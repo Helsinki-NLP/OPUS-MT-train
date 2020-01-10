@@ -675,13 +675,21 @@ tokenize-testsets prepare-testsets: ${ALLTEST}
 ## ---> need to delete the old ones if we want to create new BPE models
 
 
-BPESRCMODEL = ${TRAIN_SRC}.bpe${SRCBPESIZE:000=}k-model
-BPETRGMODEL = ${TRAIN_TRG}.bpe${TRGBPESIZE:000=}k-model
+# BPESRCMODEL = ${TRAIN_SRC}.bpe${SRCBPESIZE:000=}k-model
+# BPETRGMODEL = ${TRAIN_TRG}.bpe${TRGBPESIZE:000=}k-model
+
+## NEW: always use the same name for the BPE models
+## --> avoid overwriting validation/test data with new segmentation models
+##     if a new data set is used
+BPESRCMODEL = ${WORKDIR}/train/opus.src.bpe${SRCBPESIZE:000=}k-model
+BPETRGMODEL = ${WORKDIR}/train/opus.trg.bpe${TRGBPESIZE:000=}k-model
+
 
 .PRECIOUS: ${BPESRCMODEL} ${BPETRGMODEL}
 .INTERMEDIATE: ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG}
 
-${BPESRCMODEL}: ${WORKDIR}/%.bpe${SRCBPESIZE:000=}k-model: ${TMPDIR}/${LANGSTR}/%
+# ${BPESRCMODEL}: ${WORKDIR}/%.bpe${SRCBPESIZE:000=}k-model: ${TMPDIR}/${LANGSTR}/%
+${BPESRCMODEL}: ${LOCAL_TRAIN_SRC}
 ifeq ($(wildcard ${BPESRCMODEL}),)
 	mkdir -p ${dir $@}
 ifeq ($(TRGLANGS),${firstword ${TRGLANGS}})
@@ -699,7 +707,8 @@ else
 endif
 
 ## no labels on the target language side
-${BPETRGMODEL}: ${WORKDIR}/%.bpe${TRGBPESIZE:000=}k-model: ${TMPDIR}/${LANGSTR}/%
+# ${BPETRGMODEL}: ${WORKDIR}/%.bpe${TRGBPESIZE:000=}k-model: ${TMPDIR}/${LANGSTR}/%
+${BPETRGMODEL}: ${LOCAL_TRAIN_TRG}
 ifeq ($(wildcard ${BPETRGMODEL}),)
 	mkdir -p ${dir $@}
 	python3 ${SNMTPATH}/learn_bpe.py -s $(TRGBPESIZE) < $< > $@
@@ -751,14 +760,22 @@ endif
 ##----------------------------------------------
 
 
-SPMSRCMODEL = ${TRAIN_SRC}.spm${SRCBPESIZE:000=}k-model
-SPMTRGMODEL = ${TRAIN_TRG}.spm${TRGBPESIZE:000=}k-model
+# SPMSRCMODEL = ${TRAIN_SRC}.spm${SRCBPESIZE:000=}k-model
+# SPMTRGMODEL = ${TRAIN_TRG}.spm${TRGBPESIZE:000=}k-model
+
+## NEW: always use the same name for the SPM models
+## --> avoid overwriting validation/test data with new segmentation models
+##     if a new data set is used
+SPMSRCMODEL = ${WORKDIR}/train/opus.src.spm${SRCBPESIZE:000=}k-model
+SPMTRGMODEL = ${WORKDIR}/train/opus.trg.spm${SRCBPESIZE:000=}k-model
+
 
 .PRECIOUS: ${SPMSRCMODEL} ${SPMTRGMODEL}
 
 
 
-${SPMSRCMODEL}: ${WORKDIR}/%.spm${SRCBPESIZE:000=}k-model: ${TMPDIR}/${LANGSTR}/%
+# ${SPMSRCMODEL}: ${WORKDIR}/%.spm${SRCBPESIZE:000=}k-model: ${TMPDIR}/${LANGSTR}/%
+${SPMSRCMODEL}: ${LOCAL_TRAIN_SRC}
 ifeq ($(wildcard ${SPMSRCMODEL}),)
 	mkdir -p ${dir $@}
 ifeq ($(TRGLANGS),${firstword ${TRGLANGS}})
@@ -782,7 +799,8 @@ else
 endif
 
 ## no labels on the target language side
-${SPMTRGMODEL}: ${WORKDIR}/%.spm${TRGBPESIZE:000=}k-model: ${TMPDIR}/${LANGSTR}/%
+# ${SPMTRGMODEL}: ${WORKDIR}/%.spm${TRGBPESIZE:000=}k-model: ${TMPDIR}/${LANGSTR}/%
+${SPMTRGMODEL}: ${LOCAL_TRAIN_TRG}
 ifeq ($(wildcard ${SPMTRGMODEL}),)
 	mkdir -p ${dir $@}
 	grep . $< > $<.text
@@ -864,3 +882,13 @@ ${WORKDIR}/%.clean.${PRE_TRG}.gz: ${TMPDIR}/${LANGSTR}/%.clean.${PRE_TRG}
 	mkdir -p ${dir $@}
 	gzip -c < $< > $@
 endif
+
+
+
+
+# ALLSRCSPM = ${wildcard work-spm/*/train/*.src.spm32k-model}
+
+fix-spm-models:
+	for f in ${ALLSRCSPM}; do \
+	  ln -s $$f `dirname $$f`/opus.src.spm32k-model; \
+	done
