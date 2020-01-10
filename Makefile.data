@@ -886,9 +886,13 @@ endif
 
 
 
-# ALLSRCSPM = ${wildcard work-spm/*/train/*.src.spm32k-model}
-
 fix-spm-models:
-	for f in ${ALLSRCSPM}; do \
-	  ln -s $$f `dirname $$f`/opus.src.spm32k-model; \
+	cd work-spm; \
+	for l in ${ALL_LANG_PAIRS}; do \
+	  cd $$l/train; \
+	  if [ ! -e opus.src.spm32k-model ]; then \
+	    ln -s *.src.spm32k-model opus.src.spm32k-model; \
+	    ln -s *.trg.spm32k-model opus.trg.spm32k-model; \
+	  fi; \
+	  cd ../..; \
 	done
