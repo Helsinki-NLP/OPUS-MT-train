@@ -126,7 +126,8 @@ endif
 	fi
 	@cat ${WORKDIR}/README.md >> ${dir $@}README.md
 	@echo '' >> ${dir $@}README.md
-	@cp LICENSE ${WORKDIR}/
+	@cat models/README >> ${dir $@}README.md
+	@cp models/LICENSE ${WORKDIR}/
 	@chmod +x ${WORKDIR}/preprocess.sh
 	@sed -e 's# - /.*/\([^/]*\)$$# - \1#' \
 	    -e 's/beam-size: [0-9]*$$/beam-size: 6/' \
