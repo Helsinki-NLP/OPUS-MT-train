@@ -703,7 +703,6 @@ else
 	@echo "$@ already exists!"
 	@echo "WARNING! No new BPE model is created even though the data has changed!"
 	@echo "WARNING! Delete the file if you want to start from scratch!"
-	touch $@
 endif
 
 ## no labels on the target language side
@@ -716,7 +715,6 @@ else
 	@echo "$@ already exists!"
 	@echo "WARNING! No new BPE codes are created!"
 	@echo "WARNING! Delete the file if you want to start from scratch!"
-	touch $@
 endif
 
 
@@ -795,7 +793,6 @@ else
 	@echo "$@ already exists!"
 	@echo "WARNING! No new SPM model is created even though the data has changed!"
 	@echo "WARNING! Delete the file if you want to start from scratch!"
-	touch $@
 endif
 
 ## no labels on the target language side
@@ -813,7 +810,6 @@ else
 	@echo "$@ already exists!"
 	@echo "WARNING! No new SPM model created!"
 	@echo "WARNING! Delete the file if you want to start from scratch!"
-	touch $@
 endif
 
 

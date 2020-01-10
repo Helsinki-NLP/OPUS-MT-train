@@ -1,3 +1,26 @@
+#
+# backtranslate wiki data
+#
+# only works with sentencepiece models!
+#
+
+include ../Makefile.env
+include ../Makefile.config
+include ../Makefile.slurm
+
+SRC = af
+TRG = en
+
+## maximum input length (number sentence piece segments)
+MAX_LENGTH = 250
+
+
+LANGPAIR = ${SRC}-${TRG}
+
+
+MODELHOME = ../models/${LANGPAIR}
+MODELZIP = ${lastword ${sort ${wildcard ${MODELHOME}/*.zip}}}
+
 
 LOAD_MODULES = 	module use -a /projappl/nlpl/software/modules/etc/ && \
 		module load nlpl-udpipe nlpl-opus &&
@@ -6,24 +29,36 @@ WIKILANGS = 	${sort $(patsubst >%wiki-,%,${shell grep -o '>..wiki-' index.html})
 		${sort $(patsubst >%wiki-,%,${shell grep -o '>...wiki-' index.html})}
 
 
-LANGID   = af
+LANGID   = ${SRC}
 WIKI_TXT = wiki.${LANGID}.gz
+WIKI_SRC = wiki.${LANGPAIR}.${SRC}.gz
+WIKI_PRE = wiki.${LANGPAIR}.${SRC}.spm.gz
+WIKI_TRG = wiki.${LANGPAIR}.${TRG}.gz
 
+
+## find wiki downloads
+WIKI_JSON = $(shell grep -o '${LANGID}wiki-[0-9]*-cirrussearch-content.json.gz' index.html | head -1)
+
+## find UDPipe model
 LANGNAME = ${shell ${LOAD_MODULES} opus-iso639 -e ${LANGID} | \
 		cut -f1 -d';' | tr ' ' '-' | tr '[:upper:]' '[:lower:]'}
-UDPIPE_MODEL = ${notdir $(shell find ${UDPIPE_MODELS}/ -name "${LANGNAME}*.udpipe" | head -1)}
-WIKI_JSON = $(shell grep -o '${LANGID}wiki-[0-9]*-cirrussearch-content.json.gz' index.html | head -1)
+UDPIPE_MODEL = ${notdir $(shell ${LOAD_MODULES} find ${UDPIPE_MODELS}/ -name "${LANGNAME}*.udpipe" | head -1)}
+
 
 
 all: index.html
+	${MAKE} ${WIKI_SRC} ${WIKI_TRG}
+
+all-wikis: index.html
 	for l in ${WIKILANGS}; do \
 	  ${MAKE} LANGID=$$l wiki-txt; \
 	done
 
-wiki-txt:
-	if [ "${UDPIPE_MODEL}" != "" ]; then \
-	  ${MAKE} ${WIKI_TXT}; \
-	fi
+
+wiki-txt: ${WIKI_TXT}
+prepare-model: ${LANGPAIR}/decoder.yml
+prepare-data: ${WIKI_PRE}
+translate: ${WIKI_SRC} ${WIKI_TRG}
 
 print-names:
 	echo ${LANGNAME}
@@ -31,22 +66,77 @@ print-names:
 	echo ${WIKI_JSON}
 
 
+
+${LANGPAIR}/decoder.yml:
+ifneq (${MODELZIP},)
+	mkdir -p ${dir $@}
+	cp ${MODELZIP} ${dir $@}
+	cd ${dir $@} && unzip *.zip
+endif
+
+
+%.${LANGPAIR}.${SRC}.spm.gz: %.${SRC}.gz
+ifneq (${MODELZIP},)
+	${MAKE} ${LANGPAIR}/decoder.yml
+	zcat $< |\
+	${LANGPAIR}/preprocess.sh af ${LANGPAIR}/source.spm |\
+	perl -pe 'print if (split(/\s+/)>${MAX_LENGTH});' |\
+	gzip -c > $@
+endif
+
+${WIKI_SRC}: ${WIKI_PRE}
+ifneq (${MODELZIP},)
+	zcat $< |\
+	sed 's/ //g;s/▁/ /g' | \
+	sed 's/^ *//;s/ *$$//' |\
+	gzip -c > $@
+endif
+
+%.${LANGPAIR}.${TRG}.gz: %.${LANGPAIR}.${SRC}.spm.gz
+ifneq (${MODELZIP},)
+	${MAKE} ${LANGPAIR}/decoder.yml
+	${LOADMODS} && cd ${LANGPAIR} && ${MARIAN}/marian-decoder \
+		-i ${PWD}/$< \
+		-c decoder.yml \
+		-d ${MARIAN_GPUS} \
+		${MARIAN_DECODER_FLAGS} |\
+	sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' |\
+	gzip -c > ${PWD}/$@
+endif
+
+
+## index of all downloadable files
+index.html:
+	wget -O $@ https://dumps.wikimedia.org/other/cirrussearch/current
+
+## wiki in json format
 ${WIKI_JSON}:
 	wget https://dumps.wikimedia.org/other/cirrussearch/current/${WIKI_JSON}
 
 
+ifneq (${UDPIPE_MODEL},)
+  SENTSPLITTER = udpipe --input=horizontal --tokenize \
+		${UDPIPE_MODELS}/${UDPIPE_MODEL} |\
+		grep '^\# *text *= *' |\
+		sed 's/^\# *text *= *//'
+else
+  SENTSPLITTER = ${MOSESSCRIPTS}/ems/support/split-sentences.perl -l ${LANGID}
+endif
+
+## extract sentences and normalize
+## - requires jq, udpipe, and moses-scripts
 ${WIKI_TXT}: ${WIKI_JSON}
 	${LOAD_MODULES} \
 	zcat $< | jq -r '.text' | \
 	grep -v 'null' |\
-	udpipe --input=horizontal --tokenize \
-	${UDPIPE_MODELS}/${UDPIPE_MODEL} |\
-	grep '^\# *text *= *' |\
-	sed 's/^\# *text *= *//' |\
+	${SENTSPLITTER} |\
+	$(TOKENIZER)/replace-unicode-punctuation.perl |\
+	$(TOKENIZER)/remove-non-printing-char.perl |\
+	$(TOKENIZER)/normalize-punctuation.perl |\
+	sed 's/  */ /g;s/^ *//g;s/ *$$//g' |\
 	gzip -c > $@
 
-index.html:
-	wget -O $@ https://dumps.wikimedia.org/other/cirrussearch/current
+
 
 
 
