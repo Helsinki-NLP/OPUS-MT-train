@@ -882,6 +882,9 @@ endif
 
 
 
+## make symbolic links to spm-models
+## (previously we had data-specific models but now we want to re-use existing ones)
+
 fix-spm-models:
 	cd work-spm; \
 	for l in ${ALL_LANG_PAIRS}; do \
