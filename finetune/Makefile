@@ -1,11 +1,26 @@
 #
 # fine-tune an existing model
+# set SRC and TRG to source and target language IDs
+# defaults: SRC=en TRG=de
 #
-#  make news-tune-data ...... create tunig data from newstest sets
-#  make all ................. tune and eval
+#  make SRC=xx TRG=yy news-tune-data ...... create tuning data from newstest sets
+#  make SRC=xx TRG=yy all ................. tune and eval
+#
+# other targets:
+#
+#  make news-enfi ......... make tuned model for en-fi News
+#  make goethe-defi ....... make model for Goethe Institute data
+#  make data .............. pre-process train/dev data
+#  make tune .............. fine-tune model
+#  make translate ......... translate test set with fine-tuned model
+#  make translate-baseline  translate test set with baseline model
+#  make eval .............. evaluate test set translation (fine-tuned)
+#  make eval-baseline ..... evaluate test set translation (baseline)
+#  make compare ........... put together source, reference translation and system output
+#  make compare-baseline .. same as compare but with baseline translation
 #
 #
-# NOTE: this only works for SentencePiece models
+# NOTE: all this only works for SentencePiece models
 #
 # TODO
 # - download base models from ObjectStorage
@@ -51,7 +66,7 @@ MARIAN_EARLY_STOPPING = 5
 
 
 .PHONY: all
-all: ${TEST_SRC}.${TRG}.compare
+all: ${TEST_SRC}.${TRG}.compare ${TEST_SRC}.baseline.${TRG}.compare
 
 
 .PHONY: news-enfi
@@ -65,15 +80,15 @@ news-enfi:
 		TEST_TRG=en-fi/news/test/newstest2019-enfi.fi \
 	all
 
-.PHONY: goethe-fide
-goethe-ende:
-	${MAKE} SRC=fi TRG=de MODEL=goethe \
-		TRAIN_SRC=fi-de/goethe/train/goethe-institute-train.fi \
-		TRAIN_TRG=fi-de/goethe/train/goethe-institute-train.de \
-		DEV_SRC=fi-de/goethe/dev/goethe-institute-dev1.fi \
-		DEV_TRG=fi-de/goethe/dev/goethe-institute-dev1.de \
-		TEST_SRC=fi-de/goethe/test/goethe-institute-test1.fi \
-		TEST_TRG=fi-de/goethe/test/goethe-institute-test1.de \
+.PHONY: goethe-defi
+goethe-defi:
+	${MAKE} SRC=de TRG=fi MODEL=goethe \
+		TRAIN_SRC=de-fi/goethe/train/goethe-institute-train.de \
+		TRAIN_TRG=de-fi/goethe/train/goethe-institute-train.fi \
+		DEV_SRC=de-fi/goethe/dev/goethe-institute-dev1.de \
+		DEV_TRG=de-fi/goethe/dev/goethe-institute-dev1.fi \
+		TEST_SRC=de-fi/goethe/test/goethe-institute-test1.de \
+		TEST_TRG=de-fi/goethe/test/goethe-institute-test1.fi \
 	all
 
 
@@ -196,11 +211,27 @@ ${TEST_SRC}.${TRG}.gz: ${TEST_SRC}.pre.gz ${TUNED_MODEL}.npz.best-perplexity.npz
 	gzip -c > $@
 
 
+.PHONY: translate-baseline
+translate-baseline: ${TEST_SRC}.baseline.${TRG}.gz
 
-.PHONY: eval
+## translate test set
+${TEST_SRC}.baseline.${TRG}.gz: ${TEST_SRC}.pre.gz ${LANGPAIR}/${BASEMODELNAME}/decoder.yml
+	mkdir -p ${dir $@}
+	cd ${LANGPAIR}/${BASEMODELNAME}; \
+	${LOADMODS} && ${MARIAN}/marian-decoder -i ${PWD}/$< \
+		-c decoder.yml \
+		-d ${MARIAN_GPUS} \
+		${MARIAN_DECODER_FLAGS} |\
+	sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' |\
+	gzip -c > ${PWD}/$@
+
+
+
+.PHONY: eval eval-baseline
 eval: ${TEST_SRC}.${TRG}.eval
+eval-baseline: ${TEST_SRC}.baseline.${TRG}.eval
 
-${TEST_SRC}.${TRG}.eval: ${TEST_SRC}.${TRG}.gz ${TEST_TRG}.gz
+${TEST_SRC}.${TRG}.eval ${TEST_SRC}.baseline.${TRG}.eval: %.eval: %.gz ${TEST_TRG}.gz
 	zcat ${TEST_TRG} > $@.ref
 	zcat $< | sacrebleu $@.ref > $@
 	zcat $< | sacrebleu --metrics=chrf --width=3 $@.ref >> $@
@@ -208,10 +239,11 @@ ${TEST_SRC}.${TRG}.eval: ${TEST_SRC}.${TRG}.gz ${TEST_TRG}.gz
 
 
 
-.PHONY: compare
+.PHONY: compare compare-baseline
 compare: ${TEST_SRC}.${TRG}.compare
+compare-baseline: ${TEST_SRC}.baseline.${TRG}.compare
 
-${TEST_SRC}.${TRG}.compare: ${TEST_SRC}.${TRG}.eval
+${TEST_SRC}.${TRG}.compare ${TEST_SRC}.baseline.${TRG}.compare: %.compare: %.eval
 	zcat ${TEST_SRC}.gz > $@.1
 	zcat ${TEST_TRG}.gz > $@.2
 	zcat ${<:.eval=.gz} > $@.3
