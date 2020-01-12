@@ -11,7 +11,8 @@ LANGPAIR  = ${SRC}-${TRG}
 MODELHOME    = ../models/${LANGPAIR}
 MODELZIP     = ${lastword ${sort ${wildcard ${MODELHOME}/*-20*.zip}}}
 MODELNAME    = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
-MODELURL     = https://object.pouta.csc.fi/OPUS-MT-models/${LANGPAIR}
+MODELSTORE   = OPUS-MT-models
+MODELURL     = https://object.pouta.csc.fi/${MODELSTORE}/${LANGPAIR}
 
 TESTSETDIR   = ../testsets/${LANGPAIR}
 TESTSETS     = ${sort ${wildcard ${TESTSETDIR}/*.${SRC}.gz}}
@@ -49,6 +50,12 @@ SUBWORD_MODEL = ${filter-out ${WORKDIR}/model/source.tcmodel,${wildcard ${WORKDI
 
 ifneq (${wildcard ${WORKDIR}/model/preprocess.sh},)
   PREPROCESS = ${WORKDIR}/model/preprocess.sh ${SRC} ${SUBWORD_MODEL}
+else ifeq (${SUBWORD_MODEL},${WORKDIR}/model/source.spm)
+  PREPROCESS =  ${TOKENIZER}/replace-unicode-punctuation.perl |\
+  ${TOKENIZER}/remove-non-printing-char.perl |\
+  ${TOKENIZER}/normalize-punctuation.perl -l ${SRC} |\
+  sed 's/  */ /g;s/^ *//g;s/ *$$//g' |\
+  ${SPM_HOME}/spm_encode --model ${SUBWORD_MODEL}
 else
   PREPROCESS = ${TOKENIZER}/replace-unicode-punctuation.perl |\
 		${TOKENIZER}/remove-non-printing-char.perl |\
@@ -60,6 +67,8 @@ endif
 
 ifneq (${wildcard ${WORKDIR}/model/postprocess.sh},)
   POSTPROCESS = ${WORKDIR}/model/postprocess.sh
+else ifeq (${SUBWORD_MODEL},${WORKDIR}/model/source.spm)
+  POSTPROCESS = sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//'
 else
   POSTPROCESS =	sed 's/\@\@ //g;s/ \@\@//g;s/ \@\-\@ /-/g' |\
 		$(TOKENIZER)/detokenizer.perl -l ${TRG}
