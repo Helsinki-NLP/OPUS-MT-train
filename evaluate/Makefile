@@ -76,7 +76,7 @@ endif
 
 
 prepare-data: ${TEST_PRE}
-${TEST_PRE}: ${WORKDIR}/%.pre: ${TESTSETDIR}/%.gz ${WORKDIR}/model/decoder.yml
+${TEST_PRE}: ${TESTSET} ${WORKDIR}/model/decoder.yml
 	zcat $< | ${PREPROCESS} > $@
 
 

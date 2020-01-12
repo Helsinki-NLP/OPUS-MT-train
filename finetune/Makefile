@@ -92,6 +92,17 @@ goethe-defi:
 	all
 
 
+goethe-test:
+	${MAKE} SRC=de TRG=fi MODEL=goethe-test \
+		TRAIN_SRC=de-fi/goethe-test/train/goethe-all.de \
+		TRAIN_TRG=de-fi/goethe-test/train/goethe-all.fi \
+		DEV_SRC=de-fi/goethe-test/dev/goethe-institute-dev1.de \
+		DEV_TRG=de-fi/goethe-test/dev/goethe-institute-dev1.fi \
+		TEST_SRC=de-fi/goethe-test/test/goethe-institute-test1.de \
+		TEST_TRG=de-fi/goethe-test/test/goethe-institute-test1.fi \
+	all
+
+
 
 ## make news tuning data from testsets
 
@@ -203,7 +214,8 @@ translate: ${TEST_SRC}.${TRG}.gz
 ## translate test set
 ${TEST_SRC}.${TRG}.gz: ${TEST_SRC}.pre.gz ${TUNED_MODEL}.npz.best-perplexity.npz
 	mkdir -p ${dir $@}
-	${LOADMODS} && ${MARIAN}/marian-decoder -i $< \
+	${LOADMODS} && ${MARIAN}/marian-decoder \
+		-i $< \
 		-c ${word 2,$^}.decoder.yml \
 		-d ${MARIAN_GPUS} \
 		${MARIAN_DECODER_FLAGS} |\
@@ -218,7 +230,8 @@ translate-baseline: ${TEST_SRC}.baseline.${TRG}.gz
 ${TEST_SRC}.baseline.${TRG}.gz: ${TEST_SRC}.pre.gz ${LANGPAIR}/${BASEMODELNAME}/decoder.yml
 	mkdir -p ${dir $@}
 	cd ${LANGPAIR}/${BASEMODELNAME}; \
-	${LOADMODS} && ${MARIAN}/marian-decoder -i ${PWD}/$< \
+	${LOADMODS} && ${MARIAN}/marian-decoder \
+		-i ${PWD}/$< \
 		-c decoder.yml \
 		-d ${MARIAN_GPUS} \
 		${MARIAN_DECODER_FLAGS} |\
