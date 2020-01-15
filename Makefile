@@ -220,6 +220,15 @@ finished:
 	  fi \
 	done
 
+## only bilingual models
+%-allmultilingual:
+	for l in ${ALL_MULTILINGUAL_MODELS}; do \
+	  if  [ `find ${WORKHOME}/$$l -name '*.${PRE_SRC}-${PRE_TRG}.*.npz' | wc -l` -gt 0 ]; then \
+	    ${MAKE} SRCLANGS="`echo $$l | cut -f1 -d'-' | sed 's/\\+/ /g'`" \
+		    TRGLANGS="`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`" ${@:-allmultilingual=}; \
+	  fi \
+	done
+
 
 ## run something over all language pairs but make it possible to do it in parallel, for example
 ## - make dist-all-parallel
@@ -555,10 +564,16 @@ endif
 
 
 %.compare: %.eval
-	paste -d "\n" ${TEST_SRC} ${TEST_TRG} ${<:.eval=} |\
+	grep . ${TEST_SRC} > $@.1
+	grep . ${TEST_TRG} > $@.2
+	grep . ${<:.eval=} > $@.3
+	paste -d "\n" $@.1 $@.2 $@.3 |\
 	sed 	-e "s/&apos;/'/g" \
 		-e 's/&quot;/"/g' \
 		-e 's/&lt;/</g' \
 		-e 's/&gt;/>/g' \
 		-e 's/&amp;/&/g' |\
 	sed 'n;n;G;' > $@
+	rm -f $@.1 $@.2 $@.3
+
+#	paste -d "\n" ${TEST_SRC} ${TEST_TRG} ${<:.eval=} |\

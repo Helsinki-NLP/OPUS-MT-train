@@ -91,6 +91,49 @@ goethe-defi:
 		TEST_TRG=de-fi/goethe/test/goethe-institute-test1.fi \
 	all
 
+goethe2-defi:
+	${MAKE} SRC=de TRG=fi MODEL=goethe2 \
+		TRAIN_SRC=de-fi/goethe/train/goethe-institute-train2.de \
+		TRAIN_TRG=de-fi/goethe/train/goethe-institute-train2.fi \
+		DEV_SRC=de-fi/goethe/dev/goethe-institute-dev2.de \
+		DEV_TRG=de-fi/goethe/dev/goethe-institute-dev2.fi \
+		TEST_SRC=de-fi/goethe/test/goethe-institute-test1.de \
+		TEST_TRG=de-fi/goethe/test/goethe-institute-test1.fi \
+	all
+
+
+## without reference normalisation
+goethe-other:
+	zcat de-fi/goethe/test/goethe-institute-test1.fi.gz > $@.ref
+	for s in systran yandex google; do \
+	  cat ${HOME}/research/GoetheInstitute/data/test_de_oaversetted_van_$$s.txt |\
+	   gzip -c > de-fi/goethe/test/goethe-institute-test1.de.$$s.de.gz; \
+	  zcat de-fi/goethe/test/goethe-institute-test1.de.$$s.de.gz | sacrebleu $@.ref \
+	  > de-fi/goethe/test/goethe-institute-test1.de.$$s.de.eval; \
+	  zcat de-fi/goethe/test/goethe-institute-test1.de.$$s.de.gz | sacrebleu --metrics=chrf --width=3 $@.ref \
+	  >> de-fi/goethe/test/goethe-institute-test1.de.$$s.de.eval; \
+	done
+	rm -f $@.ref
+
+## with reference normalisation (should not do this)
+goethe-other-norm:
+	zcat de-fi/goethe/test/goethe-institute-test1.fi.gz |\
+	${TOKENIZER}/replace-unicode-punctuation.perl |\
+	${TOKENIZER}/remove-non-printing-char.perl |\
+	${TOKENIZER}/normalize-punctuation.perl -l ${TRG} |\
+	sed 's/  */ /g;s/^ *//g;s/ *$$//g' > $@.ref
+	for s in systran yandex google; do \
+	  cat ${HOME}/research/GoetheInstitute/data/test_de_oaversetted_van_$$s.txt |\
+	  ${TOKENIZER}/replace-unicode-punctuation.perl |\
+	  ${TOKENIZER}/remove-non-printing-char.perl |\
+	  ${TOKENIZER}/normalize-punctuation.perl -l ${TRG} |\
+	  sed 's/  */ /g;s/^ *//g;s/ *$$//g' | gzip -c > de-fi/goethe/test/goethe-institute-test1.de.$$s.de.gz; \
+	  zcat de-fi/goethe/test/goethe-institute-test1.de.$$s.de.gz | sacrebleu $@.ref \
+	  > de-fi/goethe/test/goethe-institute-test1.de.$$s.de.eval-norm; \
+	  zcat de-fi/goethe/test/goethe-institute-test1.de.$$s.de.gz | sacrebleu --metrics=chrf --width=3 $@.ref \
+	  >> de-fi/goethe/test/goethe-institute-test1.de.$$s.de.eval-norm; \
+	done
+	rm -f $@.ref
 
 goethe-test:
 	${MAKE} SRC=de TRG=fi MODEL=goethe-test \
@@ -244,11 +287,24 @@ ${TEST_SRC}.baseline.${TRG}.gz: ${TEST_SRC}.pre.gz ${LANGPAIR}/${BASEMODELNAME}/
 eval: ${TEST_SRC}.${TRG}.eval
 eval-baseline: ${TEST_SRC}.baseline.${TRG}.eval
 
+## without reference normalisation
 ${TEST_SRC}.${TRG}.eval ${TEST_SRC}.baseline.${TRG}.eval: %.eval: %.gz ${TEST_TRG}.gz
-	zcat ${TEST_TRG} > $@.ref
+	zcat ${TEST_TRG}.gz > $@.ref
 	zcat $< | sacrebleu $@.ref > $@
 	zcat $< | sacrebleu --metrics=chrf --width=3 $@.ref >> $@
 	rm -f $@.ref
+
+## with reference normalisation (should not do this)
+${TEST_SRC}.${TRG}.eval-norm ${TEST_SRC}.baseline.${TRG}.eval-norm: %.eval-norm: %.gz ${TEST_TRG}.gz
+	zcat ${TEST_TRG}.gz |\
+	${TOKENIZER}/replace-unicode-punctuation.perl |\
+	${TOKENIZER}/remove-non-printing-char.perl |\
+	${TOKENIZER}/normalize-punctuation.perl -l ${TRG} |\
+	sed 's/  */ /g;s/^ *//g;s/ *$$//g' > $@.ref
+	zcat $< | sacrebleu $@.ref > $@
+	zcat $< | sacrebleu --metrics=chrf --width=3 $@.ref >> $@
+	rm -f $@.ref
+
 
 
 

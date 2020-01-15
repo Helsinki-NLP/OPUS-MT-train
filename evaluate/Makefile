@@ -8,20 +8,21 @@ SRC       = en
 TRG       = de
 LANGPAIR  = ${SRC}-${TRG}
 
-MODELHOME    = ../models/${LANGPAIR}
-MODELZIP     = ${lastword ${sort ${wildcard ${MODELHOME}/*-20*.zip}}}
-MODELNAME    = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
-MODELSTORE   = OPUS-MT-models
-MODELURL     = https://object.pouta.csc.fi/${MODELSTORE}/${LANGPAIR}
+MODELHOME     = ../models/${LANGPAIR}
+MODELZIP      = ${lastword ${sort ${wildcard ${MODELHOME}/*-20*.zip}}}
+MODELNAME     = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
+MODELSTORE    = OPUS-MT-models
+MODELURL      = https://object.pouta.csc.fi/${MODELSTORE}/${LANGPAIR}
 
-TESTSETDIR   = ../testsets/${LANGPAIR}
-TESTSETS     = ${sort ${wildcard ${TESTSETDIR}/*.${SRC}.gz}}
-TESTSET      = ${lastword ${TESTSETS}}
+TESTSETDIR    = ../testsets/${LANGPAIR}
+TESTSETS      = ${sort ${wildcard ${TESTSETDIR}/*.${SRC}.gz}}
+TESTSET       = ${lastword ${TESTSETS}}
 
-WORKDIR      = ${PWD}/${LANGPAIR}/${MODELNAME}
-TEST_PRE     = ${WORKDIR}/${patsubst %.gz,%.pre,${notdir ${TESTSET}}}
-TEST_TRANS   = ${TEST_PRE}.${TRG}
-TEST_EVAL    = ${TEST_TRANS}.eval
+WORKDIR       = ${PWD}/${LANGPAIR}/${MODELNAME}
+TEST_PRE      = ${WORKDIR}/${patsubst %.gz,%.pre,${notdir ${TESTSET}}}
+TEST_TRANS    = ${TEST_PRE}.${TRG}
+TEST_EVAL     = ${TEST_TRANS}.eval
+TEST_EVALNORM = ${TEST_TRANS}.eval-norm
 
 
 
@@ -98,6 +99,16 @@ eval: ${TEST_EVAL}
 
 ${TEST_EVAL}: ${TEST_TRANS}
 	zcat ${patsubst %.${SRC}.gz,%.${TRG}.gz,${TESTSET}} > $@.ref
+	cat $< | sacrebleu $@.ref > $@
+	cat $< | sacrebleu --metrics=chrf --width=3 $@.ref >> $@
+	rm -f $@.ref
+
+${TEST_EVALNORM}: ${TEST_TRANS}
+	zcat ${patsubst %.${SRC}.gz,%.${TRG}.gz,${TESTSET}} |\
+	${TOKENIZER}/replace-unicode-punctuation.perl |\
+	${TOKENIZER}/remove-non-printing-char.perl |\
+	${TOKENIZER}/normalize-punctuation.perl -l ${TRG} |\
+	sed 's/  */ /g;s/^ *//g;s/ *$$//g' > $@.ref
 	cat $< | sacrebleu $@.ref > $@
 	cat $< | sacrebleu --metrics=chrf --width=3 $@.ref >> $@
 	rm -f $@.ref
