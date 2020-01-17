@@ -363,40 +363,43 @@ ${DEV_SRC}: %: %.shuffled.gz
 ifeq (${DEVSET},${TESTSET})
 	if (( `zcat $@.shuffled.gz | wc -l` < $$((${DEVSIZE} + ${TESTSIZE})) )); then \
 	  if (( `zcat $@.shuffled.gz | wc -l` < $$((${DEVSMALLSIZE} + ${DEVMINSIZE})) )); then \
-	    echo "devset = top ${DEVMINSIZE} lines of ${notdir $@}.shuffled!"  >> ${dir $@}/README; \
 	    zcat $@.shuffled.gz | cut -f1 | head -${DEVMINSIZE} > ${DEV_SRC}; \
 	    zcat $@.shuffled.gz | cut -f2 | head -${DEVMINSIZE} > ${DEV_TRG}; \
 	    mkdir -p ${dir ${TEST_SRC}}; \
-	    echo "testset = top ${DEVMINSIZE} lines of ../val/${notdir $@}.shuffled!"  >> ${dir ${TEST_SRC}}/README; \
 	    zcat $@.shuffled.gz | cut -f1 | tail -n +$$((${DEVMINSIZE} + 1)) > ${TEST_SRC}; \
 	    zcat $@.shuffled.gz | cut -f2 | tail -n +$$((${DEVMINSIZE} + 1)) > ${TEST_TRG}; \
 	  else \
-	    echo "devset = top ${DEVSMALLSIZE} lines of ${notdir $@}.shuffled!"  >> ${dir $@}/README; \
 	    zcat $@.shuffled.gz | cut -f1 | head -${DEVSMALLSIZE} > ${DEV_SRC}; \
 	    zcat $@.shuffled.gz | cut -f2 | head -${DEVSMALLSIZE} > ${DEV_TRG}; \
 	    mkdir -p ${dir ${TEST_SRC}}; \
-	    echo "testset = top ${DEVSMALLSIZE} lines of ../val/${notdir $@}.shuffled!"  >> ${dir ${TEST_SRC}}/README; \
 	    zcat $@.shuffled.gz | cut -f1 | tail -n +$$((${DEVSMALLSIZE} + 1)) > ${TEST_SRC}; \
 	    zcat $@.shuffled.gz | cut -f2 | tail -n +$$((${DEVSMALLSIZE} + 1)) > ${TEST_TRG}; \
 	  fi; \
 	else \
-	  echo "devset = top ${DEVSIZE} lines of ${notdir $@}.shuffled!"  >> ${dir $@}/README; \
 	  zcat $@.shuffled.gz | cut -f1 | head -${DEVSIZE} > ${DEV_SRC}; \
 	  zcat $@.shuffled.gz | cut -f2 | head -${DEVSIZE} > ${DEV_TRG}; \
 	  mkdir -p ${dir ${TEST_SRC}}; \
-	  echo "testset = second top ${DEVSIZE} lines of ../val/${notdir $@}.shuffled!"  >> ${dir ${TEST_SRC}}/README; \
 	  zcat $@.shuffled.gz | cut -f1 | head -$$((${DEVSIZE} + ${TESTSIZE})) | tail -${TESTSIZE} > ${TEST_SRC}; \
 	  zcat $@.shuffled.gz | cut -f2 | head -$$((${DEVSIZE} + ${TESTSIZE})) | tail -${TESTSIZE} > ${TEST_TRG}; \
 	  zcat $@.shuffled.gz | cut -f1 | tail -n +$$((${DEVSIZE} + ${TESTSIZE})) | gzip -c > ${DEV_SRC}.notused.gz; \
 	  zcat $@.shuffled.gz | cut -f2 | tail -n +$$((${DEVSIZE} + ${TESTSIZE})) | gzip -c > ${DEV_TRG}.notused.gz; \
 	fi
 else
-	echo "devset = top ${DEVSIZE} lines of ${notdir $@}.shuffled!"  >> ${dir $@}/README
 	zcat $@.shuffled.gz | cut -f1 | head -${DEVSIZE} > ${DEV_SRC}
 	zcat $@.shuffled.gz | cut -f2 | head -${DEVSIZE} > ${DEV_TRG}
 	zcat $@.shuffled.gz | cut -f1 | tail -n +$$((${DEVSIZE} + 1)) | gzip -c > ${DEV_SRC}.notused.gz
 	zcat $@.shuffled.gz | cut -f2 | tail -n +$$((${DEVSIZE} + 1)) | gzip -c > ${DEV_TRG}.notused.gz
 endif
+	echo -n "devset = top "                         >> ${dir ${DEV_SRC}}/README
+	wc -l < ${DEV_SRC} | tr "\n" ' '                >> ${dir ${DEV_SRC}}/README
+	echo " lines of ${notdir $@}.shuffled!"         >> ${dir ${DEV_SRC}}/README
+ifeq (${DEVSET},${TESTSET})
+	echo -n "testset = last "                       >> ${dir ${TEST_SRC}}/README
+	wc -l < ${TEST_SRC} | tr "\n" ' '               >> ${dir ${TEST_SRC}}/README
+	echo " lines of ../val/${notdir $@}.shuffled!"  >> ${dir ${TEST_SRC}}/README
+endif
+
+
 
 #	  zcat $@.shuffled.gz | cut -f1 | tail -${TESTSIZE} > ${TEST_SRC}; \
 #	  zcat $@.shuffled.gz | cut -f2 | tail -${TESTSIZE} > ${TEST_TRG}; \

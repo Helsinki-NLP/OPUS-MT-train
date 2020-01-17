@@ -27,11 +27,23 @@ ALT_MODEL_DIR = spm
 
 best_dist_all:
 	for l in $(sort ${shell ls work* | grep -- '-' | grep -v old | grep -v work}); do \
-	  if  [ `find work*/$$l -name '${DATASET}${TRAINSIZE}.*.npz' | wc -l` -gt 0 ]; then \
+	  if  [ `find work*/$$l -name '*.npz' | wc -l` -gt 0 ]; then \
+	    d=`find work-spm/$$l -name '*.best-perplexity.npz' -exec basename {} \; | cut -f1 -d.`; \
 	    ${MAKE} SRCLANGS="`echo $$l | cut -f1 -d'-' | sed 's/\\+/ /g'`" \
-		    TRGLANGS="`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`" best_dist; \
+		    TRGLANGS="`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`" \
+		    DATASET=$$d best_dist; \
 	  fi \
 	done
+
+
+# best_dist_all:
+# 	for l in $(sort ${shell ls work* | grep -- '-' | grep -v old | grep -v work}); do \
+# 	  if  [ `find work*/$$l -name '${DATASET}${TRAINSIZE}.*.npz' | wc -l` -gt 0 ]; then \
+# 	    ${MAKE} SRCLANGS="`echo $$l | cut -f1 -d'-' | sed 's/\\+/ /g'`" \
+# 		    TRGLANGS="`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`" best_dist; \
+# 	  fi \
+# 	done
+
 
 
 ## find the best model according to test set scores
