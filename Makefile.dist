@@ -91,6 +91,47 @@ DATE = ${shell date +%F}
 MODELS_URL = https://object.pouta.csc.fi/OPUS-MT-dev
 SKIP_DIST_EVAL = 0
 
+
+## determine pre-processing type
+
+ifneq (${words ${TRGLANGS}},1)
+ifneq ("$(wildcard ${BPESRCMODEL})","")
+  PREPROCESS_SCRIPT = preprocess-bpe-multi-target.sh
+  PREPROCESS_SRCMODEL = ${BPESRCMODEL}
+  PREPROCESS_TRGMODEL = ${BPETRGMODEL}
+  POSTPROCESS_SCRIPT = postprocess-bpe.sh
+  PREPROCESS_TYPE = normalization + tokenization + BPE
+else
+  PREPROCESS_SCRIPT = preprocess-spm-multi-target.sh
+  PREPROCESS_SRCMODEL = ${SPMSRCMODEL}
+  PREPROCESS_TRGMODEL = ${SPMTRGMODEL}
+  POSTPROCESS_SCRIPT = postprocess-spm.sh
+  PREPROCESS_TYPE = normalization + SentencePiece
+endif
+else
+ifneq ("$(wildcard ${BPESRCMODEL})","")
+  PREPROCESS_SCRIPT = preprocess-bpe.sh
+  PREPROCESS_SRCMODEL = ${BPESRCMODEL}
+  PREPROCESS_TRGMODEL = ${BPETRGMODEL}
+  POSTPROCESS_SCRIPT = postprocess-bpe.sh
+  PREPROCESS_TYPE = normalization + tokenization + BPE
+else
+  PREPROCESS_SCRIPT = preprocess-spm.sh
+  PREPROCESS_SRCMODEL = ${SPMSRCMODEL}
+  PREPROCESS_TRGMODEL = ${SPMTRGMODEL}
+  POSTPROCESS_SCRIPT = postprocess-spm.sh
+  PREPROCESS_TYPE = normalization + SentencePiece
+endif
+endif
+
+
+ttt:
+	@echo ${PREPROCESS_SRCMODEL}
+	@echo ${PREPROCESS_TRGMODEL}
+	@echo ${PREPROCESS_SCRIPT}
+	@echo ${POSTPROCESS_SCRIPT}
+
+
 ${DIST_PACKAGE}: ${MODEL_FINAL}
 ifneq (${SKIP_DIST_EVAL},1)
 	@${MAKE} $(TEST_EVALUATION)
@@ -102,19 +143,11 @@ endif
 	@echo '' >> ${WORKDIR}/README.md
 	@echo "* dataset: ${DATASET}" >> ${WORKDIR}/README.md
 	@echo "* model: ${MODELTYPE}" >> ${WORKDIR}/README.md
-	@if [ -e ${BPESRCMODEL} ]; then \
-	  echo "* pre-processing: normalization + tokenization + BPE" >> ${WORKDIR}/README.md; \
-	  cp ${BPESRCMODEL} ${WORKDIR}/source.bpe; \
-	  cp ${BPETRGMODEL} ${WORKDIR}/target.bpe; \
-	  cp preprocess-bpe.sh ${WORKDIR}/preprocess.sh; \
-	  cp postprocess-bpe.sh ${WORKDIR}/postprocess.sh; \
-	elif [ -e ${SPMSRCMODEL} ]; then \
-	  echo "* pre-processing: normalization + SentencePiece" >> ${WORKDIR}/README.md; \
-	  cp ${SPMSRCMODEL} ${WORKDIR}/source.spm; \
-	  cp ${SPMTRGMODEL} ${WORKDIR}/target.spm; \
-	  cp preprocess-spm.sh ${WORKDIR}/preprocess.sh; \
-	  cp postprocess-spm.sh ${WORKDIR}/postprocess.sh; \
-	fi
+	@echo "* pre-processing: ${PREPROCESS_TYPE}" >> ${WORKDIR}/README.md
+	@cp ${PREPROCESS_SRCMODEL} ${WORKDIR}/source.bpe
+	@cp ${PREPROCESS_TRGMODEL} ${WORKDIR}/target.bpe
+	@cp ${PREPROCESS_SCRIPT} ${WORKDIR}/preprocess.sh
+	@cp ${POSTPROCESS_SCRIPT} ${WORKDIR}/postprocess.sh
 	@if [ ${words ${TRGLANGS}} -gt 1 ]; then \
 	  echo '* a sentence initial language token is required in the form of `>>id<<` (id = valid target language ID)' \
 		>> ${WORKDIR}/README.md; \

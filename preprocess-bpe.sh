@@ -29,5 +29,5 @@ ${TOKENIZER}/replace-unicode-punctuation.perl |
 ${TOKENIZER}/remove-non-printing-char.perl |
 ${TOKENIZER}/normalize-punctuation.perl -l $1 |
 ${TOKENIZER}/tokenizer.perl -a -threads ${THREADS} -l $1 |
-sed 's/  */ /g;s/^ *//g;s/ *$$//g' |
+sed 's/  */ /g;s/^ *//g;s/ *$//g' |
 python3 ${SNMTPATH}/apply_bpe.py -c $2
