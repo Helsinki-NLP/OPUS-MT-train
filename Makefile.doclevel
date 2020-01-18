@@ -4,6 +4,49 @@
 DOCLEVEL_BENCHMARK_DATA = https://zenodo.org/record/3525366/files/doclevel-MT-benchmark-discomt2019.zip
 
 
+
+## continue document-level training with a new context size
+
+ifndef NEW_CONTEXT
+  NEW_CONTEXT = $$(($(CONTEXT_SIZE) + $(CONTEXT_SIZE)))
+endif
+
+continue-doctrain:
+	mkdir -p ${WORKDIR}/${MODEL}
+	cp ${MODEL_VOCAB} ${WORKDIR}/${MODEL}/$(subst .doc${CONTEXT_SIZE},.doc${NEW_CONTEXT},${notdir ${MODEL_VOCAB}})
+	cp ${MODEL_FINAL} ${WORKDIR}/${MODEL}/$(subst .doc${CONTEXT_SIZE},.doc${NEW_CONTEXT},$(notdir ${MODEL_BASENAME})).npz
+	${MAKE} MODEL_SUBDIR=${MODEL}/ CONTEXT_SIZE=$(NEW_CONTEXT) train-doc
+
+
+
+
+## continue training with a new dataset
+
+ifndef NEW_DATASET
+  NEW_DATASET = OpenSubtitles
+endif
+
+continue-datatrain:
+	mkdir -p ${WORKDIR}/${MODEL}
+	cp ${MODEL_VOCAB} ${WORKDIR}/${MODEL}/$(patsubst ${DATASET}%,${NEW_DATASET}%,${notdir ${MODEL_VOCAB}})
+	cp ${MODEL_FINAL} ${WORKDIR}/${MODEL}/$(patsubst ${DATASET}%,${NEW_DATASET}%,${MODEL_BASENAME}).npz
+	if [ -e ${BPESRCMODEL} ]; then \
+	  cp ${BPESRCMODEL} $(patsubst ${WORKDIR}/train/${DATASET}%,${WORKDIR}/train/${NEW_DATASET}%,${BPESRCMODEL}); \
+	  cp ${BPETRGMODEL} $(patsubst ${WORKDIR}/train/${DATASET}%,${WORKDIR}/train/${NEW_DATASET}%,${BPETRGMODEL}); \
+	fi
+	if [ -e ${SPMSRCMODEL} ]; then \
+	  cp ${SPMSRCMODEL} $(patsubst ${WORKDIR}/train/${DATASET}%,${WORKDIR}/train/${NEW_DATASET}%,${SPMSRCMODEL}); \
+	  cp ${SPMTRGMODEL} $(patsubst ${WORKDIR}/train/${DATASET}%,${WORKDIR}/train/${NEW_DATASET}%,${SPMTRGMODEL}); \
+	fi
+	${MAKE} MODEL_SUBDIR=${MODEL}/ DATASET=$(NEW_DATASET) train
+
+
+# MARIAN_EXTRA="${MARIAN_EXTRA} --no-restore-corpus"
+
+
+
+
+
 ## use the doclevel benchmark data sets
 %-ost:
 	${MAKE} ost-datasets

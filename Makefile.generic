@@ -1,0 +1,174 @@
+# -*-makefile-*-
+#
+# generic implic targets that make our life a bit easier
+
+
+
+
+## extension -all: run something over all language pairs, e.g.
+##   make wordalign-all
+## this goes sequentially over all language pairs
+## for the parallelizable version of this: look at %-all-parallel
+%-all:
+	for l in ${ALL_LANG_PAIRS}; do \
+	    ${MAKE} SRCLANGS="`echo $$l | cut -f1 -d'-' | sed 's/\\+/ /g'`" \
+		    TRGLANGS="`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`" ${@:-all=}; \
+	done
+
+# run something over all language pairs that have trained models
+## - make eval-allmodels
+## - make dist-allmodels
+%-allmodels:
+	for l in ${ALL_LANG_PAIRS}; do \
+	  if  [ `find ${WORKHOME}/$$l -name '*.${PRE_SRC}-${PRE_TRG}.*.npz' | wc -l` -gt 0 ]; then \
+	    ${MAKE} SRCLANGS="`echo $$l | cut -f1 -d'-' | sed 's/\\+/ /g'`" \
+		    TRGLANGS="`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`" ${@:-allmodels=}; \
+	  fi \
+	done
+
+## only bilingual models
+%-allbilingual:
+	for l in ${ALL_BILINGUAL_MODELS}; do \
+	  if  [ `find ${WORKHOME}/$$l -name '*.${PRE_SRC}-${PRE_TRG}.*.npz' | wc -l` -gt 0 ]; then \
+	    ${MAKE} SRCLANGS="`echo $$l | cut -f1 -d'-' | sed 's/\\+/ /g'`" \
+		    TRGLANGS="`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`" ${@:-allbilingual=}; \
+	  fi \
+	done
+
+## only bilingual models
+%-allmultilingual:
+	for l in ${ALL_MULTILINGUAL_MODELS}; do \
+	  if  [ `find ${WORKHOME}/$$l -name '*.${PRE_SRC}-${PRE_TRG}.*.npz' | wc -l` -gt 0 ]; then \
+	    ${MAKE} SRCLANGS="`echo $$l | cut -f1 -d'-' | sed 's/\\+/ /g'`" \
+		    TRGLANGS="`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`" ${@:-allmultilingual=}; \
+	  fi \
+	done
+
+
+## run something over all language pairs but make it possible to do it in parallel, for example
+## - make dist-all-parallel
+%-all-parallel:
+	${MAKE} $(subst -all-parallel,,${patsubst %,$@__%-run-for-langpair,${ALL_LANG_PAIRS}})
+
+## run a command that includes the langpair, for example
+##   make wordalign__en-da+sv-run-for-langpair  ...... runs wordalign with SRCLANGS="en" TRGLANGS="da sv"
+## What is this good for?
+## ---> can run many lang-pairs in parallel instead of having a for loop and run sequencetially
+%-run-for-langpair:
+	${MAKE} SRCLANGS='$(subst +, ,$(firstword $(subst -, ,${lastword ${subst __, ,${@:-run-for-langpair=}}})))' \
+		TRGLANGS='$(subst +, ,$(lastword $(subst -, ,${lastword ${subst __, ,${@:-run-for-langpair=}}})))' \
+	${shell echo $@ | sed 's/__.*$$//'}
+
+
+## right-to-left model
+%-RL:
+	${MAKE} MODEL=${MODEL}-RL \
+		MARIAN_EXTRA="${MARIAN_EXTRA} --right-left" \
+	${@:-RL=}
+
+
+
+## include all backtranslation data as well in training
+## start from the pre-trained opus model if it exists
+
+%-add-backtranslations:
+ifneq (${wildcard ${OPUSMODEL_FINAL}},)
+	cp ${OPUSMODEL_FINAL} ${MODEL_BASENAME}.gz
+endif
+	${MAKE} DATASET=opus+bt \
+		CLEAN_TRAIN_SRC="${CLEAN_TRAIN_SRC} ${BACKTRANS_SRC}" \
+		CLEAN_TRAIN_TRG="${CLEAN_TRAIN_TRG} ${BACKTRANS_TRG}" \
+	${@:-add-backtranslations=}
+
+
+
+
+
+## run a multigpu job (2 or 4 GPUs)
+
+%-multigpu %-0123:
+	${MAKE} NR_GPUS=4 MARIAN_GPUS='0 1 2 3' $(subst -gpu0123,,${@:-multigpu=})
+
+%-twogpu %-gpu01:
+	${MAKE} NR_GPUS=2 MARIAN_GPUS='0 1' $(subst -gpu01,,${@:-twogpu=})
+
+%-gpu23:
+	${MAKE} NR_GPUS=2 MARIAN_GPUS='2 3' ${@:-gpu23=}
+
+
+## run on CPUs (translate-cpu, eval-cpu, translate-ensemble-cpu, ...)
+%-cpu:
+	${MAKE} MARIAN=${MARIANCPU} \
+		LOADMODS='${LOADCPU}' \
+		MARIAN_DECODER_FLAGS="${MARIAN_DECODER_CPU}" \
+	${@:-cpu=}
+
+
+## document level models
+%-doc:
+	${MAKE} WORKHOME=${shell realpath ${PWD}/work-spm} \
+		PRE=norm \
+		PRE_SRC=spm${SRCBPESIZE:000=}k.doc${CONTEXT_SIZE} \
+		PRE_TRG=spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE} \
+	${@:-doc=}
+
+
+## sentence-piece models
+%-spm:
+	${MAKE} WORKHOME=${shell realpath ${PWD}/work-spm} \
+		PRE=norm \
+		PRE_SRC=spm${SRCBPESIZE:000=}k \
+		PRE_TRG=spm${TRGBPESIZE:000=}k \
+	${@:-spm=}
+
+%-spm-noalign:
+	${MAKE} WORKHOME=${shell realpath ${PWD}/work-spm-noalign} \
+		MODELTYPE=transformer \
+		PRE=norm \
+		PRE_SRC=spm${SRCBPESIZE:000=}k \
+		PRE_TRG=spm${TRGBPESIZE:000=}k \
+	${@:-spm-noalign=}
+
+
+
+## BPE models
+%-bpe:
+	${MAKE} WORKHOME=${shell realpath ${PWD}/work-bpe} \
+		PRE=tok \
+		MODELTYPE=transformer \
+		PRE_SRC=bpe${SRCBPESIZE:000=}k \
+		PRE_TRG=bpe${TRGBPESIZE:000=}k \
+	${@:-bpe=}
+
+%-bpe-align:
+	${MAKE} WORKHOME=${shell realpath ${PWD}/work-bpe-align} \
+		PRE=tok \
+		PRE_SRC=bpe${SRCBPESIZE:000=}k \
+		PRE_TRG=bpe${TRGBPESIZE:000=}k \
+	${@:-bpe-align=}
+
+%-bpe-memad:
+	${MAKE} WORKHOME=${shell realpath ${PWD}/work-bpe-memad} \
+		PRE=tok \
+		MODELTYPE=transformer \
+		PRE_SRC=bpe${SRCBPESIZE:000=}k \
+		PRE_TRG=bpe${TRGBPESIZE:000=}k \
+	${@:-bpe-memad=}
+
+%-bpe-old:
+	${MAKE} WORKHOME=${shell realpath ${PWD}/work-bpe-old} \
+		PRE=tok \
+		MODELTYPE=transformer \
+		PRE_SRC=bpe${SRCBPESIZE:000=}k \
+		PRE_TRG=bpe${TRGBPESIZE:000=}k \
+	${@:-bpe-old=}
+
+
+## for the inbuilt sentence-piece segmentation:
+#		PRE_SRC=txt PRE_TRG=txt
+#		MARIAN=${MARIAN}-spm
+#		MODEL_VOCABTYPE=spm
+
+
+
+

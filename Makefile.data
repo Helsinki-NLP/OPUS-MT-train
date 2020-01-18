@@ -31,6 +31,10 @@ DATA_TRG := ${sort ${CLEAN_TRAIN_TRG} ${CLEAN_TUNE_TRG} ${CLEAN_DEV_TRG} ${CLEAN
 
 
 
+BACKTRANS_DIR = backtranslate/${TRG}-${SRC}
+
+BACKTRANS_SRC = ${sort ${wildcard ${BACKTRANS_DIR}/*.${SRC}.gz}}
+BACKTRANS_TRG = ${patsubst %.${SRC}.gz,%.${TRG}.gz,${BACKTRANS_SRC}}
 
 ## make data in reverse direction without re-doing word alignment etc ...
 ## ---> this is dangerous when things run in parallel

@@ -125,12 +125,6 @@ endif
 endif
 
 
-ttt:
-	@echo ${PREPROCESS_SRCMODEL}
-	@echo ${PREPROCESS_TRGMODEL}
-	@echo ${PREPROCESS_SCRIPT}
-	@echo ${POSTPROCESS_SCRIPT}
-
 
 ${DIST_PACKAGE}: ${MODEL_FINAL}
 ifneq (${SKIP_DIST_EVAL},1)

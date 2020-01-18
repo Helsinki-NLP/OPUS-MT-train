@@ -91,6 +91,7 @@ include Makefile.dist
 include Makefile.tasks
 include Makefile.data
 include Makefile.doclevel
+include Makefile.generic
 include Makefile.slurm
 
 
@@ -133,17 +134,6 @@ translate-ensemble: ${WORKDIR}/${TESTSET}.${MODEL}${NR}.${MODELTYPE}.ensemble.${
 eval-ensemble: ${WORKDIR}/${TESTSET}.${MODEL}${NR}.${MODELTYPE}.ensemble.${SRC}.${TRG}.eval
 
 
-## resume training on an existing model
-resume:
-	if [ -e ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.npz.best-perplexity.npz ]; then \
-	  cp ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.npz.best-perplexity.npz \
-	     ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.npz; \
-	fi
-	sleep 1
-	rm -f ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
-	${MAKE} train
-
-
 #------------------------------------------------------------------------
 # translate and evaluate all test sets in testsets/
 #------------------------------------------------------------------------
@@ -152,7 +142,6 @@ resume:
 ## and all trokenized test sets that can be found in that directory
 TESTSET_HOME    = ${PWD}/testsets
 TESTSET_DIR     = ${TESTSET_HOME}/${SRC}-${TRG}
-# TESTSETS      = $(patsubst ${TESTSET_DIR}/%.${SRC}.tok.gz,%,${wildcard ${TESTSET_DIR}/*.${SRC}.tok.gz})
 TESTSETS        = $(patsubst ${TESTSET_DIR}/%.${SRC}.gz,%,${wildcard ${TESTSET_DIR}/*.${SRC}.gz})
 TESTSETS_PRESRC = $(patsubst %.gz,%.${PRE}.gz,${sort $(subst .${PRE},,${wildcard ${TESTSET_DIR}/*.${SRC}.gz})})
 TESTSETS_PRETRG = $(patsubst %.gz,%.${PRE}.gz,${sort $(subst .${PRE},,${wildcard ${TESTSET_DIR}/*.${TRG}.gz})})
@@ -190,197 +179,17 @@ finished:
 	fi
 
 
-## extension -all: run something over all language pairs, e.g.
-##   make wordalign-all
-## this goes sequentially over all language pairs
-## for the parallelizable version of this: look at %-all-parallel
-%-all:
-	for l in ${ALL_LANG_PAIRS}; do \
-	    ${MAKE} SRCLANGS="`echo $$l | cut -f1 -d'-' | sed 's/\\+/ /g'`" \
-		    TRGLANGS="`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`" ${@:-all=}; \
-	done
-
-# run something over all language pairs that have trained models
-## - make eval-allmodels
-## - make dist-allmodels
-%-allmodels:
-	for l in ${ALL_LANG_PAIRS}; do \
-	  if  [ `find ${WORKHOME}/$$l -name '*.${PRE_SRC}-${PRE_TRG}.*.npz' | wc -l` -gt 0 ]; then \
-	    ${MAKE} SRCLANGS="`echo $$l | cut -f1 -d'-' | sed 's/\\+/ /g'`" \
-		    TRGLANGS="`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`" ${@:-allmodels=}; \
-	  fi \
-	done
-
-## only bilingual models
-%-allbilingual:
-	for l in ${ALL_BILINGUAL_MODELS}; do \
-	  if  [ `find ${WORKHOME}/$$l -name '*.${PRE_SRC}-${PRE_TRG}.*.npz' | wc -l` -gt 0 ]; then \
-	    ${MAKE} SRCLANGS="`echo $$l | cut -f1 -d'-' | sed 's/\\+/ /g'`" \
-		    TRGLANGS="`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`" ${@:-allbilingual=}; \
-	  fi \
-	done
-
-## only bilingual models
-%-allmultilingual:
-	for l in ${ALL_MULTILINGUAL_MODELS}; do \
-	  if  [ `find ${WORKHOME}/$$l -name '*.${PRE_SRC}-${PRE_TRG}.*.npz' | wc -l` -gt 0 ]; then \
-	    ${MAKE} SRCLANGS="`echo $$l | cut -f1 -d'-' | sed 's/\\+/ /g'`" \
-		    TRGLANGS="`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`" ${@:-allmultilingual=}; \
-	  fi \
-	done
-
-
-## run something over all language pairs but make it possible to do it in parallel, for example
-## - make dist-all-parallel
-%-all-parallel:
-	${MAKE} $(subst -all-parallel,,${patsubst %,$@__%-run-for-langpair,${ALL_LANG_PAIRS}})
-
-## run a command that includes the langpair, for example
-##   make wordalign__en-da+sv-run-for-langpair  ...... runs wordalign with SRCLANGS="en" TRGLANGS="da sv"
-## What is this good for?
-## ---> can run many lang-pairs in parallel instead of having a for loop and run sequencetially
-%-run-for-langpair:
-	${MAKE} SRCLANGS='$(subst +, ,$(firstword $(subst -, ,${lastword ${subst __, ,${@:-run-for-langpair=}}})))' \
-		TRGLANGS='$(subst +, ,$(lastword $(subst -, ,${lastword ${subst __, ,${@:-run-for-langpair=}}})))' \
-	${shell echo $@ | sed 's/__.*$$//'}
-
-
-## right-to-left model
-%-RL:
-	${MAKE} MODEL=${MODEL}-RL \
-		MARIAN_EXTRA="${MARIAN_EXTRA} --right-left" \
-	${@:-RL=}
-
-
-## run a multigpu job (2 or 4 GPUs)
-
-%-multigpu %-0123:
-	${MAKE} NR_GPUS=4 MARIAN_GPUS='0 1 2 3' $(subst -gpu0123,,${@:-multigpu=})
-
-%-twogpu %-gpu01:
-	${MAKE} NR_GPUS=2 MARIAN_GPUS='0 1' $(subst -gpu01,,${@:-twogpu=})
-
-%-gpu23:
-	${MAKE} NR_GPUS=2 MARIAN_GPUS='2 3' ${@:-gpu23=}
-
-
-## run on CPUs (translate-cpu, eval-cpu, translate-ensemble-cpu, ...)
-%-cpu:
-	${MAKE} MARIAN=${MARIANCPU} \
-		LOADMODS='${LOADCPU}' \
-		MARIAN_DECODER_FLAGS="${MARIAN_DECODER_CPU}" \
-	${@:-cpu=}
-
-
-## document level models
-%-doc:
-	${MAKE} WORKHOME=${shell realpath ${PWD}/work-spm} \
-		PRE=norm \
-		PRE_SRC=spm${SRCBPESIZE:000=}k.doc${CONTEXT_SIZE} \
-		PRE_TRG=spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE} \
-	${@:-doc=}
-
-
-## sentence-piece models
-%-spm:
-	${MAKE} WORKHOME=${shell realpath ${PWD}/work-spm} \
-		PRE=norm \
-		PRE_SRC=spm${SRCBPESIZE:000=}k \
-		PRE_TRG=spm${TRGBPESIZE:000=}k \
-	${@:-spm=}
-
-%-spm-noalign:
-	${MAKE} WORKHOME=${shell realpath ${PWD}/work-spm-noalign} \
-		MODELTYPE=transformer \
-		PRE=norm \
-		PRE_SRC=spm${SRCBPESIZE:000=}k \
-		PRE_TRG=spm${TRGBPESIZE:000=}k \
-	${@:-spm-noalign=}
-
-
-
-## BPE models
-%-bpe:
-	${MAKE} WORKHOME=${shell realpath ${PWD}/work-bpe} \
-		PRE=tok \
-		MODELTYPE=transformer \
-		PRE_SRC=bpe${SRCBPESIZE:000=}k \
-		PRE_TRG=bpe${TRGBPESIZE:000=}k \
-	${@:-bpe=}
-
-%-bpe-align:
-	${MAKE} WORKHOME=${shell realpath ${PWD}/work-bpe-align} \
-		PRE=tok \
-		PRE_SRC=bpe${SRCBPESIZE:000=}k \
-		PRE_TRG=bpe${TRGBPESIZE:000=}k \
-	${@:-bpe-align=}
-
-%-bpe-memad:
-	${MAKE} WORKHOME=${shell realpath ${PWD}/work-bpe-memad} \
-		PRE=tok \
-		MODELTYPE=transformer \
-		PRE_SRC=bpe${SRCBPESIZE:000=}k \
-		PRE_TRG=bpe${TRGBPESIZE:000=}k \
-	${@:-bpe-memad=}
-
-%-bpe-old:
-	${MAKE} WORKHOME=${shell realpath ${PWD}/work-bpe-old} \
-		PRE=tok \
-		MODELTYPE=transformer \
-		PRE_SRC=bpe${SRCBPESIZE:000=}k \
-		PRE_TRG=bpe${TRGBPESIZE:000=}k \
-	${@:-bpe-old=}
-
-
-## for the inbuilt sentence-piece segmentation:
-#		PRE_SRC=txt PRE_TRG=txt
-#		MARIAN=${MARIAN}-spm
-#		MODEL_VOCABTYPE=spm
-
-
-
-
-
-
-
-
-## continue document-level training with a new context size
-
-ifndef NEW_CONTEXT
-  NEW_CONTEXT = $$(($(CONTEXT_SIZE) + $(CONTEXT_SIZE)))
-endif
-
-continue-doctrain:
-	mkdir -p ${WORKDIR}/${MODEL}
-	cp ${MODEL_VOCAB} ${WORKDIR}/${MODEL}/$(subst .doc${CONTEXT_SIZE},.doc${NEW_CONTEXT},${notdir ${MODEL_VOCAB}})
-	cp ${MODEL_FINAL} ${WORKDIR}/${MODEL}/$(subst .doc${CONTEXT_SIZE},.doc${NEW_CONTEXT},$(notdir ${MODEL_BASENAME})).npz
-	${MAKE} MODEL_SUBDIR=${MODEL}/ CONTEXT_SIZE=$(NEW_CONTEXT) train-doc
-
-
-
-
-## continue training with a new dataset
-
-ifndef NEW_DATASET
-  NEW_DATASET = OpenSubtitles
-endif
-
-continue-datatrain:
-	mkdir -p ${WORKDIR}/${MODEL}
-	cp ${MODEL_VOCAB} ${WORKDIR}/${MODEL}/$(patsubst ${DATASET}%,${NEW_DATASET}%,${notdir ${MODEL_VOCAB}})
-	cp ${MODEL_FINAL} ${WORKDIR}/${MODEL}/$(patsubst ${DATASET}%,${NEW_DATASET}%,${MODEL_BASENAME}).npz
-	if [ -e ${BPESRCMODEL} ]; then \
-	  cp ${BPESRCMODEL} $(patsubst ${WORKDIR}/train/${DATASET}%,${WORKDIR}/train/${NEW_DATASET}%,${BPESRCMODEL}); \
-	  cp ${BPETRGMODEL} $(patsubst ${WORKDIR}/train/${DATASET}%,${WORKDIR}/train/${NEW_DATASET}%,${BPETRGMODEL}); \
+## resume training on an existing model
+resume:
+	if [ -e ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.npz.best-perplexity.npz ]; then \
+	  cp ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.npz.best-perplexity.npz \
+	     ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.npz; \
 	fi
-	if [ -e ${SPMSRCMODEL} ]; then \
-	  cp ${SPMSRCMODEL} $(patsubst ${WORKDIR}/train/${DATASET}%,${WORKDIR}/train/${NEW_DATASET}%,${SPMSRCMODEL}); \
-	  cp ${SPMTRGMODEL} $(patsubst ${WORKDIR}/train/${DATASET}%,${WORKDIR}/train/${NEW_DATASET}%,${SPMTRGMODEL}); \
-	fi
-	${MAKE} MODEL_SUBDIR=${MODEL}/ DATASET=$(NEW_DATASET) train
+	sleep 1
+	rm -f ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
+	${MAKE} train
 
 
-# MARIAN_EXTRA="${MARIAN_EXTRA} --no-restore-corpus"
 
 
 
@@ -548,13 +357,6 @@ endif
 	rm -f $@.input $@.output
 
 
-# %.eval: % ${TEST_TRG}
-#	grep . ${TEST_TRG} > $@.ref
-#	grep . $< > $@.sys
-#	cat $@.sys | sacrebleu $@.ref > $@
-#	cat $@.sys | sacrebleu --metrics=chrf --width=3 $@.ref >> $@
-#	rm -f $@.ref $@.sys
-
 
 %.eval: % ${TEST_TRG}
 	paste ${TEST_SRC}.${PRE_SRC} ${TEST_TRG} | grep $$'.\t' | cut -f2 > $@.ref
@@ -575,5 +377,3 @@ endif
 		-e 's/&amp;/&/g' |\
 	sed 'n;n;G;' > $@
 	rm -f $@.1 $@.2 $@.3
-
-#	paste -d "\n" ${TEST_SRC} ${TEST_TRG} ${<:.eval=} |\
