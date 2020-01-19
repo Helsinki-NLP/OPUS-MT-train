@@ -24,7 +24,7 @@ endif
 	echo '#SBATCH -o ${DATASET}-${@:.submit=}.out.%j' >> $@
 	echo '#SBATCH -e ${DATASET}-${@:.submit=}.err.%j' >> $@
 	echo '#SBATCH --mem=${HPC_MEM}' >> $@
-#	echo '#SBATCH --exclude=r18g05' >> $@
+	echo '#SBATCH --exclude=r18g08' >> $@
 ifdef EMAIL
 	echo '#SBATCH --mail-type=END' >> $@
 	echo '#SBATCH --mail-user=${EMAIL}' >> $@

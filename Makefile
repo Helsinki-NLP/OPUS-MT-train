@@ -181,6 +181,17 @@ finished:
 	   echo "${WORKDIR}/${MODEL_BASENAME} unfinished"; \
 	fi
 
+## remove job files if no trained file exists
+delete-broken-submit:
+	for l in ${ALL_LANG_PAIRS}; do \
+	  if [ -e ${WORKHOME}/$$l/train.submit ]; then \
+	    if  [ ! `find ${WORKHOME}/$$l -name '*.${PRE_SRC}-${PRE_TRG}.*.best-perplexity.npz' | wc -l` -gt 0 ]; then \
+	      echo "rm -f ${WORKHOME}/$$l/train.submit"; \
+	      rm -f ${WORKHOME}/$$l/train.submit; \
+	    fi \
+	  fi \
+	done
+
 
 ## resume training on an existing model
 resume:

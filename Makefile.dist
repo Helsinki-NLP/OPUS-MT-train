@@ -380,3 +380,29 @@ link-old-models:
 	rm -f ${MODEL_TRANSLATE}.eval
 	rm -f ${MODEL_TRANSLATE}.compare
 
+
+ifneq (${DATASET},${OLDDATASET})
+  TRAINFILES = ${wildcard ${WORKDIR}/train/*${OLDDATASET}*.*}
+  MODELFILES = ${wildcard ${WORKDIR}/*${OLDDATASET}*.*}
+  DECODERFILES = ${wildcard ${WORKDIR}/*${OLDDATASET}*.decoder.yml}
+endif
+
+
+## fix model names from old style
+## where models trained on a single corpus got the name
+## of that corpus
+## Now: always use 'opus' as the name of the default dataset
+
+fix-model-names:
+ifneq (${DATASET},${OLDDATASET})
+	for f in ${DECODERFILES}; do \
+	  perl -i.bak -pe 's/${OLDDATASET}/${DATASET}/' $$f; \
+	done
+	for f in ${TRAINFILES}; do \
+	  mv -f $$f `echo $$f | sed 's/${OLDDATASET}/${DATASET}/'`; \
+	  ln -s `echo $$f | sed 's/${OLDDATASET}/${DATASET}/'` $$f; \
+	done
+	for f in ${MODELFILES}; do \
+	  mv -f $$f `echo $$f | sed 's/${OLDDATASET}/${DATASET}/'`; \
+	done
+endif

@@ -20,7 +20,7 @@
 ## - make dist-allmodels
 %-allmodels:
 	for l in ${ALL_LANG_PAIRS}; do \
-	  if  [ `find ${WORKHOME}/$$l -name '*.${PRE_SRC}-${PRE_TRG}.*.npz' | wc -l` -gt 0 ]; then \
+	  if  [ `find ${WORKHOME}/$$l -name '*.${PRE_SRC}-${PRE_TRG}.*.best-perplexity.npz' | wc -l` -gt 0 ]; then \
 	    ${MAKE} SRCLANGS="`echo $$l | cut -f1 -d'-' | sed 's/\\+/ /g'`" \
 		    TRGLANGS="`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`" ${@:-allmodels=}; \
 	  fi \
@@ -29,7 +29,7 @@
 ## only bilingual models
 %-allbilingual:
 	for l in ${ALL_BILINGUAL_MODELS}; do \
-	  if  [ `find ${WORKHOME}/$$l -name '*.${PRE_SRC}-${PRE_TRG}.*.npz' | wc -l` -gt 0 ]; then \
+	  if  [ `find ${WORKHOME}/$$l -name '*.${PRE_SRC}-${PRE_TRG}.*.best-perplexity.npz' | wc -l` -gt 0 ]; then \
 	    ${MAKE} SRCLANGS="`echo $$l | cut -f1 -d'-' | sed 's/\\+/ /g'`" \
 		    TRGLANGS="`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`" ${@:-allbilingual=}; \
 	  fi \
@@ -38,7 +38,7 @@
 ## only bilingual models
 %-allmultilingual:
 	for l in ${ALL_MULTILINGUAL_MODELS}; do \
-	  if  [ `find ${WORKHOME}/$$l -name '*.${PRE_SRC}-${PRE_TRG}.*.npz' | wc -l` -gt 0 ]; then \
+	  if  [ `find ${WORKHOME}/$$l -name '*.${PRE_SRC}-${PRE_TRG}.*.best-perplexity.npz' | wc -l` -gt 0 ]; then \
 	    ${MAKE} SRCLANGS="`echo $$l | cut -f1 -d'-' | sed 's/\\+/ /g'`" \
 		    TRGLANGS="`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`" ${@:-allmultilingual=}; \
 	  fi \
@@ -74,10 +74,12 @@
 BT_MODEL       = ${MODEL_SUBDIR}opus+bt${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
 BT_MODEL_BASE  = ${BT_MODEL}.${MODELTYPE}.model${NR}
 BT_MODEL_START = ${WORKDIR}/${BT_MODEL_BASE}.npz
+BT_MODEL_VOCAB = ${WORKDIR}/${BT_MODEL}.vocab.${MODEL_VOCABTYPE}
 
 %-add-backtranslations:
 ifneq (${wildcard ${MODEL_FINAL}},)
 	cp ${MODEL_FINAL} ${BT_MODEL_START}
+	cp ${MODEL_VOCAB} ${BT_MODEL_VOCAB}
 endif
 	${MAKE} DATASET=opus+bt \
 		CLEAN_TRAIN_SRC="${CLEAN_TRAIN_SRC} ${BACKTRANS_SRC}" \
