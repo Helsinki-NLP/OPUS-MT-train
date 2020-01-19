@@ -15,7 +15,8 @@ MIN_BLEU_SCORE = 20
 dist: ${DIST_PACKAGE}
 
 .PHONY: scores
-scores: ${WORKHOME}/eval/scores.txt
+scores:
+	${MAKE} FIND_EVAL_FILES=1 ${WORKHOME}/eval/scores.txt
 
 
 
@@ -94,36 +95,25 @@ SKIP_DIST_EVAL = 0
 
 ## determine pre-processing type
 
-ifneq (${words ${TRGLANGS}},1)
 ifneq ("$(wildcard ${BPESRCMODEL})","")
-  PREPROCESS_SCRIPT = preprocess-bpe-multi-target.sh
+  PREPROCESS_TYPE = bpe
   PREPROCESS_SRCMODEL = ${BPESRCMODEL}
   PREPROCESS_TRGMODEL = ${BPETRGMODEL}
-  POSTPROCESS_SCRIPT = postprocess-bpe.sh
-  PREPROCESS_TYPE = normalization + tokenization + BPE
+  PREPROCESS_DESCRIPTION = normalization + tokenization + BPE
 else
-  PREPROCESS_SCRIPT = preprocess-spm-multi-target.sh
+  PREPROCESS_TYPE = spm
   PREPROCESS_SRCMODEL = ${SPMSRCMODEL}
   PREPROCESS_TRGMODEL = ${SPMTRGMODEL}
-  POSTPROCESS_SCRIPT = postprocess-spm.sh
-  PREPROCESS_TYPE = normalization + SentencePiece
-endif
-else
-ifneq ("$(wildcard ${BPESRCMODEL})","")
-  PREPROCESS_SCRIPT = preprocess-bpe.sh
-  PREPROCESS_SRCMODEL = ${BPESRCMODEL}
-  PREPROCESS_TRGMODEL = ${BPETRGMODEL}
-  POSTPROCESS_SCRIPT = postprocess-bpe.sh
-  PREPROCESS_TYPE = normalization + tokenization + BPE
-else
-  PREPROCESS_SCRIPT = preprocess-spm.sh
-  PREPROCESS_SRCMODEL = ${SPMSRCMODEL}
-  PREPROCESS_TRGMODEL = ${SPMTRGMODEL}
-  POSTPROCESS_SCRIPT = postprocess-spm.sh
-  PREPROCESS_TYPE = normalization + SentencePiece
-endif
+  PREPROCESS_DESCRIPTION = normalization + SentencePiece
 endif
 
+ifneq (${words ${TRGLANGS}},1)
+  PREPROCESS_SCRIPT = preprocess-${PREPROCESS_TYPE}-multi-target.sh
+else
+  PREPROCESS_SCRIPT = preprocess-${PREPROCESS_TYPE}.sh
+endif
+
+POSTPROCESS_SCRIPT = postprocess-${PREPROCESS_TYPE}.sh
 
 
 ${DIST_PACKAGE}: ${MODEL_FINAL}
@@ -137,9 +127,9 @@ endif
 	@echo '' >> ${WORKDIR}/README.md
 	@echo "* dataset: ${DATASET}" >> ${WORKDIR}/README.md
 	@echo "* model: ${MODELTYPE}" >> ${WORKDIR}/README.md
-	@echo "* pre-processing: ${PREPROCESS_TYPE}" >> ${WORKDIR}/README.md
-	@cp ${PREPROCESS_SRCMODEL} ${WORKDIR}/source.bpe
-	@cp ${PREPROCESS_TRGMODEL} ${WORKDIR}/target.bpe
+	@echo "* pre-processing: ${PREPROCESS_DESCRIPTION}" >> ${WORKDIR}/README.md
+	@cp ${PREPROCESS_SRCMODEL} ${WORKDIR}/source.${PREPROCESS_TYPE}
+	@cp ${PREPROCESS_TRGMODEL} ${WORKDIR}/target.${PREPROCESS_TYPE}
 	@cp ${PREPROCESS_SCRIPT} ${WORKDIR}/preprocess.sh
 	@cp ${POSTPROCESS_SCRIPT} ${WORKDIR}/postprocess.sh
 	@if [ ${words ${TRGLANGS}} -gt 1 ]; then \
@@ -193,12 +183,13 @@ endif
 
 
 
+## do this only if the flag is set
+## --> avoid expensive wildcard searches each time make is called
 
-
-
-EVALSCORES = ${patsubst ${WORKHOME}/%.eval,${WORKHOME}/eval/%.eval.txt,${wildcard ${WORKHOME}/*/*.eval}}
-EVALTRANSL = ${patsubst ${WORKHOME}/%.compare,${WORKHOME}/eval/%.test.txt,${wildcard ${WORKHOME}/*/*.compare}}
-
+ifeq (${FIND_EVAL_FILES},1)
+  EVALSCORES = ${patsubst ${WORKHOME}/%.eval,${WORKHOME}/eval/%.eval.txt,${wildcard ${WORKHOME}/*/*.eval}}
+  EVALTRANSL = ${patsubst ${WORKHOME}/%.compare,${WORKHOME}/eval/%.test.txt,${wildcard ${WORKHOME}/*/*.compare}}
+endif
 
 ## upload to Object Storage
 ## Don't forget to run this before uploading!
@@ -224,11 +215,11 @@ upload-models:
 	swift upload OPUS-MT-dev index.txt
 	rm -f index.txt
 
-upload-scores: ${WORKHOME}/eval/scores.txt
+upload-scores: scores
 	cd ${WORKHOME} && swift upload OPUS-MT-eval --changed --skip-identical eval/scores.txt
 	swift post OPUS-MT-eval --read-acl ".r:*"
 
-upload-eval: ${EVALSCORES} ${EVALTRANSL}
+upload-eval: scores
 	cd ${WORKHOME} && swift upload OPUS-MT-eval --changed --skip-identical eval
 	swift post OPUS-MT-eval --read-acl ".r:*"
 
@@ -246,7 +237,8 @@ upload-images:
 #	sed 's/-/    /' | sed 's/\//    /' | sed 's/ ([^)]*)//g' |\
 #	sed 's/.eval:baseline//' | sed "s/  */\t/g" | sort  > $@
 
-${WORKHOME}/eval/scores.txt: ${EVALSCORES}
+
+${WORKHOME}/eval/scores.txt: ${EVALSCORES} ${EVALTRANSL}
 	cd ${WORKHOME} && grep BLEU */*k${NR}.*eval | cut -f1 -d '/' | tr '-' "\t" > $@.1
 	cd ${WORKHOME} && grep BLEU */*k${NR}.*eval | tr '.' '/' | cut -f2,6,7 -d '/' | tr '/' "." > $@.2
 	cd ${WORKHOME} && grep BLEU */*k${NR}.*eval | cut -f3 -d ' ' > $@.3

@@ -142,9 +142,12 @@ eval-ensemble: ${WORKDIR}/${TESTSET}.${MODEL}${NR}.${MODELTYPE}.ensemble.${SRC}.
 ## and all trokenized test sets that can be found in that directory
 TESTSET_HOME    = ${PWD}/testsets
 TESTSET_DIR     = ${TESTSET_HOME}/${SRC}-${TRG}
-TESTSETS        = $(patsubst ${TESTSET_DIR}/%.${SRC}.gz,%,${wildcard ${TESTSET_DIR}/*.${SRC}.gz})
-TESTSETS_PRESRC = $(patsubst %.gz,%.${PRE}.gz,${sort $(subst .${PRE},,${wildcard ${TESTSET_DIR}/*.${SRC}.gz})})
-TESTSETS_PRETRG = $(patsubst %.gz,%.${PRE}.gz,${sort $(subst .${PRE},,${wildcard ${TESTSET_DIR}/*.${TRG}.gz})})
+TESTSETS        = $(sort $(patsubst ${TESTSET_DIR}/%.${SRC}.gz,%,${wildcard ${TESTSET_DIR}/*.${SRC}.gz}))
+TESTSETS_PRESRC = $(patsubst %,${TESTSET_DIR}/%.${SRC}.${PRE}.gz,${TESTSETS})
+TESTSETS_PRETRG = $(patsubst %,${TESTSET_DIR}/%.${TRG}.${PRE}.gz,${TESTSETS})
+
+# TESTSETS_PRESRC = $(patsubst %.gz,%.${PRE}.gz,${sort $(subst .${PRE},,${wildcard ${TESTSET_DIR}/*.${SRC}.gz})})
+# TESTSETS_PRETRG = $(patsubst %.gz,%.${PRE}.gz,${sort $(subst .${PRE},,${wildcard ${TESTSET_DIR}/*.${TRG}.gz})})
 
 ## eval all available test sets
 eval-testsets:

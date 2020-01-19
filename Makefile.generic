@@ -71,9 +71,13 @@
 ## include all backtranslation data as well in training
 ## start from the pre-trained opus model if it exists
 
+BT_MODEL       = ${MODEL_SUBDIR}opus+bt${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
+BT_MODEL_BASE  = ${BT_MODEL}.${MODELTYPE}.model${NR}
+BT_MODEL_START = ${WORKDIR}/${BT_MODEL_BASE}.npz
+
 %-add-backtranslations:
-ifneq (${wildcard ${OPUSMODEL_FINAL}},)
-	cp ${OPUSMODEL_FINAL} ${MODEL_BASENAME}.gz
+ifneq (${wildcard ${MODEL_FINAL}},)
+	cp ${MODEL_FINAL} ${BT_MODEL_START}
 endif
 	${MAKE} DATASET=opus+bt \
 		CLEAN_TRAIN_SRC="${CLEAN_TRAIN_SRC} ${BACKTRANS_SRC}" \

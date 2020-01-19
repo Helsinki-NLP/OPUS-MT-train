@@ -19,6 +19,7 @@ WIKISOURCE = wiki
 ## maximum number of sentences to be translated (top N lines)
 MAX_LENGTH = 100
 MAX_SENTENCES = 1000000
+PART = aa
 
 LANGPAIR = ${SRC}-${TRG}
 
@@ -36,10 +37,11 @@ WIKILANGS = 	${sort $(patsubst >%${WIKISOURCE}-,%,${shell grep -o '>..${WIKISOUR
 
 
 LANGID   = ${SRC}
-WIKI_TXT = ${WIKISOURCE}.${LANGID}.gz
-WIKI_SRC = ${LANGPAIR}/${WIKISOURCE}_${MODELNAME}.${LANGPAIR}.${SRC}.gz
-WIKI_PRE = ${LANGPAIR}/${WIKISOURCE}_${MODELNAME}.${LANGPAIR}.${SRC}.spm.gz
-WIKI_TRG = ${LANGPAIR}/${WIKISOURCE}_${MODELNAME}.${LANGPAIR}.${TRG}.gz
+WIKI_DIR = wiki/${LANGPAIR}
+WIKI_TXT = ${WIKI_DIR}/${WIKISOURCE}.${LANGID}.${PART}.gz
+WIKI_SRC = ${LANGPAIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.gz
+WIKI_PRE = ${LANGPAIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.spm.gz
+WIKI_TRG = ${LANGPAIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${TRG}.gz
 
 ## don't delete translated text if the process crashes
 .PRECIOUS: ${WIKI_TRG}
@@ -49,7 +51,7 @@ WIKI_TRG = ${LANGPAIR}/${WIKISOURCE}_${MODELNAME}.${LANGPAIR}.${TRG}.gz
 WIKI_JSON = $(shell grep -o '${LANGID}${WIKISOURCE}-[0-9]*-cirrussearch-content.json.gz' index.html | head -1)
 
 ## we don't need to keep the json file
-.INTERMEDIATE: ${WIKI_JSON}
+.INTERMEDIATE: ${WIKI_JSON} ${WIKI_PRE}
 
 
 ## find UDPipe model
@@ -96,7 +98,7 @@ endif
 ## pre-process data
 ## ---> TODO: does that work for multilingual data that need prefix?
 
-${LANGPAIR}/%_${MODELNAME}.${LANGPAIR}.${SRC}.spm.gz: %.${SRC}.gz
+${LANGPAIR}/%.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.spm.gz: ${WIKI_DIR}/%.${SRC}.${PART}.gz
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
 	${MAKE} ${LANGPAIR}/${MODELNAME}/decoder.yml
@@ -165,6 +167,7 @@ endif
 ## extract sentences and normalize
 ## - requires jq, udpipe, and moses-scripts
 ${WIKI_TXT}: ${WIKI_JSON}
+	mkdir -p ${dir $@}
 	${LOAD_MODULES} \
 	zcat $< | jq -r '.text' | \
 	grep -v 'null' |\
@@ -173,7 +176,23 @@ ${WIKI_TXT}: ${WIKI_JSON}
 	$(TOKENIZER)/remove-non-printing-char.perl |\
 	$(TOKENIZER)/normalize-punctuation.perl |\
 	sed 's/  */ /g;s/^ *//g;s/ *$$//g' |\
-	gzip -c > $@
+	split -l ${MAX_SENTENCES} - ${patsubst %${PART}.gz,%,$@}
+	gzip -f ${patsubst %${PART}.gz,%,$@}*
+
+
+
+## OLD: without splitting into parts
+#
+# ${WIKI_TXT}: ${WIKI_JSON}
+# 	${LOAD_MODULES} \
+# 	zcat $< | jq -r '.text' | \
+# 	grep -v 'null' |\
+# 	${SENTSPLITTER} |\
+# 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
+# 	$(TOKENIZER)/remove-non-printing-char.perl |\
+# 	$(TOKENIZER)/normalize-punctuation.perl |\
+# 	sed 's/  */ /g;s/^ *//g;s/ *$$//g' |\
+# 	gzip -c > $@
 
 
 
