@@ -15,6 +15,47 @@
 #
 #--------------------------------------------------------------------
 #
+#   Makefile.tasks ...... various common and specific tasks/experiments
+#   Makefile.generic .... generic targets (in form of prefixes to be added to other targets)
+#
+# Examples from Makefile.tasks:
+#
+# * submit job to train a model in one specific translation direction
+#   (make data on CPU and then start a job on a GPU node with 4 GPUs)
+#   make SRCLANGS=en TRGLANGS=de unidrectional.submitcpu
+#
+# * submit jobs to train a model in both translation directions
+#   (make data on CPU, reverse data and start 2 jobs on a GPU nodes with 4 GPUs each)
+#   make SRCLANGS=en TRGLANGS=de bilingual.submitcpu
+#
+# * same as bilingual but guess some HPC settings based on data size
+#   make SRCLANGS=en TRGLANGS=de bilingual-dynamic.submitcpu
+#
+# * submit jobs for all OPUS languages to PIVOT language in both directions using bilingual-dynamic
+#   make PIVOT=en allopus2pivot              # run loop on command line
+#   make PIVOT=en allopus2pivot.submitcpu    # submit the same as CPU-based job
+#   make all2en.submitcpu                    # short form of the same
+#
+# * submit jobs for all combinations of OPUS languages (this is huge!)
+#   (only if there is no train.submit in the workdir of the language pair)
+#   make PIVOT=en allopus.submitcpu
+#
+# * submit a job to train a multilingual model with the same languages on both sides
+#   make LANGS="en de fr" multilingual.submitcpu
+#
+#--------------------------------------------------------------------
+# Some examples using generic extensions
+#
+# * submit job to train en-ru with backtranslation data from backtranslate/
+#   make HPC_CORES=4 WALLTIME=24 SRCLANGS=en TRGLANGS=ru unidirectional-add-backtranslations.submitcpu
+#
+# * submit job that evaluates all currently trained models:
+#   make eval-allmodels.submit
+#   make eval-allbilingual.submit   # only bilingual models
+#   make eval-allbilingual.submit   # only multilingual models
+#
+#--------------------------------------------------------------------
+#
 # general parameters / variables (see Makefile.config)
 #   SRCLANGS ............ set source language(s)      (en)
 #   TRGLANGS ............ set target language(s)      (de)
@@ -254,8 +295,9 @@ ${WORKDIR}/${MODEL}.transformer.model${NR}.done: \
         --valid-sets ${word 3,$^} ${word 4,$^} \
         --valid-metrics perplexity \
         --valid-mini-batch ${MARIAN_VALID_MINI_BATCH} \
-        --beam-size 12 --normalize 1 \
-        --log $(@:.model${NR}.done=.train${NR}.log) --valid-log $(@:.model${NR}.done=.valid${NR}.log) \
+        --beam-size 12 --normalize 1 --allow-unk \
+        --log $(@:.model${NR}.done=.train${NR}.log) \
+	--valid-log $(@:.model${NR}.done=.valid${NR}.log) \
         --enc-depth 6 --dec-depth 6 \
         --transformer-heads 8 \
         --transformer-postprocess-emb d \
@@ -304,8 +346,9 @@ ${WORKDIR}/${MODEL}.transformer-align.model${NR}.done: \
         --valid-sets ${word 4,$^} ${word 5,$^} \
         --valid-metrics perplexity \
         --valid-mini-batch ${MARIAN_VALID_MINI_BATCH} \
-        --beam-size 12 --normalize 1 \
-        --log $(@:.model${NR}.done=.train${NR}.log) --valid-log $(@:.model${NR}.done=.valid${NR}.log) \
+        --beam-size 12 --normalize 1 --allow-unk \
+        --log $(@:.model${NR}.done=.train${NR}.log) \
+	--valid-log $(@:.model${NR}.done=.valid${NR}.log) \
         --enc-depth 6 --dec-depth 6 \
         --transformer-heads 8 \
         --transformer-postprocess-emb d \

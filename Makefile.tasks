@@ -20,49 +20,6 @@ ifndef LANGS
 endif
 
 
-## run things with individual data sets only
-%-fiskmo:
-	${MAKE} TRAINSET=fiskmo ${@:-fiskmo=}
-
-%-opensubtitles:
-	${MAKE} TRAINSET=OpenSubtitles ${@:-opensubtitles=}
-
-%-finlex:
-	${MAKE} TRAINSET=Finlex ${@:-finlex=}
-
-
-
-## a batch of interesting models ....
-
-
-## germanic to germanic
-
-germanic:
-	${MAKE} LANGS="${GERMANIC}" HPC_DISK=1500 multilingual
-
-scandinavian:
-	${MAKE} LANGS="${SCANDINAVIAN}" multilingual-medium
-
-memad2en:
-	${MAKE} LANGS="${MEMAD_LANGS}" PIVOT=en all2pivot
-
-fiet:
-	${MAKE} SRCLANGS=fi TRGLANGS=et bilingual-medium
-
-icelandic:
-	${MAKE} SRCLANGS=is TRGLANGS=en bilingual
-	${MAKE} SRCLANGS=is TRGLANGS="da no nn nb sv" bilingual
-	${MAKE} SRCLANGS=is TRGLANGS=fi bilingual
-
-enru-yandex:
-	${MAKE} DATASET=opus+yandex SRCLANGS=ru TRGLANGS=en EXTRA_TRAINSET=yandex data
-	${MAKE} DATASET=opus+yandex SRCLANGS=ru TRGLANGS=en EXTRA_TRAINSET=yandex reverse-data
-	${MAKE} DATASET=opus+yandex SRCLANGS=en TRGLANGS=ru EXTRA_TRAINSET=yandex \
-		WALLTIME=72 HPC_CORES=1 HPC_MEM=8g MARIAN_WORKSPACE=12000 train.submit-multigpu
-	${MAKE} DATASET=opus+yandex SRCLANGS=ru TRGLANGS=en EXTRA_TRAINSET=yandex \
-		WALLTIME=72 HPC_CORES=1 HPC_MEM=4g train.submit-multigpu
-
-
 unidirectional:
 	${MAKE} data
 	${MAKE} WALLTIME=72 HPC_MEM=4g HPC_CORES=1 train.submit-multigpu
@@ -227,6 +184,53 @@ all2en:
 
 
 
+
+
+
+
+
+
+## run things with individual data sets only
+%-fiskmo:
+	${MAKE} TRAINSET=fiskmo ${@:-fiskmo=}
+
+%-opensubtitles:
+	${MAKE} TRAINSET=OpenSubtitles ${@:-opensubtitles=}
+
+%-finlex:
+	${MAKE} TRAINSET=Finlex ${@:-finlex=}
+
+
+
+## a batch of interesting models ....
+
+
+## germanic to germanic
+
+germanic:
+	${MAKE} LANGS="${GERMANIC}" HPC_DISK=1500 multilingual
+
+scandinavian:
+	${MAKE} LANGS="${SCANDINAVIAN}" multilingual-medium
+
+memad2en:
+	${MAKE} LANGS="${MEMAD_LANGS}" PIVOT=en all2pivot
+
+fiet:
+	${MAKE} SRCLANGS=fi TRGLANGS=et bilingual-medium
+
+icelandic:
+	${MAKE} SRCLANGS=is TRGLANGS=en bilingual
+	${MAKE} SRCLANGS=is TRGLANGS="da no nn nb sv" bilingual
+	${MAKE} SRCLANGS=is TRGLANGS=fi bilingual
+
+enru-yandex:
+	${MAKE} DATASET=opus+yandex SRCLANGS=ru TRGLANGS=en EXTRA_TRAINSET=yandex data
+	${MAKE} DATASET=opus+yandex SRCLANGS=ru TRGLANGS=en EXTRA_TRAINSET=yandex reverse-data
+	${MAKE} DATASET=opus+yandex SRCLANGS=en TRGLANGS=ru EXTRA_TRAINSET=yandex \
+		WALLTIME=72 HPC_CORES=1 HPC_MEM=8g MARIAN_WORKSPACE=12000 train.submit-multigpu
+	${MAKE} DATASET=opus+yandex SRCLANGS=ru TRGLANGS=en EXTRA_TRAINSET=yandex \
+		WALLTIME=72 HPC_CORES=1 HPC_MEM=4g train.submit-multigpu
 
 
 enit:

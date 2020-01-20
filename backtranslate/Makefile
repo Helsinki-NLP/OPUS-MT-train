@@ -37,7 +37,7 @@ WIKILANGS = 	${sort $(patsubst >%${WIKISOURCE}-,%,${shell grep -o '>..${WIKISOUR
 
 
 LANGID   = ${SRC}
-WIKI_DIR = wiki/${LANGPAIR}
+WIKI_DIR = wiki/${LANGID}
 WIKI_TXT = ${WIKI_DIR}/${WIKISOURCE}.${LANGID}.${PART}.gz
 WIKI_SRC = ${LANGPAIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.gz
 WIKI_PRE = ${LANGPAIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.spm.gz
@@ -67,7 +67,17 @@ UDPIPE_MODEL = ${notdir $(shell ${LOAD_MODULES} find ${UDPIPE_MODELS}/ -name "${
 all: index.html
 	${MAKE} ${WIKI_SRC} ${WIKI_TRG}
 
-all-wikis: index.html
+
+WIKISOURCES = wiki wikibooks wikinews wikiquote wikisource
+
+all-wikis:
+	for w in ${WIKISOURCES}; do \
+	  ${MAKE} WIKISOURCE=$$w prepare-data; \
+	  ${MAKE} WIKISOURCE=$$w HPC_CORES=1 WALLTIME=72 translate.submit; \
+	done
+
+
+all-wikilangs: index.html
 	for l in ${WIKILANGS}; do \
 	  ${MAKE} LANGID=$$l extract-text; \
 	done
