@@ -1,6 +1,14 @@
-# QED-2019-12-19.zip
+# opus-2020-01-21.zip
 
-* dataset: QED
+* dataset: opus
 * model: transformer-align
 * pre-processing: normalization + SentencePiece
-* download: [QED-2019-12-19.zip](https://object.pouta.csc.fi/OPUS-MT-models/mos-en/QED-2019-12-19.zip)
+* download: [opus-2020-01-21.zip](https://object.pouta.csc.fi/OPUS-MT-models/mos-en/opus-2020-01-21.zip)
+* test set translations: [opus-2020-01-21.test.txt](https://object.pouta.csc.fi/OPUS-MT-models/mos-en/opus-2020-01-21.test.txt)
+* test set scores: [opus-2020-01-21.eval.txt](https://object.pouta.csc.fi/OPUS-MT-models/mos-en/opus-2020-01-21.eval.txt)
+
+## Benchmarks
+
+| testset               | BLEU  | chr-F |
+|-----------------------|-------|-------|
+| JW300.mos.en 	| 26.1 	| 0.408 |
