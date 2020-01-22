@@ -28,6 +28,12 @@ MODELHOME = ../models/${LANGPAIR}
 MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/*-20*.zip}}}
 MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
 
+ifeq (${MODELNAME},)
+  MODELHOME = ../work-spm/models/${LANGPAIR}
+  MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/*-20*.zip}}}
+  MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
+endif
+
 
 LOAD_MODULES = 	module use -a /projappl/nlpl/software/modules/etc/ && \
 		module load nlpl-udpipe nlpl-opus &&
@@ -45,7 +51,6 @@ WIKI_TRG = ${LANGPAIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${TRG}.gz
 
 ## don't delete translated text if the process crashes
 .PRECIOUS: ${WIKI_TRG}
-
 
 ## find wiki downloads
 WIKI_JSON = $(shell grep -o '${LANGID}${WIKISOURCE}-[0-9]*-cirrussearch-content.json.gz' index.html | head -1)
@@ -68,12 +73,14 @@ all: index.html
 	${MAKE} ${WIKI_SRC} ${WIKI_TRG}
 
 
-WIKISOURCES = wiki wikibooks wikinews wikiquote wikisource
+WIKISOURCES = wiki wikibooks wikinews wikiquote wikisource wiktionary
 
 all-wikis:
 	for w in ${WIKISOURCES}; do \
 	  ${MAKE} WIKISOURCE=$$w prepare-data; \
-	  ${MAKE} WIKISOURCE=$$w HPC_CORES=1 WALLTIME=72 translate.submit; \
+	  if  [ `find ${WIKI_DIR} -name '$$w.${LANGID}.${PART}.gz' | wc -l` -gt 0 ]; then \
+	    ${MAKE} WIKISOURCE=$$w HPC_CORES=1 WALLTIME=72 translate.submit; \
+	  fi \
 	done
 
 
@@ -82,6 +89,12 @@ all-wikilangs: index.html
 	  ${MAKE} LANGID=$$l extract-text; \
 	done
 
+
+# Tagalog (tl, tgl), Central Bikol (bcl), Malayalam (ml, mal), Bengali (bn, ben), and Mongolian (mn, mon)
+focus-wikis:
+	for l in tl bcl ml bn mn; do \
+	  ${MAKE} SRC=$$l TRG=en all-wikis; \
+	done
 
 extract-text: ${WIKI_TXT}
 prepare-model: ${LANGPAIR}/decoder.yml
