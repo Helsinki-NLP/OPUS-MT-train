@@ -1,14 +1,14 @@
-# opus-2020-01-08.zip
+# opus-2020-01-24.zip
 
 * dataset: opus
 * model: transformer-align
 * pre-processing: normalization + SentencePiece
-* download: [opus-2020-01-08.zip](https://object.pouta.csc.fi/OPUS-MT-models/ar-fr/opus-2020-01-08.zip)
-* test set translations: [opus-2020-01-08.test.txt](https://object.pouta.csc.fi/OPUS-MT-models/ar-fr/opus-2020-01-08.test.txt)
-* test set scores: [opus-2020-01-08.eval.txt](https://object.pouta.csc.fi/OPUS-MT-models/ar-fr/opus-2020-01-08.eval.txt)
+* download: [opus-2020-01-24.zip](https://object.pouta.csc.fi/OPUS-MT-models/ar-fr/opus-2020-01-24.zip)
+* test set translations: [opus-2020-01-24.test.txt](https://object.pouta.csc.fi/OPUS-MT-models/ar-fr/opus-2020-01-24.test.txt)
+* test set scores: [opus-2020-01-24.eval.txt](https://object.pouta.csc.fi/OPUS-MT-models/ar-fr/opus-2020-01-24.eval.txt)
 
 ## Benchmarks
 
 | testset               | BLEU  | chr-F |
 |-----------------------|-------|-------|
-| Tatoeba.ar.fr 	| 43.2 	| 0.600 |
+| Tatoeba.ar.fr 	| 43.5 	| 0.602 |

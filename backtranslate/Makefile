@@ -77,8 +77,10 @@ WIKISOURCES = wiki wikibooks wikinews wikiquote wikisource wiktionary
 
 all-wikis:
 	for w in ${WIKISOURCES}; do \
-	  ${MAKE} WIKISOURCE=$$w prepare-data; \
-	  if  [ `find ${WIKI_DIR} -name '$$w.${LANGID}.${PART}.gz' | wc -l` -gt 0 ]; then \
+	  ${MAKE} WIKISOURCE=$$w extract-text; \
+	  echo "find ${WIKI_DIR} -name '$$w.${LANGID}.${PART}.gz'"; \
+	  if  [ `find ${WIKI_DIR} -name "$$w.${LANGID}.${PART}.gz" | wc -l` -gt 0 ]; then \
+	    echo "${MAKE} WIKISOURCE=$$w HPC_CORES=1 WALLTIME=72 translate.submit"; \
 	    ${MAKE} WIKISOURCE=$$w HPC_CORES=1 WALLTIME=72 translate.submit; \
 	  fi \
 	done
@@ -126,11 +128,13 @@ ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
 	${MAKE} ${LANGPAIR}/${MODELNAME}/decoder.yml
 	zcat $< |\
+	grep -v '[<>{}]' |\
 	${LANGPAIR}/${MODELNAME}/preprocess.sh ${SRC} ${LANGPAIR}/${MODELNAME}/source.spm |\
 	perl -e 'while (<>){next if (split(/\s+/)>${MAX_LENGTH});print;}' |\
 	head -${MAX_SENTENCES} |\
 	gzip -c > $@
 endif
+
 
 
 ## merge SentencePiece segments in the source text
@@ -194,6 +198,7 @@ ${WIKI_TXT}: ${WIKI_JSON}
 	${LOAD_MODULES} \
 	zcat $< | jq -r '.text' | \
 	grep -v 'null' |\
+	grep -v '[<>{}]' |\
 	${SENTSPLITTER} |\
 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
 	$(TOKENIZER)/remove-non-printing-char.perl |\
