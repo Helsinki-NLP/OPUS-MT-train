@@ -202,14 +202,23 @@ endif
 # - make upload-images .. images of VMs that run OPUS-MT
 
 upload:
+	find models/ -type l | tar -cf models-links.tar -T -
+	find models/ -type l -delete
 	cd models && swift upload OPUS-MT-models --changed --skip-identical *
+	tar -xf models-links.tar
+	rm -f models-links.tar
 	swift post OPUS-MT-models --read-acl ".r:*"
 	swift list OPUS-MT-models > index.txt
 	swift upload OPUS-MT-models index.txt
 	rm -f index.txt
 
+
 upload-models:
+	find ${WORKHOME}/models -type l | tar -cf dev-models-links.tar -T -
+	find ${WORKHOME}/models -type l -delete
 	cd ${WORKHOME} && swift upload OPUS-MT-dev --changed --skip-identical models
+	tar -xf dev-models-links.tar
+	rm -f dev-models-links.tar
 	swift post OPUS-MT-dev --read-acl ".r:*"
 	swift list OPUS-MT-dev > index.txt
 	swift upload OPUS-MT-dev index.txt

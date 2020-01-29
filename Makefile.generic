@@ -84,6 +84,7 @@ endif
 	${MAKE} DATASET=opus+bt \
 		CLEAN_TRAIN_SRC="${CLEAN_TRAIN_SRC} ${BACKTRANS_SRC}" \
 		CLEAN_TRAIN_TRG="${CLEAN_TRAIN_TRG} ${BACKTRANS_TRG}" \
+		MARIAN_EARLY_STOPPING=15 \
 	${@:-add-backtranslations=}
 
 

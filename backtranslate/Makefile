@@ -49,6 +49,12 @@ WIKI_SRC = ${LANGPAIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.gz
 WIKI_PRE = ${LANGPAIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.spm.gz
 WIKI_TRG = ${LANGPAIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${TRG}.gz
 
+## all parts of this wiki
+PARTS = ${sort ${patsubst ${WIKI_DIR}/${WIKISOURCE}.${LANGID}.%.gz,%,${wildcard ${WIKI_DIR}/${WIKISOURCE}.${LANGID}.*.gz}}}
+
+ttt:
+	echo ${PARTS}
+
 ## don't delete translated text if the process crashes
 .PRECIOUS: ${WIKI_TRG}
 
@@ -81,7 +87,7 @@ all-wikis:
 	  echo "find ${WIKI_DIR} -name '$$w.${LANGID}.${PART}.gz'"; \
 	  if  [ `find ${WIKI_DIR} -name "$$w.${LANGID}.${PART}.gz" | wc -l` -gt 0 ]; then \
 	    echo "${MAKE} WIKISOURCE=$$w HPC_CORES=1 WALLTIME=72 translate.submit"; \
-	    ${MAKE} WIKISOURCE=$$w HPC_CORES=1 WALLTIME=72 translate.submit; \
+	    ${MAKE} WIKISOURCE=$$w HPC_MEM=4g HPC_CORES=1 WALLTIME=72 translate.submit; \
 	  fi \
 	done
 
@@ -102,6 +108,20 @@ extract-text: ${WIKI_TXT}
 prepare-model: ${LANGPAIR}/decoder.yml
 prepare-data: ${WIKI_PRE}
 translate: ${WIKI_SRC} ${WIKI_TRG}
+
+## translate all parts
+translate-all-parts:
+	for p in ${PARTS}; do \
+	  ${MAKE} PART=$$p translate; \
+	done
+
+## create jobs for translating all parts
+submit-translate-all-parts:
+	for p in ${PARTS}; do \
+	  ${MAKE} PART=$$p translate.submit; \
+	done
+
+
 
 print-names:
 	echo ${LANGNAME}
