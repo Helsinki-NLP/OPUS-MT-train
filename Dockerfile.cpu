@@ -6,7 +6,8 @@ RUN apt update && \
                    doxygen graphviz libblas-dev libopenblas-dev \
 		   libz-dev libssl-dev zlib1g-dev libbz2-dev liblzma-dev \
 		   libprotobuf9v5 protobuf-compiler libprotobuf-dev \
-		   python3-dev python3-numpy python3-setuptools
+		   python3-dev python3-numpy python3-setuptools \
+		   cython3
 RUN wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB && \
     apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB && \
     rm GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB && \
@@ -33,6 +34,12 @@ RUN cd / && \
     python3 setup.py build && \
     python3 setup.py install    
 RUN cd / && \
+    git clone https://github.com/robertostling/eflomal.git && \
+    cd eflomal && \
+    git checkout 7b97f19 && \
+    make install && \ 
+    python3 setup.py install       
+RUN cd / && \
     git clone https://github.com/marian-nmt/marian-dev && \
     cd marian-dev && \
     git checkout 1.8.0 && \
@@ -49,3 +56,9 @@ RUN cd / && \
     git clone --depth 1 https://github.com/moses-smt/mosesdecoder.git && \
     cd /mosesdecoder && \
     ./bjam -j8
+RUN cd / && \
+    git clone https://github.com/clab/fast_align.git && \
+    cd fast_align && \
+    git checkout cab1e9a && \
+    cmake . && \
+    make
