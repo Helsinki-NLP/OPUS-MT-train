@@ -76,16 +76,19 @@ BT_MODEL_BASE  = ${BT_MODEL}.${MODELTYPE}.model${NR}
 BT_MODEL_START = ${WORKDIR}/${BT_MODEL_BASE}.npz
 BT_MODEL_VOCAB = ${WORKDIR}/${BT_MODEL}.vocab.${MODEL_VOCABTYPE}
 
-%-add-backtranslations:
+# %-add-backtranslations:
+%-bt:
 ifneq (${wildcard ${MODEL_FINAL}},)
+ifeq (${wildcard ${BT_MODEL_START}},)
 	cp ${MODEL_FINAL} ${BT_MODEL_START}
 	cp ${MODEL_VOCAB} ${BT_MODEL_VOCAB}
+endif
 endif
 	${MAKE} DATASET=opus+bt \
 		CLEAN_TRAIN_SRC="${CLEAN_TRAIN_SRC} ${BACKTRANS_SRC}" \
 		CLEAN_TRAIN_TRG="${CLEAN_TRAIN_TRG} ${BACKTRANS_TRG}" \
 		MARIAN_EARLY_STOPPING=15 \
-	${@:-add-backtranslations=}
+	${@:-bt=}
 
 
 
