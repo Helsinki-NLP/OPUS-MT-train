@@ -24,7 +24,8 @@ TOKENIZER=${MOSESSCRIPTS}/tokenizer
 
 ${TOKENIZER}/replace-unicode-punctuation.perl |
 ${TOKENIZER}/remove-non-printing-char.perl |
-${TOKENIZER}/normalize-punctuation.perl -l $1 |
 sed 's/  */ /g;s/^ *//g;s/ *$//g' |
 ${SPMENCODE} --model $3 |
 sed "s/^/>>$2<< /"
+
+# ${TOKENIZER}/normalize-punctuation.perl -l $1 |

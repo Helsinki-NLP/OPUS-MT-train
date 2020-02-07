@@ -29,7 +29,7 @@ MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/*-20*.zip}}}
 MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
 
 ifeq (${MODELNAME},)
-  MODELHOME = ../work-spm/models/${LANGPAIR}
+  MODELHOME = ../work-filter/models/${LANGPAIR}
   MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/*-20*.zip}}}
   MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
 endif
@@ -52,8 +52,6 @@ WIKI_TRG = ${LANGPAIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${TRG}.gz
 ## all parts of this wiki
 PARTS = ${sort ${patsubst ${WIKI_DIR}/${WIKISOURCE}.${LANGID}.%.gz,%,${wildcard ${WIKI_DIR}/${WIKISOURCE}.${LANGID}.*.gz}}}
 
-ttt:
-	echo ${PARTS}
 
 ## don't delete translated text if the process crashes
 .PRECIOUS: ${WIKI_TRG}
@@ -104,6 +102,7 @@ focus-wikis:
 	  ${MAKE} SRC=$$l TRG=en all-wikis; \
 	done
 
+get-data: ${WIKI_JSON}
 extract-text: ${WIKI_TXT}
 prepare-model: ${LANGPAIR}/decoder.yml
 prepare-data: ${WIKI_PRE}
@@ -222,10 +221,13 @@ ${WIKI_TXT}: ${WIKI_JSON}
 	${SENTSPLITTER} |\
 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
 	$(TOKENIZER)/remove-non-printing-char.perl |\
-	$(TOKENIZER)/normalize-punctuation.perl |\
 	sed 's/  */ /g;s/^ *//g;s/ *$$//g' |\
+	python3 ../mono-match-lang.py -l ${LANGID} |\
 	split -l ${MAX_SENTENCES} - ${patsubst %${PART}.gz,%,$@}
 	gzip -f ${patsubst %${PART}.gz,%,$@}*
+
+
+#	$(TOKENIZER)/normalize-punctuation.perl |\
 
 
 

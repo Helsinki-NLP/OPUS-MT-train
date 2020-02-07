@@ -236,15 +236,37 @@ ${TRAIN_ALG}: 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 # 	@echo "done!"
 
 
-%.clean.${SRCEXT}.gz: %.${SRCEXT}.${PRE} %.${TRGEXT}.${PRE}
-	cat $< |\
-	perl -CS -pe 'tr[\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}][]cd;' |\
-	gzip -c > $@
 
-%.clean.${TRGEXT}.gz: %.${TRGEXT}.${PRE}
-	cat $< |\
-	perl -CS -pe 'tr[\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}][]cd;' |\
-	gzip -c > $@
+# %.clean.${SRCEXT}.gz: %.${SRCEXT}.${PRE} %.${TRGEXT}.${PRE}
+# 	cat $< |\
+# 	perl -CS -pe 'tr[\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}][]cd;' |\
+# 	gzip -c > $@
+
+# %.clean.${TRGEXT}.gz: %.${TRGEXT}.${PRE}
+# 	cat $< |\
+# 	perl -CS -pe 'tr[\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}][]cd;' |\
+# 	gzip -c > $@
+
+
+
+%.clean.${SRCEXT}.gz: %.${SRCEXT}.${PRE} %.${TRGEXT}.${PRE}
+	cat ${word 1,$^} |\
+	perl -CS -pe 'tr[\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}][]cd;' > $@.1
+	cat ${word 2,$^} |\
+	perl -CS -pe 'tr[\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}][]cd;' > $@.2
+	paste $@.1 $@.2 |\
+	python3 bitext-match-lang.py -s ${SRC} -t ${TRG} > $@.bitext
+	cut -f1 $@.bitext | gzip -c > $@
+	cut -f2 $@.bitext | gzip -c > $(@:.clean.${SRCEXT}.gz=.clean.${TRGEXT}.gz)
+	rm -f $@.bitext $@.1 $@.2
+
+#	paste $@.${SRCEXT} $@.${TRGEXT} |\
+#	python3 bitext-match-lang.py -s ${SRC} -t ${TRG} > $@.bitext
+#	cut -f1 $@.bitext > $@
+#	cut -f2 $@.bitext > $(@:.src.clean.${PRE_SRC}=.trg.clean.${PRE_TRG})
+
+%.clean.${TRGEXT}.gz: %.clean.${SRCEXT}.gz
+	@echo "done!"
 
 
 
@@ -639,6 +661,21 @@ endif
 	sed 's/  */ /g;s/^ *//g;s/ *$$//g' | gzip -c > $@
 
 
+## minimal pre-processing
+%.simple: %.raw
+	$(LOAD_MOSES) cat $< |\
+	$(TOKENIZER)/replace-unicode-punctuation.perl |\
+	$(TOKENIZER)/remove-non-printing-char.perl |\
+	sed 's/  */ /g;s/^ *//g;s/ *$$//g' > $@
+
+%.simple.gz: %.gz
+	$(LOAD_MOSES) zcat $< |\
+	$(TOKENIZER)/replace-unicode-punctuation.perl |\
+	$(TOKENIZER)/remove-non-printing-char.perl |\
+	sed 's/  */ /g;s/^ *//g;s/ *$$//g' | gzip -c > $@
+
+
+
 ## increase max number of tokens to 250
 ## (TODO: should MIN_NTOKENS be 1?)
 MIN_NR_TOKENS = 0
@@ -653,6 +690,13 @@ MAX_NR_TOKENS = 250
 	rm -f $<.${SRCEXT} $<.${TRGEXT}
 	mv $@.${SRCEXT} $@
 	mv $@.${TRGEXT} $(@:.src.clean.${PRE_SRC}=.trg.clean.${PRE_TRG})
+
+#	paste $@.${SRCEXT} $@.${TRGEXT} |\
+#	python3 bitext-match-lang.py -s ${SRC} -t ${TRG} > $@.bitext
+#	cut -f1 $@.bitext > $@
+#	cut -f2 $@.bitext > $(@:.src.clean.${PRE_SRC}=.trg.clean.${PRE_TRG})
+#	rm -f $@.${SRCEXT} $@.${TRGEXT} $@.bitext
+
 
 %.trg.clean.${PRE_TRG}: %.src.clean.${PRE_SRC}
 	@echo "done!"

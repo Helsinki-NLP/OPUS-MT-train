@@ -140,6 +140,15 @@ endif
 	${@:-spm-noalign=}
 
 
+## sentence-piece models with langid-filtering (new default)
+%-filter:
+	${MAKE} WORKHOME=${shell realpath ${PWD}/work-filter} \
+		PRE=simple \
+		PRE_SRC=spm${SRCBPESIZE:000=}k \
+		PRE_TRG=spm${TRGBPESIZE:000=}k \
+	${@:-spm=}
+
+
 
 ## BPE models
 %-bpe:
