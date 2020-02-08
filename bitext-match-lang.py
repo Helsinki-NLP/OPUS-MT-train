@@ -11,6 +11,10 @@ parser.add_argument('-s','--srclang','--source-language', type=str, default='en'
                    help='accepted language')
 parser.add_argument('-t','--trglang','--target-language', type=str, default='de',
                    help='accepted language')
+parser.add_argument('-l','--supported','--supported-languages', action='store_true',
+                   help='list all supported languages')
+parser.add_argument('-c','--checklang','--check-language-support', action='store_true',
+                   help='show whether languages are supported')
 args = parser.parse_args()
 
 
@@ -30,10 +34,27 @@ def is_accepted(line,accept,reject):
             if isReliable:
                 return True
     else:
-        if details[0][1] != 'un':
-            if details[0][1] != reject:
-                return True
+        if details[0][1] != reject:
+            return True
 
+
+if args.supported:
+    print(cld2.LANGUAGES)
+    quit()
+
+
+if args.checklang:
+    if args.srclang:
+        if supported_language(args.srclang):
+            print(args.srclang + " is supported")
+        else:
+            print(args.srclang + " is not supported")
+    if args.trglang:
+        if supported_language(args.trglang):
+            print(args.trglang + " is supported")
+        else:
+            print(args.trglang + " is not supported")
+    quit()
 
 
 if not supported_language(args.srclang):

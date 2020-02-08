@@ -5,7 +5,7 @@
 #
 
 MODELSHOME   = ${WORKHOME}/models
-DIST_PACKAGE = ${MODELSHOME}/${LANGSTR}/${DATASET}.zip
+DIST_PACKAGE = ${MODELSHOME}/${LANGPAIRSTR}/${DATASET}.zip
 
 
 ## minimum BLEU score for models to be accepted as distribution package
@@ -56,13 +56,13 @@ best_dist:
 	@m=0;\
 	s=''; \
 	echo "------------------------------------------------"; \
-	echo "search best model for ${LANGSTR}"; \
+	echo "search best model for ${LANGPAIRSTR}"; \
 	for d in ${ALT_MODEL_DIR}; do \
-	  e=`ls work-$$d/${LANGSTR}/val/*.trg | xargs basename | sed 's/\.trg//'`; \
+	  e=`ls work-$$d/${LANGPAIRSTR}/val/*.trg | xargs basename | sed 's/\.trg//'`; \
 	  echo "evaldata = $$e"; \
 	  if [ "$$e" != "GNOME" ]; then \
-	    if ls work-$$d/${LANGSTR}/$$e*.eval 1> /dev/null 2>&1; then \
-	      b=`grep 'BLEU+' work-$$d/${LANGSTR}/$$e*.eval | cut -f3 -d' '`; \
+	    if ls work-$$d/${LANGPAIRSTR}/$$e*.eval 1> /dev/null 2>&1; then \
+	      b=`grep 'BLEU+' work-$$d/${LANGPAIRSTR}/$$e*.eval | cut -f3 -d' '`; \
 	      if (( $$(echo "$$m-$$b < 1" |bc -l) )); then \
 	        echo "$$d ($$b) is better or not much worse than $$s ($$m)!"; \
 	        m=$$b; \
@@ -136,10 +136,10 @@ endif
 	  echo '* a sentence initial language token is required in the form of `>>id<<` (id = valid target language ID)' \
 		>> ${WORKDIR}/README.md; \
 	fi
-	@echo "* download: [$(notdir ${@:.zip=})-${DATE}.zip](${MODELS_URL}/${LANGSTR}/$(notdir ${@:.zip=})-${DATE}.zip)" >> ${WORKDIR}/README.md
+	@echo "* download: [$(notdir ${@:.zip=})-${DATE}.zip](${MODELS_URL}/${LANGPAIRSTR}/$(notdir ${@:.zip=})-${DATE}.zip)" >> ${WORKDIR}/README.md
 	if [ -e $(TEST_EVALUATION) ]; then \
-	  echo "* test set translations: [$(notdir ${@:.zip=})-${DATE}.test.txt](${MODELS_URL}/${LANGSTR}/$(notdir ${@:.zip=})-${DATE}.test.txt)" >> ${WORKDIR}/README.md; \
-	  echo "* test set scores: [$(notdir ${@:.zip=})-${DATE}.eval.txt](${MODELS_URL}/${LANGSTR}/$(notdir ${@:.zip=})-${DATE}.eval.txt)" >> ${WORKDIR}/README.md; \
+	  echo "* test set translations: [$(notdir ${@:.zip=})-${DATE}.test.txt](${MODELS_URL}/${LANGPAIRSTR}/$(notdir ${@:.zip=})-${DATE}.test.txt)" >> ${WORKDIR}/README.md; \
+	  echo "* test set scores: [$(notdir ${@:.zip=})-${DATE}.eval.txt](${MODELS_URL}/${LANGPAIRSTR}/$(notdir ${@:.zip=})-${DATE}.eval.txt)" >> ${WORKDIR}/README.md; \
 	  echo '' >> ${WORKDIR}/README.md; \
 	  echo '## Benchmarks' >> ${WORKDIR}/README.md; \
 	  echo '' >> ${WORKDIR}/README.md; \

@@ -131,6 +131,16 @@ endif
 		PRE_TRG=spm${TRGBPESIZE:000=}k \
 	${@:-spm=}
 
+## with SPM models trained on monolingual data
+%-monospm: ${SPMSRCMONO} ${SPMTRGMONO}
+	${MAKE} WORKHOME=${shell realpath ${PWD}/work-monospm} \
+		SPMSRCMODEL=${SPMSRCMONO} \
+		SPMTRGMODEL=${SPMTRGMONO} \
+		PRE_SRC=spm${SRCBPESIZE:000=}k \
+		PRE_TRG=spm${TRGBPESIZE:000=}k \
+	${@:-monospm=}
+
+
 %-spm-noalign:
 	${MAKE} WORKHOME=${shell realpath ${PWD}/work-spm-noalign} \
 		MODELTYPE=transformer \
@@ -141,12 +151,21 @@ endif
 
 
 ## sentence-piece models with langid-filtering (new default)
-%-filter:
-	${MAKE} WORKHOME=${shell realpath ${PWD}/work-filter} \
+%-langid:
+	${MAKE} WORKHOME=${shell realpath ${PWD}/work-langid} \
 		PRE=simple \
 		PRE_SRC=spm${SRCBPESIZE:000=}k \
 		PRE_TRG=spm${TRGBPESIZE:000=}k \
-	${@:-spm=}
+	${@:-langid=}
+
+## sentence-piece models with langid-filtering (new default)
+%-langid-noalign:
+	${MAKE} WORKHOME=${shell realpath ${PWD}/work-langid} \
+		MODELTYPE=transformer \
+		PRE=simple \
+		PRE_SRC=spm${SRCBPESIZE:000=}k \
+		PRE_TRG=spm${TRGBPESIZE:000=}k \
+	${@:-langid-noalign=}
 
 
 

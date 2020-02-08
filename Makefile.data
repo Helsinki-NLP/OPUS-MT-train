@@ -99,6 +99,9 @@ clean-data:
 
 clean-data-source: ${DATA_SRC} ${DATA_TRG}
 
+## monolingual data sets (for sentence piece models)
+mono-data: ${LOCAL_MONO_DATA}.${PRE}
+
 
 ## word alignment used for guided alignment
 
@@ -569,8 +572,8 @@ endif
 
 
 # %.clean.gz: %.gz
-#	mkdir -p ${TMPDIR}/${LANGSTR}/cleanup
-#	gzip -cd < $< >  ${TMPDIR}/${LANGSTR}/cleanup/$(notdir $@).${SRCEXT}
+#	mkdir -p ${TMPDIR}/${LANGPAIRSTR}/cleanup
+#	gzip -cd < $< >  ${TMPDIR}/${LANGPAIRSTR}/cleanup/$(notdir $@).${SRCEXT}
 
 
 ########################
@@ -604,6 +607,22 @@ endif
 endif
 
 
+
+${LOCAL_MONO_DATA}.raw:
+	mkdir -p ${dir $@}
+	rm -f $@
+	-for l in ${LANGS}; do \
+	  ${MAKE} DATASET=${DATASET} LANGID:=$$l \
+		add-to-local-mono-data; \
+	done
+
+add-to-local-mono-data:
+	for c in ${MONOSET}; do \
+	  if [ -e ${OPUSHOME}/$$c/latest/mono/${LANGID}.txt.gz ]; then \
+	    zcat ${OPUSHOME}/$$c/latest/mono/${LANGID}.txt.gz |\
+	    python3 mono-match-lang.py -l ${LANGID} >> ${LOCAL_MONO_DATA}.raw; \
+	  fi \
+	done
 
 ##----------------------------------------------
 ## tokenization
@@ -739,7 +758,7 @@ BPETRGMODEL = ${WORKDIR}/train/opus.trg.bpe${TRGBPESIZE:000=}k-model
 .PRECIOUS: ${BPESRCMODEL} ${BPETRGMODEL}
 .INTERMEDIATE: ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG}
 
-# ${BPESRCMODEL}: ${WORKDIR}/%.bpe${SRCBPESIZE:000=}k-model: ${TMPDIR}/${LANGSTR}/%
+# ${BPESRCMODEL}: ${WORKDIR}/%.bpe${SRCBPESIZE:000=}k-model: ${TMPDIR}/${LANGPAIRSTR}/%
 ${BPESRCMODEL}: ${LOCAL_TRAIN_SRC}
 ifeq ($(wildcard ${BPESRCMODEL}),)
 	mkdir -p ${dir $@}
@@ -757,7 +776,7 @@ else
 endif
 
 ## no labels on the target language side
-# ${BPETRGMODEL}: ${WORKDIR}/%.bpe${TRGBPESIZE:000=}k-model: ${TMPDIR}/${LANGSTR}/%
+# ${BPETRGMODEL}: ${WORKDIR}/%.bpe${TRGBPESIZE:000=}k-model: ${TMPDIR}/${LANGPAIRSTR}/%
 ${BPETRGMODEL}: ${LOCAL_TRAIN_TRG}
 ifeq ($(wildcard ${BPETRGMODEL}),)
 	mkdir -p ${dir $@}
@@ -816,14 +835,19 @@ endif
 ## --> avoid overwriting validation/test data with new segmentation models
 ##     if a new data set is used
 SPMSRCMODEL = ${WORKDIR}/train/opus.src.spm${SRCBPESIZE:000=}k-model
-SPMTRGMODEL = ${WORKDIR}/train/opus.trg.spm${SRCBPESIZE:000=}k-model
+SPMTRGMODEL = ${WORKDIR}/train/opus.trg.spm${TRGBPESIZE:000=}k-model
+
+## sentence piece model trained on monolingual data
+SPMMODEL = ${SPMDIR}/${LANGSTR}/opus.spm${BPESIZE:000=}k-model
+SPMSRCMONO = ${SPMDIR}/${LANGSRCSTR}/opus.spm${SRCBPESIZE:000=}k-model
+SPMTRGMONO = ${SPMDIR}/${LANGTRGSTR}/opus.spm${TRGBPESIZE:000=}k-model
 
 
-.PRECIOUS: ${SPMSRCMODEL} ${SPMTRGMODEL}
+.PRECIOUS: ${SPMSRCMODEL} ${SPMTRGMODEL} ${SPMMODEL} ${SPMSRCMONO} ${SPMTRGMONO}
 
 
 
-# ${SPMSRCMODEL}: ${WORKDIR}/%.spm${SRCBPESIZE:000=}k-model: ${TMPDIR}/${LANGSTR}/%
+# ${SPMSRCMODEL}: ${WORKDIR}/%.spm${SRCBPESIZE:000=}k-model: ${TMPDIR}/${LANGPAIRSTR}/%
 ${SPMSRCMODEL}: ${LOCAL_TRAIN_SRC}
 ifeq ($(wildcard ${SPMSRCMODEL}),)
 	mkdir -p ${dir $@}
@@ -847,7 +871,7 @@ else
 endif
 
 ## no labels on the target language side
-# ${SPMTRGMODEL}: ${WORKDIR}/%.spm${TRGBPESIZE:000=}k-model: ${TMPDIR}/${LANGSTR}/%
+# ${SPMTRGMODEL}: ${WORKDIR}/%.spm${TRGBPESIZE:000=}k-model: ${TMPDIR}/${LANGPAIRSTR}/%
 ${SPMTRGMODEL}: ${LOCAL_TRAIN_TRG}
 ifeq ($(wildcard ${SPMTRGMODEL}),)
 	mkdir -p ${dir $@}
@@ -862,6 +886,35 @@ else
 	@echo "WARNING! No new SPM model created!"
 	@echo "WARNING! Delete the file if you want to start from scratch!"
 endif
+
+
+
+
+## sentence piece model trained on monolingual data
+
+mono-spm-model: ${SPMMODEL}
+
+${SPMSRCMONO}:
+	${MAKE} LANGS=${SRCLANGS} BPESIZE=${SRCBPESIZE} mono-spm-model
+
+${SPMTRGMONO}:
+	${MAKE} LANGS=${TRGLANGS} BPESIZE=${TRGBPESIZE} mono-spm-model
+
+${SPMMODEL}: ${LOCAL_MONO_DATA}.${PRE}
+ifeq ($(wildcard ${SPMMODEL}),)
+	mkdir -p ${dir $@}
+	grep . $< > $<.text
+	${SPM_HOME}/spm_train \
+		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=$<.text \
+		--character_coverage=1.0 --hard_vocab_limit=false
+	mv $@.model $@
+	rm -f $<.text
+else
+	@echo "$@ already exists!"
+	@echo "WARNING! No new SPM model created!"
+	@echo "WARNING! Delete the file if you want to start from scratch!"
+endif
+
 
 
 
@@ -920,12 +973,12 @@ endif
 ##----------------------------------------------
 ## get data from local space and compress ...
 
-${WORKDIR}/%.clean.${PRE_SRC}.gz: ${TMPDIR}/${LANGSTR}/%.clean.${PRE_SRC}
+${WORKDIR}/%.clean.${PRE_SRC}.gz: ${TMPDIR}/${LANGPAIRSTR}/%.clean.${PRE_SRC}
 	mkdir -p ${dir $@}
 	gzip -c < $< > $@
 
 ifneq (${PRE_SRC},${PRE_TRG})
-${WORKDIR}/%.clean.${PRE_TRG}.gz: ${TMPDIR}/${LANGSTR}/%.clean.${PRE_TRG}
+${WORKDIR}/%.clean.${PRE_TRG}.gz: ${TMPDIR}/${LANGPAIRSTR}/%.clean.${PRE_TRG}
 	mkdir -p ${dir $@}
 	gzip -c < $< > $@
 endif
