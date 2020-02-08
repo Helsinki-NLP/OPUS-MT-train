@@ -837,32 +837,28 @@ endif
 SPMSRCMODEL = ${WORKDIR}/train/opus.src.spm${SRCBPESIZE:000=}k-model
 SPMTRGMODEL = ${WORKDIR}/train/opus.trg.spm${TRGBPESIZE:000=}k-model
 
-## sentence piece model trained on monolingual data
-SPMMODEL = ${SPMDIR}/${LANGSTR}/opus.spm${BPESIZE:000=}k-model
-SPMSRCMONO = ${SPMDIR}/${LANGSRCSTR}/opus.spm${SRCBPESIZE:000=}k-model
-SPMTRGMONO = ${SPMDIR}/${LANGTRGSTR}/opus.spm${TRGBPESIZE:000=}k-model
-
-
-.PRECIOUS: ${SPMSRCMODEL} ${SPMTRGMODEL} ${SPMMODEL} ${SPMSRCMONO} ${SPMTRGMONO}
-
-
+.PRECIOUS: ${SPMSRCMODEL} ${SPMTRGMODEL}
 
 # ${SPMSRCMODEL}: ${WORKDIR}/%.spm${SRCBPESIZE:000=}k-model: ${TMPDIR}/${LANGPAIRSTR}/%
-${SPMSRCMODEL}: ${LOCAL_TRAIN_SRC}
+${SPMSRCMODEL}: ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_SRC}.charfreq
 ifeq ($(wildcard ${SPMSRCMODEL}),)
 	mkdir -p ${dir $@}
 ifeq ($(TRGLANGS),${firstword ${TRGLANGS}})
-	grep . $< > $<.text
-	${SPM_HOME}/spm_train \
-		--model_prefix=$@ --vocab_size=$(SRCBPESIZE) --input=$<.text \
-		--character_coverage=1.0 --hard_vocab_limit=false
+	grep . $< | shuf > $<.text
 else
-	cut -f2- -d ' ' $< | grep . > $<.text
-	${SPM_HOME}/spm_train \
-		--model_prefix=$@ --vocab_size=$(SRCBPESIZE) --input=$<.text \
-		--character_coverage=1.0 --hard_vocab_limit=false
+	cut -f2- -d ' ' $< | grep . | shuf > $<.text
 endif
+	if [ `cat ${word 2,$^} | wc -l` -gt 1000 ]; then \
+	  ${SPM_HOME}/spm_train \
+		--model_prefix=$@ --vocab_size=$(SRCBPESIZE) --input=$<.text \
+		--character_coverage=0.9995 --hard_vocab_limit=false; \
+	else \
+	  ${SPM_HOME}/spm_train \
+		--model_prefix=$@ --vocab_size=$(SRCBPESIZE) --input=$<.text \
+		--character_coverage=1.0 --hard_vocab_limit=false; \
+	fi
 	mv $@.model $@
+	${SPM_HOME}/spm_encode --model=$@ --generate_vocabulary < $<.text > $@.voc
 	rm -f $<.text
 else
 	@echo "$@ already exists!"
@@ -870,16 +866,24 @@ else
 	@echo "WARNING! Delete the file if you want to start from scratch!"
 endif
 
+
 ## no labels on the target language side
 # ${SPMTRGMODEL}: ${WORKDIR}/%.spm${TRGBPESIZE:000=}k-model: ${TMPDIR}/${LANGPAIRSTR}/%
-${SPMTRGMODEL}: ${LOCAL_TRAIN_TRG}
+${SPMTRGMODEL}: ${LOCAL_TRAIN_TRG} ${LOCAL_TRAIN_TRG}.charfreq
 ifeq ($(wildcard ${SPMTRGMODEL}),)
 	mkdir -p ${dir $@}
-	grep . $< > $<.text
-	${SPM_HOME}/spm_train \
+	grep . $< | shuf > $<.text
+	if [ `cat ${word 2,$^} | wc -l` -gt 1000 ]; then \
+	  ${SPM_HOME}/spm_train \
 		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=$<.text \
-		--character_coverage=1.0 --hard_vocab_limit=false
+		--character_coverage=0.9995 --hard_vocab_limit=false; \
+	else \
+	  ${SPM_HOME}/spm_train \
+		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=$<.text \
+		--character_coverage=1.0 --hard_vocab_limit=false; \
+	fi
 	mv $@.model $@
+	${SPM_HOME}/spm_encode --model=$@ --generate_vocabulary < $<.text > $@.voc
 	rm -f $<.text
 else
 	@echo "$@ already exists!"
@@ -887,6 +891,47 @@ else
 	@echo "WARNING! Delete the file if you want to start from scratch!"
 endif
 
+
+
+
+
+
+## sentence piece model trained on monolingual data
+SPMMODEL   = ${SPMDIR}/${LANGSTR}/opus.spm${BPESIZE:000=}k-model
+SPMSRCMONO = ${SPMDIR}/${LANGSRCSTR}/opus.spm${SRCBPESIZE:000=}k-model
+SPMTRGMONO = ${SPMDIR}/${LANGTRGSTR}/opus.spm${TRGBPESIZE:000=}k-model
+
+## vocabulary files created from monolingual data
+SPMVOCAB    = ${SPMDIR}/${LANGSTR}/opus.spm${BPESIZE:000=}k.vocab.yml
+SPMSRCVOCAB = ${SPMDIR}/${LANGSRCSTR}/opus.spm${SRCBPESIZE:000=}k.vocab.yml
+SPMTRGVOCAB = ${SPMDIR}/${LANGTRGSTR}/opus.spm${TRGBPESIZE:000=}k.vocab.yml
+
+.PRECIOUS: ${SPMMODEL} ${SPMSRCMONO} ${SPMTRGMONO} ${SPMVOCAB}
+
+mono-spm-vocab: ${SPMVOCAB}
+
+ifneq (${SPMVOCAB},${SPMSRCVOCAB})
+  ${SPMSRCVOCAB}:
+	${MAKE} LANGS=${SRCLANGS} BPESIZE=${SRCBPESIZE} mono-spm-vocab
+endif
+
+ifneq (${SPMVOCAB},${SPMTRGVOCAB})
+  ${SPMSRCVOCAB}:
+	${MAKE} LANGS=${TRGLANGS} BPESIZE=${TRGBPESIZE} mono-spm-vocab
+endif
+
+
+${SPMVOCAB}: ${LOCAL_MONO_DATA}.${PRE} ${SPMMODEL}
+ifeq ($(wildcard ${SPMVOCAB}),)
+	mkdir -p ${dir $@}
+	${SPM_HOME}/spm_encode --model ${SPMMODEL} < $< |\
+	${MARIAN}/marian-vocab --max-size ${VOCABSIZE} > $@
+else
+	@echo "$@ already exists!"
+	@echo "WARNING! No new vocabulary is created even though the data has changed!"
+	@echo "WARNING! Delete the file if you want to start from scratch!"
+	touch $@
+endif
 
 
 
@@ -894,20 +939,32 @@ endif
 
 mono-spm-model: ${SPMMODEL}
 
-${SPMSRCMONO}:
+ifneq (${SPMMODEL},${SPMSRCMONO})
+  ${SPMSRCMONO}:
 	${MAKE} LANGS=${SRCLANGS} BPESIZE=${SRCBPESIZE} mono-spm-model
+endif
 
-${SPMTRGMONO}:
+ifneq (${SPMMODEL},${SPMTRGMONO})
+  ${SPMTRGMONO}:
 	${MAKE} LANGS=${TRGLANGS} BPESIZE=${TRGBPESIZE} mono-spm-model
+endif
 
-${SPMMODEL}: ${LOCAL_MONO_DATA}.${PRE}
+
+${SPMMODEL}: ${LOCAL_MONO_DATA}.${PRE} ${LOCAL_MONO_DATA}.${PRE}.charfreq
 ifeq ($(wildcard ${SPMMODEL}),)
 	mkdir -p ${dir $@}
-	grep . $< > $<.text
-	${SPM_HOME}/spm_train \
+	grep . $< | shuf > $<.text
+	if [ `cat ${word 2,$^} | wc -l` -gt 1000 ]; then \
+	  ${SPM_HOME}/spm_train \
 		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=$<.text \
-		--character_coverage=1.0 --hard_vocab_limit=false
+		--character_coverage=0.9995 --hard_vocab_limit=false; \
+	else \
+	  ${SPM_HOME}/spm_train \
+		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=$<.text \
+		--character_coverage=1.0 --hard_vocab_limit=false; \
+	fi
 	mv $@.model $@
+	${SPM_HOME}/spm_encode --model=$@ --generate_vocabulary < $<.text > $@.voc
 	rm -f $<.text
 else
 	@echo "$@ already exists!"
@@ -915,8 +972,36 @@ else
 	@echo "WARNING! Delete the file if you want to start from scratch!"
 endif
 
+## SentencePiece parameters:
+##
+# --input_sentence_size (maximum size of sentences the trainer loads)  type: int32  default: 10000000
+# --hard_vocab_limit (If set to false, --vocab_size is considered as a soft limit.)  type: bool  default: true
+# --training_sentence_size (maximum size of sentences to train sentence pieces)  type: int32  default: 10000000
+# --vocab_size (vocabulary size)  type: int32  default: 8000
 
 
+## character frequence table
+## --> used to decide about the character coverage level
+
+## awk-based char-counter
+#%.charfreq: %
+#	sed 's/./& /g' < $< | tr ' ' "\n" | grep . |\
+#	awk '!/^$$/{a[$$0]++}END{for (i in a)print i,a[i];}' > $@
+
+## python-based char-counter (seems to be the fastest version)
+%.charfreq: %
+	python -c "import collections, pprint; pprint.pprint(dict(collections.Counter(open('$<', 'r').read())))" > $@
+
+## slow version
+%.charfreq2: %
+	sed 's/./& /g' < $< | tr ' ' "\n" | grep . |\
+	sort | uniq -c > $@
+
+
+
+## TODO: should we have vocab limits?
+## --vocabulary={vocab_file}.L1 --vocabulary_threshold=50
+## see https://github.com/google/sentencepiece#c-from-source
 
 %.src.spm${SRCBPESIZE:000=}k: %.src ${SPMSRCMODEL}
 ifeq ($(TRGLANGS),${firstword ${TRGLANGS}})
