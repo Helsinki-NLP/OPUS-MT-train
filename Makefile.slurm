@@ -20,9 +20,9 @@ endif
 %.submit:
 	mkdir -p ${WORKDIR}
 	echo '#!/bin/bash -l' > $@
-	echo '#SBATCH -J "${DATASET}-${@:.submit=}"' >>$@
-	echo '#SBATCH -o ${DATASET}-${@:.submit=}.out.%j' >> $@
-	echo '#SBATCH -e ${DATASET}-${@:.submit=}.err.%j' >> $@
+	echo '#SBATCH -J "${LANGSTR}-${DATASET}-${@:.submit=}"' >>$@
+	echo '#SBATCH -o ${LANGSTR}-${DATASET}-${@:.submit=}.out.%j' >> $@
+	echo '#SBATCH -e ${LANGSTR}-${DATASET}-${@:.submit=}.err.%j' >> $@
 	echo '#SBATCH --mem=${HPC_MEM}' >> $@
 	echo '#SBATCH --exclude=r18g08' >> $@
 ifdef EMAIL

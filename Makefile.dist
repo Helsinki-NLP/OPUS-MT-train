@@ -24,7 +24,7 @@ scores:
 ## in the following sub directories (add prefix work-)
 
 # ALT_MODEL_DIR = bpe-old bpe-memad bpe spm-noalign bpe-align spm
-ALT_MODEL_DIR = spm
+ALT_MODEL_DIR = spm langid
 
 best_dist_all:
 	for l in $(sort ${shell ls work* | grep -- '-' | grep -v old | grep -v work}); do \

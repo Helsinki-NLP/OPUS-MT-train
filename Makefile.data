@@ -102,10 +102,12 @@ clean-data-source: ${DATA_SRC} ${DATA_TRG}
 ## monolingual data sets (for sentence piece models)
 mono-data: ${LOCAL_MONO_DATA}.${PRE}
 
+.INTERMEDIATE: ${LOCAL_MONO_DATA}.${PRE} ${LOCAL_MONO_DATA}.raw ${LOCAL_MONO_DATA}.${PRE}.charfreq
+
 
 ## word alignment used for guided alignment
 
-.INTERMEDIATE: ${LOCAL_TRAIN_SRC}.algtmp ${LOCAL_TRAIN_TRG}.algtmp
+.INTERMEDIATE: ${LOCAL_TRAIN_SRC}.algtmp ${LOCAL_TRAIN_TRG}.algtmp 
 
 ${LOCAL_TRAIN_SRC}.algtmp: ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz
 	mkdir -p ${dir $@}
@@ -756,7 +758,7 @@ BPETRGMODEL = ${WORKDIR}/train/opus.trg.bpe${TRGBPESIZE:000=}k-model
 
 
 .PRECIOUS: ${BPESRCMODEL} ${BPETRGMODEL}
-.INTERMEDIATE: ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG}
+.INTERMEDIATE: ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG} ${LOCAL_TRAIN_SRC}.charfreq ${LOCAL_TRAIN_TRG}.charfreq
 
 # ${BPESRCMODEL}: ${WORKDIR}/%.bpe${SRCBPESIZE:000=}k-model: ${TMPDIR}/${LANGPAIRSTR}/%
 ${BPESRCMODEL}: ${LOCAL_TRAIN_SRC}

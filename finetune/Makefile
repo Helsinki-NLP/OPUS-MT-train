@@ -69,6 +69,49 @@ MARIAN_EARLY_STOPPING = 5
 all: ${TEST_SRC}.${TRG}.compare ${TEST_SRC}.baseline.${TRG}.compare
 
 
+
+## convert a TMX file to create dev-test-train data
+## and start fine-tuning
+
+TMX = vero-20200123.tmx.gz
+tmx-tune:
+	zcat ${TMX} |\
+	tmx2moses -r -o ${TMX:.tmx.gz=}
+	s=`ls ${TMX:.tmx.gz=}.*-* | sort | sed 's/^.*\.\([a-z]*\)$$/\1/' | head -1`; \
+	t=`ls ${TMX:.tmx.gz=}.*-* | sort | sed 's/^.*\.\([a-z]*\)$$/\1/' | tail -1`; \
+	echo $$s; echo $$t; \
+	mkdir -p $$s-$$t; \
+	paste ${TMX:.tmx.gz=}.*-*.$$s ${TMX:.tmx.gz=}.*-*.$$t | \
+	shuf > ${TMX:.tmx.gz=}.$$s-$$t.shuffled; \
+	mkdir -p $$s-$$t/${TMX:.tmx.gz=}/dev; \
+	mkdir -p $$s-$$t/${TMX:.tmx.gz=}/test; \
+	mkdir -p $$s-$$t/${TMX:.tmx.gz=}/train; \
+	head -1000 ${TMX:.tmx.gz=}.$$s-$$t.shuffled | cut -f1 | gzip -c \
+		> $$s-$$t/${TMX:.tmx.gz=}/test/${TMX:.tmx.gz=}.$$s.gz; \
+	head -1000 ${TMX:.tmx.gz=}.$$s-$$t.shuffled | cut -f2 | gzip -c \
+		> $$s-$$t/${TMX:.tmx.gz=}/test/${TMX:.tmx.gz=}.$$t.gz; \
+	head -2001 ${TMX:.tmx.gz=}.$$s-$$t.shuffled | tail -1000 | cut -f1 | gzip -c \
+		> $$s-$$t/${TMX:.tmx.gz=}/dev/${TMX:.tmx.gz=}.$$s.gz; \
+	head -2001 ${TMX:.tmx.gz=}.$$s-$$t.shuffled | tail -1000 | cut -f2 | gzip -c \
+		> $$s-$$t/${TMX:.tmx.gz=}/dev/${TMX:.tmx.gz=}.$$t.gz; \
+	tail -n +2002 ${TMX:.tmx.gz=}.$$s-$$t.shuffled | cut -f1 | gzip -c \
+		> $$s-$$t/${TMX:.tmx.gz=}/train/${TMX:.tmx.gz=}.$$s.gz; \
+	tail -n +2002 ${TMX:.tmx.gz=}.$$s-$$t.shuffled | cut -f2 | gzip -c \
+		> $$s-$$t/${TMX:.tmx.gz=}/train/${TMX:.tmx.gz=}.$$t.gz; \
+	mv ${TMX:.tmx.gz=}.*-* $$s-$$t/; \
+	${MAKE} SRC=$$s TRG=$$t MODEL=${TMX:.tmx.gz=} \
+		TRAIN_SRC=$$s-$$t/${TMX:.tmx.gz=}/train/${TMX:.tmx.gz=}.$$s \
+		TRAIN_TRG=$$s-$$t/${TMX:.tmx.gz=}/train/${TMX:.tmx.gz=}.$$t \
+		DEV_SRC=$$s-$$t/${TMX:.tmx.gz=}/dev/${TMX:.tmx.gz=}.$$s \
+		DEV_TRG=$$s-$$t/${TMX:.tmx.gz=}/dev/${TMX:.tmx.gz=}.$$t \
+		TEST_SRC=$$s-$$t/${TMX:.tmx.gz=}/test/${TMX:.tmx.gz=}.$$s \
+		TEST_TRG=$$s-$$t/${TMX:.tmx.gz=}/test/${TMX:.tmx.gz=}.$$t \
+	all
+
+
+
+
+
 .PHONY: news-enfi
 news-enfi:
 	${MAKE} SRC=en TRG=fi MODEL=news \
