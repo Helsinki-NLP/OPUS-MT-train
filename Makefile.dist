@@ -23,11 +23,14 @@ scores:
 ## get the best model from all kind of alternative setups
 ## in the following sub directories (add prefix work-)
 
+ALT_MODEL_BASE = work-
 # ALT_MODEL_DIR = bpe-old bpe-memad bpe spm-noalign bpe-align spm
-ALT_MODEL_DIR = spm langid
+# ALT_MODEL_DIR = spm langid
+ALT_MODEL_DIR = langid
+
 
 best_dist_all:
-	for l in $(sort ${shell ls work* | grep -- '-' | grep -v old | grep -v work}); do \
+	for l in $(sort ${shell ls ${ALT_MODEL_BASE}* | grep -- '-' | grep -v old | grep -v work}); do \
 	  if  [ `find work*/$$l -name '*.npz' | wc -l` -gt 0 ]; then \
 	    d=`find work-spm/$$l -name '*.best-perplexity.npz' -exec basename {} \; | cut -f1 -d.`; \
 	    ${MAKE} SRCLANGS="`echo $$l | cut -f1 -d'-' | sed 's/\\+/ /g'`" \

@@ -30,7 +30,8 @@ MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
 
 ifeq (${MODELNAME},)
   MODELHOME = ../work-filter/models/${LANGPAIR}
-  MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/*-20*.zip}}}
+  # MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/*-20*.zip}}}
+  MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/opus-20*.zip}}}
   MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
 endif
 
@@ -77,9 +78,10 @@ all: index.html
 	${MAKE} ${WIKI_SRC} ${WIKI_TRG}
 
 
-WIKISOURCES = wiki wikibooks wikinews wikiquote wikisource wiktionary
+# WIKISOURCES = wiki wikibooks wikinews wikiquote wikisource wiktionary
+WIKISOURCES = wiki wikibooks wikinews wikiquote wikisource
 
-all-wikis:
+all-wikis: ${LANGPAIR}/${MODELNAME}/decoder.yml
 	for w in ${WIKISOURCES}; do \
 	  ${MAKE} WIKISOURCE=$$w extract-text; \
 	  echo "find ${WIKI_DIR} -name '$$w.${LANGID}.${PART}.gz'"; \
@@ -104,18 +106,18 @@ focus-wikis:
 
 get-data: ${WIKI_JSON}
 extract-text: ${WIKI_TXT}
-prepare-model: ${LANGPAIR}/decoder.yml
+prepare-model: ${LANGPAIR}/${MODELNAME}/decoder.yml
 prepare-data: ${WIKI_PRE}
 translate: ${WIKI_SRC} ${WIKI_TRG}
 
 ## translate all parts
-translate-all-parts:
+translate-all-parts: ${LANGPAIR}/${MODELNAME}/decoder.yml
 	for p in ${PARTS}; do \
 	  ${MAKE} PART=$$p translate; \
 	done
 
 ## create jobs for translating all parts
-submit-translate-all-parts:
+submit-translate-all-parts: ${LANGPAIR}/${MODELNAME}/decoder.yml
 	for p in ${PARTS}; do \
 	  ${MAKE} PART=$$p translate.submit; \
 	done

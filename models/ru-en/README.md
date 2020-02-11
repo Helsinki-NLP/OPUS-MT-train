@@ -67,3 +67,26 @@
 | newstest2019-ruen.ru.en 	| 32.0 	| 0.581 |
 | Tatoeba.ru.en 	| 59.8 	| 0.726 |
 
+# opus-2020-02-11.zip
+
+* dataset: opus
+* model: transformer-align
+* pre-processing: normalization + SentencePiece
+* download: [opus-2020-02-11.zip](https://object.pouta.csc.fi/OPUS-MT-models/ru-en/opus-2020-02-11.zip)
+* test set translations: [opus-2020-02-11.test.txt](https://object.pouta.csc.fi/OPUS-MT-models/ru-en/opus-2020-02-11.test.txt)
+* test set scores: [opus-2020-02-11.eval.txt](https://object.pouta.csc.fi/OPUS-MT-models/ru-en/opus-2020-02-11.eval.txt)
+
+## Benchmarks
+
+| testset               | BLEU  | chr-F |
+|-----------------------|-------|-------|
+| newstest2012.ru.en 	| 34.8 	| 0.603 |
+| newstest2013.ru.en 	| 28.1 	| 0.546 |
+| newstest2014-ruen.ru.en 	| 32.1 	| 0.593 |
+| newstest2015-enru.ru.en 	| 30.3 	| 0.567 |
+| newstest2016-enru.ru.en 	| 30.1 	| 0.566 |
+| newstest2017-enru.ru.en 	| 33.4 	| 0.593 |
+| newstest2018-enru.ru.en 	| 29.6 	| 0.566 |
+| newstest2019-ruen.ru.en 	| 31.5 	| 0.577 |
+| Tatoeba.ru.en 	| 60.8 	| 0.734 |
+

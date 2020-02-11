@@ -71,17 +71,36 @@ all: ${TEST_SRC}.${TRG}.compare ${TEST_SRC}.baseline.${TRG}.compare
 
 
 ## convert a TMX file to create dev-test-train data
-## and start fine-tuning
+## and start fine-tuning in the direction of sorted lang-IDs
+## set REVERSE = 1 to run in the opposite direction
+##
+## - this also does some filtering of the TMX
+##    based on language identification and simple scripts and regexes
+## - it assumes that ${TMX} points to a valid TMX files
+## - it assumes that there are only 2 languages in the TMX (it will only use 2)
 
 TMX = vero-20200123.tmx.gz
+REVERSE = 0
+
 tmx-tune:
 	zcat ${TMX} |\
 	tmx2moses -r -o ${TMX:.tmx.gz=}
-	s=`ls ${TMX:.tmx.gz=}.*-* | sort | sed 's/^.*\.\([a-z]*\)$$/\1/' | head -1`; \
-	t=`ls ${TMX:.tmx.gz=}.*-* | sort | sed 's/^.*\.\([a-z]*\)$$/\1/' | tail -1`; \
+	if [ ${REVERSE} -gt 0 ]; then \
+	  t=`ls ${TMX:.tmx.gz=}.*-* | sort | sed 's/^.*\.\([a-z]*\)$$/\1/' | head -1`; \
+	  s=`ls ${TMX:.tmx.gz=}.*-* | sort | sed 's/^.*\.\([a-z]*\)$$/\1/' | tail -1`; \
+	else \
+	  s=`ls ${TMX:.tmx.gz=}.*-* | sort | sed 's/^.*\.\([a-z]*\)$$/\1/' | head -1`; \
+	  t=`ls ${TMX:.tmx.gz=}.*-* | sort | sed 's/^.*\.\([a-z]*\)$$/\1/' | tail -1`; \
+	fi; \
 	echo $$s; echo $$t; \
 	mkdir -p $$s-$$t; \
 	paste ${TMX:.tmx.gz=}.*-*.$$s ${TMX:.tmx.gz=}.*-*.$$t | \
+	sort | uniq | \
+	python3 ../bitext-match-lang.py -s $$s -t $$t | \
+	grep -v '[<>{}]' |\
+	$(TOKENIZER)/replace-unicode-punctuation.perl |\
+	perl -CS -pe 'tr[\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}][]cd;' |\
+	sed 's/  */ /g;s/^ *//g;s/ *$$//g' |\
 	shuf > ${TMX:.tmx.gz=}.$$s-$$t.shuffled; \
 	mkdir -p $$s-$$t/${TMX:.tmx.gz=}/dev; \
 	mkdir -p $$s-$$t/${TMX:.tmx.gz=}/test; \
