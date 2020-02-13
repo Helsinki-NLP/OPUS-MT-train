@@ -687,12 +687,14 @@ add-to-local-mono-data:
 	$(LOAD_MOSES) cat $< |\
 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
 	$(TOKENIZER)/remove-non-printing-char.perl |\
+	$(TOKENIZER)/deescape-special-chars.perl |\
 	sed 's/  */ /g;s/^ *//g;s/ *$$//g' > $@
 
 %.simple.gz: %.gz
 	$(LOAD_MOSES) zcat $< |\
 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
 	$(TOKENIZER)/remove-non-printing-char.perl |\
+	$(TOKENIZER)/deescape-special-chars.perl |\
 	sed 's/  */ /g;s/^ *//g;s/ *$$//g' | gzip -c > $@
 
 
@@ -842,7 +844,7 @@ SPMTRGMODEL = ${WORKDIR}/train/opus.trg.spm${TRGBPESIZE:000=}k-model
 .PRECIOUS: ${SPMSRCMODEL} ${SPMTRGMODEL}
 
 # ${SPMSRCMODEL}: ${WORKDIR}/%.spm${SRCBPESIZE:000=}k-model: ${TMPDIR}/${LANGPAIRSTR}/%
-${SPMSRCMODEL}: ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_SRC}.charfreq
+${SPMSRCMODEL}: ${LOCAL_TRAIN_SRC}
 ifeq ($(wildcard ${SPMSRCMODEL}),)
 	mkdir -p ${dir $@}
 ifeq ($(TRGLANGS),${firstword ${TRGLANGS}})
@@ -850,7 +852,8 @@ ifeq ($(TRGLANGS),${firstword ${TRGLANGS}})
 else
 	cut -f2- -d ' ' $< | grep . | shuf > $<.text
 endif
-	if [ `cat ${word 2,$^} | wc -l` -gt 1000 ]; then \
+	${MAKE} ${LOCAL_TRAIN_SRC}.charfreq
+	if [ `cat ${LOCAL_TRAIN_SRC}.charfreq | wc -l` -gt 1000 ]; then \
 	  ${SPM_HOME}/spm_train \
 		--model_prefix=$@ --vocab_size=$(SRCBPESIZE) --input=$<.text \
 		--character_coverage=0.9995 --hard_vocab_limit=false; \
@@ -871,11 +874,12 @@ endif
 
 ## no labels on the target language side
 # ${SPMTRGMODEL}: ${WORKDIR}/%.spm${TRGBPESIZE:000=}k-model: ${TMPDIR}/${LANGPAIRSTR}/%
-${SPMTRGMODEL}: ${LOCAL_TRAIN_TRG} ${LOCAL_TRAIN_TRG}.charfreq
+${SPMTRGMODEL}: ${LOCAL_TRAIN_TRG}
 ifeq ($(wildcard ${SPMTRGMODEL}),)
 	mkdir -p ${dir $@}
 	grep . $< | shuf > $<.text
-	if [ `cat ${word 2,$^} | wc -l` -gt 1000 ]; then \
+	${MAKE} ${LOCAL_TRAIN_TRG}.charfreq
+	if [ `cat ${LOCAL_TRAIN_TRG}.charfreq | wc -l` -gt 1000 ]; then \
 	  ${SPM_HOME}/spm_train \
 		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=$<.text \
 		--character_coverage=0.9995 --hard_vocab_limit=false; \
@@ -952,11 +956,12 @@ ifneq (${SPMMODEL},${SPMTRGMONO})
 endif
 
 
-${SPMMODEL}: ${LOCAL_MONO_DATA}.${PRE} ${LOCAL_MONO_DATA}.${PRE}.charfreq
+${SPMMODEL}: ${LOCAL_MONO_DATA}.${PRE}
 ifeq ($(wildcard ${SPMMODEL}),)
 	mkdir -p ${dir $@}
 	grep . $< | shuf > $<.text
-	if [ `cat ${word 2,$^} | wc -l` -gt 1000 ]; then \
+	${MAKE} ${LOCAL_MONO_DATA}.${PRE}.charfreq
+	if [ `cat ${LOCAL_MONO_DATA}.${PRE}.charfreq | wc -l` -gt 1000 ]; then \
 	  ${SPM_HOME}/spm_train \
 		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=$<.text \
 		--character_coverage=0.9995 --hard_vocab_limit=false; \
@@ -992,11 +997,15 @@ endif
 
 ## python-based char-counter (seems to be the fastest version)
 %.charfreq: %
-	python -c "import collections, pprint; pprint.pprint(dict(collections.Counter(open('$<', 'r').read())))" > $@
+	head -10000000 $< > $<.10m
+	python -c "import collections, pprint; pprint.pprint(dict(collections.Counter(open('$<.10m', 'r').read())))" > $@
+	rm -f $<.10m
 
 ## slow version
 %.charfreq2: %
-	sed 's/./& /g' < $< | tr ' ' "\n" | grep . |\
+	head -10000000 $< |\
+	sed 's/./& /g' | \
+	tr ' ' "\n" | grep . |\
 	sort | uniq -c > $@
 
 

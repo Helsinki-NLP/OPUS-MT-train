@@ -29,7 +29,7 @@ MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/*-20*.zip}}}
 MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
 
 ifeq (${MODELNAME},)
-  MODELHOME = ../work-filter/models/${LANGPAIR}
+  MODELHOME = ../work-langid/models/${LANGPAIR}
   # MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/*-20*.zip}}}
   MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/opus-20*.zip}}}
   MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
@@ -128,6 +128,7 @@ print-names:
 	echo ${LANGNAME}
 	echo ${UDPIPE_MODEL}
 	echo ${WIKI_JSON}
+	echo ${MODELNAME}
 
 
 ## fetch the latest model

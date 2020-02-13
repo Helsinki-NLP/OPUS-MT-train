@@ -66,7 +66,7 @@ MARIAN_EARLY_STOPPING = 5
 
 
 .PHONY: all
-all: ${TEST_SRC}.${TRG}.compare ${TEST_SRC}.baseline.${TRG}.compare
+all: ${TEST_SRC}.${BASEMODELNAME}.${TRG}.compare ${TEST_SRC}.${BASEMODELNAME}.baseline.${TRG}.compare
 
 
 
@@ -250,11 +250,13 @@ ${LANGPAIR}/${BASEMODELNAME}/decoder.yml:
 	cp ${BASEMODELZIP} ${dir $@}
 	cd ${dir $@} && unzip -u *.zip
 
+.INTERMEDIATE: ${TRAIN_SRC}.pre.gz ${DEV_SRC}.pre.gz ${TEST_SRC}.pre.gz
 ${TRAIN_SRC}.pre.gz ${DEV_SRC}.pre.gz ${TEST_SRC}.pre.gz: %.pre.gz: %.gz ${LANGPAIR}/${BASEMODELNAME}/decoder.yml
 	zcat $< |\
 	${LANGPAIR}/${BASEMODELNAME}/preprocess.sh ${SRC} ${LANGPAIR}/${BASEMODELNAME}/source.spm |\
 	gzip -c > $@
 
+.INTERMEDIATE: ${TRAIN_TRG}.pre.gz ${DEV_TRG}.pre.gz
 ${TRAIN_TRG}.pre.gz ${DEV_TRG}.pre.gz: %.pre.gz: %.gz ${LANGPAIR}/${BASEMODELNAME}/decoder.yml
 	zcat $< |\
 	${LANGPAIR}/${BASEMODELNAME}/preprocess.sh ${SRC} ${LANGPAIR}/${BASEMODELNAME}/target.spm |\
@@ -314,10 +316,10 @@ ${TUNED_MODEL}.done: ${TRAIN_SRC}.pre.gz ${TRAIN_TRG}.pre.gz ${DEV_SRC}.pre.gz $
 
 
 .PHONY: translate
-translate: ${TEST_SRC}.${TRG}.gz
+translate: ${TEST_SRC}.${BASEMODELNAME}.${TRG}.gz
 
 ## translate test set
-${TEST_SRC}.${TRG}.gz: ${TEST_SRC}.pre.gz ${TUNED_MODEL}.npz.best-perplexity.npz
+${TEST_SRC}.${BASEMODELNAME}.${TRG}.gz: ${TEST_SRC}.pre.gz ${TUNED_MODEL}.npz.best-perplexity.npz
 	mkdir -p ${dir $@}
 	${LOADMODS} && ${MARIAN}/marian-decoder \
 		-i $< \
@@ -329,10 +331,10 @@ ${TEST_SRC}.${TRG}.gz: ${TEST_SRC}.pre.gz ${TUNED_MODEL}.npz.best-perplexity.npz
 
 
 .PHONY: translate-baseline
-translate-baseline: ${TEST_SRC}.baseline.${TRG}.gz
+translate-baseline: ${TEST_SRC}.${BASEMODELNAME}.baseline.${TRG}.gz
 
 ## translate test set
-${TEST_SRC}.baseline.${TRG}.gz: ${TEST_SRC}.pre.gz ${LANGPAIR}/${BASEMODELNAME}/decoder.yml
+${TEST_SRC}.${BASEMODELNAME}.baseline.${TRG}.gz: ${TEST_SRC}.pre.gz ${LANGPAIR}/${BASEMODELNAME}/decoder.yml
 	mkdir -p ${dir $@}
 	cd ${LANGPAIR}/${BASEMODELNAME}; \
 	${LOADMODS} && ${MARIAN}/marian-decoder \
@@ -346,18 +348,18 @@ ${TEST_SRC}.baseline.${TRG}.gz: ${TEST_SRC}.pre.gz ${LANGPAIR}/${BASEMODELNAME}/
 
 
 .PHONY: eval eval-baseline
-eval: ${TEST_SRC}.${TRG}.eval
-eval-baseline: ${TEST_SRC}.baseline.${TRG}.eval
+eval: ${TEST_SRC}.${BASEMODELNAME}.${TRG}.eval
+eval-baseline: ${TEST_SRC}.${BASEMODELNAME}.baseline.${TRG}.eval
 
 ## without reference normalisation
-${TEST_SRC}.${TRG}.eval ${TEST_SRC}.baseline.${TRG}.eval: %.eval: %.gz ${TEST_TRG}.gz
+${TEST_SRC}.${BASEMODELNAME}.${TRG}.eval ${TEST_SRC}.${BASEMODELNAME}.baseline.${TRG}.eval: %.eval: %.gz ${TEST_TRG}.gz
 	zcat ${TEST_TRG}.gz > $@.ref
 	zcat $< | sacrebleu $@.ref > $@
 	zcat $< | sacrebleu --metrics=chrf --width=3 $@.ref >> $@
 	rm -f $@.ref
 
 ## with reference normalisation (should not do this)
-${TEST_SRC}.${TRG}.eval-norm ${TEST_SRC}.baseline.${TRG}.eval-norm: %.eval-norm: %.gz ${TEST_TRG}.gz
+${TEST_SRC}.${BASEMODELNAME}.${TRG}.eval-norm ${TEST_SRC}.${BASEMODELNAME}.baseline.${TRG}.eval-norm: %.eval-norm: %.gz ${TEST_TRG}.gz
 	zcat ${TEST_TRG}.gz |\
 	${TOKENIZER}/replace-unicode-punctuation.perl |\
 	${TOKENIZER}/remove-non-printing-char.perl |\
@@ -371,10 +373,10 @@ ${TEST_SRC}.${TRG}.eval-norm ${TEST_SRC}.baseline.${TRG}.eval-norm: %.eval-norm:
 
 
 .PHONY: compare compare-baseline
-compare: ${TEST_SRC}.${TRG}.compare
-compare-baseline: ${TEST_SRC}.baseline.${TRG}.compare
+compare: ${TEST_SRC}.${BASEMODELNAME}.${TRG}.compare
+compare-baseline: ${TEST_SRC}.${BASEMODELNAME}.baseline.${TRG}.compare
 
-${TEST_SRC}.${TRG}.compare ${TEST_SRC}.baseline.${TRG}.compare: %.compare: %.eval
+${TEST_SRC}.${BASEMODELNAME}.${TRG}.compare ${TEST_SRC}.${BASEMODELNAME}.baseline.${TRG}.compare: %.compare: %.eval
 	zcat ${TEST_SRC}.gz > $@.1
 	zcat ${TEST_TRG}.gz > $@.2
 	zcat ${<:.eval=.gz} > $@.3
