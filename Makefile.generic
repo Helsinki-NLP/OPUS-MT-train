@@ -133,6 +133,16 @@ endif
 		PRE_TRG=spm${TRGBPESIZE:000=}k \
 	${@:-spm=}
 
+## sentence-piece models with space-separated strings
+%-nospace:
+	${MAKE} WORKHOME=${shell realpath ${PWD}/work-nospace} \
+		PRE=simple \
+		SPMEXTRA=--split_by_whitespace=false \
+		PRE_SRC=spm${SRCBPESIZE:000=}k \
+		PRE_TRG=spm${TRGBPESIZE:000=}k \
+	${@:-nospace=}
+
+
 ## with SPM models trained on monolingual data
 %-monospm: ${SPMSRCMONO} ${SPMTRGMONO}
 	${MAKE} WORKHOME=${shell realpath ${PWD}/work-monospm} \

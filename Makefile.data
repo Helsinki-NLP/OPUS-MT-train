@@ -697,6 +697,24 @@ add-to-local-mono-data:
 	$(TOKENIZER)/deescape-special-chars.perl |\
 	sed 's/  */ /g;s/^ *//g;s/ *$$//g' | gzip -c > $@
 
+## remove all spaces (treat everything as a long string)
+%.nospace: %.raw
+	$(LOAD_MOSES) cat $< |\
+	$(TOKENIZER)/replace-unicode-punctuation.perl |\
+	$(TOKENIZER)/remove-non-printing-char.perl |\
+	$(TOKENIZER)/deescape-special-chars.perl |\
+	sed 's/  */ /g;s/^ *//g;s/ *$$//g' |\
+	sed 's/ /▁/g' > $@
+
+%.nospace.gz: %.gz
+	$(LOAD_MOSES) zcat $< |\
+	$(TOKENIZER)/replace-unicode-punctuation.perl |\
+	$(TOKENIZER)/remove-non-printing-char.perl |\
+	$(TOKENIZER)/deescape-special-chars.perl |\
+	sed 's/  */ /g;s/^ *//g;s/ *$$//g' |\
+	sed 's/ /▁/g' |\
+	gzip -c > $@
+
 
 
 ## increase max number of tokens to 250
@@ -840,6 +858,8 @@ endif
 ##     if a new data set is used
 SPMSRCMODEL = ${WORKDIR}/train/opus.src.spm${SRCBPESIZE:000=}k-model
 SPMTRGMODEL = ${WORKDIR}/train/opus.trg.spm${TRGBPESIZE:000=}k-model
+# SPMEXTRA = --split_by_whitespace=false
+SPMEXTRA = 
 
 .PRECIOUS: ${SPMSRCMODEL} ${SPMTRGMODEL}
 
@@ -854,11 +874,11 @@ else
 endif
 	${MAKE} ${LOCAL_TRAIN_SRC}.charfreq
 	if [ `cat ${LOCAL_TRAIN_SRC}.charfreq | wc -l` -gt 1000 ]; then \
-	  ${SPM_HOME}/spm_train \
+	  ${SPM_HOME}/spm_train ${SPMEXTRA} \
 		--model_prefix=$@ --vocab_size=$(SRCBPESIZE) --input=$<.text \
 		--character_coverage=0.9995 --hard_vocab_limit=false; \
 	else \
-	  ${SPM_HOME}/spm_train \
+	  ${SPM_HOME}/spm_train ${SPMEXTRA} \
 		--model_prefix=$@ --vocab_size=$(SRCBPESIZE) --input=$<.text \
 		--character_coverage=1.0 --hard_vocab_limit=false; \
 	fi
@@ -880,11 +900,11 @@ ifeq ($(wildcard ${SPMTRGMODEL}),)
 	grep . $< | shuf > $<.text
 	${MAKE} ${LOCAL_TRAIN_TRG}.charfreq
 	if [ `cat ${LOCAL_TRAIN_TRG}.charfreq | wc -l` -gt 1000 ]; then \
-	  ${SPM_HOME}/spm_train \
+	  ${SPM_HOME}/spm_train ${SPMEXTRA} \
 		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=$<.text \
 		--character_coverage=0.9995 --hard_vocab_limit=false; \
 	else \
-	  ${SPM_HOME}/spm_train \
+	  ${SPM_HOME}/spm_train ${SPMEXTRA} \
 		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=$<.text \
 		--character_coverage=1.0 --hard_vocab_limit=false; \
 	fi
@@ -962,11 +982,11 @@ ifeq ($(wildcard ${SPMMODEL}),)
 	grep . $< | shuf > $<.text
 	${MAKE} ${LOCAL_MONO_DATA}.${PRE}.charfreq
 	if [ `cat ${LOCAL_MONO_DATA}.${PRE}.charfreq | wc -l` -gt 1000 ]; then \
-	  ${SPM_HOME}/spm_train \
+	  ${SPM_HOME}/spm_train ${SPMEXTRA} \
 		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=$<.text \
 		--character_coverage=0.9995 --hard_vocab_limit=false; \
 	else \
-	  ${SPM_HOME}/spm_train \
+	  ${SPM_HOME}/spm_train ${SPMEXTRA} \
 		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=$<.text \
 		--character_coverage=1.0 --hard_vocab_limit=false; \
 	fi

@@ -46,17 +46,23 @@ TRAIN_TRG = ${patsubst %.${SRC},%.${TRG},${TRAIN_SRC}}
 DEV_TRG   = ${patsubst %.${SRC},%.${TRG},${DEV_SRC}}
 TEST_TRG  = ${patsubst %.${SRC},%.${TRG},${TEST_SRC}}
 
+OBJECTSTORAGE  = https://object.pouta.csc.fi
+MODELCONTAINER = OPUS-MT-models
+MODELINDEX     = ${OBJECTSTORAGE}/${MODELCONTAINER}/index.txt
 
-BASEMODELHOME     = ../models/${LANGPAIR}
-BASEMODELZIP      = ${lastword ${sort ${wildcard ${BASEMODELHOME}/*-20*.zip}}}
-BASEMODELNAME     = ${patsubst %.zip,%,${notdir ${BASEMODELZIP}}}
+# BASEMODELHOME     = ../models/${LANGPAIR}
+# BASEMODELZIP      = ${lastword ${sort ${wildcard ${BASEMODELHOME}/*-20*.zip}}}
+# BASEMODELNAME     = ${patsubst %.zip,%,${notdir ${BASEMODELZIP}}}
 
+BASEMODELHOME     = ${OBJECTSTORAGE}/${MODELCONTAINER}/${LANGPAIR}
+BASEMODELZIP      = ${lastword ${sort ${notdir ${shell grep '${LANGPAIR}/opus-.*\.zip' model-index.txt}}}}
+BASEMODELNAME     = ${BASEMODELZIP:.zip=}
 
 TUNED_MODEL       = ${LANGPAIR}/${MODEL}/model/${BASEMODELNAME}_${MODEL}.transformer.model
 TUNED_MODEL_VOCAB = ${LANGPAIR}/${MODEL}/model/${BASEMODELNAME}_${MODEL}.vocab.yml
 
 
-MARIAN_WORKSPACE       = 5000
+MARIAN_WORKSPACE      = 5000
 MARIAN_VALID_FREQ     = 100
 MARIAN_SAVE_FREQ      = ${MARIAN_VALID_FREQ}
 MARIAN_DISP_FREQ      = ${MARIAN_VALID_FREQ}
@@ -64,10 +70,14 @@ MARIAN_EARLY_STOPPING = 5
 
 
 
-
 .PHONY: all
-all: ${TEST_SRC}.${BASEMODELNAME}.${TRG}.compare ${TEST_SRC}.${BASEMODELNAME}.baseline.${TRG}.compare
+all: model-index.txt
+	${MAKE} ${TEST_SRC}.${BASEMODELNAME}.${TRG}.compare
+	${MAKE} ${TEST_SRC}.${BASEMODELNAME}.baseline.${TRG}.compare
 
+
+model-index.txt:
+	wget -nv -O $@ ${MODELINDEX}
 
 
 ## convert a TMX file to create dev-test-train data
@@ -79,52 +89,54 @@ all: ${TEST_SRC}.${BASEMODELNAME}.${TRG}.compare ${TEST_SRC}.${BASEMODELNAME}.ba
 ## - it assumes that ${TMX} points to a valid TMX files
 ## - it assumes that there are only 2 languages in the TMX (it will only use 2)
 
-TMX = vero-20200123.tmx.gz
+
+TMXFILE = VNK-Hallituksen_vuosikertomus.tmx
+TMXBASE = ${TMXFILE:.tmx=}
 REVERSE = 0
 
 tmx-tune:
-	zcat ${TMX} |\
-	tmx2moses -r -o ${TMX:.tmx.gz=}
+	cat ${TMXFILE} |\
+	tmx2moses -r -o ${TMXBASE}
 	if [ ${REVERSE} -gt 0 ]; then \
-	  t=`ls ${TMX:.tmx.gz=}.*-* | sort | sed 's/^.*\.\([a-z]*\)$$/\1/' | head -1`; \
-	  s=`ls ${TMX:.tmx.gz=}.*-* | sort | sed 's/^.*\.\([a-z]*\)$$/\1/' | tail -1`; \
+	  t=`ls ${TMXBASE}.*-* | sort | sed 's/^.*\.\([a-z]*\)$$/\1/' | head -1`; \
+	  s=`ls ${TMXBASE}.*-* | sort | sed 's/^.*\.\([a-z]*\)$$/\1/' | tail -1`; \
 	else \
-	  s=`ls ${TMX:.tmx.gz=}.*-* | sort | sed 's/^.*\.\([a-z]*\)$$/\1/' | head -1`; \
-	  t=`ls ${TMX:.tmx.gz=}.*-* | sort | sed 's/^.*\.\([a-z]*\)$$/\1/' | tail -1`; \
+	  s=`ls ${TMXBASE}.*-* | sort | sed 's/^.*\.\([a-z]*\)$$/\1/' | head -1`; \
+	  t=`ls ${TMXBASE}.*-* | sort | sed 's/^.*\.\([a-z]*\)$$/\1/' | tail -1`; \
 	fi; \
 	echo $$s; echo $$t; \
 	mkdir -p $$s-$$t; \
-	paste ${TMX:.tmx.gz=}.*-*.$$s ${TMX:.tmx.gz=}.*-*.$$t | \
+	paste ${TMXBASE}.*-*.$$s ${TMXBASE}.*-*.$$t | \
 	sort | uniq | \
 	python3 ../bitext-match-lang.py -s $$s -t $$t | \
 	grep -v '[<>{}]' |\
 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
 	perl -CS -pe 'tr[\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}][]cd;' |\
 	sed 's/  */ /g;s/^ *//g;s/ *$$//g' |\
-	shuf > ${TMX:.tmx.gz=}.$$s-$$t.shuffled; \
-	mkdir -p $$s-$$t/${TMX:.tmx.gz=}/dev; \
-	mkdir -p $$s-$$t/${TMX:.tmx.gz=}/test; \
-	mkdir -p $$s-$$t/${TMX:.tmx.gz=}/train; \
-	head -1000 ${TMX:.tmx.gz=}.$$s-$$t.shuffled | cut -f1 | gzip -c \
-		> $$s-$$t/${TMX:.tmx.gz=}/test/${TMX:.tmx.gz=}.$$s.gz; \
-	head -1000 ${TMX:.tmx.gz=}.$$s-$$t.shuffled | cut -f2 | gzip -c \
-		> $$s-$$t/${TMX:.tmx.gz=}/test/${TMX:.tmx.gz=}.$$t.gz; \
-	head -2001 ${TMX:.tmx.gz=}.$$s-$$t.shuffled | tail -1000 | cut -f1 | gzip -c \
-		> $$s-$$t/${TMX:.tmx.gz=}/dev/${TMX:.tmx.gz=}.$$s.gz; \
-	head -2001 ${TMX:.tmx.gz=}.$$s-$$t.shuffled | tail -1000 | cut -f2 | gzip -c \
-		> $$s-$$t/${TMX:.tmx.gz=}/dev/${TMX:.tmx.gz=}.$$t.gz; \
-	tail -n +2002 ${TMX:.tmx.gz=}.$$s-$$t.shuffled | cut -f1 | gzip -c \
-		> $$s-$$t/${TMX:.tmx.gz=}/train/${TMX:.tmx.gz=}.$$s.gz; \
-	tail -n +2002 ${TMX:.tmx.gz=}.$$s-$$t.shuffled | cut -f2 | gzip -c \
-		> $$s-$$t/${TMX:.tmx.gz=}/train/${TMX:.tmx.gz=}.$$t.gz; \
-	mv ${TMX:.tmx.gz=}.*-* $$s-$$t/; \
-	${MAKE} SRC=$$s TRG=$$t MODEL=${TMX:.tmx.gz=} \
-		TRAIN_SRC=$$s-$$t/${TMX:.tmx.gz=}/train/${TMX:.tmx.gz=}.$$s \
-		TRAIN_TRG=$$s-$$t/${TMX:.tmx.gz=}/train/${TMX:.tmx.gz=}.$$t \
-		DEV_SRC=$$s-$$t/${TMX:.tmx.gz=}/dev/${TMX:.tmx.gz=}.$$s \
-		DEV_TRG=$$s-$$t/${TMX:.tmx.gz=}/dev/${TMX:.tmx.gz=}.$$t \
-		TEST_SRC=$$s-$$t/${TMX:.tmx.gz=}/test/${TMX:.tmx.gz=}.$$s \
-		TEST_TRG=$$s-$$t/${TMX:.tmx.gz=}/test/${TMX:.tmx.gz=}.$$t \
+	shuf > ${TMXBASE}.$$s-$$t.shuffled; \
+	mkdir -p $$s-$$t/${TMXBASE}/dev; \
+	mkdir -p $$s-$$t/${TMXBASE}/test; \
+	mkdir -p $$s-$$t/${TMXBASE}/train; \
+	head -1000 ${TMXBASE}.$$s-$$t.shuffled | cut -f1 | gzip -c \
+		> $$s-$$t/${TMXBASE}/test/${TMXBASE}.$$s.gz; \
+	head -1000 ${TMXBASE}.$$s-$$t.shuffled | cut -f2 | gzip -c \
+		> $$s-$$t/${TMXBASE}/test/${TMXBASE}.$$t.gz; \
+	head -2001 ${TMXBASE}.$$s-$$t.shuffled | tail -1000 | cut -f1 | gzip -c \
+		> $$s-$$t/${TMXBASE}/dev/${TMXBASE}.$$s.gz; \
+	head -2001 ${TMXBASE}.$$s-$$t.shuffled | tail -1000 | cut -f2 | gzip -c \
+		> $$s-$$t/${TMXBASE}/dev/${TMXBASE}.$$t.gz; \
+	tail -n +2002 ${TMXBASE}.$$s-$$t.shuffled | cut -f1 | gzip -c \
+		> $$s-$$t/${TMXBASE}/train/${TMXBASE}.$$s.gz; \
+	tail -n +2002 ${TMXBASE}.$$s-$$t.shuffled | cut -f2 | gzip -c \
+		> $$s-$$t/${TMXBASE}/train/${TMXBASE}.$$t.gz; \
+	mv ${TMXBASE}.*-* $$s-$$t/; \
+	${MAKE} SRC=$$s TRG=$$t MODEL=${TMXBASE} \
+		TRAIN_SRC=$$s-$$t/${TMXBASE}/train/${TMXBASE}.$$s \
+		TRAIN_TRG=$$s-$$t/${TMXBASE}/train/${TMXBASE}.$$t \
+		DEV_SRC=$$s-$$t/${TMXBASE}/dev/${TMXBASE}.$$s \
+		DEV_TRG=$$s-$$t/${TMXBASE}/dev/${TMXBASE}.$$t \
+		TEST_SRC=$$s-$$t/${TMXBASE}/test/${TMXBASE}.$$s \
+		TEST_TRG=$$s-$$t/${TMXBASE}/test/${TMXBASE}.$$t \
 	all
 
 
@@ -244,11 +256,15 @@ endif
 .PHONY: data
 data: ${TRAIN_SRC}.pre.gz ${TRAIN_TRG}.pre.gz ${DEV_SRC}.pre.gz ${DEV_TRG}.pre.gz
 
-.INTERMEDIATE: ${LANGPAIR}/${BASEMODELNAME}/decoder.yml
 ${LANGPAIR}/${BASEMODELNAME}/decoder.yml:
 	mkdir -p ${dir $@}
-	cp ${BASEMODELZIP} ${dir $@}
-	cd ${dir $@} && unzip -u *.zip
+ifneq (${BASEMODELZIP},)
+	wget -nv -O ${dir $@}/${BASEMODELZIP} ${BASEMODELHOME}/${BASEMODELZIP}
+	cd ${dir $@} && unzip -u ${BASEMODELZIP}
+else
+	@echo "no model found for ${LANGAIR}!"
+endif
+
 
 .INTERMEDIATE: ${TRAIN_SRC}.pre.gz ${DEV_SRC}.pre.gz ${TEST_SRC}.pre.gz
 ${TRAIN_SRC}.pre.gz ${DEV_SRC}.pre.gz ${TEST_SRC}.pre.gz: %.pre.gz: %.gz ${LANGPAIR}/${BASEMODELNAME}/decoder.yml
