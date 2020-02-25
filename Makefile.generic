@@ -85,7 +85,7 @@ ifeq (${wildcard ${BT_MODEL_START}},)
 endif
 endif
 	rm -f ${WORKHOME}/${LANGPAIRSTR}/train.submit
-	${MAKE} DATASET=opus+bt \
+	${MAKE} DATASET=${DATASET}+bt \
 		CLEAN_TRAIN_SRC="${CLEAN_TRAIN_SRC} ${BACKTRANS_SRC}" \
 		CLEAN_TRAIN_TRG="${CLEAN_TRAIN_TRG} ${BACKTRANS_TRG}" \
 		MARIAN_EARLY_STOPPING=15 \

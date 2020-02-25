@@ -145,8 +145,10 @@ include Makefile.slurm
 data:	${TRAIN_SRC}.clean.${PRE_SRC}.gz ${TRAIN_TRG}.clean.${PRE_TRG}.gz \
 	${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG}
 	${MAKE} ${TEST_SRC}.${PRE_SRC} ${TEST_TRG}
-	${MAKE} ${TRAIN_ALG}
 	${MAKE} ${MODEL_VOCAB}
+ifeq (${MODELTYPE},transformer-align)
+	${MAKE} ${TRAIN_ALG}
+endif
 
 
 traindata: 	${TRAIN_SRC}.clean.${PRE_SRC}.gz ${TRAIN_TRG}.clean.${PRE_TRG}.gz
