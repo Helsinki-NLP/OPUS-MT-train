@@ -55,7 +55,10 @@ best_dist_all:
 ## (BLEU needs to be above MIN_BLEU_SCORE)
 ## NEW: don't trust models tested with GNOME test sets!
 
-best_dist:
+
+## OLD version of finding the best model
+## --> this didn't properly look at different variants in the same folder
+best_dist_old:
 	@m=0;\
 	s=''; \
 	echo "------------------------------------------------"; \
@@ -83,6 +86,54 @@ best_dist:
 		MODELS_URL=https://object.pouta.csc.fi/OPUS-MT-models dist-$$s; \
 	  fi; \
 	fi
+
+
+## new version of finding the best model
+## --> look at different model variants in each work-dir
+## --> take only the best one to publish
+best_dist:
+	@m=0;\
+	s=''; \
+	echo "------------------------------------------------"; \
+	echo "search best model for ${LANGPAIRSTR}"; \
+	for d in ${ALT_MODEL_DIR}; do \
+	  e=`ls work-$$d/${LANGPAIRSTR}/val/*.trg | xargs basename | sed 's/\.trg//'`; \
+	  echo "evaldata = $$e"; \
+	  if [ "$$e" != "GNOME" ]; then \
+	    I=`find work-$$d/${LANGPAIRSTR}/ -maxdepth 1 -name "$$e.*.eval" -printf "%f\n"`; \
+	    for i in $$I; do \
+	      x=`echo $$i | cut -f3 -d. | cut -f1 -d-`; \
+	      y=`echo $$i | cut -f3 -d. | cut -f2 -d- | sed 's/[0-9]$$//'`; \
+	      z=`echo $$i | cut -f2 -d.`; \
+	      v=`echo $$i | cut -f4 -d.`; \
+	      b=`grep 'BLEU+' work-$$d/${LANGPAIRSTR}/$$e.$$z.$$x-$$y[0-9].$$v.*.eval | cut -f3 -d' '`; \
+	      if (( $$(echo "$$m-$$b < 0" |bc -l) )); then \
+	        echo "$$d/$$i ($$b) is better than $$s ($$m)!"; \
+	        m=$$b; \
+	        E=$$i; \
+	        s=$$d; \
+	      else \
+	        echo "$$d/$$i ($$b) is  worse than $$s ($$m)!"; \
+	      fi \
+	    done; \
+	  fi \
+	done; \
+	echo "------------------------------------------------"; \
+	if [ "$$s" != "" ]; then \
+	  if (( $$(echo "$$m > ${MIN_BLEU_SCORE}" |bc -l) )); then \
+	    x=`echo $$E | cut -f3 -d. | cut -f1 -d-`; \
+	    y=`echo $$E | cut -f3 -d. | cut -f2 -d- | sed 's/[0-9]$$//'`; \
+	    z=`echo $$E | cut -f2 -d.`; \
+	    v=`echo $$E | cut -f4 -d.`; \
+	    ${MAKE} \
+		MODELSHOME=${PWD}/models \
+		PRE_SRC=$$x PRE_TRG=$$y \
+		DATASET=$$z \
+		MODELTYPE=$$v   \
+		MODELS_URL=https://object.pouta.csc.fi/OPUS-MT-models dist-$$s; \
+	  fi; \
+	fi
+
 
 
 
@@ -119,6 +170,9 @@ endif
 POSTPROCESS_SCRIPT = postprocess-${PREPROCESS_TYPE}.sh
 
 
+
+## make the distribution package including test evaluation files and README
+
 ${DIST_PACKAGE}: ${MODEL_FINAL}
 ifneq (${SKIP_DIST_EVAL},1)
 	@${MAKE} $(TEST_EVALUATION)
@@ -147,10 +201,10 @@ endif
 	  echo '## Benchmarks' >> ${WORKDIR}/README.md; \
 	  echo '' >> ${WORKDIR}/README.md; \
 	  cd ${WORKDIR}; \
-	  grep -H BLEU *k${NR}.*eval | \
+	  grep -H BLEU *.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | \
 		tr '.' '/' | cut -f1,5,6 -d '/' | tr '/' "." > $@.1; \
-	  grep BLEU *k${NR}.*eval | cut -f3 -d ' ' > $@.2; \
-	  grep chrF *k${NR}.*eval | cut -f3 -d ' ' > $@.3; \
+	  grep BLEU *.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | cut -f3 -d ' ' > $@.2; \
+	  grep chrF *.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | cut -f3 -d ' ' > $@.3; \
 	  echo '| testset               | BLEU  | chr-F |' >> README.md; \
 	  echo '|-----------------------|-------|-------|' >> README.md; \
 	  paste $@.1 $@.2 $@.3 | sed  "s/\t/ 	| /g;s/^/| /;s/$$/ |/" >> README.md; \

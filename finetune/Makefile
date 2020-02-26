@@ -55,7 +55,7 @@ MODELINDEX     = ${OBJECTSTORAGE}/${MODELCONTAINER}/index.txt
 # BASEMODELNAME     = ${patsubst %.zip,%,${notdir ${BASEMODELZIP}}}
 
 BASEMODELHOME     = ${OBJECTSTORAGE}/${MODELCONTAINER}/${LANGPAIR}
-BASEMODELZIP      = ${lastword ${sort ${notdir ${shell grep '${LANGPAIR}/opus-.*\.zip' model-index.txt}}}}
+BASEMODELZIP      = ${lastword ${sort ${notdir ${shell grep '${LANGPAIR}/${DATASET}-.*\.zip' model-index.txt}}}}
 BASEMODELNAME     = ${BASEMODELZIP:.zip=}
 
 TUNED_MODEL       = ${LANGPAIR}/${MODEL}/model/${BASEMODELNAME}_${MODEL}.transformer.model

@@ -67,3 +67,26 @@
 | newstestB2017-enfi.en.fi 	| 22.3 	| 0.560 |
 | Tatoeba.en.fi 	| 41.1 	| 0.645 |
 
+# opus+bt-2020-02-26.zip
+
+* dataset: opus+bt
+* model: transformer-align
+* pre-processing: normalization + SentencePiece
+* download: [opus+bt-2020-02-26.zip](https://object.pouta.csc.fi/OPUS-MT-models/en-fi/opus+bt-2020-02-26.zip)
+* test set translations: [opus+bt-2020-02-26.test.txt](https://object.pouta.csc.fi/OPUS-MT-models/en-fi/opus+bt-2020-02-26.test.txt)
+* test set scores: [opus+bt-2020-02-26.eval.txt](https://object.pouta.csc.fi/OPUS-MT-models/en-fi/opus+bt-2020-02-26.eval.txt)
+
+## Benchmarks
+
+| testset               | BLEU  | chr-F |
+|-----------------------|-------|-------|
+| newsdev2015-enfi.en.fi 	| 23.5 	| 0.572 |
+| newstest2015-enfi.en.fi 	| 25.7 	| 0.586 |
+| newstest2016-enfi.en.fi 	| 26.4 	| 0.594 |
+| newstest2017-enfi.en.fi 	| 29.8 	| 0.624 |
+| newstest2018-enfi.en.fi 	| 19.8 	| 0.545 |
+| newstest2019-enfi.en.fi 	| 23.7 	| 0.562 |
+| newstestB2016-enfi.en.fi 	| 21.3 	| 0.558 |
+| newstestB2017-enfi.en.fi 	| 24.9 	| 0.584 |
+| Tatoeba.en.fi 	| 41.4 	| 0.650 |
+

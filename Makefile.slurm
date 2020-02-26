@@ -31,7 +31,7 @@ ifdef EMAIL
 endif
 	echo '#SBATCH -n 1' >> $@
 	echo '#SBATCH -N 1' >> $@
-	echo '#SBATCH -p gpu' >> $@
+	echo '#SBATCH -p ${HPC_GPUQUEUE}' >> $@
 ifeq (${shell hostname --domain},bullx)
 	echo '#SBATCH --account=${CSCPROJECT}' >> $@
 	echo '#SBATCH --gres=gpu:${GPU}:${NR_GPUS},nvme:${HPC_DISK}' >> $@

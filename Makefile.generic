@@ -20,11 +20,55 @@
 ## - make dist-allmodels
 %-allmodels:
 	for l in ${ALL_LANG_PAIRS}; do \
-	  if  [ `find ${WORKHOME}/$$l -name '*.${PRE_SRC}-${PRE_TRG}.*.best-perplexity.npz' | wc -l` -gt 0 ]; then \
-	    ${MAKE} SRCLANGS="`echo $$l | cut -f1 -d'-' | sed 's/\\+/ /g'`" \
-		    TRGLANGS="`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`" ${@:-allmodels=}; \
-	  fi \
+	  m=`find ${WORKHOME}/$$l -maxdepth 1 -name '*.best-perplexity.npz' -printf "%f\n"`; \
+	  for i in $$m; do \
+	    s=`echo $$l | cut -f1 -d'-' | sed 's/\\+/ /g'`; \
+	    t=`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`; \
+	    d=`echo $$i | cut -f1 -d.`; \
+	    x=`echo $$i | cut -f2 -d. | cut -f1 -d-`; \
+	    y=`echo $$i | cut -f2 -d. | cut -f2 -d-`; \
+	    v=`echo $$i | cut -f3 -d.`; \
+	    echo "model    = $$i"; \
+	    echo "dataset  = $$d"; \
+	    echo "src-lang = $$s"; \
+	    echo "trg-lang = $$t"; \
+	    echo "pre-src  = $$x"; \
+	    echo "pre-trg  = $$y"; \
+	    echo "type     = $$v"; \
+	    ${MAKE} \
+		SRCLANGS="$$s" TRGLANGS="$$t" \
+		DATASET=$$d \
+		PRE_SRC=$$x PRE_TRG=$$y \
+		MODELTYPE=$$v ${@:-allmodels=}; \
+	  done \
 	done
+
+## OLD: doesn't work for different model variants
+##
+# %-allmodels:
+# 	for l in ${ALL_LANG_PAIRS}; do \
+# 	  if  [ `find ${WORKHOME}/$$l -name '*.${PRE_SRC}-${PRE_TRG}.*.best-perplexity.npz' | wc -l` -gt 0 ]; then \
+# 	    ${MAKE} SRCLANGS="`echo $$l | cut -f1 -d'-' | sed 's/\\+/ /g'`" \
+# 		    TRGLANGS="`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`" ${@:-allmodels=}; \
+# 	  fi \
+# 	done
+
+
+listallmodels:
+	@m=`find ${WORKDIR} -maxdepth 1 -name '*.best-perplexity.npz' -printf "%f\n"`; \
+	for i in $$m; do \
+	  d=`echo $$i | cut -f1 -d.`; \
+	  s=`echo $$i | cut -f2 -d. | cut -f1 -d-`; \
+	  t=`echo $$i | cut -f2 -d. | cut -f1 -d-`; \
+	  v=`echo $$i | cut -f3 -d.`; \
+	  echo "model   = $$i"; \
+	  echo "dataset = $$d"; \
+	  echo "pre-src = $$s"; \
+	  echo "pre-trg = $$t"; \
+	  echo "type    = $$v"; \
+	done
+
+
 
 ## only bilingual models
 %-allbilingual:
