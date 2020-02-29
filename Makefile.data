@@ -18,11 +18,11 @@ endif
 ## no further arguments are supported
 
 ifneq (${wildcard scripts/cleanup/${SRC}},)
-  SRC_CLEANUP_SCRIPTS = | ${subst ${SPACE}, | ,${shell find scripts/cleanup/${SRC} -executable -type f}} |
+  SRC_CLEANUP_SCRIPTS = | ${subst ${SPACE}, | ,${shell find scripts/cleanup/${SRC} -executable -type f}}
 endif
 
 ifneq (${wildcard scripts/cleanup/${TRG}},)
-  TRG_CLEANUP_SCRIPTS = | ${subst ${SPACE}, | ,${shell find scripts/cleanup/${TRG} -executable -type f}} |
+  TRG_CLEANUP_SCRIPTS = | ${subst ${SPACE}, | ,${shell find scripts/cleanup/${TRG} -executable -type f}}
 endif
 
 
@@ -721,6 +721,20 @@ add-to-local-mono-data:
 	$(TOKENIZER)/normalize-punctuation.perl |\
 	sed 's/  */ /g;s/^ *//g;s/ *$$//g' > $@
 
+%.${SRCEXT}.norm: %.${SRCEXT}.raw
+	$(LOAD_MOSES) cat $< ${SRC_CLEANUP_SCRIPTS} |\
+	$(TOKENIZER)/replace-unicode-punctuation.perl |\
+	$(TOKENIZER)/remove-non-printing-char.perl |\
+	$(TOKENIZER)/normalize-punctuation.perl |\
+	sed 's/  */ /g;s/^ *//g;s/ *$$//g' > $@
+
+%.${TRGEXT}.norm: %.${TRGEXT}.raw
+	$(LOAD_MOSES) cat $< ${TRG_CLEANUP_SCRIPTS} |\
+	$(TOKENIZER)/replace-unicode-punctuation.perl |\
+	$(TOKENIZER)/remove-non-printing-char.perl |\
+	$(TOKENIZER)/normalize-punctuation.perl |\
+	sed 's/  */ /g;s/^ *//g;s/ *$$//g' > $@
+
 
 ## minimal pre-processing
 %.simple: %.raw
@@ -729,6 +743,21 @@ add-to-local-mono-data:
 	$(TOKENIZER)/remove-non-printing-char.perl |\
 	$(TOKENIZER)/deescape-special-chars.perl |\
 	sed 's/  */ /g;s/^ *//g;s/ *$$//g' > $@
+
+%.${SRCEXT}.simple: %.${SRCEXT}.raw
+	$(LOAD_MOSES) cat $< ${SRC_CLEANUP_SCRIPTS} |\
+	$(TOKENIZER)/replace-unicode-punctuation.perl |\
+	$(TOKENIZER)/remove-non-printing-char.perl |\
+	$(TOKENIZER)/deescape-special-chars.perl |\
+	sed 's/  */ /g;s/^ *//g;s/ *$$//g' > $@
+
+%.${TRGEXT}.simple: %.${TRGEXT}.raw
+	$(LOAD_MOSES) cat $< ${TRG_CLEANUP_SCRIPTS} |\
+	$(TOKENIZER)/replace-unicode-punctuation.perl |\
+	$(TOKENIZER)/remove-non-printing-char.perl |\
+	$(TOKENIZER)/deescape-special-chars.perl |\
+	sed 's/  */ /g;s/^ *//g;s/ *$$//g' > $@
+
 
 
 ## remove all spaces (treat everything as a long string)
