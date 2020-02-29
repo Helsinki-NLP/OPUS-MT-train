@@ -185,9 +185,9 @@ eval-ensemble: ${WORKDIR}/${TESTSET}.${MODEL}${NR}.${MODELTYPE}.ensemble.${SRC}.
 ## and all trokenized test sets that can be found in that directory
 TESTSET_HOME    = ${PWD}/testsets
 TESTSET_DIR     = ${TESTSET_HOME}/${SRC}-${TRG}
-TESTSETS        = $(sort $(patsubst ${TESTSET_DIR}/%.${SRC}.gz,%,${wildcard ${TESTSET_DIR}/*.${SRC}.gz}))
-TESTSETS_PRESRC = $(patsubst %,${TESTSET_DIR}/%.${SRC}.${PRE}.gz,${TESTSETS})
-TESTSETS_PRETRG = $(patsubst %,${TESTSET_DIR}/%.${TRG}.${PRE}.gz,${TESTSETS})
+TESTSETS        = $(sort $(patsubst ${TESTSET_DIR}/%.${SRCEXT}.gz,%,${wildcard ${TESTSET_DIR}/*.${SRCEXT}.gz}))
+TESTSETS_PRESRC = $(patsubst %,${TESTSET_DIR}/%.${SRCEXT}.${PRE}.gz,${TESTSETS})
+TESTSETS_PRETRG = $(patsubst %,${TESTSET_DIR}/%.${TRGEXT}.${PRE}.gz,${TESTSETS})
 
 # TESTSETS_PRESRC = $(patsubst %.gz,%.${PRE}.gz,${sort $(subst .${PRE},,${wildcard ${TESTSET_DIR}/*.${SRC}.gz})})
 # TESTSETS_PRETRG = $(patsubst %.gz,%.${PRE}.gz,${sort $(subst .${PRE},,${wildcard ${TESTSET_DIR}/*.${TRG}.gz})})
@@ -204,7 +204,7 @@ eval-heldout:
 	${MAKE} TESTSET_HOME=${HELDOUT_DIR} eval-testsets
 
 %-testsets-langpair: ${TESTSETS_PRESRC} ${TESTSETS_PRETRG}
-	@echo "testsets: ${TESTSET_DIR}/*.${SRC}.gz"
+	@echo "testsets: ${TESTSET_DIR}/*.${SRCEXT}.gz"
 	for t in ${TESTSETS}; do \
 	  ${MAKE} TESTSET=$$t ${@:-testsets-langpair=}; \
 	done

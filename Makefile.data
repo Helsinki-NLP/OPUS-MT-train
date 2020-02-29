@@ -99,6 +99,9 @@ endif
 endif
 endif
 
+
+
+
 ifndef OLDMODELTYPE
   OLDMODELTYPE=transformer-align
 endif
@@ -108,6 +111,8 @@ ifndef NEWMODELTYPE
 endif
 
 
+## TODO: this does not seem to work as the config does not match
+## (optmiser cannot contintue to run ....)
 ## move model files to a new name
 ## (useful if using as starting point for another modeltyp
 ##  for example, continue training without guided alignment)
@@ -557,9 +562,9 @@ ${TEST_SRC}: ${DEV_SRC}
 ifneq (${TESTSET},${DEVSET})
 	mkdir -p ${dir $@}
 	rm -f ${TEST_SRC} ${TEST_TRG}
-	if [ -e ${TESTSET_DIR}/${TESTSET}.${SRC}.${PRE}.gz ]; then \
-	  ${MAKE} CLEAN_TEST_SRC=${TESTSET_DIR}/${TESTSET}.${SRC}.${PRE}.gz \
-		  CLEAN_TEST_TRG=${TESTSET_DIR}/${TESTSET}.${TRG}.${PRE}.gz \
+	if [ -e ${TESTSET_DIR}/${TESTSET}.${SRCEXT}.${PRE}.gz ]; then \
+	  ${MAKE} CLEAN_TEST_SRC=${TESTSET_DIR}/${TESTSET}.${SRCEXT}.${PRE}.gz \
+		  CLEAN_TEST_TRG=${TESTSET_DIR}/${TESTSET}.${TRGEXT}.${PRE}.gz \
 	  add-to-test-data; \
 	else \
 	  for s in ${SRCLANGS}; do \
@@ -576,9 +581,9 @@ ifneq (${TESTSET},${DEVSET})
 	fi
 else
 	mkdir -p ${dir $@}
-	if [ -e ${TESTSET_DIR}/${TESTSET}.${SRC}.${PRE}.gz ]; then \
-	  ${MAKE} CLEAN_TEST_SRC=${TESTSET_DIR}/${TESTSET}.${SRC}.${PRE}.gz \
-		  CLEAN_TEST_TRG=${TESTSET_DIR}/${TESTSET}.${TRG}.${PRE}.gz \
+	if [ -e ${TESTSET_DIR}/${TESTSET}.${SRCEXT}.${PRE}.gz ]; then \
+	  ${MAKE} CLEAN_TEST_SRC=${TESTSET_DIR}/${TESTSET}.${SRCEXT}.${PRE}.gz \
+		  CLEAN_TEST_TRG=${TESTSET_DIR}/${TESTSET}.${TRGEXT}.${PRE}.gz \
 	  add-to-test-data; \
 	elif (( `zcat $<.shuffled.gz | wc -l` < $$((${DEVSIZE} + ${TESTSIZE})) )); then \
 	  zcat $<.shuffled.gz | cut -f1 | tail -n +$$((${DEVMINSIZE} + 1)) > ${TEST_SRC}; \
@@ -714,6 +719,13 @@ add-to-local-mono-data:
 ### use SRC_CLEANUP_SCRIPTS TRG_CLEANUP_SCRIPTS
 
 ## only normalisation
+%.norm.gz: %.gz
+	$(LOAD_MOSES) zcat $< |\
+	$(TOKENIZER)/replace-unicode-punctuation.perl |\
+	$(TOKENIZER)/remove-non-printing-char.perl |\
+	$(TOKENIZER)/normalize-punctuation.perl |\
+	sed 's/  */ /g;s/^ *//g;s/ *$$//g' | gzip -c > $@
+
 %.norm: %.raw
 	$(LOAD_MOSES) cat $< |\
 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
@@ -737,6 +749,13 @@ add-to-local-mono-data:
 
 
 ## minimal pre-processing
+%.simple.gz: %.gz
+	$(LOAD_MOSES) zcat $< |\
+	$(TOKENIZER)/replace-unicode-punctuation.perl |\
+	$(TOKENIZER)/remove-non-printing-char.perl |\
+	$(TOKENIZER)/deescape-special-chars.perl |\
+	sed 's/  */ /g;s/^ *//g;s/ *$$//g' | gzip -c > $@
+
 %.simple: %.raw
 	$(LOAD_MOSES) cat $< |\
 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
@@ -871,8 +890,8 @@ tokenize-testsets prepare-testsets: ${ALLTEST}
 ## NEW: always use the same name for the BPE models
 ## --> avoid overwriting validation/test data with new segmentation models
 ##     if a new data set is used
-BPESRCMODEL = ${WORKDIR}/train/opus.src.bpe${SRCBPESIZE:000=}k-model
-BPETRGMODEL = ${WORKDIR}/train/opus.trg.bpe${TRGBPESIZE:000=}k-model
+BPESRCMODEL = ${WORKDIR}/train/${BPEMODELNAME}.src.bpe${SRCBPESIZE:000=}k-model
+BPETRGMODEL = ${WORKDIR}/train/${BPEMODELNAME}.trg.bpe${TRGBPESIZE:000=}k-model
 
 
 .PRECIOUS: ${BPESRCMODEL} ${BPETRGMODEL}
@@ -954,8 +973,8 @@ endif
 ## NEW: always use the same name for the SPM models
 ## --> avoid overwriting validation/test data with new segmentation models
 ##     if a new data set is used
-SPMSRCMODEL = ${WORKDIR}/train/opus.src.spm${SRCBPESIZE:000=}k-model
-SPMTRGMODEL = ${WORKDIR}/train/opus.trg.spm${TRGBPESIZE:000=}k-model
+SPMSRCMODEL = ${WORKDIR}/train/${BPEMODELNAME}.src.spm${SRCBPESIZE:000=}k-model
+SPMTRGMODEL = ${WORKDIR}/train/${BPEMODELNAME}.trg.spm${TRGBPESIZE:000=}k-model
 # SPMEXTRA = --split_by_whitespace=false
 SPMEXTRA = 
 
@@ -1021,14 +1040,14 @@ endif
 
 
 ## sentence piece model trained on monolingual data
-SPMMODEL   = ${SPMDIR}/${LANGSTR}/opus.spm${BPESIZE:000=}k-model
-SPMSRCMONO = ${SPMDIR}/${LANGSRCSTR}/opus.spm${SRCBPESIZE:000=}k-model
-SPMTRGMONO = ${SPMDIR}/${LANGTRGSTR}/opus.spm${TRGBPESIZE:000=}k-model
+SPMMODEL   = ${SPMDIR}/${LANGSTR}/${BPEMODELNAME}.spm${BPESIZE:000=}k-model
+SPMSRCMONO = ${SPMDIR}/${LANGSRCSTR}/${BPEMODELNAME}.spm${SRCBPESIZE:000=}k-model
+SPMTRGMONO = ${SPMDIR}/${LANGTRGSTR}/${BPEMODELNAME}.spm${TRGBPESIZE:000=}k-model
 
 ## vocabulary files created from monolingual data
-SPMVOCAB    = ${SPMDIR}/${LANGSTR}/opus.spm${BPESIZE:000=}k.vocab.yml
-SPMSRCVOCAB = ${SPMDIR}/${LANGSRCSTR}/opus.spm${SRCBPESIZE:000=}k.vocab.yml
-SPMTRGVOCAB = ${SPMDIR}/${LANGTRGSTR}/opus.spm${TRGBPESIZE:000=}k.vocab.yml
+SPMVOCAB    = ${SPMDIR}/${LANGSTR}/${BPEMODELNAME}.spm${BPESIZE:000=}k.vocab.yml
+SPMSRCVOCAB = ${SPMDIR}/${LANGSRCSTR}/${BPEMODELNAME}.spm${SRCBPESIZE:000=}k.vocab.yml
+SPMTRGVOCAB = ${SPMDIR}/${LANGTRGSTR}/${BPEMODELNAME}.spm${TRGBPESIZE:000=}k.vocab.yml
 
 .PRECIOUS: ${SPMMODEL} ${SPMSRCMONO} ${SPMTRGMONO} ${SPMVOCAB}
 
