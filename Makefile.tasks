@@ -3,6 +3,7 @@
 # pre-defined tasks that we might want to run
 # 
 
+include Makefile.simplify
 
 
 MEMAD_LANGS = de en fi fr nl sv
@@ -235,12 +236,6 @@ all2en:
 
 
 
-
-
-
-
-
-
 ## run things with individual data sets only
 %-fiskmo:
 	${MAKE} TRAINSET=fiskmo ${@:-fiskmo=}
@@ -289,7 +284,7 @@ enru-yandex:
 enru-yandex-bt:
 	${MAKE} DATASET=opus+yandex MODELTYPE=transformer SRCLANGS=en TRGLANGS=ru EXTRA_TRAINSET=yandex data-bt
 	${MAKE} DATASET=opus+yandex MODELTYPE=transformer SRCLANGS=en TRGLANGS=ru EXTRA_TRAINSET=yandex \
-		WALLTIME=72 HPC_CORES=1 HPC_MEM=8g MARIAN_WORKSPACE=12000 MARIAN_EARLY_STOPPING=15 train-bt.submit-multigpu
+		WALLTIME=72 HPC_CORES=1 HPC_MEM=12g MARIAN_WORKSPACE=12000 MARIAN_EARLY_STOPPING=15 train-bt.submit-multigpu
 
 
 enit:

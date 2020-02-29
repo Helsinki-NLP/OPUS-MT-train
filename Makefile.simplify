@@ -1,0 +1,46 @@
+# -*-makefile-*-
+
+
+
+SIMPLEWIKI_DATA1_URL = https://cs.pomona.edu/~dkauchak/simplification/data.v1/
+SIMPLEWIKI_DATA2_URL = https://cs.pomona.edu/~dkauchak/simplification/data.v2/
+
+SIMPLEWIKI_DATA1 = data.v1.split
+SIMPLEWIKI_DATA2_SENT = sentence-aligned.v2
+SIMPLEWIKI_DATA2_DOC = document-aligned.v2
+
+
+${WORKHOME}/simplewiki/${SIMPLEWIKI_DATA1}:
+	mkdir -p ${dir $@}
+	wget -O $@.tar.gz ${SIMPLEWIKI_DATA1_URL}/${SIMPLEWIKI_DATA1}.tar.gz
+	tar -C ${dir $@} -xzf $@.tar.gz
+	rm -f $@.tar.gz
+	${TOKENIZER}/detokenizer.perl -l en < $@/normal.training.txt > ${DATADIR}/${PRE}/simplewiki_v1-training.en-en.en1.raw
+	${TOKENIZER}/detokenizer.perl -l en < $@/simple.training.txt > ${DATADIR}/${PRE}/simplewiki_v1-training.en-en.en2.raw
+	${TOKENIZER}/detokenizer.perl -l en < $@/normal.tuning.txt > ${DATADIR}/${PRE}/simplewiki_v1-tuning.en-en.en1.raw
+	${TOKENIZER}/detokenizer.perl -l en < $@/simple.tuning.txt > ${DATADIR}/${PRE}/simplewiki_v1-tuning.en-en.en2.raw
+	${TOKENIZER}/detokenizer.perl -l en < $@/normal.testing.txt > ${DATADIR}/${PRE}/simplewiki_v1-testing.en-en.en1.raw
+	${TOKENIZER}/detokenizer.perl -l en < $@/simple.testing.txt > ${DATADIR}/${PRE}/simplewiki_v1-testing.en-en.en2.raw
+
+
+${DATADIR}/${PRE}/simplewiki_v1-%.en-en.en1.raw: ${WORKHOME}/simplewiki/${SIMPLEWIKI_DATA1}/normal.%.txt
+	mkdir -p ${dir $@}
+	${TOKENIZER}/detokenizer.perl -l en < $< > $@
+
+${DATADIR}/${PRE}/simplewiki_v1-%.en-en.en2.raw: ${WORKHOME}/simplewiki/${SIMPLEWIKI_DATA1}/simple.%.txt
+	mkdir -p ${dir $@}
+	${TOKENIZER}/detokenizer.perl -l en < $< > $@
+
+simplify-english-prepare: ${WORKHOME}/simplewiki/${SIMPLEWIKI_DATA1}
+
+## train a simplification model from simplewiki for English
+
+%-simplify-english: ${WORKHOME}/simplewiki/${SIMPLEWIKI_DATA1}
+	${MAKE} DATASET=simplewiki_v1 \
+		TRAINSET=simplewiki_v1-training \
+		DEVSET=simplewiki_v1-tuning \
+		TESTSET=simplewiki_v1-testing \
+		HELDOUTSIZE=0 \
+		SRCLANGS=en TRGLANGS=en \
+	${@:-simplify-english=}
+

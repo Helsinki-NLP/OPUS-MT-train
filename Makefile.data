@@ -13,6 +13,18 @@ ifndef THREADS
 endif
 
 
+## look for cleanup scripts and put them into a pipe
+## they should be executable and should basically read STDIN and print to STDOUT
+## no further arguments are supported
+
+ifneq (${wildcard scripts/cleanup/${SRC}},)
+  SRC_CLEANUP_SCRIPTS = | ${subst ${SPACE}, | ,${shell find scripts/cleanup/${SRC} -executable -type f}} |
+endif
+
+ifneq (${wildcard scripts/cleanup/${TRG}},)
+  TRG_CLEANUP_SCRIPTS = | ${subst ${SPACE}, | ,${shell find scripts/cleanup/${TRG} -executable -type f}} |
+endif
+
 
 CLEAN_TRAIN_SRC = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.clean.${SRCEXT}.gz,${TRAINSET}}
 CLEAN_TRAIN_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_TRAIN_SRC}}
@@ -87,7 +99,39 @@ endif
 endif
 endif
 
+ifndef OLDMODELTYPE
+  OLDMODELTYPE=transformer-align
+endif
 
+ifndef NEWMODELTYPE
+  NEWMODELTYPE=transformer
+endif
+
+
+## move model files to a new name
+## (useful if using as starting point for another modeltyp
+##  for example, continue training without guided alignment)
+
+OLDMODEL_BASE  = ${WORKDIR}/${MODEL}.${OLDMODELTYPE}.model${NR}
+NEWMODEL_BASE  = ${WORKDIR}/${MODEL}.${NEWMODELTYPE}.model${NR}
+
+move-model:
+ifeq (${wildcard ${NEWMODEL_BASE}.npz},)
+	cp ${OLDMODEL_BASE}.npz ${NEWMODEL_BASE}.npz
+	cp ${OLDMODEL_BASE}.npz.best-perplexity.npz ${NEWMODEL_BASE}.npz.best-perplexity.npz
+	cp ${OLDMODEL_BASE}.npz.optimizer.npz ${NEWMODEL_BASE}.npz.optimizer.npz
+	cp ${OLDMODEL_BASE}.npz.orig.npz ${NEWMODEL_BASE}.npz.orig.npz
+	cp ${OLDMODEL_BASE}.npz.progress.yml ${NEWMODEL_BASE}.npz.progress.yml
+	cp ${OLDMODEL_BASE}.npz.yml ${NEWMODEL_BASE}.npz.yml
+	sed 's/${OLDMODELTYPE}/${NEWMODELTYPE}/' \
+		< ${OLDMODEL_BASE}.npz.decoder.yml \
+		> ${NEWMODEL_BASE}.npz.decoder.yml
+	sed 's/${OLDMODELTYPE}/${NEWMODELTYPE}/' \
+		< ${OLDMODEL_BASE}.npz.best-perplexity.npz.decoder.yml \
+		> ${NEWMODEL_BASE}.npz.best-perplexity.npz.decoder.yml
+else
+	@echo "new model ${NEWMODEL_BASE}.npz exists already!"
+endif
 
 
 clean-data:
@@ -260,7 +304,7 @@ ${TRAIN_ALG}: 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 	cat ${word 2,$^} |\
 	perl -CS -pe 'tr[\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}][]cd;' > $@.2
 	paste $@.1 $@.2 |\
-	python3 bitext-match-lang.py -s ${SRC} -t ${TRG} > $@.bitext
+	scripts/filter/bitext-match-lang.py -s ${SRC} -t ${TRG} > $@.bitext
 	cut -f1 $@.bitext | gzip -c > $@
 	cut -f2 $@.bitext | gzip -c > $(@:.clean.${SRCEXT}.gz=.clean.${TRGEXT}.gz)
 	rm -f $@.bitext $@.1 $@.2
@@ -622,7 +666,7 @@ add-to-local-mono-data:
 	for c in ${MONOSET}; do \
 	  if [ -e ${OPUSHOME}/$$c/latest/mono/${LANGID}.txt.gz ]; then \
 	    zcat ${OPUSHOME}/$$c/latest/mono/${LANGID}.txt.gz |\
-	    python3 mono-match-lang.py -l ${LANGID} >> ${LOCAL_MONO_DATA}.raw; \
+	    scripts/filter/mono-match-lang.py -l ${LANGID} >> ${LOCAL_MONO_DATA}.raw; \
 	  fi \
 	done
 
@@ -666,6 +710,9 @@ add-to-local-mono-data:
 
 
 
+### TODO: make language-specific pre-processing ....
+### use SRC_CLEANUP_SCRIPTS TRG_CLEANUP_SCRIPTS
+
 ## only normalisation
 %.norm: %.raw
 	$(LOAD_MOSES) cat $< |\
@@ -673,13 +720,6 @@ add-to-local-mono-data:
 	$(TOKENIZER)/remove-non-printing-char.perl |\
 	$(TOKENIZER)/normalize-punctuation.perl |\
 	sed 's/  */ /g;s/^ *//g;s/ *$$//g' > $@
-
-%.norm.gz: %.gz
-	$(LOAD_MOSES) zcat $< |\
-	$(TOKENIZER)/replace-unicode-punctuation.perl |\
-	$(TOKENIZER)/remove-non-printing-char.perl |\
-	$(TOKENIZER)/normalize-punctuation.perl |\
-	sed 's/  */ /g;s/^ *//g;s/ *$$//g' | gzip -c > $@
 
 
 ## minimal pre-processing
@@ -690,12 +730,6 @@ add-to-local-mono-data:
 	$(TOKENIZER)/deescape-special-chars.perl |\
 	sed 's/  */ /g;s/^ *//g;s/ *$$//g' > $@
 
-%.simple.gz: %.gz
-	$(LOAD_MOSES) zcat $< |\
-	$(TOKENIZER)/replace-unicode-punctuation.perl |\
-	$(TOKENIZER)/remove-non-printing-char.perl |\
-	$(TOKENIZER)/deescape-special-chars.perl |\
-	sed 's/  */ /g;s/^ *//g;s/ *$$//g' | gzip -c > $@
 
 ## remove all spaces (treat everything as a long string)
 %.nospace: %.raw
@@ -706,14 +740,49 @@ add-to-local-mono-data:
 	sed 's/  */ /g;s/^ *//g;s/ *$$//g' |\
 	sed 's/ /▁/g' > $@
 
-%.nospace.gz: %.gz
-	$(LOAD_MOSES) zcat $< |\
-	$(TOKENIZER)/replace-unicode-punctuation.perl |\
-	$(TOKENIZER)/remove-non-printing-char.perl |\
-	$(TOKENIZER)/deescape-special-chars.perl |\
-	sed 's/  */ /g;s/^ *//g;s/ *$$//g' |\
-	sed 's/ /▁/g' |\
-	gzip -c > $@
+
+## generic targets to make it possible to work with compressed data
+## when running the same pre-processing pipeline
+## TODO: does that destroy anything?
+## TODO: do we need this?
+
+# %.raw: %.gz
+# 	gzip -cd < $< > $@
+
+# %.${PRE}.gz: %.${PRE}
+# 	gzip -c < $< > $@
+
+
+
+
+
+
+## the above should avoid having repeating the pipeline below
+
+# %.norm.gz: %.gz
+# 	$(LOAD_MOSES) zcat $< |\
+# 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
+# 	$(TOKENIZER)/remove-non-printing-char.perl |\
+# 	$(TOKENIZER)/normalize-punctuation.perl |\
+# 	sed 's/  */ /g;s/^ *//g;s/ *$$//g' | gzip -c > $@
+
+# %.simple.gz: %.gz
+# 	$(LOAD_MOSES) zcat $< |\
+# 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
+# 	$(TOKENIZER)/remove-non-printing-char.perl |\
+# 	$(TOKENIZER)/deescape-special-chars.perl |\
+# 	sed 's/  */ /g;s/^ *//g;s/ *$$//g' | gzip -c > $@
+
+# %.nospace.gz: %.gz
+# 	$(LOAD_MOSES) zcat $< |\
+# 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
+# 	$(TOKENIZER)/remove-non-printing-char.perl |\
+# 	$(TOKENIZER)/deescape-special-chars.perl |\
+# 	sed 's/  */ /g;s/^ *//g;s/ *$$//g' |\
+# 	sed 's/ /▁/g' |\
+# 	gzip -c > $@
+
+
 
 
 
@@ -733,7 +802,7 @@ MAX_NR_TOKENS = 250
 	mv $@.${TRGEXT} $(@:.src.clean.${PRE_SRC}=.trg.clean.${PRE_TRG})
 
 #	paste $@.${SRCEXT} $@.${TRGEXT} |\
-#	python3 bitext-match-lang.py -s ${SRC} -t ${TRG} > $@.bitext
+#	scripts/filter/bitext-match-lang.py -s ${SRC} -t ${TRG} > $@.bitext
 #	cut -f1 $@.bitext > $@
 #	cut -f2 $@.bitext > $(@:.src.clean.${PRE_SRC}=.trg.clean.${PRE_TRG})
 #	rm -f $@.${SRCEXT} $@.${TRGEXT} $@.bitext
