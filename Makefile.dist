@@ -97,7 +97,7 @@ best_dist:
 	echo "------------------------------------------------"; \
 	echo "search best model for ${LANGPAIRSTR}"; \
 	for d in ${ALT_MODEL_DIR}; do \
-	  e=`ls work-$$d/${LANGPAIRSTR}/val/*.trg | xargs basename | sed 's/\.trg//'`; \
+	  e=`ls work-$$d/${LANGPAIRSTR}/test/*.trg | tail -1 | xargs basename | sed 's/\.trg//'`; \
 	  echo "evaldata = $$e"; \
 	  if [ "$$e" != "GNOME" ]; then \
 	    I=`find work-$$d/${LANGPAIRSTR}/ -maxdepth 1 -name "$$e.*.eval" -printf "%f\n"`; \

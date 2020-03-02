@@ -70,6 +70,7 @@ MARIAN_EARLY_STOPPING = 5
 
 
 
+
 .PHONY: all
 all: model-index.txt
 	${MAKE} ${TEST_SRC}.${BASEMODELNAME}.${TRG}.compare
@@ -141,6 +142,24 @@ tmx-tune:
 
 
 
+
+## awful hack to fix a problem with the pre-processing script for the target language
+
+.PHONY: en-simplify
+en-simplify:
+	${MAKE} SRC=en1 TRG=en2 \
+		MODEL=simplewiki_v1 \
+		SRCPRE_PARA="en en en1-en2/opus-2020-03-02/source.spm" \
+		TRGPRE_PARA="en en en1-en2/opus-2020-03-02/target.spm | sed 's/^>>en<< //'" \
+		BASEMODELHOME=../models/en+el+es+fi-en+el+es+fi \
+		BASEMODELZIP=opus-2020-03-02.zip \
+		TRAIN_SRC=en1-en2/simplewiki_v1/train/simplewiki_v1-training.en-en.clean.en1 \
+		TRAIN_TRG=en1-en2/simplewiki_v1/train/simplewiki_v1-training.en-en.clean.en2 \
+		DEV_SRC=en1-en2/simplewiki_v1/dev/simplewiki_v1-tuning.en-en.clean.en1 \
+		DEV_TRG=en1-en2/simplewiki_v1/dev/simplewiki_v1-tuning.en-en.clean.en2 \
+		TEST_SRC=en1-en2/simplewiki_v1/test/simplewiki_v1-testing.en-en.clean.en1 \
+		TEST_TRG=en1-en2/simplewiki_v1/test/simplewiki_v1-testing.en-en.clean.en2 \
+	all
 
 
 .PHONY: news-enfi
@@ -256,9 +275,13 @@ endif
 .PHONY: data
 data: ${TRAIN_SRC}.pre.gz ${TRAIN_TRG}.pre.gz ${DEV_SRC}.pre.gz ${DEV_TRG}.pre.gz
 
+.PHONY: basemodel
+basemodel: ${LANGPAIR}/${BASEMODELNAME}/decoder.yml
 ${LANGPAIR}/${BASEMODELNAME}/decoder.yml:
 	mkdir -p ${dir $@}
-ifneq (${BASEMODELZIP},)
+ifneq (${wildcard ${BASEMODELHOME}/${BASEMODELZIP}},)
+	unzip -u -d ${dir $@} ${BASEMODELHOME}/${BASEMODELZIP}
+else ifneq (${BASEMODELZIP},)
 	wget -nv -O ${dir $@}/${BASEMODELZIP} ${BASEMODELHOME}/${BASEMODELZIP}
 	cd ${dir $@} && unzip -u ${BASEMODELZIP}
 else
@@ -266,16 +289,19 @@ else
 endif
 
 
+SRCPRE_PARA = ${SRC} ${LANGPAIR}/${BASEMODELNAME}/source.spm
+TRGPRE_PARA = ${TRG} ${LANGPAIR}/${BASEMODELNAME}/target.spm
+
 .INTERMEDIATE: ${TRAIN_SRC}.pre.gz ${DEV_SRC}.pre.gz ${TEST_SRC}.pre.gz
 ${TRAIN_SRC}.pre.gz ${DEV_SRC}.pre.gz ${TEST_SRC}.pre.gz: %.pre.gz: %.gz ${LANGPAIR}/${BASEMODELNAME}/decoder.yml
 	zcat $< |\
-	${LANGPAIR}/${BASEMODELNAME}/preprocess.sh ${SRC} ${LANGPAIR}/${BASEMODELNAME}/source.spm |\
+	${LANGPAIR}/${BASEMODELNAME}/preprocess.sh ${SRCPRE_PARA} |\
 	gzip -c > $@
 
 .INTERMEDIATE: ${TRAIN_TRG}.pre.gz ${DEV_TRG}.pre.gz
 ${TRAIN_TRG}.pre.gz ${DEV_TRG}.pre.gz: %.pre.gz: %.gz ${LANGPAIR}/${BASEMODELNAME}/decoder.yml
 	zcat $< |\
-	${LANGPAIR}/${BASEMODELNAME}/preprocess.sh ${SRC} ${LANGPAIR}/${BASEMODELNAME}/target.spm |\
+	${LANGPAIR}/${BASEMODELNAME}/preprocess.sh ${TRGPRE_PARA} |\
 	gzip -c > $@
 
 
