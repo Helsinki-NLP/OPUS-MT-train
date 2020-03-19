@@ -1059,7 +1059,7 @@ ifneq (${SPMVOCAB},${SPMSRCVOCAB})
 endif
 
 ifneq (${SPMVOCAB},${SPMTRGVOCAB})
-  ${SPMSRCVOCAB}:
+  ${SPMTRGVOCAB}:
 	${MAKE} LANGS=${TRGLANGS} BPESIZE=${TRGBPESIZE} mono-spm-vocab
 endif
 

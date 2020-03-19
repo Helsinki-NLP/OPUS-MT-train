@@ -39,6 +39,47 @@ testsets/en-en/simplification.en2.gz: simplification
 simplify-testset: testsets/en-en/simplification.en1.gz testsets/en-en/simplification.en2.gz
 
 
+#---------------------------------------------------------------------
+# document-level data
+#---------------------------------------------------------------------
+
+simplewiki-docdata: ${DATADIR}/${PRE}/simplewiki_v2_doc${MARIAN_MAX_LENGTH}-test.en-en.en1.raw \
+		${DATADIR}/${PRE}/simplewiki_v2_doc${MARIAN_MAX_LENGTH}-test.en-en.en2.raw \
+		${DATADIR}/${PRE}/simplewiki_v2_doc${MARIAN_MAX_LENGTH}-dev.en-en.en1.raw \
+		${DATADIR}/${PRE}/simplewiki_v2_doc${MARIAN_MAX_LENGTH}-dev.en-en.en2.raw \
+		${DATADIR}/${PRE}/simplewiki_v2_doc${MARIAN_MAX_LENGTH}-train.en-en.en1.raw \
+		${DATADIR}/${PRE}/simplewiki_v2_doc${MARIAN_MAX_LENGTH}-train.en-en.en2.raw
+
+${DATADIR}/simplify/simplewiki_v2_doc${MARIAN_MAX_LENGTH}.en-en.en1.raw: ${HOME}/work/SimplifyRussian/data/simplification_datasets/simplewiki_docs.csv
+	mkdir -p ${dir $@}
+	tail -n +2 $< | cut -f2 |  sed 's/^"//;s/ "$$//' > $@.en1
+	tail -n +2 $< | cut -f3 |  sed 's/^"//;s/ "$$//' > $@.en2
+	$(MOSESSCRIPTS)/training/clean-corpus-n.perl $@ en1 en2 $@.clean 0 ${MARIAN_MAX_LENGTH}
+	${TOKENIZER}/detokenizer.perl -l en < $@.clean.en1 > $@
+	${TOKENIZER}/detokenizer.perl -l en < $@.clean.en2 > $(@:.en1.raw=.en2.raw)
+	rm -f $@.en1 $@.en2 $@.clean.en1 $@.clean.en2
+
+${DATADIR}/simplify/simplewiki_v2_doc${MARIAN_MAX_LENGTH}.en-en.en2.raw: ${DATADIR}/simplify/simplewiki_v2_doc${MARIAN_MAX_LENGTH}.en-en.en1.raw
+	@echo "done!"
+
+${DATADIR}/${PRE}/simplewiki_v2_doc${MARIAN_MAX_LENGTH}-test.en-en.en1.raw: ${DATADIR}/simplify/simplewiki_v2_doc${MARIAN_MAX_LENGTH}.en-en.en1.raw
+	head -1000 $< > $@
+
+${DATADIR}/${PRE}/simplewiki_v2_doc${MARIAN_MAX_LENGTH}-test.en-en.en2.raw: ${DATADIR}/simplify/simplewiki_v2_doc${MARIAN_MAX_LENGTH}.en-en.en2.raw
+	head -1000 $< > $@
+
+${DATADIR}/${PRE}/simplewiki_v2_doc${MARIAN_MAX_LENGTH}-dev.en-en.en1.raw: ${DATADIR}/simplify/simplewiki_v2_doc${MARIAN_MAX_LENGTH}.en-en.en1.raw
+	head -2000 $< | tail -1000 > $@
+
+${DATADIR}/${PRE}/simplewiki_v2_doc${MARIAN_MAX_LENGTH}-dev.en-en.en2.raw: ${DATADIR}/simplify/simplewiki_v2_doc${MARIAN_MAX_LENGTH}.en-en.en2.raw
+	head -2000 $< | tail -1000 > $@
+
+${DATADIR}/${PRE}/simplewiki_v2_doc${MARIAN_MAX_LENGTH}-train.en-en.en1.raw: ${DATADIR}/simplify/simplewiki_v2_doc${MARIAN_MAX_LENGTH}.en-en.en1.raw
+	tail -n +2001 $< > $@
+
+${DATADIR}/${PRE}/simplewiki_v2_doc${MARIAN_MAX_LENGTH}-train.en-en.en2.raw: ${DATADIR}/simplify/simplewiki_v2_doc${MARIAN_MAX_LENGTH}.en-en.en2.raw
+	tail -n +2001 $< > $@
+
 
 #---------------------------------------------------------------------
 # data from https://cs.pomona.edu/~dkauchak/simplification/
@@ -113,6 +154,42 @@ simplewiki-v1-english-prepare: ${WORKHOME}/simplewiki/${SIMPLEWIKI_DATA1}
 		HELDOUTSIZE=0 \
 		SRCLANGS=en TRGLANGS=en \
 	${@:-simplewiki-v2sent-english=}
+
+
+%-simplewiki-v2doc-english: simplewiki-docdata
+	rm -f ${WORKDIR}/*.submit
+	${MAKE} DATASET=simplewiki_v2_doc \
+		BPEMODELNAME=simplewiki_v2_doc${MARIAN_MAX_LENGTH} \
+		TRAINSET=simplewiki_v2_doc${MARIAN_MAX_LENGTH}-train \
+		DEVSET=simplewiki_v2_doc${MARIAN_MAX_LENGTH}-dev \
+		TESTSET=simplewiki_v2_doc${MARIAN_MAX_LENGTH}-test \
+		HELDOUTSIZE=0 MAX_NR_TOKENS=${MARIAN_MAX_LENGTH} \
+		SRCLANGS=en TRGLANGS=en \
+	    	MARIAN_VALID_FREQ=1000 \
+	    	MARIAN_WORKSPACE=5000 \
+		MARIAN_MAX_LENGTH=500 \
+		HPC_MEM=12g \
+	${@:-simplewiki-v2doc-english=}
+
+#		MARIAN_EXTRA="--max-length-crop" \
+
+
+
+
+%-simplewiki-v2sent+doc-english: ${WORKHOME}/simplewiki/${SIMPLEWIKI_DATA2_SENT} simplewiki-docdata
+	rm -f ${WORKDIR}/*.submit
+	${MAKE} DATASET=simplewiki_v2_sent+doc${MARIAN_MAX_LENGTH} \
+		BPEMODELNAME=simplewiki_v2-sent+doc${MARIAN_MAX_LENGTH} \
+		TRAINSET="simplewiki_v2_doc${MARIAN_MAX_LENGTH}-train simplewiki_v2_sent-training" \
+		DEVSET=simplewiki_v2_doc${MARIAN_MAX_LENGTH}-dev \
+		TESTSET=simplewiki_v2_doc${MARIAN_MAX_LENGTH}-test \
+		HELDOUTSIZE=0 MAX_NR_TOKENS=${MARIAN_MAX_LENGTH} \
+		SRCLANGS=en TRGLANGS=en \
+	    	MARIAN_VALID_FREQ=1000 \
+	    	MARIAN_WORKSPACE=5000 \
+		HPC_MEM=16g \
+	${@:-simplewiki-v2sent+doc-english=}
+
 
 
 #---------------------------------------------------------------------

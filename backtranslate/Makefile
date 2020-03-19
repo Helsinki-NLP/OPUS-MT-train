@@ -225,7 +225,7 @@ ${WIKI_TXT}: ${WIKI_JSON}
 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
 	$(TOKENIZER)/remove-non-printing-char.perl |\
 	sed 's/  */ /g;s/^ *//g;s/ *$$//g' |\
-	python3 ../mono-match-lang.py -l ${LANGID} |\
+	python3 ../scripts/filter/mono-match-lang.py -l ${LANGID} |\
 	split -l ${MAX_SENTENCES} - ${patsubst %${PART}.gz,%,$@}
 	gzip -f ${patsubst %${PART}.gz,%,$@}*
 
