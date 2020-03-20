@@ -91,6 +91,10 @@ all-wikis: ${LANGPAIR}/${MODELNAME}/decoder.yml
 	  fi \
 	done
 
+all-wikitext:
+	for w in ${WIKISOURCES}; do \
+	  ${MAKE} WIKISOURCE=$$w extract-text; \
+	done
 
 all-wikilangs: index.html
 	for l in ${WIKILANGS}; do \
