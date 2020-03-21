@@ -207,14 +207,14 @@ endif
 	  grep chrF *.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | cut -f3 -d ' ' > $@.3; \
 	  echo '| testset               | BLEU  | chr-F |' >> README.md; \
 	  echo '|-----------------------|-------|-------|' >> README.md; \
-	  paste $@.1 $@.2 $@.3 | sed  "s/\t/ 	| /g;s/^/| /;s/$$/ |/" >> README.md; \
+	  paste $@.1 $@.2 $@.3 | sed  "s/\t/ 	| /g;s/^/| /;s/$$/ |/" | sort | uniq >> README.md; \
 	  rm -f $@.1 $@.2 $@.3; \
 	fi
 	@cat ${WORKDIR}/README.md >> ${dir $@}README.md
 	@echo '' >> ${dir $@}README.md
 	@cp models/LICENSE ${WORKDIR}/
 	@chmod +x ${WORKDIR}/preprocess.sh
-	@sed -e 's# - /.*/\([^/]*\)$$# - \1#' \
+	@sed -e 's# - .*/\([^/]*\)$$# - \1#' \
 	    -e 's/beam-size: [0-9]*$$/beam-size: 6/' \
 	    -e 's/mini-batch: [0-9]*$$/mini-batch: 1/' \
 	    -e 's/maxi-batch: [0-9]*$$/maxi-batch: 1/' \

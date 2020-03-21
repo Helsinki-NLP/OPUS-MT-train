@@ -1,15 +1,28 @@
 #
 # fine-tune an existing model
 # set SRC and TRG to source and target language IDs
-# defaults: SRC=en TRG=de
 #
 #  make SRC=xx TRG=yy news-tune-data ...... create tuning data from newstest sets
 #  make SRC=xx TRG=yy all ................. tune and eval
 #
-# other targets:
+#
+# create a package from the fine-tuned model
+# NOTE: set SRCLANGS and TRGLANSG to make the top-level makefile happy
+#
+#  make SRCLANGS=xx TRGLANGS=yy dist
+#
+#
+# other targets for special cases
 #
 #  make news-enfi ......... make tuned model for en-fi News
 #  make goethe-defi ....... make model for Goethe Institute data
+#  make waen .............. fine tune fr-en model for Walloon-English
+#  make enwa .............. same as waen but for English-Walloon
+#  make waen-dist ......... make a package for wa-en
+#
+#
+# other targets for sub-tasks
+#
 #  make data .............. pre-process train/dev data
 #  make tune .............. fine-tune model
 #  make translate ......... translate test set with fine-tuned model
@@ -32,9 +45,12 @@ include ../Makefile.env
 include ../Makefile.config
 include ../Makefile.slurm
 
-
-SRC       = en
-TRG       = de
+ifndef SRC
+  SRC = en
+endif
+ifndef TRG
+  TRG = de
+endif
 LANGPAIR  = ${SRC}-${TRG}
 MODEL     = news
 
@@ -237,6 +253,103 @@ goethe-test:
 		TEST_SRC=de-fi/goethe-test/test/goethe-institute-test1.de \
 		TEST_TRG=de-fi/goethe-test/test/goethe-institute-test1.fi \
 	all
+
+
+
+
+## make dist:
+## 
+## make a package of the fine-tuned model
+## and copy it into the models directory (../models)
+
+## test data evaluation for to generate info about test score in the README.md
+OLD_TEST_EVAL = ${TEST_SRC}.${BASEMODELNAME}.${TRG}.eval
+NEW_TEST_DATA = ${patsubst %.${SRC},%,${notdir ${TEST_SRC}}}
+NEW_TEST_EVAL = ${LANGPAIR}/${MODEL}/model/${NEW_TEST_DATA}.${DATASET}-${MODEL}.${PRE_SRC}-${PRE_TRG}${NR}.transformer.${SRC}.${TRG}.eval
+
+dist:
+	cp ${OLD_TEST_EVAL} ${NEW_TEST_EVAL}
+	${MAKE} -C .. \
+		MODELSHOME=${PWD}/../models \
+		MODELS_URL=https://object.pouta.csc.fi/OPUS-MT-models \
+		DATASET=${DATASET}-${MODEL} \
+		SRCLANGS=${SRCLANGS} TRGLANGS=${TRGLANGS} \
+		PREPROCESS_TYPE=spm \
+		MODELTYPE=transformer \
+		PREPROCESS_SRCMODEL=${PWD}/${LANGPAIR}/${BASEMODELNAME}/source.spm \
+		PREPROCESS_TRGMODEL=${PWD}/${LANGPAIR}/${BASEMODELNAME}/target.spm \
+		PREPROCESS_DESCRIPTION="normalization + SentencePiece" \
+		MODEL_FINAL=${PWD}/${TUNED_MODEL}.npz.best-perplexity.npz \
+		MODEL_DECODER=${PWD}/${TUNED_MODEL}.npz.best-perplexity.npz.decoder.yml \
+		MODEL_VOCAB=${PWD}/${TUNED_MODEL_VOCAB} \
+		MODEL_VALIDLOG=${patsubst %.model,%.valid.log,${PWD}/${TUNED_MODEL}} \
+		MODEL_TRAINLOG=${patsubst %.model,%.train.log,${PWD}/${TUNED_MODEL}} \
+		TEST_EVALUATION=${PWD}/${TEST_SRC}.${BASEMODELNAME}.${TRG}.eval \
+		TEST_COMPARISON=${PWD}/${TEST_SRC}.${BASEMODELNAME}.${TRG}.compare \
+		WORKDIR=${PWD}/${LANGPAIR}/${MODEL}/model \
+	dist
+
+
+
+## fine-tune en-fr model for walloon
+## --> can we do that?
+
+ENWA = ${wildcard ${OPUSHOME}/*/latest/moses/en-wa.*}
+enwa-data: en-fr/enwa/train/enwa.fr.gz
+waen-data: fr-en/enwa/train/enwa.fr.gz
+waen-dist:
+	${MAKE} SRCLANGS=wa TRGLANGS=en SRC=fr TRG=en MODEL=enwa dist
+
+en-fr/enwa/train/enwa.fr.gz: ${ENWA}
+	mkdir -p en-fr/tmp
+	cd en-fr/tmp; \
+	for c in ${ENWA}; do \
+	  unzip -n $$c; \
+	done
+	cat en-fr/tmp/*.wa > en-fr/all.wa
+	cat en-fr/tmp/*.en > en-fr/all.en
+	paste en-fr/all.en en-fr/all.wa |\
+	$(TOKENIZER)/replace-unicode-punctuation.perl |\
+	perl -CS -pe 'tr[\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}][]cd;' |\
+	sed 's/  */ /g;s/^ *//g;s/ *$$//g' |\
+	sort | uniq | shuf > en-fr/all.en-wa
+	mkdir -p en-fr/enwa/dev
+	mkdir -p en-fr/enwa/test
+	mkdir -p en-fr/enwa/train
+	head -1000 en-fr/all.en-wa | cut -f1 | gzip -c \
+		> en-fr/enwa/test/enwa.en.gz
+	head -1000 en-fr/all.en-wa | cut -f2 | gzip -c \
+		> en-fr/enwa/test/enwa.fr.gz
+	head -2001 en-fr/all.en-wa | tail -1000 | cut -f1 | gzip -c \
+		> en-fr/enwa/dev/enwa.en.gz
+	head -2001 en-fr/all.en-wa | tail -1000 | cut -f2 | gzip -c \
+		> en-fr/enwa/dev/enwa.fr.gz
+	tail -n +2002 en-fr/all.en-wa | cut -f1 | gzip -c \
+		> en-fr/enwa/train/enwa.en.gz
+	tail -n +2002 en-fr/all.en-wa | cut -f2 | gzip -c \
+		> en-fr/enwa/train/enwa.fr.gz
+	rm -f en-fr/all.*
+	rm -fr en-fr/tmp
+
+fr-en/enwa/train/enwa.fr.gz: en-fr/enwa/train/enwa.fr.gz
+	mkdir -p fr-en/enwa/dev
+	mkdir -p fr-en/enwa/test
+	mkdir -p fr-en/enwa/train
+	cp en-fr/enwa/test/enwa.en.gz fr-en/enwa/test/
+	cp en-fr/enwa/test/enwa.fr.gz fr-en/enwa/test/
+	cp en-fr/enwa/dev/enwa.en.gz fr-en/enwa/dev/
+	cp en-fr/enwa/dev/enwa.fr.gz fr-en/enwa/dev/
+	cp en-fr/enwa/train/enwa.en.gz fr-en/enwa/train/
+	cp en-fr/enwa/train/enwa.fr.gz fr-en/enwa/train/
+
+
+enwa: en-fr/enwa/train/enwa.fr.gz
+	${MAKE} SRC=en TRG=fr MODEL=enwa all
+
+waen: fr-en/enwa/train/enwa.fr.gz
+	${MAKE} SRC=fr TRG=en MODEL=enwa all
+
+
 
 
 
