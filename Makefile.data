@@ -305,9 +305,11 @@ ${TRAIN_ALG}: 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 
 %.clean.${SRCEXT}.gz: %.${SRCEXT}.${PRE} %.${TRGEXT}.${PRE}
 	cat ${word 1,$^} |\
-	perl -CS -pe 'tr[\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}][]cd;' > $@.1
+	perl -CS -pe 'tr[\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}][]cd;' |\
+	perl -CS -pe 's/\&\s*\#\s*160\s*\;/ /g' > $@.1
 	cat ${word 2,$^} |\
-	perl -CS -pe 'tr[\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}][]cd;' > $@.2
+	perl -CS -pe 'tr[\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}][]cd;' |\
+	perl -CS -pe 's/\&\s*\#\s*160\s*\;/ /g' > $@.2
 	paste $@.1 $@.2 |\
 	scripts/filter/bitext-match-lang.py -s ${SRC} -t ${TRG} > $@.bitext
 	cut -f1 $@.bitext | gzip -c > $@

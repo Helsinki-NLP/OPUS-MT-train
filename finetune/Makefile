@@ -2,8 +2,8 @@
 # fine-tune an existing model
 # set SRC and TRG to source and target language IDs
 #
-#  make SRC=xx TRG=yy news-tune-data ...... create tuning data from newstest sets
-#  make SRC=xx TRG=yy all ................. tune and eval
+#  make SRCLANGS=xx TRGLANGS=yy news-tune-data ...... create tuning data from newstest sets
+#  make SRCLANGS=xx TRGLANGS=yy all ................. tune and eval
 #
 #
 # create a package from the fine-tuned model
@@ -45,18 +45,12 @@ include ../Makefile.env
 include ../Makefile.config
 include ../Makefile.slurm
 
-ifndef SRC
-  SRC = en
-endif
-ifndef TRG
-  TRG = de
-endif
-LANGPAIR  = ${SRC}-${TRG}
 MODEL     = news
 
-TRAIN_SRC = ${patsubst %.gz,%,$(wildcard ${LANGPAIR}/${MODEL}/train/*.${SRC}.gz)}
-DEV_SRC   = ${patsubst %.gz,%,$(wildcard ${LANGPAIR}/${MODEL}/dev/*.${SRC}.gz)}
-TEST_SRC  = ${patsubst %.gz,%,$(wildcard ${LANGPAIR}/${MODEL}/test/*.${SRC}.gz)}
+
+TRAIN_SRC = ${patsubst %.gz,%,$(wildcard ${LANGPAIRSTR}/${MODEL}/train/*.${SRC}.gz)}
+DEV_SRC   = ${patsubst %.gz,%,$(wildcard ${LANGPAIRSTR}/${MODEL}/dev/*.${SRC}.gz)}
+TEST_SRC  = ${patsubst %.gz,%,$(wildcard ${LANGPAIRSTR}/${MODEL}/test/*.${SRC}.gz)}
 
 TRAIN_TRG = ${patsubst %.${SRC},%.${TRG},${TRAIN_SRC}}
 DEV_TRG   = ${patsubst %.${SRC},%.${TRG},${DEV_SRC}}
@@ -66,16 +60,31 @@ OBJECTSTORAGE  = https://object.pouta.csc.fi
 MODELCONTAINER = OPUS-MT-models
 MODELINDEX     = ${OBJECTSTORAGE}/${MODELCONTAINER}/index.txt
 
-# BASEMODELHOME     = ../models/${LANGPAIR}
+
+# base model to be finetuned
+
+ifndef BASE_SRCLANGS
+  BASE_SRCLANGS = ${SRCLANGS}
+endif
+ifndef BASE_TRGLANGS
+  BASE_TRGLANGS = ${TRGLANGS}
+endif
+BASE_LANGSRCSTR  = ${subst ${SPACE},+,$(BASE_SRCLANGS)}
+BASE_LANGTRGSTR  = ${subst ${SPACE},+,$(BASE_TRGLANGS)}
+BASE_LANGPAIRSTR = ${BASE_LANGSRCSTR}-${BASE_LANGTRGSTR}
+
+
+
+# BASEMODELHOME     = ../models/${LANGPAIRSTR}
 # BASEMODELZIP      = ${lastword ${sort ${wildcard ${BASEMODELHOME}/*-20*.zip}}}
 # BASEMODELNAME     = ${patsubst %.zip,%,${notdir ${BASEMODELZIP}}}
 
-BASEMODELHOME     = ${OBJECTSTORAGE}/${MODELCONTAINER}/${LANGPAIR}
-BASEMODELZIP      = ${lastword ${sort ${notdir ${shell grep '${LANGPAIR}/${DATASET}-.*\.zip' model-index.txt}}}}
-BASEMODELNAME     = ${BASEMODELZIP:.zip=}
+BASEMODELHOME     = ${OBJECTSTORAGE}/${MODELCONTAINER}/${BASE_LANGPAIRSTR}
+BASEMODELZIP      = ${lastword ${sort ${notdir ${shell grep '${BASE_LANGPAIRSTR}/${DATASET}-.*\.zip' model-index.txt}}}}
+BASEMODELNAME     = ${BASEMODELZIP:.zip=}_${BASE_LANGPAIRSTR}
 
-TUNED_MODEL       = ${LANGPAIR}/${MODEL}/model/${BASEMODELNAME}_${MODEL}.transformer.model
-TUNED_MODEL_VOCAB = ${LANGPAIR}/${MODEL}/model/${BASEMODELNAME}_${MODEL}.vocab.yml
+TUNED_MODEL       = ${LANGPAIRSTR}/${MODEL}/model/${BASEMODELNAME}_${MODEL}.transformer.model
+TUNED_MODEL_VOCAB = ${LANGPAIRSTR}/${MODEL}/model/${BASEMODELNAME}_${MODEL}.vocab.yml
 
 
 MARIAN_WORKSPACE      = 5000
@@ -147,7 +156,7 @@ tmx-tune:
 	tail -n +2002 ${TMXBASE}.$$s-$$t.shuffled | cut -f2 | gzip -c \
 		> $$s-$$t/${TMXBASE}/train/${TMXBASE}.$$t.gz; \
 	mv ${TMXBASE}.*-* $$s-$$t/; \
-	${MAKE} SRC=$$s TRG=$$t MODEL=${TMXBASE} \
+	${MAKE} SRCLANGS=$$s TRGLANGS=$$t MODEL=${TMXBASE} \
 		TRAIN_SRC=$$s-$$t/${TMXBASE}/train/${TMXBASE}.$$s \
 		TRAIN_TRG=$$s-$$t/${TMXBASE}/train/${TMXBASE}.$$t \
 		DEV_SRC=$$s-$$t/${TMXBASE}/dev/${TMXBASE}.$$s \
@@ -163,7 +172,7 @@ tmx-tune:
 
 .PHONY: en-simplify
 en-simplify:
-	${MAKE} SRC=en1 TRG=en2 \
+	${MAKE} SRCLANGS=en1 TRGLANGS=en2 \
 		MODEL=simplewiki_v1 \
 		SRCPRE_PARA="en en en1-en2/opus-2020-03-02/source.spm" \
 		TRGPRE_PARA="en en en1-en2/opus-2020-03-02/target.spm | sed 's/^>>en<< //'" \
@@ -180,7 +189,7 @@ en-simplify:
 
 .PHONY: news-enfi
 news-enfi:
-	${MAKE} SRC=en TRG=fi MODEL=news \
+	${MAKE} SRCLANGS=en TRGLANGS=fi MODEL=news \
 		TRAIN_SRC=en-fi/news/train/newstest2015-2018.en \
 		TRAIN_TRG=en-fi/news/train/newstest2015-2018.fi \
 		DEV_SRC=en-fi/news/dev/newsdev2015-enfi.en \
@@ -191,7 +200,7 @@ news-enfi:
 
 .PHONY: goethe-defi
 goethe-defi:
-	${MAKE} SRC=de TRG=fi MODEL=goethe \
+	${MAKE} SRCLANGS=de TRGLANGS=fi MODEL=goethe \
 		TRAIN_SRC=de-fi/goethe/train/goethe-institute-train.de \
 		TRAIN_TRG=de-fi/goethe/train/goethe-institute-train.fi \
 		DEV_SRC=de-fi/goethe/dev/goethe-institute-dev1.de \
@@ -201,7 +210,7 @@ goethe-defi:
 	all
 
 goethe2-defi:
-	${MAKE} SRC=de TRG=fi MODEL=goethe2 \
+	${MAKE} SRCLANGS=de TRGLANGS=fi MODEL=goethe2 \
 		TRAIN_SRC=de-fi/goethe/train/goethe-institute-train2.de \
 		TRAIN_TRG=de-fi/goethe/train/goethe-institute-train2.fi \
 		DEV_SRC=de-fi/goethe/dev/goethe-institute-dev2.de \
@@ -245,7 +254,7 @@ goethe-other-norm:
 	rm -f $@.ref
 
 goethe-test:
-	${MAKE} SRC=de TRG=fi MODEL=goethe-test \
+	${MAKE} SRCLANGS=de TRGLANGS=fi MODEL=goethe-test \
 		TRAIN_SRC=de-fi/goethe-test/train/goethe-all.de \
 		TRAIN_TRG=de-fi/goethe-test/train/goethe-all.fi \
 		DEV_SRC=de-fi/goethe-test/dev/goethe-institute-dev1.de \
@@ -265,7 +274,7 @@ goethe-test:
 ## test data evaluation for to generate info about test score in the README.md
 OLD_TEST_EVAL = ${TEST_SRC}.${BASEMODELNAME}.${TRG}.eval
 NEW_TEST_DATA = ${patsubst %.${SRC},%,${notdir ${TEST_SRC}}}
-NEW_TEST_EVAL = ${LANGPAIR}/${MODEL}/model/${NEW_TEST_DATA}.${DATASET}-${MODEL}.${PRE_SRC}-${PRE_TRG}${NR}.transformer.${SRC}.${TRG}.eval
+NEW_TEST_EVAL = ${LANGPAIRSTR}/${MODEL}/model/${NEW_TEST_DATA}.${DATASET}-${MODEL}.${PRE_SRC}-${PRE_TRG}${NR}.transformer.${SRC}.${TRG}.eval
 
 dist:
 	cp ${OLD_TEST_EVAL} ${NEW_TEST_EVAL}
@@ -276,8 +285,8 @@ dist:
 		SRCLANGS=${SRCLANGS} TRGLANGS=${TRGLANGS} \
 		PREPROCESS_TYPE=spm \
 		MODELTYPE=transformer \
-		PREPROCESS_SRCMODEL=${PWD}/${LANGPAIR}/${BASEMODELNAME}/source.spm \
-		PREPROCESS_TRGMODEL=${PWD}/${LANGPAIR}/${BASEMODELNAME}/target.spm \
+		PREPROCESS_SRCMODEL=${PWD}/${LANGPAIRSTR}/${BASEMODELNAME}/source.spm \
+		PREPROCESS_TRGMODEL=${PWD}/${LANGPAIRSTR}/${BASEMODELNAME}/target.spm \
 		PREPROCESS_DESCRIPTION="normalization + SentencePiece" \
 		MODEL_FINAL=${PWD}/${TUNED_MODEL}.npz.best-perplexity.npz \
 		MODEL_DECODER=${PWD}/${TUNED_MODEL}.npz.best-perplexity.npz.decoder.yml \
@@ -286,68 +295,149 @@ dist:
 		MODEL_TRAINLOG=${patsubst %.model,%.train.log,${PWD}/${TUNED_MODEL}} \
 		TEST_EVALUATION=${PWD}/${TEST_SRC}.${BASEMODELNAME}.${TRG}.eval \
 		TEST_COMPARISON=${PWD}/${TEST_SRC}.${BASEMODELNAME}.${TRG}.compare \
-		WORKDIR=${PWD}/${LANGPAIR}/${MODEL}/model \
+		WORKDIR=${PWD}/${LANGPAIRSTR}/${MODEL}/model \
 	dist
 
 
 
-## fine-tune en-fr model for walloon
-## --> can we do that?
+# ## fine-tune en-fr model for walloon
+# ## --> can we do that?
 
-ENWA = ${wildcard ${OPUSHOME}/*/latest/moses/en-wa.*}
-enwa-data: en-fr/enwa/train/enwa.fr.gz
-waen-data: fr-en/enwa/train/enwa.fr.gz
-waen-dist:
-	${MAKE} SRCLANGS=wa TRGLANGS=en SRC=fr TRG=en MODEL=enwa dist
+waen:	wa-en/opus/train/opus.wa.gz \
+	wa-en/opus/train/opus.en.gz \
+	wa-en/opus/dev/Tatoeba.wa.gz \
+	wa-en/opus/dev/Tatoeba.en.gz \
+	wa-en/opus/test/Tatoeba.wa.gz \
+	wa-en/opus/test/Tatoeba.en.gz
+	${MAKE} MODEL=opus \
+		MARIAN_VALID_FREQ=500 \
+		SRCLANGS=wa TRGLANGS=en \
+		BASE_SRCLANGS=fr BASE_TRGLANGS=en all
 
-en-fr/enwa/train/enwa.fr.gz: ${ENWA}
-	mkdir -p en-fr/tmp
-	cd en-fr/tmp; \
-	for c in ${ENWA}; do \
-	  unzip -n $$c; \
-	done
-	cat en-fr/tmp/*.wa > en-fr/all.wa
-	cat en-fr/tmp/*.en > en-fr/all.en
-	paste en-fr/all.en en-fr/all.wa |\
-	$(TOKENIZER)/replace-unicode-punctuation.perl |\
-	perl -CS -pe 'tr[\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}][]cd;' |\
-	sed 's/  */ /g;s/^ *//g;s/ *$$//g' |\
-	sort | uniq | shuf > en-fr/all.en-wa
-	mkdir -p en-fr/enwa/dev
-	mkdir -p en-fr/enwa/test
-	mkdir -p en-fr/enwa/train
-	head -1000 en-fr/all.en-wa | cut -f1 | gzip -c \
-		> en-fr/enwa/test/enwa.en.gz
-	head -1000 en-fr/all.en-wa | cut -f2 | gzip -c \
-		> en-fr/enwa/test/enwa.fr.gz
-	head -2001 en-fr/all.en-wa | tail -1000 | cut -f1 | gzip -c \
-		> en-fr/enwa/dev/enwa.en.gz
-	head -2001 en-fr/all.en-wa | tail -1000 | cut -f2 | gzip -c \
-		> en-fr/enwa/dev/enwa.fr.gz
-	tail -n +2002 en-fr/all.en-wa | cut -f1 | gzip -c \
-		> en-fr/enwa/train/enwa.en.gz
-	tail -n +2002 en-fr/all.en-wa | cut -f2 | gzip -c \
-		> en-fr/enwa/train/enwa.fr.gz
-	rm -f en-fr/all.*
-	rm -fr en-fr/tmp
+wa-en/opus/train/opus.wa.gz: ../work/wa-en/train/opus.src.clean.spm32k.gz
+	mkdir -p ${dir $@}
+	zcat $< | sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' | gzip -c > $@
 
-fr-en/enwa/train/enwa.fr.gz: en-fr/enwa/train/enwa.fr.gz
-	mkdir -p fr-en/enwa/dev
-	mkdir -p fr-en/enwa/test
-	mkdir -p fr-en/enwa/train
-	cp en-fr/enwa/test/enwa.en.gz fr-en/enwa/test/
-	cp en-fr/enwa/test/enwa.fr.gz fr-en/enwa/test/
-	cp en-fr/enwa/dev/enwa.en.gz fr-en/enwa/dev/
-	cp en-fr/enwa/dev/enwa.fr.gz fr-en/enwa/dev/
-	cp en-fr/enwa/train/enwa.en.gz fr-en/enwa/train/
-	cp en-fr/enwa/train/enwa.fr.gz fr-en/enwa/train/
+wa-en/opus/train/opus.en.gz: ../work/wa-en/train/opus.trg.clean.spm32k.gz
+	mkdir -p ${dir $@}
+	zcat $< | sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' | gzip -c > $@
+
+wa-en/opus/dev/Tatoeba.wa.gz: ../work/wa-en/val/Tatoeba.src
+	mkdir -p ${dir $@}
+	gzip -c < $< > $@
+
+wa-en/opus/dev/Tatoeba.en.gz: ../work/wa-en/val/Tatoeba.trg
+	mkdir -p ${dir $@}
+	gzip -c < $< > $@
+
+wa-en/opus/test/Tatoeba.wa.gz: ../work/wa-en/test/Tatoeba.src
+	mkdir -p ${dir $@}
+	gzip -c < $< > $@
+
+wa-en/opus/test/Tatoeba.en.gz: ../work/wa-en/test/Tatoeba.trg
+	mkdir -p ${dir $@}
+	gzip -c < $< > $@
 
 
-enwa: en-fr/enwa/train/enwa.fr.gz
-	${MAKE} SRC=en TRG=fr MODEL=enwa all
+enwa:	en-wa/opus/train/opus.wa.gz \
+	en-wa/opus/train/opus.en.gz \
+	en-wa/opus/dev/Tatoeba.wa.gz \
+	en-wa/opus/dev/Tatoeba.en.gz \
+	en-wa/opus/test/Tatoeba.wa.gz \
+	en-wa/opus/test/Tatoeba.en.gz
+	${MAKE} MODEL=opus \
+		MARIAN_VALID_FREQ=500 \
+		SRCLANGS=en TRGLANGS=wa \
+		BASE_SRCLANGS=en BASE_TRGLANGS=fr all
 
-waen: fr-en/enwa/train/enwa.fr.gz
-	${MAKE} SRC=fr TRG=en MODEL=enwa all
+en-wa/opus/train/opus.en.gz: ../work/en-wa/train/opus.src.clean.spm32k.gz
+	mkdir -p ${dir $@}
+	zcat $< | sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' | gzip -c > $@
+
+en-wa/opus/train/opus.wa.gz: ../work/en-wa/train/opus.trg.clean.spm32k.gz
+	mkdir -p ${dir $@}
+	zcat $< | sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' | gzip -c > $@
+
+en-wa/opus/dev/Tatoeba.en.gz: ../work/en-wa/val/Tatoeba.src
+	mkdir -p ${dir $@}
+	gzip -c < $< > $@
+
+en-wa/opus/dev/Tatoeba.wa.gz: ../work/en-wa/val/Tatoeba.trg
+	mkdir -p ${dir $@}
+	gzip -c < $< > $@
+
+en-wa/opus/test/Tatoeba.en.gz: ../work/en-wa/test/Tatoeba.src
+	mkdir -p ${dir $@}
+	gzip -c < $< > $@
+
+en-wa/opus/test/Tatoeba.wa.gz: ../work/en-wa/test/Tatoeba.trg
+	mkdir -p ${dir $@}
+	gzip -c < $< > $@
+
+
+
+
+
+# ## fine-tune en-fr model for walloon
+# ## --> can we do that?
+
+# ENWA = ${wildcard ${OPUSHOME}/*/latest/moses/en-wa.*}
+# enwa-data: en-fr/enwa/train/enwa.fr.gz
+# waen-data: fr-en/enwa/train/enwa.fr.gz
+# waen-dist:
+# 	${MAKE} SRCLANGS=wa TRGLANGS=en SRC=fr TRG=en MODEL=enwa dist
+
+
+# en-fr/enwa/train/enwa.fr.gz: ${ENWA}
+# 	mkdir -p en-fr/tmp
+# 	cd en-fr/tmp; \
+# 	for c in ${ENWA}; do \
+# 	  unzip -n $$c; \
+# 	done
+# 	cat en-fr/tmp/*.wa > en-fr/all.wa
+# 	cat en-fr/tmp/*.en > en-fr/all.en
+# 	paste en-fr/all.en en-fr/all.wa |\
+# 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
+# 	perl -CS -pe 'tr[\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}][]cd;' |\
+# 	sed 's/  */ /g;s/^ *//g;s/ *$$//g' |\
+# 	sort | uniq | shuf > en-fr/all.en-wa
+# 	mkdir -p en-fr/enwa/dev
+# 	mkdir -p en-fr/enwa/test
+# 	mkdir -p en-fr/enwa/train
+# 	head -1000 en-fr/all.en-wa | cut -f1 | gzip -c \
+# 		> en-fr/enwa/test/enwa.en.gz
+# 	head -1000 en-fr/all.en-wa | cut -f2 | gzip -c \
+# 		> en-fr/enwa/test/enwa.fr.gz
+# 	head -2001 en-fr/all.en-wa | tail -1000 | cut -f1 | gzip -c \
+# 		> en-fr/enwa/dev/enwa.en.gz
+# 	head -2001 en-fr/all.en-wa | tail -1000 | cut -f2 | gzip -c \
+# 		> en-fr/enwa/dev/enwa.fr.gz
+# 	tail -n +2002 en-fr/all.en-wa | cut -f1 | gzip -c \
+# 		> en-fr/enwa/train/enwa.en.gz
+# 	tail -n +2002 en-fr/all.en-wa | cut -f2 | gzip -c \
+# 		> en-fr/enwa/train/enwa.fr.gz
+# 	rm -f en-fr/all.*
+# 	rm -fr en-fr/tmp
+
+
+
+# fr-en/enwa/train/enwa.fr.gz: en-fr/enwa/train/enwa.fr.gz
+# 	mkdir -p fr-en/enwa/dev
+# 	mkdir -p fr-en/enwa/test
+# 	mkdir -p fr-en/enwa/train
+# 	cp en-fr/enwa/test/enwa.en.gz fr-en/enwa/test/
+# 	cp en-fr/enwa/test/enwa.fr.gz fr-en/enwa/test/
+# 	cp en-fr/enwa/dev/enwa.en.gz fr-en/enwa/dev/
+# 	cp en-fr/enwa/dev/enwa.fr.gz fr-en/enwa/dev/
+# 	cp en-fr/enwa/train/enwa.en.gz fr-en/enwa/train/
+# 	cp en-fr/enwa/train/enwa.fr.gz fr-en/enwa/train/
+
+
+# enwa: en-fr/enwa/train/enwa.fr.gz
+# 	${MAKE} SRC=en TRG=fr MODEL=enwa all
+
+# waen: fr-en/enwa/train/enwa.fr.gz
+# 	${MAKE} SRC=fr TRG=en MODEL=enwa all
 
 
 
@@ -355,7 +445,7 @@ waen: fr-en/enwa/train/enwa.fr.gz
 
 ## make news tuning data from testsets
 
-TESTSETS_HOME     = ../testsets/${LANGPAIR}
+TESTSETS_HOME     = ../testsets/${LANGPAIRSTR}
 NEWS_ALLSETS_SRC  = ${sort ${wildcard ${TESTSETS_HOME}/news*.${SRC}.gz}}
 NEWS_ALLSETS_TRG  = ${sort ${wildcard ${TESTSETS_HOME}/news*.${TRG}.gz}}
 NEWS_DEVSET_SRC   = ${firstword ${NEWS_ALLSETS_SRC}}
@@ -370,15 +460,15 @@ news-tune-data:
 ifneq (${words ${NEWS_ALLSETS_SRC}},0)
 ifneq (${words ${NEWS_ALLSETS_SRC}},1)
 ifneq (${words ${NEWS_ALLSETS_SRC}},2)
-	mkdir -p ${LANGPAIR}/news/train
-	mkdir -p ${LANGPAIR}/news/dev
-	mkdir -p ${LANGPAIR}/news/test
-	cp ${NEWS_TESTSET_SRC} ${LANGPAIR}/news/test/
-	cp ${NEWS_TESTSET_TRG} ${LANGPAIR}/news/test/
-	cp ${NEWS_DEVSET_SRC} ${LANGPAIR}/news/dev/
-	cp ${NEWS_DEVSET_TRG} ${LANGPAIR}/news/dev/
-	zcat ${NEWS_TRAINSET_SRC} | gzip -c > ${LANGPAIR}/news/train/news.${SRC}.gz
-	zcat ${NEWS_TRAINSET_TRG} | gzip -c > ${LANGPAIR}/news/train/news.${TRG}.gz
+	mkdir -p ${LANGPAIRSTR}/news/train
+	mkdir -p ${LANGPAIRSTR}/news/dev
+	mkdir -p ${LANGPAIRSTR}/news/test
+	cp ${NEWS_TESTSET_SRC} ${LANGPAIRSTR}/news/test/
+	cp ${NEWS_TESTSET_TRG} ${LANGPAIRSTR}/news/test/
+	cp ${NEWS_DEVSET_SRC} ${LANGPAIRSTR}/news/dev/
+	cp ${NEWS_DEVSET_TRG} ${LANGPAIRSTR}/news/dev/
+	zcat ${NEWS_TRAINSET_SRC} | gzip -c > ${LANGPAIRSTR}/news/train/news.${SRC}.gz
+	zcat ${NEWS_TRAINSET_TRG} | gzip -c > ${LANGPAIRSTR}/news/train/news.${TRG}.gz
 endif
 endif
 endif
@@ -389,8 +479,8 @@ endif
 data: ${TRAIN_SRC}.pre.gz ${TRAIN_TRG}.pre.gz ${DEV_SRC}.pre.gz ${DEV_TRG}.pre.gz
 
 .PHONY: basemodel
-basemodel: ${LANGPAIR}/${BASEMODELNAME}/decoder.yml
-${LANGPAIR}/${BASEMODELNAME}/decoder.yml:
+basemodel: ${LANGPAIRSTR}/${BASEMODELNAME}/decoder.yml
+${LANGPAIRSTR}/${BASEMODELNAME}/decoder.yml:
 	mkdir -p ${dir $@}
 ifneq (${wildcard ${BASEMODELHOME}/${BASEMODELZIP}},)
 	unzip -u -d ${dir $@} ${BASEMODELHOME}/${BASEMODELZIP}
@@ -402,19 +492,19 @@ else
 endif
 
 
-SRCPRE_PARA = ${SRC} ${LANGPAIR}/${BASEMODELNAME}/source.spm
-TRGPRE_PARA = ${TRG} ${LANGPAIR}/${BASEMODELNAME}/target.spm
+SRCPRE_PARA = ${SRC} ${LANGPAIRSTR}/${BASEMODELNAME}/source.spm
+TRGPRE_PARA = ${TRG} ${LANGPAIRSTR}/${BASEMODELNAME}/target.spm
 
 .INTERMEDIATE: ${TRAIN_SRC}.pre.gz ${DEV_SRC}.pre.gz ${TEST_SRC}.pre.gz
-${TRAIN_SRC}.pre.gz ${DEV_SRC}.pre.gz ${TEST_SRC}.pre.gz: %.pre.gz: %.gz ${LANGPAIR}/${BASEMODELNAME}/decoder.yml
+${TRAIN_SRC}.pre.gz ${DEV_SRC}.pre.gz ${TEST_SRC}.pre.gz: %.pre.gz: %.gz ${LANGPAIRSTR}/${BASEMODELNAME}/decoder.yml
 	zcat $< |\
-	${LANGPAIR}/${BASEMODELNAME}/preprocess.sh ${SRCPRE_PARA} |\
+	${LANGPAIRSTR}/${BASEMODELNAME}/preprocess.sh ${SRCPRE_PARA} |\
 	gzip -c > $@
 
 .INTERMEDIATE: ${TRAIN_TRG}.pre.gz ${DEV_TRG}.pre.gz
-${TRAIN_TRG}.pre.gz ${DEV_TRG}.pre.gz: %.pre.gz: %.gz ${LANGPAIR}/${BASEMODELNAME}/decoder.yml
+${TRAIN_TRG}.pre.gz ${DEV_TRG}.pre.gz: %.pre.gz: %.gz ${LANGPAIRSTR}/${BASEMODELNAME}/decoder.yml
 	zcat $< |\
-	${LANGPAIR}/${BASEMODELNAME}/preprocess.sh ${TRGPRE_PARA} |\
+	${LANGPAIRSTR}/${BASEMODELNAME}/preprocess.sh ${TRGPRE_PARA} |\
 	gzip -c > $@
 
 
@@ -427,11 +517,11 @@ tune: ${TUNED_MODEL}.done
 ${TUNED_MODEL}.npz.best-perplexity.npz: ${TUNED_MODEL}.done
 
 ${TUNED_MODEL}.done: ${TRAIN_SRC}.pre.gz ${TRAIN_TRG}.pre.gz ${DEV_SRC}.pre.gz ${DEV_TRG}.pre.gz \
-		${LANGPAIR}/${BASEMODELNAME}/decoder.yml
+		${LANGPAIRSTR}/${BASEMODELNAME}/decoder.yml
 	mkdir -p ${dir $@}
 	if [ ! -e ${@:done=npz} ]; then \
-	  cp ${LANGPAIR}/${BASEMODELNAME}/*.npz ${@:done=npz}; \
-	  cp ${LANGPAIR}/${BASEMODELNAME}/*.vocab.yml ${TUNED_MODEL_VOCAB}; \
+	  cp ${LANGPAIRSTR}/${BASEMODELNAME}/*.npz ${@:done=npz}; \
+	  cp ${LANGPAIRSTR}/${BASEMODELNAME}/*.vocab.yml ${TUNED_MODEL_VOCAB}; \
 	fi
 	${LOADMODS} && ${MARIAN}/marian ${MARIAN_EXTRA} \
         --model $(@:.done=.npz) \
@@ -489,9 +579,9 @@ ${TEST_SRC}.${BASEMODELNAME}.${TRG}.gz: ${TEST_SRC}.pre.gz ${TUNED_MODEL}.npz.be
 translate-baseline: ${TEST_SRC}.${BASEMODELNAME}.baseline.${TRG}.gz
 
 ## translate test set
-${TEST_SRC}.${BASEMODELNAME}.baseline.${TRG}.gz: ${TEST_SRC}.pre.gz ${LANGPAIR}/${BASEMODELNAME}/decoder.yml
+${TEST_SRC}.${BASEMODELNAME}.baseline.${TRG}.gz: ${TEST_SRC}.pre.gz ${LANGPAIRSTR}/${BASEMODELNAME}/decoder.yml
 	mkdir -p ${dir $@}
-	cd ${LANGPAIR}/${BASEMODELNAME}; \
+	cd ${LANGPAIRSTR}/${BASEMODELNAME}; \
 	${LOADMODS} && ${MARIAN}/marian-decoder \
 		-i ${PWD}/$< \
 		-c decoder.yml \
