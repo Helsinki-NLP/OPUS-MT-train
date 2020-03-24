@@ -134,7 +134,7 @@ tmx-tune:
 	mkdir -p $$s-$$t; \
 	paste ${TMXBASE}.*-*.$$s ${TMXBASE}.*-*.$$t | \
 	sort | uniq | \
-	python3 ../bitext-match-lang.py -s $$s -t $$t | \
+	python3 ../scripts/filter/bitext-match-lang.py -s $$s -t $$t | \
 	grep -v '[<>{}]' |\
 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
 	perl -CS -pe 'tr[\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}][]cd;' |\

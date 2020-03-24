@@ -1,5 +1,15 @@
 
 
+further resources: (from http://techiaith.cymru/translation/demo/?lang=en)
+contact: Dewi Jones (d.b.jones@bangor.ac.uk)
+
+http://techiaith.cymru/corpws/Moses/CofnodYCynulliad/CofnodYCynulliad.tar.gz
+http://techiaith.cymru/corpws/Moses/Deddfwriaeth/Deddfwriaeth.tar.gz
+http://techiaith.cymru/corpws/Moses/Meddalwedd/Meddalwedd.tar.gz
+http://techiaith.cymru/alinio/rhestr_geiriau.tsv
+
+(see work/data/cy-en)
+
 
 
 # celtic languages

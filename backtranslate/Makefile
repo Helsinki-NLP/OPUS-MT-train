@@ -102,6 +102,19 @@ all-wikilangs: index.html
 	done
 
 
+
+## for Breton: use the multilingual celtic model to backtranslate
+breton:
+	${MAKE} SRC=br TRG=en MODELHOME=../models/ga+cy+br+gd+kv+gv-en all-wikis
+
+## do the same for all Celtic languages in the model
+celtic:
+	for l in ga cy br gd kv gv; do \
+	  ${MAKE} SRC=$$l TRG=en MODELHOME=../models/ga+cy+br+gd+kv+gv-en all-wikis; \
+	done
+
+
+
 # Tagalog (tl, tgl), Central Bikol (bcl), Malayalam (ml, mal), Bengali (bn, ben), and Mongolian (mn, mon)
 focus-wikis:
 	for l in tl bcl ml bn mn; do \

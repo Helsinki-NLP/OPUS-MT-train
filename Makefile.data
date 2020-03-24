@@ -26,8 +26,23 @@ ifneq (${wildcard scripts/cleanup/${TRG}},)
 endif
 
 
-CLEAN_TRAIN_SRC = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.clean.${SRCEXT}.gz,${TRAINSET}}
-CLEAN_TRAIN_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_TRAIN_SRC}}
+## back translation data
+
+BACKTRANS_DIR = backtranslate/${TRG}-${SRC}
+
+BACKTRANS_SRC = ${sort ${wildcard ${BACKTRANS_DIR}/*.${SRCEXT}.gz}}
+BACKTRANS_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${BACKTRANS_SRC}}
+
+
+## data sets (train/dev/test)
+
+ifeq (${USE_BACKTRANS},1)
+  CLEAN_TRAIN_SRC = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.clean.${SRCEXT}.gz,${TRAINSET}} ${BACKTRANS_SRC}
+  CLEAN_TRAIN_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_TRAIN_SRC}}
+else
+  CLEAN_TRAIN_SRC = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.clean.${SRCEXT}.gz,${TRAINSET}}
+  CLEAN_TRAIN_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_TRAIN_SRC}}
+endif
 
 CLEAN_TUNE_SRC  = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.clean.${SRCEXT}.gz,${TUNESET}}
 CLEAN_TUNE_TRG  = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_TUNE_SRC}}
@@ -43,11 +58,6 @@ DATA_TRG := ${sort ${CLEAN_TRAIN_TRG} ${CLEAN_TUNE_TRG} ${CLEAN_DEV_TRG} ${CLEAN
 
 
 
-BACKTRANS_DIR = backtranslate/${TRG}-${SRC}
-
-BACKTRANS_SRC = ${sort ${wildcard ${BACKTRANS_DIR}/*.${SRC}.gz}}
-BACKTRANS_TRG = ${patsubst %.${SRC}.gz,%.${TRG}.gz,${BACKTRANS_SRC}}
-
 ## make data in reverse direction without re-doing word alignment etc ...
 ## ---> this is dangerous when things run in parallel
 ## ---> only works for bilingual models
@@ -55,6 +65,10 @@ BACKTRANS_TRG = ${patsubst %.${SRC}.gz,%.${TRG}.gz,${BACKTRANS_SRC}}
 REV_LANGSTR = ${subst ${SPACE},+,$(TRGLANGS)}-${subst ${SPACE},+,$(SRCLANGS)}
 REV_WORKDIR = ${WORKHOME}/${REV_LANGSTR}
 
+
+ttt:
+	echo ${CLEAN_TRAIN_SRC}
+	echo ${CLEAN_TRAIN_TRG}
 
 reverse-data:
 ifeq (${PRE_SRC},${PRE_TRG})
@@ -982,6 +996,8 @@ SPMEXTRA =
 
 .PRECIOUS: ${SPMSRCMODEL} ${SPMTRGMODEL}
 
+GENERATE_SPM_VOC = 0
+
 # ${SPMSRCMODEL}: ${WORKDIR}/%.spm${SRCBPESIZE:000=}k-model: ${TMPDIR}/${LANGPAIRSTR}/%
 ${SPMSRCMODEL}: ${LOCAL_TRAIN_SRC}
 ifeq ($(wildcard ${SPMSRCMODEL}),)
@@ -1002,7 +1018,9 @@ endif
 		--character_coverage=1.0 --hard_vocab_limit=false; \
 	fi
 	mv $@.model $@
+ifeq (${GENERATE_SPM_VOC},1)
 	${SPM_HOME}/spm_encode --model=$@ --generate_vocabulary < $<.text > $@.voc
+endif
 	rm -f $<.text
 else
 	@echo "$@ already exists!"
@@ -1028,7 +1046,9 @@ ifeq ($(wildcard ${SPMTRGMODEL}),)
 		--character_coverage=1.0 --hard_vocab_limit=false; \
 	fi
 	mv $@.model $@
+ifeq (${GENERATE_SPM_VOC},1)
 	${SPM_HOME}/spm_encode --model=$@ --generate_vocabulary < $<.text > $@.voc
+endif
 	rm -f $<.text
 else
 	@echo "$@ already exists!"
