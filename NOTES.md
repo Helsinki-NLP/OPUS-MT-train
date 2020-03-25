@@ -7,6 +7,7 @@ http://techiaith.cymru/corpws/Moses/CofnodYCynulliad/CofnodYCynulliad.tar.gz
 http://techiaith.cymru/corpws/Moses/Deddfwriaeth/Deddfwriaeth.tar.gz
 http://techiaith.cymru/corpws/Moses/Meddalwedd/Meddalwedd.tar.gz
 http://techiaith.cymru/alinio/rhestr_geiriau.tsv
+http://techiaith.cymru/alinio/hunalign/cy-en.dic
 
 (see work/data/cy-en)
 
