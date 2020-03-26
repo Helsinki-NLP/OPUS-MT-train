@@ -398,6 +398,129 @@ ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz:
 
 
 
+GIELLATEKNO_HOME = https://victorio.uit.no/biggies/trunk
+GIELLATEKNO_TM_HOME = ${GIELLATEKNO_HOME}/mt/omegat
+
+GIELLATEKNO_SAMI_TM = 	fin-smn/tm/finsmn.tmx \
+			fin-sme/tm/finsme.tmx \
+			fin-sms/tm/finsms.tmx \
+			sme-smn/tm/smesmn.tmx \
+			sme-smj/tm/smesmj.tmx \
+			sme-nob/tm/smenob.tmx \
+			sme-sma/tm/smesma.tmx \
+			nob-smj/tm/nobsmj.tmx \
+			nob-sme/tm/nobsme-2012.tmx \
+			nob-sme/tm/nobsme-admin.tmx \
+			nob-sme/tm/nobsme-bible.tmx \
+			nob-sme/tm/nobsme-facta.tmx \
+			nob-sme/tm/nobsme-laws.tmx \
+			nob-sme/tm/nobsme-science.tmx \
+			nob-sma/tm/nobsma.tmx \
+			sma-nob/tm/smanob.tmx
+
+
+## glossaries
+
+convert-sami-gloss:
+	wget ${GIELLATEKNO_TM_HOME}/fin-smn/glossary/finsmn.utf8
+	cut -f1 finsmn.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.fi-smn.clean.fi.gz
+	cut -f2 finsmn.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.fi-smn.clean.smn.gz
+	rm -f finsmn.utf8
+	wget ${GIELLATEKNO_TM_HOME}/fin-sme/glossary/finsme.utf8
+	cut -f1 finsme.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.fi-smn.clean.fi.gz
+	cut -f2 finsme.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.fi-smn.clean.se.gz
+	rm -f finsme.utf8
+	wget ${GIELLATEKNO_TM_HOME}/fin-sms/glossary/finsms.utf8
+	cut -f1 finsms.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.fi-sms.clean.fi.gz
+	cut -f2 finsms.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.fi-sms.clean.se.gz
+	rm -f finsms.utf8
+	wget ${GIELLATEKNO_TM_HOME}/sme-smn/glossary/smesmn.utf8
+	cut -f1 smesmn.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.sme-smn.clean.se.gz
+	cut -f2 smesmn.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.sme-smn.clean.smn.gz
+	rm -f smesmn.utf8
+	wget ${GIELLATEKNO_TM_HOME}/sme-smj/glossary/glossary.utf8
+	cut -f1 glossary.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.sme-smj.clean.se.gz
+	cut -f2 glossary.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.sme-smj.clean.smj.gz
+	rm -f glossary.utf8
+	wget ${GIELLATEKNO_TM_HOME}/sme-nob/glossary/smenob.utf8
+	wget ${GIELLATEKNO_TM_HOME}/sme-nob/glossary/termwiki.utf8
+	cut -f1 smenob.utf8 > ${DATADIR}/${PRE}/glossary.nb-sme.clean.se
+	cut -f2 smenob.utf8 > ${DATADIR}/${PRE}/glossary.nb-sme.clean.nb
+	cut -f1 termwiki.utf8 >> ${DATADIR}/${PRE}/glossary.nb-sme.clean.se
+	cut -f2 termwiki.utf8 >> ${DATADIR}/${PRE}/glossary.nb-sme.clean.nb
+	gzip -f ${DATADIR}/${PRE}/glossary.nb-sme.clean.se
+	gzip -f ${DATADIR}/${PRE}/glossary.nb-sme.clean.nb
+	rm -f smenob.utf8 termwiki.utf8
+	wget ${GIELLATEKNO_TM_HOME}/sme-sma/glossary/glossary.utf8
+	cut -f1 glossary.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.sma-sme.clean.se.gz
+	cut -f2 glossary.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.sma-sme.clean.sma.gz
+	rm -f glossary.utf8
+	wget ${GIELLATEKNO_TM_HOME}/nob-smj/glossary/nobsmj.utf8
+	cut -f1 nobsmj.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.nb-smj.clean.nb.gz
+	cut -f2 nobsmj.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.nb-smj.clean.smj.gz
+	rm -f nobsmj.utf8
+	wget ${GIELLATEKNO_TM_HOME}/nob-sme/glossary/nobsme.utf8
+	cut -f1 nobsme.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.nb-sme.clean.nb.gz
+	cut -f2 nobsme.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.nb-sme.clean.se.gz
+	rm -f nobsme.utf8
+	wget ${GIELLATEKNO_TM_HOME}/nob-sma/glossary/nobsma.utf8
+	wget ${GIELLATEKNO_TM_HOME}/sma-nob/glossary/termwiki.utf8
+	cut -f1 nobsma.utf8 > ${DATADIR}/${PRE}/glossary.nb-sma.clean.nb
+	cut -f2 nobsma.utf8 > ${DATADIR}/${PRE}/glossary.nb-sma.clean.sma
+	cut -f1 termwiki.utf8 >>${DATADIR}/${PRE}/glossary.nb-sma.clean.sma
+	cut -f2 termwiki.utf8 >> ${DATADIR}/${PRE}/glossary.nb-sma.clean.nb
+	gzip -f ${DATADIR}/${PRE}/glossary.nb-sma.clean.sma
+	gzip -f ${DATADIR}/${PRE}/glossary.nb-sma.clean.nb
+	rm -f nobsma.utf8 termwiki.utf8
+
+fetch-sami-tmx: ${GIELLATEKNO_SAMI_TM}
+convert-sami-tmx:
+	for t in ${GIELLATEKNO_SAMI_TM}; do \
+	  mkdir -p ${DATADIR}/sami; \
+	  tmx2moses -r -o ${DATADIR}/sami/`echo -n $$t | xargs basename | sed 's/.tmx//'` $$t; \
+	done
+
+move-sami-data:
+	for f in `ls ${DATADIR}/sami`; do \
+	  gzip -c < ${DATADIR}/sami/$$f \
+	  > ${DATADIR}/${PRE}/`echo -n $$f | sed 's/\.\([^.]*\)$$/.clean.\1.gz/'`; \
+	done
+
+${GIELLATEKNO_SAMI_TM}:
+	mkdir -p ${dir $@}
+	wget -O $@ ${GIELLATEKNO_TM_HOME}/$@
+
+
+
+## name of the data sets
+SAMI_EXTRA = ${patsubst %.tmx,%,${notdir ${GIELLATEKNO_SAMI_TM}}} glossary
+
+sami-multilingual:
+	${MAKE} DATASET=opus+giella \
+		HELDOUTSIZE=0 \
+		DEVSET=Tatoeba \
+		TESTSET=Tatoeba \
+		DEVMINSIZE=200 \
+		EXTRA_TRAINSET="${SAMI_EXTRA}" \
+		SRCLANGS="se sma smn sms smj et fi kv krl nb no nn ru sv en" \
+		TRGLANGS="se sma smn sms smj et fi kv krl nb no nn ru sv en" \
+		SKIP_LANGPAIRS="en-en|en-et|en-fi|en-nb|en-no|en-nn|en-ru|en-sv|et-et|et-fi|et-nb|et-no|et-nn|et-ru|et-sv|fi-fi|fi-nb|fi-no|fi-nn|fi-ru|fi-sv|nb-nb|nb-no|nb-nn|nb-ru|nb-sv|no-no|no-nn|no-ru|no-sv|nn-nn|nn-ru|nn-sv|ru-ru|ru-sv|sv-sv" \
+	train-dynamic
+
+
+
+
+
+test-skip:
+	for s in ${SRCLANGS}; do \
+	  for t in ${TRGLANGS}; do \
+	    if [ `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
+	      echo "skip $$s-$$t"; \
+	    fi \
+	  done \
+	done
+
+
 
 
 
@@ -409,6 +532,12 @@ LANGS_ROMANCE = fr ${LANGS_FR_VARIANTS} wa frp oc ca rm lld fur lij lmo es ${LAN
 romance-english:
 	${MAKE} HPC_DISK=1000 HELDOUTSIZE=0 MODELTYPE=transformer SRCLANGS="${LANGS_ROMANCE}" TRGLANGS=en train-dynamic
 	${MAKE} HPC_DISK=1000 HELDOUTSIZE=0 MODELTYPE=transformer TRGLANGS="${LANGS_ROMANCE}" SRCLANGS=en train-dynamic
+
+romance-english-eval:
+	${MAKE} HPC_DISK=1000 HELDOUTSIZE=0 MODELTYPE=transformer SRCLANGS="${LANGS_ROMANCE}" TRGLANGS=en eval
+
+romance-english-dist:
+	${MAKE} HPC_DISK=1000 HELDOUTSIZE=0 MODELTYPE=transformer SRCLANGS="${LANGS_ROMANCE}" TRGLANGS=en best_dist
 
 
 

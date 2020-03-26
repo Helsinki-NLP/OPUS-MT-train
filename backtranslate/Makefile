@@ -87,7 +87,7 @@ all-wikis: ${LANGPAIR}/${MODELNAME}/decoder.yml
 	  echo "find ${WIKI_DIR} -name '$$w.${LANGID}.${PART}.gz'"; \
 	  if  [ `find ${WIKI_DIR} -name "$$w.${LANGID}.${PART}.gz" | wc -l` -gt 0 ]; then \
 	    echo "${MAKE} WIKISOURCE=$$w HPC_CORES=1 WALLTIME=72 translate.submit"; \
-	    ${MAKE} WIKISOURCE=$$w HPC_MEM=4g HPC_CORES=1 WALLTIME=72 translate.submit; \
+	    ${MAKE} WIKISOURCE=$$w HPC_MEM=4g HPC_CORES=1 WALLTIME=72 submit-translate-all-parts; \
 	  fi \
 	done
 
@@ -112,6 +112,15 @@ celtic:
 	for l in ga cy br gd kv gv; do \
 	  ${MAKE} SRC=$$l TRG=en MODELHOME=../models/ga+cy+br+gd+kv+gv-en all-wikis; \
 	done
+
+small-romance:
+	for l in wa frp oc ca rm lld fur lij lmo gl lad an mwl co nap scn vec sc la; do \
+	  ${MAKE} SRC=$$l TRG=en MODELHOME=../models/fr+fr_BE+fr_CA+fr_FR+wa+frp+oc+ca+rm+lld+fur+lij+lmo+es+es_AR+es_CL+es_CO+es_CR+es_DO+es_EC+es_ES+es_GT+es_HN+es_MX+es_NI+es_PA+es_PE+es_PR+es_SV+es_UY+es_VE+pt+pt_br+pt_BR+pt_PT+gl+lad+an+mwl+it+it_IT+co+nap+scn+vec+sc+ro+la-en all-wikis; \
+	done
+
+
+wiki-gl-en:
+	${MAKE} SRC=gl TRG=en MODELHOME=../models/fr+fr_BE+fr_CA+fr_FR+wa+frp+oc+ca+rm+lld+fur+lij+lmo+es+es_AR+es_CL+es_CO+es_CR+es_DO+es_EC+es_ES+es_GT+es_HN+es_MX+es_NI+es_PA+es_PE+es_PR+es_SV+es_UY+es_VE+pt+pt_br+pt_BR+pt_PT+gl+lad+an+mwl+it+it_IT+co+nap+scn+vec+sc+ro+la-en translate
 
 
 

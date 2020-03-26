@@ -13,6 +13,18 @@ ifndef THREADS
 endif
 
 
+## SKIP_LANGPAIRS can be used to skip certain language pairs
+## in data preparation for multilingual models
+## ---> this can be good to skip BIG language pairs
+##      that would very much dominate all the data
+## must be a pattern that can be matched by egrep
+## e.g. en-de|en-fr
+
+ifndef SKIP_LANGPAIRS
+  SKIP_LANGPAIRS = "nothing"
+endif
+
+
 ## look for cleanup scripts and put them into a pipe
 ## they should be executable and should basically read STDIN and print to STDOUT
 ## no further arguments are supported
@@ -66,9 +78,6 @@ REV_LANGSTR = ${subst ${SPACE},+,$(TRGLANGS)}-${subst ${SPACE},+,$(SRCLANGS)}
 REV_WORKDIR = ${WORKHOME}/${REV_LANGSTR}
 
 
-ttt:
-	echo ${CLEAN_TRAIN_SRC}
-	echo ${CLEAN_TRAIN_TRG}
 
 reverse-data:
 ifeq (${PRE_SRC},${PRE_TRG})
@@ -339,7 +348,6 @@ ${TRAIN_ALG}: 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 	@echo "done!"
 
 
-
 ## add training data for each language combination
 ## and put it together in local space
 ${LOCAL_TRAIN_SRC}: ${DEV_SRC} ${DEV_TRG}
@@ -347,12 +355,16 @@ ${LOCAL_TRAIN_SRC}: ${DEV_SRC} ${DEV_TRG}
 	rm -f ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG}
 	-for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
-	    if [ ${HELDOUTSIZE} -gt 0 ]; then \
-	      ${MAKE} DATASET=${DATASET} SRC:=$$s TRG:=$$t \
-		add-to-local-train-and-heldout-data; \
+	    if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
+	      if [ ${HELDOUTSIZE} -gt 0 ]; then \
+	        ${MAKE} DATASET=${DATASET} SRC:=$$s TRG:=$$t \
+		  add-to-local-train-and-heldout-data; \
+	      else \
+	        ${MAKE} DATASET=${DATASET} SRC:=$$s TRG:=$$t \
+		  add-to-local-train-data; \
+	      fi \
 	    else \
-	      ${MAKE} DATASET=${DATASET} SRC:=$$s TRG:=$$t \
-		add-to-local-train-data; \
+	      echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
 	    fi \
 	  done \
 	done
@@ -443,7 +455,11 @@ ${DEV_SRC}.shuffled.gz:
 	rm -f ${DEV_SRC} ${DEV_TRG}
 	-for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
-	    ${MAKE} SRC=$$s TRG=$$t add-to-dev-data; \
+	    if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
+	      ${MAKE} SRC=$$s TRG=$$t add-to-dev-data; \
+	    else \
+	      echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
+	    fi \
 	  done \
 	done
 	paste ${DEV_SRC} ${DEV_TRG} | shuf | gzip -c > $@
@@ -585,7 +601,11 @@ ifneq (${TESTSET},${DEVSET})
 	else \
 	  for s in ${SRCLANGS}; do \
 	    for t in ${TRGLANGS}; do \
-	      ${MAKE} SRC=$$s TRG=$$t add-to-test-data; \
+	      if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
+	        ${MAKE} SRC=$$s TRG=$$t add-to-test-data; \
+	      else \
+	        echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
+	      fi \
 	    done \
 	  done; \
 	  if [ ${TESTSIZE} -lt `cat $@ | wc -l` ]; then \
