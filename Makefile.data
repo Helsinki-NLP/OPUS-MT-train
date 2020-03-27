@@ -384,6 +384,17 @@ ${LOCAL_TRAIN_TRG}: ${LOCAL_TRAIN_SRC}
 
 ## add to the training data
 add-to-local-train-data: ${CLEAN_TRAIN_SRC} ${CLEAN_TRAIN_TRG}
+	@if [ `zcat ${CLEAN_TRAIN_SRC} | wc -l` != `zcat ${CLEAN_TRAIN_TRG} | wc -l` ]; then \
+	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+	  echo "source and target are not of same lengt!"; \
+	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+	  echo ${CLEAN_TRAIN_SRC}; \
+	  echo ${CLEAN_TRAIN_TRG}; \
+	fi
 ifneq (${CLEAN_TRAIN_SRC},)
 	echo "${CLEAN_TRAIN_SRC}" >> ${dir ${LOCAL_TRAIN_SRC}}/README
 ifneq (${words ${TRGLANGS}},1)

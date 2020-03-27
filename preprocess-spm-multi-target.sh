@@ -21,7 +21,7 @@ fi
 MOSESSCRIPTS=${MOSESHOME}/scripts
 TOKENIZER=${MOSESSCRIPTS}/tokenizer
 
-if [ $4 == "noflags" ]; then
+if [ "$4" == "noflags" ]; then
   ${TOKENIZER}/replace-unicode-punctuation.perl |
   ${TOKENIZER}/remove-non-printing-char.perl |
   sed 's/  */ /g;s/^ *//g;s/ *$//g' |

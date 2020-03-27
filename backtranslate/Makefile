@@ -11,6 +11,10 @@ include ../Makefile.slurm
 SRC = af
 TRG = en
 
+## set to 1 if the model for backtranslation is a multi-target model
+## --> need to use pre-processing script differently
+MULTI_TARGET_MODEL = 0
+
 ## various sources are available
 ## can be general wikipedia, wikinews, wikibooks, ...
 WIKISOURCE = wiki
@@ -118,17 +122,80 @@ small-romance:
 	  ${MAKE} SRC=$$l TRG=en MODELHOME=../models/fr+fr_BE+fr_CA+fr_FR+wa+frp+oc+ca+rm+lld+fur+lij+lmo+es+es_AR+es_CL+es_CO+es_CR+es_DO+es_EC+es_ES+es_GT+es_HN+es_MX+es_NI+es_PA+es_PE+es_PR+es_SV+es_UY+es_VE+pt+pt_br+pt_BR+pt_PT+gl+lad+an+mwl+it+it_IT+co+nap+scn+vec+sc+ro+la-en all-wikis; \
 	done
 
-
-wiki-gl-en:
-	${MAKE} SRC=gl TRG=en MODELHOME=../models/fr+fr_BE+fr_CA+fr_FR+wa+frp+oc+ca+rm+lld+fur+lij+lmo+es+es_AR+es_CL+es_CO+es_CR+es_DO+es_EC+es_ES+es_GT+es_HN+es_MX+es_NI+es_PA+es_PE+es_PR+es_SV+es_UY+es_VE+pt+pt_br+pt_BR+pt_PT+gl+lad+an+mwl+it+it_IT+co+nap+scn+vec+sc+ro+la-en translate
-
-
-
 # Tagalog (tl, tgl), Central Bikol (bcl), Malayalam (ml, mal), Bengali (bn, ben), and Mongolian (mn, mon)
-focus-wikis:
+wikimedia-focus-wikis:
 	for l in tl bcl ml bn mn; do \
 	  ${MAKE} SRC=$$l TRG=en all-wikis; \
 	done
+
+
+uralic-wiki-texts:
+	for l in se kv vep; do \
+	  ${MAKE} SRC=$$l TRG=en all-wikitext; \
+	done
+
+
+# should be included: vep
+
+uralic-wikis:
+	for s in se kv vep; do \
+	  for t in se sma smn sms smj vep et fi kv krl nb no nn ru sv en; do \
+	    ${MAKE} SRC=$$s TRG=$$t \
+	      if [ "$$s" != "$$t" ]; then \
+		MULTI_TARGET_MODEL=1 \
+		MODELHOME=${HOME}/research/Opus-MT-train/work/models/se+sma+smj+smn+sms+vep+et+fi+kv+krl+nb+no+nn+ru+sv+en-se+sma+smj+smn+sms+vep++et+fi+kv+krl+nb+no+nn+ru+sv+en \
+		all-wikis; \
+	     fi \
+	  done \
+	done
+
+
+# fetch sami corpora from giellatekno
+
+sami-corp:
+	for l in sme sma smn sms smj; do \
+	  ${MAKE} SRC=$$l giellatekno/$$l/corp.$$l.aa.gz; \
+	done
+
+giellatekno/${SRC}/corp.${SRC}.aa.gz: 
+	${MAKE} victorio.uit.no/biggies/trunk/langs/${SRC}
+	mkdir -p ${dir $@}
+	find victorio.uit.no/biggies/trunk/langs/${SRC}/corp -type f -regex '.*/[^.]*.txt' |\
+	xargs cat | grep . | sed 's/ ¶//' |\
+	$(TOKENIZER)/detokenizer.perl -l fi | \
+	split -l ${MAX_SENTENCES} - giellatekno/${SRC}/corp.${SRC}.
+	gzip -f giellatekno/${SRC}/corp.${SRC}.*
+
+victorio.uit.no/biggies/trunk/langs/${SRC}:
+	wget -r -np https://victorio.uit.no/biggies/trunk/langs/${SRC}/corp
+
+giellatekno/se: giellatekno/sme
+	-cd giellatekno && ln -s sme se
+	-cd giellatekno/sme && ln -s corp.sme.aa.gz corp.se.aa.gz
+
+# cleanup-uralic:
+# 	for s in se sma smn sms smj kv krl vep; do \
+# 	  rm -fr $$s-$$s; \
+# 	done
+
+
+translate-sami-corp: sami-corp giellatekno/se
+	for s in se sma smn sms smj; do \
+	  for t in se sma smn sms smj et fi kv krl nb no nn ru sv en; do \
+	    if [ "$$s" != "$$t" ]; then \
+	      ${MAKE} SRC=$$s TRG=$$t \
+	      WIKI_DIR=giellatekno/$$s \
+	      WIKISOURCE=corp \
+	      MULTI_TARGET_MODEL=1 \
+	      MODELHOME=${HOME}/research/Opus-MT-train/work/models/se+sma+smn+sms+smj+et+fi+kv+krl+nb+no+nn+ru+sv+en-se+sma+smn+sms+smj+et+fi+kv+krl+nb+no+nn+ru+sv+en \
+	      HPC_MEM=4g HPC_CORES=1 WALLTIME=72 \
+	      translate.submit; \
+	    fi \
+	  done \
+	done
+
+
+
 
 get-data: ${WIKI_JSON}
 extract-text: ${WIKI_TXT}
@@ -171,13 +238,19 @@ endif
 ## pre-process data
 ## ---> TODO: does that work for multilingual data that need prefix?
 
+ifeq (${MULTI_TARGET_MODEL},1)
+  PREPROCESS_ARGS = ${SRC} ${TRG} ${LANGPAIR}/${MODELNAME}/source.spm
+else
+  PREPROCESS_ARGS = ${SRC} ${LANGPAIR}/${MODELNAME}/source.spm
+endif
+
 ${LANGPAIR}/%.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.spm.gz: ${WIKI_DIR}/%.${SRC}.${PART}.gz
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
 	${MAKE} ${LANGPAIR}/${MODELNAME}/decoder.yml
 	zcat $< |\
 	grep -v '[<>{}]' |\
-	${LANGPAIR}/${MODELNAME}/preprocess.sh ${SRC} ${LANGPAIR}/${MODELNAME}/source.spm |\
+	${LANGPAIR}/${MODELNAME}/preprocess.sh ${PREPROCESS_ARGS} |\
 	perl -e 'while (<>){next if (split(/\s+/)>${MAX_LENGTH});print;}' |\
 	head -${MAX_SENTENCES} |\
 	gzip -c > $@
@@ -257,6 +330,36 @@ ${WIKI_TXT}: ${WIKI_JSON}
 
 
 #	$(TOKENIZER)/normalize-punctuation.perl |\
+
+
+
+
+check-length:
+	for d in `find . -maxdepth 1 -type d -name '*-*' -printf "%f "`; do \
+	  s=`echo $$d | cut -f1 -d'-'`; \
+	  t=`echo $$d | cut -f2 -d'-'`; \
+	  echo "check $$d"; \
+	  for S in `ls $$d/*.$$s.gz`; do \
+	    T=`echo $$S | sed 's/.$$s.gz/.$$t.gz/'`; \
+	    echo "$$S -- $$T"; \
+	    zcat $$S | wc -l; \
+	    zcat $$T | wc -l; \
+	    if [ `zcat $$S | wc -l` != `zcat $$T | wc -l` ]; then \
+	      echo "$$S != $$T"; \
+	    fi \
+	  done \
+	done
+
+
+
+
+
+
+
+
+
+
+
 
 
 

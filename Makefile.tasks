@@ -128,70 +128,12 @@ bilingual-dynamic: train-dynamic
 	  ${MAKE} TRGLANGS="${SRCLANGS}" SRCLANGS='${TRGLANGS}' train-dynamic; \
 	fi
 
-# bilingual-dynamic:
-# 	if [ ! -e "${WORKHOME}/${LANGPAIRSTR}/train.submit" ]; then \
-# 	  ${MAKE} data; \
-# 	  s=`zcat ${WORKHOME}/${LANGPAIRSTR}/train/*.src.clean.${PRE_SRC}.gz | head -10000001 | wc -l`; \
-# 	  if [ $$s -gt 10000000 ]; then \
-# 	    echo "${LANGPAIRSTR} bigger than 10 million"; \
-# 	    ${MAKE} HPC_CORES=1 HPC_MEM=8g train.submit-multigpu; \
-# 	    if [ "${SRCLANGS}" != "${TRGLANGS}" ]; then \
-# 	      ${MAKE} reverse-data-spm; \
-# 	      ${MAKE} TRGLANGS="${SRCLANGS}" SRCLANGS='${TRGLANGS}' HPC_CORES=1 HPC_MEM=8g train.submit-multigpu; \
-# 	    fi; \
-# 	  elif [ $$s -gt 1000000 ]; then \
-# 	    echo "${LANGPAIRSTR} bigger than 1 million"; \
-# 	    ${MAKE} \
-# 	    	MARIAN_VALID_FREQ=2500 \
-# 	    	HPC_CORES=1 HPC_MEM=4g train.submit; \
-# 	    if [ "${SRCLANGS}" != "${TRGLANGS}" ]; then \
-# 	      ${MAKE} reverse-data-spm; \
-# 	      ${MAKE} TRGLANGS="${SRCLANGS}" SRCLANGS='${TRGLANGS}' \
-# 	    	MARIAN_VALID_FREQ=2500 \
-# 	    	HPC_CORES=1 HPC_MEM=4g train.submit; \
-# 	    fi; \
-# 	  elif [ $$s -gt 100000 ]; then \
-# 	    echo "${LANGPAIRSTR} bigger than 100k"; \
-# 	    ${MAKE} \
-# 	    	MARIAN_VALID_FREQ=1000 \
-# 	    	MARIAN_WORKSPACE=5000 \
-# 	    	MARIAN_VALID_MINI_BATCH=8 \
-# 	    	MARIAN_EARLY_STOPPING=5 \
-# 	    	HPC_CORES=1 HPC_MEM=4g train.submit; \
-# 	    if [ "${SRCLANGS}" != "${TRGLANGS}" ]; then \
-# 	      ${MAKE} reverse-data-spm; \
-# 	      ${MAKE} TRGLANGS="${SRCLANGS}" SRCLANGS='${TRGLANGS}' \
-# 	    	MARIAN_VALID_FREQ=1000 \
-# 	    	MARIAN_WORKSPACE=5000 \
-# 	    	MARIAN_VALID_MINI_BATCH=8 \
-# 	    	MARIAN_EARLY_STOPPING=5 \
-# 	    	HPC_CORES=1 HPC_MEM=4g train.submit; \
-# 	    fi; \
-# 	  elif [ $$s -gt 10000 ]; then \
-# 	    echo "${LANGPAIRSTR} bigger than 10k"; \
-# 	    ${MAKE} \
-# 	    	MARIAN_WORKSPACE=3500 \
-# 	    	MARIAN_VALID_MINI_BATCH=4 \
-# 	    	MARIAN_DROPOUT=0.5 \
-# 	    	MARIAN_VALID_FREQ=1000 \
-# 	    	MARIAN_EARLY_STOPPING=5 \
-# 	    	HPC_CORES=1 HPC_MEM=4g train.submit; \
-# 	    if [ "${SRCLANGS}" != "${TRGLANGS}" ]; then \
-# 	      ${MAKE} reverse-data-spm; \
-# 	      ${MAKE} TRGLANGS="${SRCLANGS}" SRCLANGS='${TRGLANGS}' \
-# 	    	MARIAN_WORKSPACE=3500 \
-# 	    	MARIAN_VALID_MINI_BATCH=4 \
-# 	    	MARIAN_DROPOUT=0.5 \
-# 	    	MARIAN_VALID_FREQ=1000 \
-# 	    	MARIAN_EARLY_STOPPING=5 \
-# 	    	HPC_CORES=1 HPC_MEM=4g train.submit; \
-# 	    fi; \
-# 	  else \
-# 	    echo "${LANGPAIRSTR} too small"; \
-# 	  fi \
-# 	fi
 
 
+
+#-------------------------------------------------------------------
+# OPUS-MT
+#-------------------------------------------------------------------
 
 
 
@@ -242,6 +184,10 @@ all2en:
 
 
 
+#-------------------------------------------------------------------
+# experiments and models from the fiskmö project
+#-------------------------------------------------------------------
+
 
 
 ## run things with individual data sets only
@@ -256,7 +202,6 @@ all2en:
 
 
 
-##-------------------------------------------------
 ## make some tests with crawled fiskmo data
 
 FISKMO-DATASETS = crawl-v2-2M \
@@ -324,10 +269,10 @@ fiskmo-svfi-%:
 		${patsubst fiskmo-svfi-%,%,$@}
 
 
-##-------------------------------------------------
 
-
-## a batch of interesting models ....
+#-------------------------------------------------------------------
+# models for Celtic languages
+#-------------------------------------------------------------------
 
 
 ${DATADIR}/${PRE}/%.cy-en.clean.cy.gz:
@@ -398,6 +343,22 @@ ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz:
 
 
 
+
+
+
+#-------------------------------------------------------------------
+# multilingual model for Sami languages
+#-------------------------------------------------------------------
+
+sami-data: fetch-sami-tmx convert-sami-tmx move-sami-data convert-sami-gloss
+	${MAKE} data-sami
+
+sami-train: train-dynamic-sami
+sami-eval: eval-sami
+sami-dist: dist-sami
+
+
+
 GIELLATEKNO_HOME = https://victorio.uit.no/biggies/trunk
 GIELLATEKNO_TM_HOME = ${GIELLATEKNO_HOME}/mt/omegat
 
@@ -427,41 +388,41 @@ convert-sami-gloss:
 	cut -f2 finsmn.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.fi-smn.clean.smn.gz
 	rm -f finsmn.utf8
 	wget ${GIELLATEKNO_TM_HOME}/fin-sme/glossary/finsme.utf8
-	cut -f1 finsme.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.fi-smn.clean.fi.gz
-	cut -f2 finsme.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.fi-smn.clean.se.gz
+	cut -f1 finsme.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.fi-se.clean.fi.gz
+	cut -f2 finsme.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.fi-se.clean.se.gz
 	rm -f finsme.utf8
 	wget ${GIELLATEKNO_TM_HOME}/fin-sms/glossary/finsms.utf8
 	cut -f1 finsms.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.fi-sms.clean.fi.gz
-	cut -f2 finsms.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.fi-sms.clean.se.gz
+	cut -f2 finsms.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.fi-sms.clean.sms.gz
 	rm -f finsms.utf8
 	wget ${GIELLATEKNO_TM_HOME}/sme-smn/glossary/smesmn.utf8
-	cut -f1 smesmn.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.sme-smn.clean.se.gz
-	cut -f2 smesmn.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.sme-smn.clean.smn.gz
+	cut -f1 smesmn.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.se-smn.clean.se.gz
+	cut -f2 smesmn.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.se-smn.clean.smn.gz
 	rm -f smesmn.utf8
 	wget ${GIELLATEKNO_TM_HOME}/sme-smj/glossary/glossary.utf8
-	cut -f1 glossary.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.sme-smj.clean.se.gz
-	cut -f2 glossary.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.sme-smj.clean.smj.gz
+	cut -f1 glossary.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.se-smj.clean.se.gz
+	cut -f2 glossary.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.se-smj.clean.smj.gz
 	rm -f glossary.utf8
 	wget ${GIELLATEKNO_TM_HOME}/sme-nob/glossary/smenob.utf8
 	wget ${GIELLATEKNO_TM_HOME}/sme-nob/glossary/termwiki.utf8
-	cut -f1 smenob.utf8 > ${DATADIR}/${PRE}/glossary.nb-sme.clean.se
-	cut -f2 smenob.utf8 > ${DATADIR}/${PRE}/glossary.nb-sme.clean.nb
-	cut -f1 termwiki.utf8 >> ${DATADIR}/${PRE}/glossary.nb-sme.clean.se
-	cut -f2 termwiki.utf8 >> ${DATADIR}/${PRE}/glossary.nb-sme.clean.nb
-	gzip -f ${DATADIR}/${PRE}/glossary.nb-sme.clean.se
-	gzip -f ${DATADIR}/${PRE}/glossary.nb-sme.clean.nb
+	cut -f1 smenob.utf8 > ${DATADIR}/${PRE}/glossary.nb-se.clean.se
+	cut -f2 smenob.utf8 > ${DATADIR}/${PRE}/glossary.nb-se.clean.nb
+	cut -f1 termwiki.utf8 >> ${DATADIR}/${PRE}/glossary.nb-se.clean.se
+	cut -f2 termwiki.utf8 >> ${DATADIR}/${PRE}/glossary.nb-se.clean.nb
+	gzip -f ${DATADIR}/${PRE}/glossary.nb-se.clean.se
+	gzip -f ${DATADIR}/${PRE}/glossary.nb-se.clean.nb
 	rm -f smenob.utf8 termwiki.utf8
 	wget ${GIELLATEKNO_TM_HOME}/sme-sma/glossary/glossary.utf8
-	cut -f1 glossary.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.sma-sme.clean.se.gz
-	cut -f2 glossary.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.sma-sme.clean.sma.gz
+	cut -f1 glossary.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.se-sma.clean.se.gz
+	cut -f2 glossary.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.se-sma.clean.sma.gz
 	rm -f glossary.utf8
 	wget ${GIELLATEKNO_TM_HOME}/nob-smj/glossary/nobsmj.utf8
 	cut -f1 nobsmj.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.nb-smj.clean.nb.gz
 	cut -f2 nobsmj.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.nb-smj.clean.smj.gz
 	rm -f nobsmj.utf8
 	wget ${GIELLATEKNO_TM_HOME}/nob-sme/glossary/nobsme.utf8
-	cut -f1 nobsme.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.nb-sme.clean.nb.gz
-	cut -f2 nobsme.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.nb-sme.clean.se.gz
+	cut -f1 nobsme.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.nb-se.clean.nb.gz
+	cut -f2 nobsme.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.nb-se.clean.se.gz
 	rm -f nobsme.utf8
 	wget ${GIELLATEKNO_TM_HOME}/nob-sma/glossary/nobsma.utf8
 	wget ${GIELLATEKNO_TM_HOME}/sma-nob/glossary/termwiki.utf8
@@ -491,21 +452,20 @@ ${GIELLATEKNO_SAMI_TM}:
 	wget -O $@ ${GIELLATEKNO_TM_HOME}/$@
 
 
-
-## name of the data sets
+## name of the sami data sets
 SAMI_EXTRA = ${patsubst %.tmx,%,${notdir ${GIELLATEKNO_SAMI_TM}}} glossary
 
-sami-multilingual:
+%-sami:
 	${MAKE} DATASET=opus+giella \
 		HELDOUTSIZE=0 \
 		DEVSET=Tatoeba \
 		TESTSET=Tatoeba \
 		DEVMINSIZE=200 \
 		EXTRA_TRAINSET="${SAMI_EXTRA}" \
-		SRCLANGS="se sma smn sms smj et fi kv krl nb no nn ru sv en" \
-		TRGLANGS="se sma smn sms smj et fi kv krl nb no nn ru sv en" \
+		SRCLANGS="se sma smj smn sms vep et fi kv krl nb no nn ru sv en" \
+		TRGLANGS="se sma smj smn sms vep et fi kv krl nb no nn ru sv en" \
 		SKIP_LANGPAIRS="en-en|en-et|en-fi|en-nb|en-no|en-nn|en-ru|en-sv|et-et|et-fi|et-nb|et-no|et-nn|et-ru|et-sv|fi-fi|fi-nb|fi-no|fi-nn|fi-ru|fi-sv|nb-nb|nb-no|nb-nn|nb-ru|nb-sv|no-no|no-nn|no-ru|no-sv|nn-nn|nn-ru|nn-sv|ru-ru|ru-sv|sv-sv" \
-	train-dynamic
+	${@:-sami=}
 
 
 
@@ -523,6 +483,9 @@ test-skip:
 
 
 
+#-------------------------------------------------------------------
+# Romance-languages - English models
+#-------------------------------------------------------------------
 
 LANGS_FR_VARIANTS = fr_BE fr_CA fr_FR
 LANGS_ES_VARIANTS = es_AR es_CL es_CO es_CR es_DO es_EC es_ES es_GT es_HN es_MX es_NI es_PA es_PE es_PR es_SV es_UY es_VE
@@ -541,7 +504,10 @@ romance-english-dist:
 
 
 
-## germanic to germanic
+
+#-------------------------------------------------------------------
+# other language groups
+#-------------------------------------------------------------------
 
 germanic:
 	${MAKE} LANGS="${GERMANIC}" HPC_DISK=1500 multilingual
@@ -549,8 +515,12 @@ germanic:
 scandinavian:
 	${MAKE} LANGS="${SCANDINAVIAN}" multilingual-medium
 
-memad2en:
-	${MAKE} LANGS="${MEMAD_LANGS}" PIVOT=en all2pivot
+
+
+#-------------------------------------------------------------------
+# some other interesting language pairs
+#-------------------------------------------------------------------
+
 
 fiet:
 	${MAKE} SRCLANGS=fi TRGLANGS=et bilingual-medium
@@ -576,12 +546,36 @@ enru-yandex-bt:
 	${MAKE} DATASET=opus+yandex MODELTYPE=transformer SRCLANGS=en TRGLANGS=ru EXTRA_TRAINSET=yandex \
 		WALLTIME=72 HPC_CORES=1 HPC_MEM=12g MARIAN_WORKSPACE=12000 MARIAN_EARLY_STOPPING=15 train-bt.submit-multigpu
 
-
 enit:
 	${MAKE} SRCLANGS=en TRGLANGS=it traindata-spm
 	${MAKE} SRCLANGS=en TRGLANGS=it devdata-spm
 	${MAKE} SRCLANGS=en TRGLANGS=it wordalign-spm
 	${MAKE} SRCLANGS=en TRGLANGS=it WALLTIME=72 HPC_MEM=4g HPC_CORES=1 train-spm.submit-multigpu
+
+
+
+#-------------------------------------------------------------------
+# document-level MT (concatenation approach)
+#-------------------------------------------------------------------
+
+
+doclevel:
+	${MAKE} ost-datasets
+	${MAKE} traindata-doc-ost
+	${MAKE} devdata-doc-ost
+	${MAKE} wordalign-doc-ost
+	${MAKE} CONTEXT_SIZE=${CONTEXT_SIZE} MODELTYPE=${MODELTYPE} \
+		HPC_CORES=1 WALLTIME=72 HPC_MEM=4g train-doc-ost.submit
+
+
+
+
+#-------------------------------------------------------------------
+# models for the MeMAD project
+#-------------------------------------------------------------------
+
+memad2en:
+	${MAKE} LANGS="${MEMAD_LANGS}" PIVOT=en all2pivot
 
 
 memad-fiensv:
@@ -622,9 +616,6 @@ memad-fiensv_more:
 	${MAKE} CONTEXT_SIZE=500 memad-fiensv_doc
 
 
-
-
-
 memad:
 	for s in fi en sv de fr nl; do \
 	  for t in en fi sv de fr nl; do \
@@ -639,15 +630,6 @@ memad:
 #	        ${MAKE} SRCLANGS=$$s TRGLANGS=$$t data; \
 #	        ${MAKE} SRCLANGS=$$s TRGLANGS=$$t HPC_CORES=1 HPC_MEM=4g train.submit-multigpu; \
 
-
-
-doclevel:
-	${MAKE} ost-datasets
-	${MAKE} traindata-doc-ost
-	${MAKE} devdata-doc-ost
-	${MAKE} wordalign-doc-ost
-	${MAKE} CONTEXT_SIZE=${CONTEXT_SIZE} MODELTYPE=${MODELTYPE} \
-		HPC_CORES=1 WALLTIME=72 HPC_MEM=4g train-doc-ost.submit
 
 
 fiensv_bpe:

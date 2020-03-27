@@ -25,7 +25,7 @@ TOKENIZER=${MOSESSCRIPTS}/tokenizer
 
 THREADS=4
 
-if [ $4 == "noflags" ]; then
+if [ "$4" == "noflags" ]; then
   ${TOKENIZER}/replace-unicode-punctuation.perl |
   ${TOKENIZER}/remove-non-printing-char.perl |
   ${TOKENIZER}/normalize-punctuation.perl -l $1 |
