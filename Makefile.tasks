@@ -275,41 +275,29 @@ fiskmo-svfi-%:
 #-------------------------------------------------------------------
 
 
-${DATADIR}/${PRE}/%.cy-en.clean.cy.gz:
-	wget http://techiaith.cymru/corpws/Moses/$(patsubst %.cy-en.clean.cy.gz,%.tar.gz,${notdir $@})
-	tar -xzf $(patsubst %.cy-en.clean.cy.gz,%.tar.gz,${notdir $@})
-	$(TOKENIZER)/detokenizer.perl -l cy < $(patsubst %.cy-en.clean.cy.gz,%.cy,${notdir $@}) |\
-	$(MOSESSCRIPTS)/recaser/detruecase.perl | gzip -c > $@
-	$(TOKENIZER)/detokenizer.perl -l en < $(patsubst %.cy-en.clean.cy.gz,%.en,${notdir $@}) |\
-	$(MOSESSCRIPTS)/recaser/detruecase.perl | gzip -c > ${@:.cy.gz=.en.gz}
-	rm -f $(patsubst %.cy-en.clean.cy.gz,%.tar.gz,${notdir $@})
+## only OPUS data
 
+%-celtic-english-opus:
+	${MAKE} HELDOUTSIZE=0 SRCLANGS="ga cy br gd kv gv" TRGLANGS=en ${@:-celtic-english-opus=}
 
-
-
-
-celtic-english:
-	${MAKE} HELDOUTSIZE=0 SRCLANGS="ga cy br gd kv gv" TRGLANGS=en train-dynamic
-	${MAKE} HELDOUTSIZE=0 TRGLANGS="ga cy br gd kv gv" SRCLANGS=en TRG=ga SRC=en train-dynamic
+%-english-celtic-opus:
+	${MAKE} HELDOUTSIZE=0 TRGLANGS="ga cy br gd kv gv" SRCLANGS=en TRG=ga SRC=en ${@:-english-celtic-opus=}
 
 
 # more data for cy-en
 
-celtic-english-extra: ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz
+%-celtic-english: ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz
 	${MAKE} DATASET=opus+techiaith HELDOUTSIZE=0 \
 		EXTRA_TRAINSET="CofnodYCynulliad Deddfwriaeth Meddalwedd rhestr_geiriau dic" \
-		SRCLANGS="ga cy br gd kv gv" TRGLANGS=en train-dynamic
+		SRCLANGS="ga cy br gd kv gv" TRGLANGS=en \
+	${@:-celtic-english=}
+
+%-english-celtic: ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz
 	${MAKE} DATASET=opus+techiaith HELDOUTSIZE=0 \
 		EXTRA_TRAINSET="CofnodYCynulliad Deddfwriaeth Meddalwedd rhestr_geiriau dic" \
-		TRGLANGS="ga cy br gd kv gv" SRCLANGS=en TRG=ga SRC=en train-dynamic
+		TRGLANGS="ga cy br gd kv gv" SRCLANGS=en TRG=ga SRC=en \
+	${@:-english-celtic=}
 
-
-## also inlcude backtranslations!
-
-english-celtic-extra: ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz
-	${MAKE} DATASET=opus+techiaith HELDOUTSIZE=0 \
-		EXTRA_TRAINSET="CofnodYCynulliad Deddfwriaeth Meddalwedd rhestr_geiriau dic" \
-		TRGLANGS="ga cy br gd kv gv" SRCLANGS=en TRG=ga SRC=en train-dynamic-bt
 
 
 
@@ -321,6 +309,7 @@ english-celtic-extra: ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz
 # http://techiaith.cymru/alinio/rhestr_geiriau.tsv
 # http://techiaith.cymru/alinio/hunalign/cy-en.dic
 
+.PHONY: welsh-data
 welsh-data: ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz
 
 ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz:
@@ -341,7 +330,14 @@ ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz:
 	cut -f1 -d '@' < cy-en.dic | sed 's/ $$*//' | gzip -c > ${DATADIR}/${PRE}/dic.cy-en.clean.en.gz
 	cut -f2 -d '@' < cy-en.dic | sed 's/^ *//' | gzip -c > ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz
 
-
+${DATADIR}/${PRE}/%.cy-en.clean.cy.gz:
+	wget http://techiaith.cymru/corpws/Moses/$(patsubst %.cy-en.clean.cy.gz,%.tar.gz,${notdir $@})
+	tar -xzf $(patsubst %.cy-en.clean.cy.gz,%.tar.gz,${notdir $@})
+	$(TOKENIZER)/detokenizer.perl -l cy < $(patsubst %.cy-en.clean.cy.gz,%.cy,${notdir $@}) |\
+	$(MOSESSCRIPTS)/recaser/detruecase.perl | gzip -c > $@
+	$(TOKENIZER)/detokenizer.perl -l en < $(patsubst %.cy-en.clean.cy.gz,%.en,${notdir $@}) |\
+	$(MOSESSCRIPTS)/recaser/detruecase.perl | gzip -c > ${@:.cy.gz=.en.gz}
+	rm -f $(patsubst %.cy-en.clean.cy.gz,%.tar.gz,${notdir $@})
 
 
 
@@ -456,7 +452,7 @@ ${GIELLATEKNO_SAMI_TM}:
 SAMI_EXTRA = ${patsubst %.tmx,%,${notdir ${GIELLATEKNO_SAMI_TM}}} glossary
 
 %-sami:
-	${MAKE} DATASET=opus+giella \
+	${MAKE} DATASET=${DATASET}+giella \
 		HELDOUTSIZE=0 \
 		DEVSET=Tatoeba \
 		TESTSET=Tatoeba \
@@ -492,16 +488,13 @@ LANGS_ES_VARIANTS = es_AR es_CL es_CO es_CR es_DO es_EC es_ES es_GT es_HN es_MX 
 LANGS_PT_VARIANTS = pt_br pt_BR pt_PT
 LANGS_ROMANCE = fr ${LANGS_FR_VARIANTS} wa frp oc ca rm lld fur lij lmo es ${LANGS_ES_VARIANTS} pt ${LANGS_PT_VARIANTS} gl lad an mwl it it_IT co nap scn vec sc ro la
 
-romance-english:
-	${MAKE} HPC_DISK=1000 HELDOUTSIZE=0 MODELTYPE=transformer SRCLANGS="${LANGS_ROMANCE}" TRGLANGS=en train-dynamic
-	${MAKE} HPC_DISK=1000 HELDOUTSIZE=0 MODELTYPE=transformer TRGLANGS="${LANGS_ROMANCE}" SRCLANGS=en train-dynamic
+%-romance-english:
+	${MAKE} HPC_DISK=1000 HELDOUTSIZE=0 MODELTYPE=transformer SRCLANGS="${LANGS_ROMANCE}" TRGLANGS=en \
+	${@:-romance-english=}
 
-romance-english-eval:
-	${MAKE} HPC_DISK=1000 HELDOUTSIZE=0 MODELTYPE=transformer SRCLANGS="${LANGS_ROMANCE}" TRGLANGS=en eval
-
-romance-english-dist:
-	${MAKE} HPC_DISK=1000 HELDOUTSIZE=0 MODELTYPE=transformer SRCLANGS="${LANGS_ROMANCE}" TRGLANGS=en best_dist
-
+%-english-romance:
+	${MAKE} HPC_DISK=1000 HELDOUTSIZE=0 MODELTYPE=transformer TRGLANGS="${LANGS_ROMANCE}" SRCLANGS=en \
+	${@:-english-romance=}
 
 
 

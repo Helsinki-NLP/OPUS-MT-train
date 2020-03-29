@@ -140,8 +140,8 @@ uralic-wiki-texts:
 uralic-wikis:
 	for s in se kv vep; do \
 	  for t in se sma smn sms smj vep et fi kv krl nb no nn ru sv en; do \
-	    ${MAKE} SRC=$$s TRG=$$t \
-	      if [ "$$s" != "$$t" ]; then \
+	    if [ "$$s" != "$$t" ]; then \
+	      ${MAKE} SRC=$$s TRG=$$t \
 		MULTI_TARGET_MODEL=1 \
 		MODELHOME=${HOME}/research/Opus-MT-train/work/models/se+sma+smj+smn+sms+vep+et+fi+kv+krl+nb+no+nn+ru+sv+en-se+sma+smj+smn+sms+vep++et+fi+kv+krl+nb+no+nn+ru+sv+en \
 		all-wikis; \
@@ -179,20 +179,58 @@ giellatekno/se: giellatekno/sme
 # 	done
 
 
+translate-sami: translate-sami-wiki translate-sami-corp
+
 translate-sami-corp: sami-corp giellatekno/se
+	d=`date "+%Y-%m-%d"`; \
 	for s in se sma smn sms smj; do \
 	  for t in se sma smn sms smj et fi kv krl nb no nn ru sv en; do \
 	    if [ "$$s" != "$$t" ]; then \
+	      mkdir -p $$s-$$t/$$d; \
+	      mv $$s-$$t/* $$s-$$t/$$d/; \
 	      ${MAKE} SRC=$$s TRG=$$t \
 	      WIKI_DIR=giellatekno/$$s \
 	      WIKISOURCE=corp \
 	      MULTI_TARGET_MODEL=1 \
-	      MODELHOME=${HOME}/research/Opus-MT-train/work/models/se+sma+smn+sms+smj+et+fi+kv+krl+nb+no+nn+ru+sv+en-se+sma+smn+sms+smj+et+fi+kv+krl+nb+no+nn+ru+sv+en \
+	      MODELHOME=${HOME}/research/Opus-MT-train/work/models/se+sma+smj+smn+sms+vep+et+fi+kv+krl+nb+no+nn+ru+sv+en-se+sma+smj+smn+sms+vep+et+fi+kv+krl+nb+no+nn+ru+sv+en \
 	      HPC_MEM=4g HPC_CORES=1 WALLTIME=72 \
 	      translate.submit; \
 	    fi \
 	  done \
 	done
+
+translate-sami-wiki:
+	d=`date "+%Y-%m-%d"`; \
+	for s in se; do \
+	  for t in se sma smn sms smj vep et fi kv krl nb no nn ru sv en; do \
+	    if [ "$$s" != "$$t" ]; then \
+	      mkdir -p $$s-$$t/$$d; \
+	      mv $$s-$$t/* $$s-$$t/$$d/; \
+	      ${MAKE} SRC=$$s TRG=$$t \
+		MULTI_TARGET_MODEL=1 \
+	        MODELHOME=${HOME}/research/Opus-MT-train/work/models/se+sma+smj+smn+sms+vep+et+fi+kv+krl+nb+no+nn+ru+sv+en-se+sma+smj+smn+sms+vep+et+fi+kv+krl+nb+no+nn+ru+sv+en \
+	        HPC_MEM=4g HPC_CORES=1 WALLTIME=72 \
+	        translate.submit; \
+	     fi \
+	  done \
+	done
+	d=`date "+%Y-%m-%d"`; \
+	for s in no nn ru sv en; do \
+	  for t in se sma smn sms smj; do \
+	    if [ "$$s" != "$$t" ]; then \
+	      mkdir -p $$s-$$t/$$d; \
+	      mv $$s-$$t/* $$s-$$t/$$d/; \
+	      ${MAKE} SRC=$$s TRG=$$t \
+		MULTI_TARGET_MODEL=1 \
+	        MODELHOME=${HOME}/research/Opus-MT-train/work/models/se+sma+smj+smn+sms+vep+et+fi+kv+krl+nb+no+nn+ru+sv+en-se+sma+smj+smn+sms+vep+et+fi+kv+krl+nb+no+nn+ru+sv+en \
+	        HPC_MEM=4g HPC_CORES=1 WALLTIME=72 \
+	        translate.submit; \
+	     fi \
+	  done \
+	done
+
+
+
 
 
 
