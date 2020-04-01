@@ -39,8 +39,14 @@ endif
 
 
 ## back translation data
+## - use only the latest backtranslations
+##   if such a subdir exists
 
-BACKTRANS_DIR = backtranslate/${TRG}-${SRC}
+ifneq (${wildcard backtranslate/${TRG}-${SRC}/latest},)
+  BACKTRANS_DIR = backtranslate/${TRG}-${SRC}/latest
+else
+  BACKTRANS_DIR = backtranslate/${TRG}-${SRC}
+endif
 
 BACKTRANS_SRC = ${sort ${wildcard ${BACKTRANS_DIR}/*.${SRCEXT}.gz}}
 BACKTRANS_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${BACKTRANS_SRC}}

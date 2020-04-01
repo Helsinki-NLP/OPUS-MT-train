@@ -29,14 +29,24 @@ LANGPAIR = ${SRC}-${TRG}
 
 
 MODELHOME = ../models/${LANGPAIR}
-MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/*-20*.zip}}}
+## standard sort is different from UTF8-based sort
+## --> prefer models with augmented data sets (separated by +)
+##     we need the UTF8 sort order
+## --> use bash sort and UTF8 locale
+# MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/*-20*.zip}}}
+MODELZIP  = ${lastword ${shell ls ${MODELHOME}/*-20*.zip | LANG=en_US.UTF-8 sort}}
 MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
+
 
 ifeq (${MODELNAME},)
   MODELHOME = ../work-langid/models/${LANGPAIR}
   # MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/*-20*.zip}}}
   MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/opus-20*.zip}}}
   MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
+endif
+
+ifdef LOCAL_SCRATCH
+  TMPDIR = ${LOCAL_SCRATCH}
 endif
 
 
@@ -53,6 +63,10 @@ WIKI_TXT = ${WIKI_DIR}/${WIKISOURCE}.${LANGID}.${PART}.gz
 WIKI_SRC = ${LANGPAIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.gz
 WIKI_PRE = ${LANGPAIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.spm.gz
 WIKI_TRG = ${LANGPAIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${TRG}.gz
+
+WIKI_LATEST_SRC = ${LANGPAIR}/latest/${WIKISOURCE}.${PART}.${LANGPAIR}.${SRC}.gz
+WIKI_LATEST_TRG = ${LANGPAIR}/latest/${WIKISOURCE}.${PART}.${LANGPAIR}.${TRG}.gz
+
 
 ## all parts of this wiki
 PARTS = ${sort ${patsubst ${WIKI_DIR}/${WIKISOURCE}.${LANGID}.%.gz,%,${wildcard ${WIKI_DIR}/${WIKISOURCE}.${LANGID}.*.gz}}}
@@ -79,7 +93,7 @@ UDPIPE_MODEL = ${notdir $(shell ${LOAD_MODULES} find ${UDPIPE_MODELS}/ -name "${
 
 
 all: index.html
-	${MAKE} ${WIKI_SRC} ${WIKI_TRG}
+	${MAKE} ${WIKI_LATEST_SRC} ${WIKI_LATEST_TRG}
 
 
 # WIKISOURCES = wiki wikibooks wikinews wikiquote wikisource wiktionary
@@ -106,16 +120,53 @@ all-wikilangs: index.html
 	done
 
 
+## aux function to pring the selected modelname
+.PHONY: print-modelname
+print-modelname:
+	@echo ${MODELNAME}
+	@echo ${MODELZIP}
+	@echo "${sort ${wildcard ${MODELHOME}/*-20*.zip}}"
+
+
+
+
+
+fetch-celtic:
+	for l in ga cy br gd kw gv; do \
+	  ${MAKE} SRC=$$l TRG=en MODELHOME=../models/ga+cy+br+gd+kw+gv-en all-wikitext; \
+	done
+
+## translate celtic languages using our multilingual model
+## in both directions
+translate-celtic-english:
+	for l in ga cy br gd kw gv; do \
+	  ${MAKE} SRC=$$l TRG=en MODELHOME=../models/ga+cy+br+gd+kw+gv-en all-wikis; \
+	done
+
+translate-english-celtic:
+	for l in ga cy br gd kw gv; do \
+	  ${MAKE} TRG=$$l SRC=en \
+		MODELHOME=../models/en-ga+cy+br+gd+kw+gv \
+		MULTI_TARGET_MODEL=1 \
+	  	HPC_MEM=4g HPC_CORES=1 WALLTIME=72 translate.submit; \
+	done
+
+
+
+# test-celtic:
+# 	for l in ga cy br gd kw gv; do \
+# 	  ${MAKE} SRC=$$l TRG=en MODELHOME=../models/ga+cy+br+gd+kw+gv-en print-modelname; \
+# 	done
+
+
 
 ## for Breton: use the multilingual celtic model to backtranslate
 breton:
-	${MAKE} SRC=br TRG=en MODELHOME=../models/ga+cy+br+gd+kv+gv-en all-wikis
+	${MAKE} SRC=br TRG=en MODELHOME=../models/ga+cy+br+gd+kw+gv-en all-wikis
 
-## do the same for all Celtic languages in the model
-celtic:
-	for l in ga cy br gd kv gv; do \
-	  ${MAKE} SRC=$$l TRG=en MODELHOME=../models/ga+cy+br+gd+kv+gv-en all-wikis; \
-	done
+
+
+
 
 small-romance:
 	for l in wa frp oc ca rm lld fur lij lmo gl lad an mwl co nap scn vec sc la; do \
@@ -182,12 +233,9 @@ giellatekno/se: giellatekno/sme
 translate-sami: translate-sami-wiki translate-sami-corp
 
 translate-sami-corp: sami-corp giellatekno/se
-	d=`date "+%Y-%m-%d"`; \
 	for s in se sma smn sms smj; do \
 	  for t in se sma smn sms smj et fi kv krl nb no nn ru sv en; do \
 	    if [ "$$s" != "$$t" ]; then \
-	      mkdir -p $$s-$$t/$$d; \
-	      mv $$s-$$t/* $$s-$$t/$$d/; \
 	      ${MAKE} SRC=$$s TRG=$$t \
 	      WIKI_DIR=giellatekno/$$s \
 	      WIKISOURCE=corp \
@@ -200,12 +248,9 @@ translate-sami-corp: sami-corp giellatekno/se
 	done
 
 translate-sami-wiki:
-	d=`date "+%Y-%m-%d"`; \
 	for s in se; do \
 	  for t in se sma smn sms smj vep et fi kv krl nb no nn ru sv en; do \
 	    if [ "$$s" != "$$t" ]; then \
-	      mkdir -p $$s-$$t/$$d; \
-	      mv $$s-$$t/* $$s-$$t/$$d/; \
 	      ${MAKE} SRC=$$s TRG=$$t \
 		MULTI_TARGET_MODEL=1 \
 	        MODELHOME=${HOME}/research/Opus-MT-train/work/models/se+sma+smj+smn+sms+vep+et+fi+kv+krl+nb+no+nn+ru+sv+en-se+sma+smj+smn+sms+vep+et+fi+kv+krl+nb+no+nn+ru+sv+en \
@@ -214,12 +259,9 @@ translate-sami-wiki:
 	     fi \
 	  done \
 	done
-	d=`date "+%Y-%m-%d"`; \
 	for s in no nn ru sv en; do \
 	  for t in se sma smn sms smj; do \
 	    if [ "$$s" != "$$t" ]; then \
-	      mkdir -p $$s-$$t/$$d; \
-	      mv $$s-$$t/* $$s-$$t/$$d/; \
 	      ${MAKE} SRC=$$s TRG=$$t \
 		MULTI_TARGET_MODEL=1 \
 	        MODELHOME=${HOME}/research/Opus-MT-train/work/models/se+sma+smj+smn+sms+vep+et+fi+kv+krl+nb+no+nn+ru+sv+en-se+sma+smj+smn+sms+vep+et+fi+kv+krl+nb+no+nn+ru+sv+en \
@@ -239,7 +281,7 @@ get-data: ${WIKI_JSON}
 extract-text: ${WIKI_TXT}
 prepare-model: ${LANGPAIR}/${MODELNAME}/decoder.yml
 prepare-data: ${WIKI_PRE}
-translate: ${WIKI_SRC} ${WIKI_TRG}
+translate: ${WIKI_LATEST_SRC} ${WIKI_LATEST_TRG}
 
 ## translate all parts
 translate-all-parts: ${LANGPAIR}/${MODELNAME}/decoder.yml
@@ -309,6 +351,21 @@ ifneq (${MODELZIP},)
 endif
 
 
+
+## overwrite the file with the latest translations
+## --> this allows multiple translation iterations
+##     without duplicating the data we want to use in MT training
+
+${WIKI_LATEST_SRC}: ${WIKI_SRC}
+	mkdir -p ${dir $@}
+	cp $< $@
+
+${WIKI_LATEST_TRG}: ${WIKI_TRG}
+	mkdir -p ${dir $@}
+	cp $< $@
+
+
+
 ## translate
 
 %.${LANGPAIR}.${TRG}.gz: %.${LANGPAIR}.${SRC}.spm.gz
@@ -322,11 +379,11 @@ ifneq (${MODELZIP},)
 		${MARIAN_DECODER_FLAGS} |\
 	sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' |\
 	gzip -c > ${PWD}/$@
-ifneq (${LANGPAIR},)
-ifneq (${MODELNAME},)
-	rm -fr ${LANGPAIR}/${MODELNAME}
-endif
-endif
+#ifneq (${LANGPAIR},)
+#ifneq (${MODELNAME},)
+#	rm -fr ${LANGPAIR}/${MODELNAME}
+#endif
+#endif
 endif
 
 
@@ -363,8 +420,10 @@ ${WIKI_TXT}: ${WIKI_JSON}
 	$(TOKENIZER)/remove-non-printing-char.perl |\
 	sed 's/  */ /g;s/^ *//g;s/ *$$//g' |\
 	python3 ../scripts/filter/mono-match-lang.py -l ${LANGID} |\
+	${SORT} -u | ${SHUFFLE} |\
 	split -l ${MAX_SENTENCES} - ${patsubst %${PART}.gz,%,$@}
 	gzip -f ${patsubst %${PART}.gz,%,$@}*
+
 
 
 #	$(TOKENIZER)/normalize-punctuation.perl |\

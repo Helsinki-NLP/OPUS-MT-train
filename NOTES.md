@@ -23,7 +23,7 @@ ga	gle			Irish			yes (ga)
 cy	wel/cym			Welsh			yes (cy)
 br	bre	bre/xbm/obt	Breton			yes (br)
 gd	gla			Scottish Gaelic		yes (gd)
-kw	cor	cor/cnx/oco	Cornish	 		yes (kv)
+kw	cor	cor/cnx/oco	Cornish	 		yes (kw)
 gv	glv			Manx			yes (gv)
 ```
 

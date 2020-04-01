@@ -98,7 +98,7 @@ train-dynamic:
 	    echo "${LANGPAIRSTR} bigger than 1 million"; \
 	    ${MAKE} \
 	    	MARIAN_VALID_FREQ=2500 \
-	    	HPC_CORES=1 HPC_MEM=4g train.submit; \
+	    	HPC_CORES=1 HPC_MEM=8g train.submit; \
 	  elif [ $$s -gt 100000 ]; then \
 	    echo "${LANGPAIRSTR} bigger than 100k"; \
 	    ${MAKE} \
@@ -278,10 +278,10 @@ fiskmo-svfi-%:
 ## only OPUS data
 
 %-celtic-english-opus:
-	${MAKE} HELDOUTSIZE=0 SRCLANGS="ga cy br gd kv gv" TRGLANGS=en ${@:-celtic-english-opus=}
+	${MAKE} HELDOUTSIZE=0 SRCLANGS="ga cy br gd kw gv" TRGLANGS=en ${@:-celtic-english-opus=}
 
 %-english-celtic-opus:
-	${MAKE} HELDOUTSIZE=0 TRGLANGS="ga cy br gd kv gv" SRCLANGS=en TRG=ga SRC=en ${@:-english-celtic-opus=}
+	${MAKE} HELDOUTSIZE=0 TRGLANGS="ga cy br gd kw gv" SRCLANGS=en TRG=ga SRC=en ${@:-english-celtic-opus=}
 
 
 # more data for cy-en
@@ -289,13 +289,13 @@ fiskmo-svfi-%:
 %-celtic-english: ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz
 	${MAKE} DATASET=opus+techiaith HELDOUTSIZE=0 \
 		EXTRA_TRAINSET="CofnodYCynulliad Deddfwriaeth Meddalwedd rhestr_geiriau dic" \
-		SRCLANGS="ga cy br gd kv gv" TRGLANGS=en \
+		SRCLANGS="ga cy br gd kw gv" TRGLANGS=en \
 	${@:-celtic-english=}
 
 %-english-celtic: ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz
 	${MAKE} DATASET=opus+techiaith HELDOUTSIZE=0 \
 		EXTRA_TRAINSET="CofnodYCynulliad Deddfwriaeth Meddalwedd rhestr_geiriau dic" \
-		TRGLANGS="ga cy br gd kv gv" SRCLANGS=en TRG=ga SRC=en \
+		TRGLANGS="ga cy br gd kw gv" SRCLANGS=en TRG=ga SRC=en \
 	${@:-english-celtic=}
 
 
