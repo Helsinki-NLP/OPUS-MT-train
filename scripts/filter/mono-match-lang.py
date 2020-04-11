@@ -78,6 +78,8 @@ else:
 
 for line in sys.stdin:
     text = line.rstrip()
-    if is_accepted(text,accept,reject):
-        print(text)
-
+    if text:
+        if is_accepted(text,accept,reject):
+            print(text)
+    else:
+        print("")

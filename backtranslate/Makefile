@@ -57,15 +57,17 @@ WIKILANGS = 	${sort $(patsubst >%${WIKISOURCE}-,%,${shell grep -o '>..${WIKISOUR
 		${sort $(patsubst >%${WIKISOURCE}-,%,${shell grep -o '>...${WIKISOURCE}-' index.html})}
 
 
-LANGID   = ${SRC}
-WIKI_DIR = wiki/${LANGID}
-WIKI_TXT = ${WIKI_DIR}/${WIKISOURCE}.${LANGID}.${PART}.gz
-WIKI_SRC = ${LANGPAIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.gz
-WIKI_PRE = ${LANGPAIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.spm.gz
-WIKI_TRG = ${LANGPAIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${TRG}.gz
+LANGID     = ${SRC}
+WIKI_DIR   = wiki/${LANGID}
+OUTPUT_DIR = ${LANGPAIR}
+WIKI_TXT   = ${WIKI_DIR}/${WIKISOURCE}.${LANGID}.${PART}.gz
+WIKI_DOC   = wikidoc/${LANGID}/${WIKISOURCE}.${LANGID}.gz
+WIKI_SRC   = ${OUTPUT_DIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.gz
+WIKI_PRE   = ${OUTPUT_DIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.spm.gz
+WIKI_TRG   = ${OUTPUT_DIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${TRG}.gz
 
-WIKI_LATEST_SRC = ${LANGPAIR}/latest/${WIKISOURCE}.${PART}.${LANGPAIR}.${SRC}.gz
-WIKI_LATEST_TRG = ${LANGPAIR}/latest/${WIKISOURCE}.${PART}.${LANGPAIR}.${TRG}.gz
+WIKI_LATEST_SRC = ${OUTPUT_DIR}/latest/${WIKISOURCE}.${PART}.${LANGPAIR}.${SRC}.gz
+WIKI_LATEST_TRG = ${OUTPUT_DIR}/latest/${WIKISOURCE}.${PART}.${LANGPAIR}.${TRG}.gz
 
 
 ## all parts of this wiki
@@ -131,6 +133,32 @@ print-modelname:
 
 
 
+## nordic language wikis
+
+all-nordic-wikidocs:
+	for l in da  et  fi  fo  is  nn  no  sv; do \
+	  for w in ${WIKISOURCES}; do \
+	    ${MAKE} SRC=$$l WIKISOURCE=$$w extract-doc; \
+	  done \
+	done
+
+
+
+
+
+
+translate-thl:
+	${MAKE} WIKI_DIR=thl/${SRC} \
+		OUTPUT_DIR=thl/${SRC}-${TRG} \
+		WIKISOURCE=thl \
+		HPC_MEM=4g HPC_CORES=1 WALLTIME=72 \
+	translate.submit
+
+
+
+
+
+
 fetch-celtic:
 	for l in ga cy br gd kw gv; do \
 	  ${MAKE} SRC=$$l TRG=en MODELHOME=../models/ga+cy+br+gd+kw+gv-en all-wikitext; \
@@ -177,6 +205,11 @@ small-romance:
 wikimedia-focus-wikis:
 	for l in tl bcl ml bn mn; do \
 	  ${MAKE} SRC=$$l TRG=en all-wikis; \
+	done
+
+finland-focus-wikis:
+	for l in ru et so ku fa sq vi th pl tr es ar; do \
+	  ${MAKE} SRC=$$l TRG=fi all-wikitext; \
 	done
 
 
@@ -279,6 +312,7 @@ translate-sami-wiki:
 
 get-data: ${WIKI_JSON}
 extract-text: ${WIKI_TXT}
+extract-doc: ${WIKI_DOC}
 prepare-model: ${LANGPAIR}/${MODELNAME}/decoder.yml
 prepare-data: ${WIKI_PRE}
 translate: ${WIKI_LATEST_SRC} ${WIKI_LATEST_TRG}
@@ -324,7 +358,7 @@ else
   PREPROCESS_ARGS = ${SRC} ${LANGPAIR}/${MODELNAME}/source.spm
 endif
 
-${LANGPAIR}/%.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.spm.gz: ${WIKI_DIR}/%.${SRC}.${PART}.gz
+${OUTPUT_DIR}/%.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.spm.gz: ${WIKI_DIR}/%.${SRC}.${PART}.gz
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
 	${MAKE} ${LANGPAIR}/${MODELNAME}/decoder.yml
@@ -347,9 +381,23 @@ ifneq (${MODELZIP},)
 	zcat $< |\
 	sed 's/ //g;s/▁/ /g' | \
 	sed 's/^ *//;s/ *$$//' |\
+	sed 's/^>>[a-z]*<< //' |\
 	gzip -c > $@
 endif
 
+
+
+## remove prefix from latest translation files
+
+ALL_LATEST = ${wildcard */latest/*.gz}
+
+fix-prefix:
+	for d in ${ALL_LATEST}; do \
+	  echo "fix $$d"; \
+	  zcat $$d | sed 's/^>>[a-z]*<< //' > $$d.fixed; \
+	  cat $$d.fixed | gzip -c > $$d; \
+	  rm -f $$d.fixed; \
+	done
 
 
 ## overwrite the file with the latest translations
@@ -401,7 +449,7 @@ ${WIKI_JSON}:
 ifneq (${UDPIPE_MODEL},)
   SENTSPLITTER = udpipe --input=horizontal --tokenize \
 		${UDPIPE_MODELS}/${UDPIPE_MODEL} |\
-		grep '^\# *text *= *' |\
+		grep '^\# *text *= *\|\# newpar' |\
 		sed 's/^\# *text *= *//'
 else
   SENTSPLITTER = ${MOSESSCRIPTS}/ems/support/split-sentences.perl -l ${LANGID}
@@ -428,6 +476,20 @@ ${WIKI_TXT}: ${WIKI_JSON}
 
 #	$(TOKENIZER)/normalize-punctuation.perl |\
 
+
+${WIKI_DOC}: ${WIKI_JSON}
+	mkdir -p ${dir $@}
+	${LOAD_MODULES} \
+	zcat $< | jq -r '.text' | \
+	sed 's/^ *null *$$//' |\
+	grep -v '[<>{}]' |\
+	${SENTSPLITTER} |\
+	$(TOKENIZER)/replace-unicode-punctuation.perl |\
+	$(TOKENIZER)/remove-non-printing-char.perl |\
+	sed 's/  */ /g;s/^ *//g;s/ *$$//g' |\
+	sed 's/^# newpar$$//' |\
+	python3 ../scripts/filter/mono-match-lang.py -l ${LANGID} |\
+	gzip -c > $@
 
 
 
