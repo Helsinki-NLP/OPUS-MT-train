@@ -152,10 +152,10 @@ endif
 
 
 showdata:
-	echo ${LOCAL_TRAIN_SRC}
+#	echo ${LOCAL_TRAIN_SRC}
 #	echo ${CLEAN_TRAIN_SRC}
-#	echo ${TRAIN_SRC}.clean.${PRE_SRC}.gz 
-#	echo ${TRAIN_TRG}.clean.${PRE_TRG}.gz
+	echo ${TRAIN_SRC}.clean.${PRE_SRC}.gz 
+	echo ${TRAIN_TRG}.clean.${PRE_TRG}.gz
 
 traindata: 	${TRAIN_SRC}.clean.${PRE_SRC}.gz ${TRAIN_TRG}.clean.${PRE_TRG}.gz
 tunedata: 	${TUNE_SRC}.${PRE_SRC} ${TUNE_TRG}.${PRE_TRG}
