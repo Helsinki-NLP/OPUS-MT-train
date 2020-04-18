@@ -946,3 +946,30 @@ germanic-romance:
 		SRCLANGS="${GERMANIC}" train.submit-multigpu
 
 
+
+
+
+
+## fix a problem with missing links from reverse-data
+## --> this caused that models with bt data used less data
+## --> need to restart those!
+
+fix-missing-val:
+	for f in `find work/ -type l -name '*.shuffled.gz' | grep -v old | sed 's/.src.shuffled.gz//'`; do \
+	  if [ ! -e $$f.src.notused.gz ]; then \
+	    echo "missing $$f.src.notused.gz!"; \
+	    s=`echo $$f | cut -f2 -d'/' | cut -f1 -d'-'`; \
+	    t=`echo $$f | cut -f2 -d'/' | cut -f2 -d'-'`; \
+	    d=`echo $$f | cut -f4 -d'/'`; \
+	    if [ -e work/$$t-$$s/val/$$d.trg.notused.gz ]; then \
+	      echo "linking ${PWD}/work/$$t-$$s/val/$$d.trg.notused.gz"; \
+	      ln -s ${PWD}/work/$$t-$$s/val/$$d.trg.notused.gz $$f.src.notused.gz; \
+	      ln -s ${PWD}/work/$$t-$$s/val/$$d.src.notused.gz $$f.trg.notused.gz; \
+	      if [ `ls work/$$s-$$t/opus*+bt*valid1.log 2>/dev/null | wc -l` -gt 0 ]; then \
+		echo "opus+bt model exists! move it away!"; \
+		mkdir work/$$s-$$t/old-bt-model; \
+		mv work/$$s-$$t/*+bt* work/$$s-$$t/old-bt-model/; \
+	      fi; \
+	    fi; \
+	  fi \
+	done
