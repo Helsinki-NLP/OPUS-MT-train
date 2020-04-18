@@ -193,6 +193,10 @@ breton:
 	${MAKE} SRC=br TRG=en MODELHOME=../models/ga+cy+br+gd+kw+gv-en all-wikis
 
 
+assamese:
+	${MAKE} SRC=as TRG=en MODELHOME=${HOME}/research/Opus-MT-train/work/models/as-en all-wikis
+
+
 
 
 
@@ -304,6 +308,47 @@ translate-sami-wiki:
 	  done \
 	done
 
+
+
+### NEWNEWNEW
+
+translate-sami-xx-wiki:
+	for s in se; do \
+	  for t in sma smn sms smj fi no sv; do \
+	      ${MAKE} SRC=$$s TRG=$$t \
+		MULTI_TARGET_MODEL=1 \
+	        MODELHOME=${HOME}/research/Opus-MT-train/models/se+sma+smj+smn+sms-fi+nb+no+nn+ru+sv+en \
+	        HPC_MEM=4g HPC_CORES=1 WALLTIME=72 \
+	        translate.submit; \
+	  done \
+	done
+
+
+translate-sami-xx-corp: sami-corp giellatekno/se
+	for s in se sma smn sms smj; do
+	  for t in fi no sv; do \
+	    if [ "$$s" != "$$t" ]; then \
+	      ${MAKE} SRC=$$s TRG=$$t \
+	      WIKI_DIR=giellatekno/$$s \
+	      WIKISOURCE=corp \
+	      MULTI_TARGET_MODEL=1 \
+	      MODELHOME=${HOME}/research/Opus-MT-train/models/se+sma+smj+smn+sms-fi+nb+no+nn+ru+sv+en \
+	      HPC_MEM=4g HPC_CORES=1 WALLTIME=72 \
+	      translate.submit; \
+	    fi \
+	  done \
+	done
+
+translate-xx-sami-wiki:
+	for s in fi no nn sv; do \
+	  for t in se sma smn sms smj; do \
+	      ${MAKE} SRC=$$s TRG=$$t \
+		MULTI_TARGET_MODEL=1 \
+	        MODELHOME=${HOME}/research/Opus-MT-train/models/fi+nb+no+nn+ru+sv+en-se+sma+smj+smn+sms \
+	        HPC_MEM=4g HPC_CORES=1 WALLTIME=72 \
+	        translate.submit; \
+	  done \
+	done
 
 
 

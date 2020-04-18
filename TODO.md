@@ -2,6 +2,13 @@
 # Things to do
 
 
+## General settings
+
+* better hyperparameters for low-resource setting (lower batch sizes, smaller vocabularies ...)
+* better data selection (data cleaning / filtering); use opus-filter?
+* better balance between general data sets and backtranslations
+
+
 ## Backtranslation
 
 * status: basically working, need better integration?!

@@ -183,10 +183,48 @@ all2en:
 	${MAKE} PIVOT=en allopus2pivot
 
 
+#-------------------------------------------------------------------
+# wikimedia tasks
+#-------------------------------------------------------------------
+
+as-en:
+	${MAKE} data-as-en
+	${MAKE} train-dynamic-as-en
+	${MAKE} reverse-data-as-en
+	${MAKE} train-dynamic-en-as
+
+%-as-en:
+	${MAKE} HELDOUTSIZE=0 DEVSIZE=1000 TESTSIZE=1000 DEVMINSIZE=100 BPESIZE=4000 \
+		SRCLANGS="as" TRGLANGS="en" \
+	${@:-as-en=}
+
+%-en-as:
+	${MAKE} HELDOUTSIZE=0 DEVSIZE=1000 TESTSIZE=1000 DEVMINSIZE=100 BPESIZE=4000 \
+		SRCLANGS="en" TRGLANGS="as" \
+	${@:-en-as=}
+
+
 
 #-------------------------------------------------------------------
 # important secondary langs in Finland
 #-------------------------------------------------------------------
+
+fi-so:
+	${MAKE} data-fi-so
+	${MAKE} train-dynamic-fi-so
+	${MAKE} reverse-data-fi-so
+	${MAKE} train-dynamic-so-fi
+
+%-fi-so:
+	${MAKE} HELDOUTSIZE=0 BPESIZE=4000 DEVSIZE=1000 TESTSIZE=1000 DEVMINSIZE=100 \
+		SRCLANGS=fi TRGLANGS=so data \
+	${@:-fi-so=}
+
+%-so-fi:
+	${MAKE} HELDOUTSIZE=0 BPESIZE=4000 DEVSIZE=1000 TESTSIZE=1000 DEVMINSIZE=100 \
+		SRCLANGS=so TRGLANGS=fi data \
+	${@:-so-fi=}
+
 
 fi-xx:
 	for l in ru et ar so ku fa sq vi th tr es pl; do \
