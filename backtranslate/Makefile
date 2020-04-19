@@ -193,8 +193,11 @@ breton:
 	${MAKE} SRC=br TRG=en MODELHOME=../models/ga+cy+br+gd+kw+gv-en all-wikis
 
 
-assamese:
+assamese-english:
 	${MAKE} SRC=as TRG=en MODELHOME=${HOME}/research/Opus-MT-train/work/models/as-en all-wikis
+
+english-assamese:
+	${MAKE} SRC=en TRG=as MODELHOME=${HOME}/research/Opus-MT-train/work/models/en-as translate.submit
 
 
 
