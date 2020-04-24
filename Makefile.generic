@@ -183,8 +183,6 @@ endif
 	${MAKE} WORKHOME=${shell realpath ${PWD}/work-nospace} \
 		PRE=simple \
 		SPMEXTRA=--split_by_whitespace=false \
-		PRE_SRC=spm${SRCBPESIZE:000=}k \
-		PRE_TRG=spm${TRGBPESIZE:000=}k \
 	${@:-nospace=}
 
 
@@ -211,17 +209,13 @@ endif
 %-langid:
 	${MAKE} WORKHOME=${shell realpath ${PWD}/work-langid} \
 		PRE=simple \
-		PRE_SRC=spm${SRCBPESIZE:000=}k \
-		PRE_TRG=spm${TRGBPESIZE:000=}k \
 	${@:-langid=}
 
 ## sentence-piece models with langid-filtering (new default)
 %-langid-noalign:
-	${MAKE} WORKHOME=${shell realpath ${PWD}/work-langid} \
+	${MAKE} WORKHOME=${shell realpath ${PWD}/work-langid-noalign} \
 		MODELTYPE=transformer \
 		PRE=simple \
-		PRE_SRC=spm${SRCBPESIZE:000=}k \
-		PRE_TRG=spm${TRGBPESIZE:000=}k \
 	${@:-langid-noalign=}
 
 

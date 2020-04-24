@@ -359,23 +359,26 @@ fiskmo-svfi-%:
 
 ## only OPUS data
 
+# CELTIC_BPESIZE = 12000
+CELTIC_BPESIZE = 4000
+
 %-celtic-english-opus:
-	${MAKE} HELDOUTSIZE=0 SRCLANGS="ga cy br gd kw gv" TRGLANGS=en ${@:-celtic-english-opus=}
+	${MAKE} HELDOUTSIZE=0 BPESIZE=${CELTIC_BPESIZE} SRCLANGS="ga cy br gd kw gv" TRGLANGS=en ${@:-celtic-english-opus=}
 
 %-english-celtic-opus:
-	${MAKE} HELDOUTSIZE=0 TRGLANGS="ga cy br gd kw gv" SRCLANGS=en TRG=ga SRC=en ${@:-english-celtic-opus=}
+	${MAKE} HELDOUTSIZE=0 BPESIZE=${CELTIC_BPESIZE} TRGLANGS="ga cy br gd kw gv" SRCLANGS=en TRG=ga SRC=en ${@:-english-celtic-opus=}
 
 
 # more data for cy-en
 
 %-celtic-english: ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz
-	${MAKE} DATASET=opus+techiaith HELDOUTSIZE=0 \
+	${MAKE} DATASET=opus+techiaith HELDOUTSIZE=0 BPESIZE=${CELTIC_BPESIZE} \
 		EXTRA_TRAINSET="CofnodYCynulliad Deddfwriaeth Meddalwedd rhestr_geiriau dic" \
 		SRCLANGS="ga cy br gd kw gv" TRGLANGS=en \
 	${@:-celtic-english=}
 
 %-english-celtic: ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz
-	${MAKE} DATASET=opus+techiaith HELDOUTSIZE=0 \
+	${MAKE} DATASET=opus+techiaith HELDOUTSIZE=0 BPESIZE=${CELTIC_BPESIZE} \
 		EXTRA_TRAINSET="CofnodYCynulliad Deddfwriaeth Meddalwedd rhestr_geiriau dic" \
 		TRGLANGS="ga cy br gd kw gv" SRCLANGS=en TRG=ga SRC=en \
 	${@:-english-celtic=}

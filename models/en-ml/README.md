@@ -28,3 +28,18 @@
 |-----------------------|-------|-------|
 | Tatoeba.en.ml 	| 17.0 	| 0.507 |
 
+# opus-2020-04-20.zip
+
+* dataset: opus
+* model: transformer-align
+* pre-processing: normalization + SentencePiece
+* download: [opus-2020-04-20.zip](https://object.pouta.csc.fi/OPUS-MT-models/en-ml/opus-2020-04-20.zip)
+* test set translations: [opus-2020-04-20.test.txt](https://object.pouta.csc.fi/OPUS-MT-models/en-ml/opus-2020-04-20.test.txt)
+* test set scores: [opus-2020-04-20.eval.txt](https://object.pouta.csc.fi/OPUS-MT-models/en-ml/opus-2020-04-20.eval.txt)
+
+## Benchmarks
+
+| testset               | BLEU  | chr-F |
+|-----------------------|-------|-------|
+| Tatoeba.en.ml 	| 18.3 	| 0.531 |
+

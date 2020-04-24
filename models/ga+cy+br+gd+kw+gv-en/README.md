@@ -28,3 +28,18 @@
 |-----------------------|-------|-------|
 | Tatoeba.ga.en 	| 25.9 	| 0.417 |
 
+# opus+techiaith-2020-04-21.zip
+
+* dataset: opus+techiaith
+* model: transformer-align
+* pre-processing: normalization + SentencePiece
+* download: [opus+techiaith-2020-04-21.zip](https://object.pouta.csc.fi/OPUS-MT-models/ga+cy+br+gd+kw+gv-en/opus+techiaith-2020-04-21.zip)
+* test set translations: [opus+techiaith-2020-04-21.test.txt](https://object.pouta.csc.fi/OPUS-MT-models/ga+cy+br+gd+kw+gv-en/opus+techiaith-2020-04-21.test.txt)
+* test set scores: [opus+techiaith-2020-04-21.eval.txt](https://object.pouta.csc.fi/OPUS-MT-models/ga+cy+br+gd+kw+gv-en/opus+techiaith-2020-04-21.eval.txt)
+
+## Benchmarks
+
+| testset               | BLEU  | chr-F |
+|-----------------------|-------|-------|
+| Tatoeba.ga.en 	| 26.8 	| 0.413 |
+

@@ -118,7 +118,7 @@ best_dist:
 	    done; \
 	  fi \
 	done; \
-	echo "------------------------------------------------"; \
+	echo "--------------- best = $$m ($$s/$$E) ---------------------------------"; \
 	if [ "$$s" != "" ]; then \
 	  if (( $$(echo "$$m > ${MIN_BLEU_SCORE}" |bc -l) )); then \
 	    x=`echo $$E | cut -f3 -d. | cut -f1 -d-`; \

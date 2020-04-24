@@ -142,6 +142,35 @@ all-nordic-wikidocs:
 	  done \
 	done
 
+# ar: Arabic
+# bg: Bulgarian
+# de: German
+# el: Greek
+# en: English
+# es: Spanish
+# fr: French
+# hi: Hindi
+# ru: Russian
+# sw: Swahili
+# th: Thai
+# tr: Turkish
+# ur: Urdu
+# vi: Vietnamese
+# zh: Chinese (Simplified)
+
+xnli-wikidocs:
+	for l in ar bg de el en es fr hi ru sw th tr ur vi zh; do \
+	  for w in ${WIKISOURCES}; do \
+	    ${MAKE} SRC=$$l WIKISOURCE=$$w extract-doc; \
+	  done \
+	done
+
+## en and es are too big to run through udpipe ....
+big-wikidocs:
+	for l in en es; do \
+	  ${MAKE} SENTSPLITTER="${MOSESSCRIPTS}/ems/support/split-sentences.perl -l $$l" \
+		SRC=$$l WIKISOURCE=wiki extract-doc; \
+	done
 
 
 
