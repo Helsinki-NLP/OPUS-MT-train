@@ -209,6 +209,15 @@ translate-english-celtic:
 	done
 
 
+translate-english-celtic-missing:
+	for l in gd; do \
+	  ${MAKE} TRG=$$l SRC=en \
+		MODELHOME=../models/en-ga+cy+br+gd+kw+gv \
+		MULTI_TARGET_MODEL=1 \
+	  	HPC_MEM=4g HPC_CORES=1 WALLTIME=72 translate.submit; \
+	done
+
+
 
 # test-celtic:
 # 	for l in ga cy br gd kw gv; do \
