@@ -1,24 +1,101 @@
 # -*-makefile-*-
 #
-# train Opus-MT models using MarianNMT
+# train and test Opus-MT models using MarianNMT
 #
 #--------------------------------------------------------------------
 #
-# (1) train NMT model
+# make all
 #
-# make train .............. train NMT model for current language pair
-#
-# (2) translate and evaluate
-#
+# make data ............... create training data
+# make train .............. train NMT model
 # make translate .......... translate test set
 # make eval ............... evaluate
 #
+# make train-job .......... create data and submit training job
+#
 #--------------------------------------------------------------------
+# general parameters / variables (see lib/config.mk)
 #
-#   Makefile.tasks ...... various common and specific tasks/experiments
-#   Makefile.generic .... generic targets (in form of prefixes to be added to other targets)
+# * most essential parameters (language IDs used in OPUS):
 #
-# Examples from Makefile.tasks:
+# SRCLANGS ................ set of source languages
+# TRGLANGS ................ set of target languages
+#
+# * other important parameters (can leave defaults)
+#
+# MODELTYPE ............... transformer|transformer-align
+# TRAINSET ................ set of corpora used for training (default = all of OPUS)
+# TESTSET ................. test set corpus (default - subset of Tatoeba with some fallbacks)
+# DEVSET .................. validation corpus (default - another subset of TESTSET)
+#
+# DEVSIZE ................. nr of sentences in validation data
+# TESTSIZE ................ nr of sentences in test data
+# HELDOUTSIZE ............. nr of sentence in heldout data from each train corpus
+#
+# TESTSMALLSIZE ........... reduced size for low-resource settings
+# DEVSMALLSIZE ............ reduced size for low-resource settings
+# DEVMINSIZE .............. minimum size for validation data
+#--------------------------------------------------------------------
+# lib/generic.mk
+#
+# There are implicit targets that define certain frequent tasks
+# They typically modify certain settings and make another target
+# with those modifiction. They can be used by adding a suffix to
+# the actual target that needs to be done. For example, 
+# adding -RL triggers right-to-left models:
+#
+#   make train-RL
+#   make eval-RL
+#
+# Another example would be to run something over a number of models,
+# for example, translate and evaluate with those models:
+#
+#   make eval-allmodels.submit
+#   make eval-allbilingual.submit     # only bilingual models
+#   make eval-allmultlingual.submit   # only multilingual models
+#--------------------------------------------------------------------
+# lib/slurm.mk
+#
+# Defines generic targets for submitting jobs. They work in the 
+# same way as the generic targets in lib/generic.mk but submit a
+# job using SLURM sbatch. This only works if the SLURM parameters
+# are correctly set. Check lib/env.mk, lib/config.mk and lib/slurm.mk
+#
+#   %.submit ........ job on GPU nodes (for train and translate)
+#   %.submitcpu ..... job on CPU nodes (for translate and eval)
+#
+# They can be combined with any other target, even with generic 
+# extensions described above. For exaple, subkit a job to train
+# an en-ru right-to-left model for 24 hours you can run
+#
+#   make WALLTIME=24 SRCLANGS=en TRGLANGS=ru train-RL.submit
+#
+# Other extensions can be added to modify the SLURM job, for example
+# to submit the same job to run on multiple GPUs on one node:
+#
+#   make WALLTIME=24 SRCLANGS=en TRGLANGS=ru train-RL.submit-multigpu
+#
+# There can also be targets that submit jobs via SLURM, for exampl
+# the train-job target. This can be combined with starting a CPU
+# job to create the data sets, which will then submit the train
+# job on GPUs once the training data are ready. For example, to
+# submit a job with 4 threads (using make -j 4) that will run
+# the train-job target on a CPU node allocating 4 CPU cores you
+# can do:
+#
+#   make HPC_CORES=4 SRCLANGS=en TRGLANGS=ru train-job-RL.submitcpu
+#
+#--------------------------------------------------------------------
+# lib/dist.mk
+#
+# Targets to create and upload packages of trained models
+#
+#--------------------------------------------------------------------
+# There are various special targets for specific and generic tasks.
+# Look into the makefiles in lib/generic.mk and lib/models/*.mk
+# Many of those targets can be further adjusted by setting certain variables
+# Some examples are below but all of those things are subject to change ....
+#
 #
 # * submit job to train a model in one specific translation direction
 #   (make data on CPU and then start a job on a GPU node with 4 GPUs)
@@ -44,41 +121,14 @@
 #   make LANGS="en de fr" multilingual.submitcpu
 #
 #--------------------------------------------------------------------
-# Some examples using generic extensions
-#
-# * submit job to train en-ru with backtranslation data from backtranslate/
-#   make HPC_CORES=4 WALLTIME=24 SRCLANGS=en TRGLANGS=ru unidirectional-add-backtranslations.submitcpu
-#
-# * submit job that evaluates all currently trained models:
-#   make eval-allmodels.submit
-#   make eval-allbilingual.submit   # only bilingual models
-#   make eval-allbilingual.submit   # only multilingual models
-#
-#--------------------------------------------------------------------
-#
-# general parameters / variables (see Makefile.config)
-#   SRCLANGS ............ set source language(s)      (en)
-#   TRGLANGS ............ set target language(s)      (de)
-#
+# Ensembles: One can train a number of models and ensemble them.
+# NOTE: make sure that the data files and vocabularies exist before
+#       training models. Otherwise, thete could be a racing situation
+#       when those jobs start simultaneously!!!
 # 
-# submit jobs by adding suffix to make-target to be run
-#   .submit ........ job on GPU nodes (for train and translate)
-#   .submitcpu ..... job on CPU nodes (for translate and eval)
 #
-# for example:
-#    make train.submit
-#
-# run a multigpu job, for example
-#    make train-multigpu.submit
-#    make train-twogpu.submit
-#    make train-gpu01.submit
-#    make train-gpu23.submit
-#
-#
-# typical procedure: train and evaluate en-de with 3 models in ensemble
-#
-# make data.submitcpu
-# make vocab.submit
+# make data
+# make vocab
 # make NR=1 train.submit
 # make NR=2 train.submit
 # make NR=3 train.submit
@@ -86,50 +136,20 @@
 # make NR=1 eval.submit
 # make NR=2 eval.submit
 # make NR=3 eval.submit
+#
 # make eval-ensemble.submit
 #
-#
-# include right-to-left models:
-#
-# make NR=1 train-RL.submit
-# make NR=2 train-RL.submit
-# make NR=3 train-RL.submit
-#
-#
-#--------------------------------------------------------------------
-# train several versions of the same model (for ensembling)
-#
-#   make NR=1 ....
-#   make NR=2 ....
-#   make NR=3 ....
-#
-# DANGER: problem with vocabulary files if you start them simultaneously
-#         --> racing situation for creating them between the processes
-#
-#--------------------------------------------------------------------
-# resume training
-#
-#   make resume
-#
-#--------------------------------------------------------------------
-# translate with ensembles of models
-#
-#   make translate-ensemble
-#   make eval-ensemble
-#
-# this only makes sense if there are several models
-# (created with different NR)
 #--------------------------------------------------------------------
 
 
 # check and adjust lib/env.mk and lib/config.mk
-# add specific tasks in lib/tasks.mk
-
 
 include lib/env.mk
 include lib/config.mk
 
-## load model-specific configuration parameters
+# load model-specific configuration parameters
+# if they exist in the work directory
+
 ifneq ($(wildcard ${WORKDIR}/config.mk),)
   include ${WORKDIR}/config.mk
 endif
@@ -170,8 +190,20 @@ include lib/models/simplify.mk
 # include Makefile.slurm
 
 
+.PHONY: all
+all: ${WORKDIR}/config.mk
+	${MAKE} data
+	${MAKE} train
+	${MAKE} eval
+	${MAKE} compare
+
+.PHONY: train-job
+train-job: ${WORKDIR}/config.mk
+	${MAKE} data
+	${MAKE} HPC_CORES=1 HPC_MEM=${GPUJOB_HPC_MEM} train.submit${GPUJOB_SUBMIT}
+
 #------------------------------------------------------------------------
-# make various data sets
+# make various data sets (and word alignment)
 #------------------------------------------------------------------------
 
 

@@ -10,13 +10,8 @@
 SRCLANGS = sv
 TRGLANGS = fi
 
-ifndef SRC
-  SRC := ${firstword ${SRCLANGS}}
-endif
-ifndef TRG
-  TRG := ${lastword ${TRGLANGS}}
-endif
-
+SRC ?= ${firstword ${SRCLANGS}}
+TRG ?= ${lastword ${TRGLANGS}}
 
 
 # sorted languages and langpair used to match resources in OPUS
@@ -29,15 +24,9 @@ LANGPAIRSTR = ${LANGSRCSTR}-${LANGTRGSTR}
 
 
 ## for monolingual things
-ifndef LANGS
-  LANGS := ${SRCLANGS}
-endif
-ifndef LANGID
-  LANGID := ${firstword ${LANGS}}
-endif
-ifndef LANGSTR
-  LANGSTR = ${subst ${SPACE},+,$(LANGS)}
-endif
+LANGS ?= ${SRCLANGS}
+LANGID ?= ${firstword ${LANGS}}
+LANGSTR ?= ${subst ${SPACE},+,$(LANGS)}
 
 
 ## for same language pairs: add numeric extension
@@ -103,6 +92,7 @@ HELDOUTSIZE = ${DEVSIZE}
 ## - check that data exist
 ## - check that there are at least 2 x DEVMINSIZE examples
 ## TODO: this does not work well for multilingual models!
+## TODO: find a better solution than looking into *.info files (use OPUS API?)
 
 ifneq ($(wildcard ${OPUSHOME}/Tatoeba/latest/moses/${LANGPAIR}.txt.zip),)
 ifeq ($(shell if (( `head -1 ${OPUSHOME}/Tatoeba/latest/info/${LANGPAIR}.txt.info` \
@@ -175,9 +165,7 @@ BPESIZE    = 32000
 SRCBPESIZE = ${BPESIZE}
 TRGBPESIZE = ${BPESIZE}
 
-ifndef VOCABSIZE
-  VOCABSIZE  = $$((${SRCBPESIZE} + ${TRGBPESIZE} + 1000))
-endif
+VOCABSIZE  ?= $$((${SRCBPESIZE} + ${TRGBPESIZE} + 1000))
 
 ## for document-level models
 CONTEXT_SIZE = 100

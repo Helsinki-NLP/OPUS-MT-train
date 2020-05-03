@@ -33,18 +33,11 @@ WALLTIME    = 72
 
 ## set variables with HPC prefix
 
-ifndef HPC_TIME
-  HPC_TIME = ${WALLTIME}:00
-endif
+HPC_TIME  ?= ${WALLTIME}:00
+HPC_CORES ?= ${THREADS}
+HPC_MEM   ?= ${MEM}
 
-ifndef HPC_CORES
-  HPC_CORES = ${THREADS}
-endif
-
-ifndef HPC_MEM
-  HPC_MEM = ${MEM}
-endif
-
+GPUJOB_HPC_MEM ?= 4g
 
 
 
