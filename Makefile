@@ -122,18 +122,52 @@
 #--------------------------------------------------------------------
 
 
-# check and adjust Makfile.env and Makfile.config
-# add specific tasks in Makefile.tasks
+# check and adjust lib/env.mk and lib/config.mk
+# add specific tasks in lib/tasks.mk
 
 
-include Makefile.env
-include Makefile.config
-include Makefile.dist
-include Makefile.tasks
-include Makefile.data
-include Makefile.doclevel
-include Makefile.generic
-include Makefile.slurm
+include lib/env.mk
+include lib/config.mk
+
+## load model-specific configuration parameters
+ifneq ($(wildcard ${WORKDIR}/config.mk),)
+  include ${WORKDIR}/config.mk
+endif
+
+include lib/data.mk
+include lib/train.mk
+include lib/test.mk
+
+include lib/misc.mk
+include lib/dist.mk
+include lib/slurm.mk
+
+include lib/generic.mk
+include lib/langsets.mk
+# include lib/tasks.mk
+include lib/models/celtic.mk
+include lib/models/finland.mk
+include lib/models/fiskmo.mk
+include lib/models/memad.mk
+include lib/models/multilingual.mk
+include lib/models/opus.mk
+include lib/models/romance.mk
+include lib/models/russian.mk
+include lib/models/sami.mk
+include lib/models/wikimedia.mk
+
+include lib/models/doclevel.mk
+include lib/models/simplify.mk
+
+
+# include Makefile.env
+# include Makefile.config
+# include Makefile.dist
+# include Makefile.tasks
+# include Makefile.data
+# include Makefile.doclevel
+# include Makefile.generic
+# include Makefile.slurm
 
 
 #------------------------------------------------------------------------
@@ -151,19 +185,14 @@ ifeq (${MODELTYPE},transformer-align)
 endif
 
 
-showdata:
-#	echo ${LOCAL_TRAIN_SRC}
-#	echo ${CLEAN_TRAIN_SRC}
-	echo ${TRAIN_SRC}.clean.${PRE_SRC}.gz 
-	echo ${TRAIN_TRG}.clean.${PRE_TRG}.gz
-
 traindata: 	${TRAIN_SRC}.clean.${PRE_SRC}.gz ${TRAIN_TRG}.clean.${PRE_TRG}.gz
 tunedata: 	${TUNE_SRC}.${PRE_SRC} ${TUNE_TRG}.${PRE_TRG}
-devdata:	${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG}
 testdata:	${TEST_SRC}.${PRE_SRC} ${TEST_TRG}
+devdata:	${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG}
+devdata-raw:	${DEV_SRC} ${DEV_TRG}
+
 wordalign:	${TRAIN_ALG}
 
-devdata-raw:	${DEV_SRC} ${DEV_TRG}
 
 
 #------------------------------------------------------------------------
@@ -183,262 +212,4 @@ translate-ensemble: ${WORKDIR}/${TESTSET}.${MODEL}${NR}.${MODELTYPE}.ensemble.${
 eval-ensemble: ${WORKDIR}/${TESTSET}.${MODEL}${NR}.${MODELTYPE}.ensemble.${SRC}.${TRG}.eval
 
 
-#------------------------------------------------------------------------
-# translate and evaluate all test sets in testsets/
-#------------------------------------------------------------------------
 
-## testset dir for all test sets in this language pair
-## and all trokenized test sets that can be found in that directory
-TESTSET_HOME    = ${PWD}/testsets
-TESTSET_DIR     = ${TESTSET_HOME}/${SRC}-${TRG}
-TESTSETS        = $(sort $(patsubst ${TESTSET_DIR}/%.${SRCEXT}.gz,%,${wildcard ${TESTSET_DIR}/*.${SRCEXT}.gz}))
-TESTSETS_PRESRC = $(patsubst %,${TESTSET_DIR}/%.${SRCEXT}.${PRE}.gz,${TESTSETS})
-TESTSETS_PRETRG = $(patsubst %,${TESTSET_DIR}/%.${TRGEXT}.${PRE}.gz,${TESTSETS})
-
-# TESTSETS_PRESRC = $(patsubst %.gz,%.${PRE}.gz,${sort $(subst .${PRE},,${wildcard ${TESTSET_DIR}/*.${SRC}.gz})})
-# TESTSETS_PRETRG = $(patsubst %.gz,%.${PRE}.gz,${sort $(subst .${PRE},,${wildcard ${TESTSET_DIR}/*.${TRG}.gz})})
-
-## eval all available test sets
-eval-testsets:
-	for s in ${SRCLANGS}; do \
-	  for t in ${TRGLANGS}; do \
-	    ${MAKE} SRC=$$s TRG=$$t compare-testsets-langpair; \
-	  done \
-	done
-
-eval-heldout:
-	${MAKE} TESTSET_HOME=${HELDOUT_DIR} eval-testsets
-
-%-testsets-langpair: ${TESTSETS_PRESRC} ${TESTSETS_PRETRG}
-	@echo "testsets: ${TESTSET_DIR}/*.${SRCEXT}.gz"
-	for t in ${TESTSETS}; do \
-	  ${MAKE} TESTSET=$$t ${@:-testsets-langpair=}; \
-	done
-
-
-
-#------------------------------------------------------------------------
-# some helper functions
-#------------------------------------------------------------------------
-
-
-## check whether a model is converged or not
-finished:
-	@if grep -q 'stalled ${MARIAN_EARLY_STOPPING} times' ${WORKDIR}/${MODEL_VALIDLOG}; then\
-	   echo "${WORKDIR}/${MODEL_BASENAME} finished"; \
-	else \
-	   echo "${WORKDIR}/${MODEL_BASENAME} unfinished"; \
-	fi
-
-## remove job files if no trained file exists
-delete-broken-submit:
-	for l in ${ALL_LANG_PAIRS}; do \
-	  if [ -e ${WORKHOME}/$$l/train.submit ]; then \
-	    if  [ ! `find ${WORKHOME}/$$l -name '*.${PRE_SRC}-${PRE_TRG}.*.best-perplexity.npz' | wc -l` -gt 0 ]; then \
-	      echo "rm -f ${WORKHOME}/$$l/train.submit"; \
-	      rm -f ${WORKHOME}/$$l/train.submit; \
-	    fi \
-	  fi \
-	done
-
-
-## resume training on an existing model
-resume:
-	if [ -e ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.npz.best-perplexity.npz ]; then \
-	  cp ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.npz.best-perplexity.npz \
-	     ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.npz; \
-	fi
-	sleep 1
-	rm -f ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
-	${MAKE} train
-
-
-
-
-
-#------------------------------------------------------------------------
-# training MarianNMT models
-#------------------------------------------------------------------------
-
-
-## make vocabulary
-## - no new vocabulary is created if the file already exists!
-## - need to delete the file if you want to create a new one!
-
-${MODEL_VOCAB}:	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
-		${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz
-ifeq ($(wildcard ${MODEL_VOCAB}),)
-	mkdir -p ${dir $@}
-	${LOADMODS} && zcat $^ | ${MARIAN}/marian-vocab --max-size ${VOCABSIZE} > $@
-else
-	@echo "$@ already exists!"
-	@echo "WARNING! No new vocabulary is created even though the data has changed!"
-	@echo "WARNING! Delete the file if you want to start from scratch!"
-	touch $@
-endif
-
-
-## NEW: take away dependency on ${MODEL_VOCAB}
-## (will be created by marian if it does not exist)
-
-## train transformer model
-${WORKDIR}/${MODEL}.transformer.model${NR}.done: \
-		${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
-		${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz \
-		${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG}
-	mkdir -p ${dir $@}
-	${LOADMODS} && ${MARIAN}/marian ${MARIAN_EXTRA} \
-        --model $(@:.done=.npz) \
-	--type transformer \
-        --train-sets ${word 1,$^} ${word 2,$^} ${MARIAN_TRAIN_WEIGHTS} \
-        --max-length 500 \
-        --vocabs ${MODEL_VOCAB} ${MODEL_VOCAB} \
-        --mini-batch-fit \
-	-w ${MARIAN_WORKSPACE} \
-	--maxi-batch ${MARIAN_MAXI_BATCH} \
-        --early-stopping ${MARIAN_EARLY_STOPPING} \
-        --valid-freq ${MARIAN_VALID_FREQ} \
-	--save-freq ${MARIAN_SAVE_FREQ} \
-	--disp-freq ${MARIAN_DISP_FREQ} \
-        --valid-sets ${word 3,$^} ${word 4,$^} \
-        --valid-metrics perplexity \
-        --valid-mini-batch ${MARIAN_VALID_MINI_BATCH} \
-        --beam-size 12 --normalize 1 --allow-unk \
-        --log $(@:.model${NR}.done=.train${NR}.log) \
-	--valid-log $(@:.model${NR}.done=.valid${NR}.log) \
-        --enc-depth 6 --dec-depth 6 \
-        --transformer-heads 8 \
-        --transformer-postprocess-emb d \
-        --transformer-postprocess dan \
-        --transformer-dropout ${MARIAN_DROPOUT} \
-	--label-smoothing 0.1 \
-        --learn-rate 0.0003 --lr-warmup 16000 --lr-decay-inv-sqrt 16000 --lr-report \
-        --optimizer-params 0.9 0.98 1e-09 --clip-norm 5 \
-        --tied-embeddings-all \
-	--overwrite --keep-best \
-	--devices ${MARIAN_GPUS} \
-        --sync-sgd --seed ${SEED} \
-	--sqlite \
-	--tempdir ${TMPDIR} \
-        --exponential-smoothing
-	touch $@
-
-
-
-
-
-
-
-## NEW: take away dependency on ${MODEL_VOCAB}
-
-## train transformer model with guided alignment
-${WORKDIR}/${MODEL}.transformer-align.model${NR}.done: \
-		${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
-		${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz \
-		${TRAIN_ALG} \
-		${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG}
-	mkdir -p ${dir $@}
-	${LOADMODS} && ${MARIAN}/marian ${MARIAN_EXTRA} \
-        --model $(@:.done=.npz) \
-	--type transformer \
-        --train-sets ${word 1,$^} ${word 2,$^} ${MARIAN_TRAIN_WEIGHTS} \
-        --max-length 500 \
-        --vocabs ${MODEL_VOCAB} ${MODEL_VOCAB} \
-        --mini-batch-fit \
-	-w ${MARIAN_WORKSPACE} \
-	--maxi-batch ${MARIAN_MAXI_BATCH} \
-        --early-stopping ${MARIAN_EARLY_STOPPING} \
-        --valid-freq ${MARIAN_VALID_FREQ} \
-	--save-freq ${MARIAN_SAVE_FREQ} \
-	--disp-freq ${MARIAN_DISP_FREQ} \
-        --valid-sets ${word 4,$^} ${word 5,$^} \
-        --valid-metrics perplexity \
-        --valid-mini-batch ${MARIAN_VALID_MINI_BATCH} \
-        --beam-size 12 --normalize 1 --allow-unk \
-        --log $(@:.model${NR}.done=.train${NR}.log) \
-	--valid-log $(@:.model${NR}.done=.valid${NR}.log) \
-        --enc-depth 6 --dec-depth 6 \
-        --transformer-heads 8 \
-        --transformer-postprocess-emb d \
-        --transformer-postprocess dan \
-        --transformer-dropout ${MARIAN_DROPOUT} \
-	--label-smoothing 0.1 \
-        --learn-rate 0.0003 --lr-warmup 16000 --lr-decay-inv-sqrt 16000 --lr-report \
-        --optimizer-params 0.9 0.98 1e-09 --clip-norm 5 \
-        --tied-embeddings-all \
-	--overwrite --keep-best \
-	--devices ${MARIAN_GPUS} \
-        --sync-sgd --seed ${SEED} \
-	--sqlite \
-	--tempdir ${TMPDIR} \
-        --exponential-smoothing \
-	--guided-alignment ${word 3,$^}
-	touch $@
-
-
-
-#------------------------------------------------------------------------
-# translate with an ensemble of several models
-#------------------------------------------------------------------------
-
-ENSEMBLE = ${wildcard ${WORKDIR}/${MODEL}.${MODELTYPE}.model*.npz.best-perplexity.npz}
-
-${WORKDIR}/${TESTSET}.${MODEL}${NR}.${MODELTYPE}.ensemble.${SRC}.${TRG}: ${TEST_SRC}.${PRE_SRC} ${ENSEMBLE}
-	mkdir -p ${dir $@}
-	grep . $< > $@.input
-	${LOADMODS} && ${MARIAN}/marian-decoder -i $@.input \
-		--models ${ENSEMBLE} \
-		--vocabs ${WORKDIR}/${MODEL}.vocab.yml \
-			${WORKDIR}/${MODEL}.vocab.yml \
-			${WORKDIR}/${MODEL}.vocab.yml \
-		${MARIAN_DECODER_FLAGS} > $@.output
-ifeq (${PRE_TRG},spm${TRGBPESIZE:000=}k)
-	sed 's/ //g;s/▁/ /g' < $@.output | sed 's/^ *//;s/ *$$//' > $@
-else
-	sed 's/\@\@ //g;s/ \@\@//g;s/ \@\-\@ /-/g' < $@.output |\
-	$(TOKENIZER)/detokenizer.perl -l ${TRG} > $@
-endif
-	rm -f $@.input $@.output
-
-
-#------------------------------------------------------------------------
-# translate, evaluate and generate a file 
-# for comparing system to reference translations
-#------------------------------------------------------------------------
-
-${WORKDIR}/${TESTSET}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}: ${TEST_SRC}.${PRE_SRC} ${MODEL_FINAL}
-	mkdir -p ${dir $@}
-	grep . $< > $@.input
-	${LOADMODS} && ${MARIAN}/marian-decoder -i $@.input \
-		-c ${word 2,$^}.decoder.yml \
-		-d ${MARIAN_GPUS} \
-		${MARIAN_DECODER_FLAGS} > $@.output
-ifeq (${PRE_TRG},spm${TRGBPESIZE:000=}k)
-	sed 's/ //g;s/▁/ /g' < $@.output | sed 's/^ *//;s/ *$$//' > $@
-else
-	sed 's/\@\@ //g;s/ \@\@//g;s/ \@\-\@ /-/g' < $@.output |\
-	$(TOKENIZER)/detokenizer.perl -l ${TRG} > $@
-endif
-	rm -f $@.input $@.output
-
-
-
-%.eval: % ${TEST_TRG}
-	paste ${TEST_SRC}.${PRE_SRC} ${TEST_TRG} | grep $$'.\t' | cut -f2 > $@.ref
-	cat $< | sacrebleu $@.ref > $@
-	cat $< | sacrebleu --metrics=chrf --width=3 $@.ref >> $@
-	rm -f $@.ref
-
-
-%.compare: %.eval
-	grep . ${TEST_SRC} > $@.1
-	grep . ${TEST_TRG} > $@.2
-	grep . ${<:.eval=} > $@.3
-	paste -d "\n" $@.1 $@.2 $@.3 |\
-	sed 	-e "s/&apos;/'/g" \
-		-e 's/&quot;/"/g' \
-		-e 's/&lt;/</g' \
-		-e 's/&gt;/>/g' \
-		-e 's/&amp;/&/g' |\
-	sed 'n;n;G;' > $@
-	rm -f $@.1 $@.2 $@.3
