@@ -4,9 +4,9 @@
 # only works with sentencepiece models!
 #
 
-include ../Makefile.env
-include ../Makefile.config
-include ../Makefile.slurm
+include ../lib/env.mk
+include ../lib/config.mk
+include ../lib/slurm.mk
 
 SRC = af
 TRG = en

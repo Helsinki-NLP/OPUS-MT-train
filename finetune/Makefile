@@ -41,9 +41,10 @@
 #   --> need to adjust preprocess-scripts for those models
 #
 
-include ../Makefile.env
-include ../Makefile.config
-include ../Makefile.slurm
+include ../lib/env.mk
+include ../lib/config.mk
+include ../lib/slurm.mk
+
 
 MODEL     = news
 

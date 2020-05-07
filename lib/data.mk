@@ -481,7 +481,10 @@ ${DEV_SRC}.shuffled.gz:
 	    fi \
 	  done \
 	done
-	paste ${DEV_SRC} ${DEV_TRG} | shuf | gzip -c > $@
+	paste ${DEV_SRC} ${DEV_TRG} | ${SHUFFLE} | gzip -c > $@
+
+#	paste ${DEV_SRC} ${DEV_TRG} | shuf | gzip -c > $@
+
 
 
 ## if we have less than twice the amount of DEVMINSIZE in the data set
@@ -628,7 +631,7 @@ ifneq (${TESTSET},${DEVSET})
 	    done \
 	  done; \
 	  if [ ${TESTSIZE} -lt `cat $@ | wc -l` ]; then \
-	    paste ${TEST_SRC} ${TEST_TRG} | shuf | gzip -c > $@.shuffled.gz; \
+	    paste ${TEST_SRC} ${TEST_TRG} | ${SHUFFLE} | gzip -c > $@.shuffled.gz; \
 	    zcat $@.shuffled.gz | cut -f1 | tail -${TESTSIZE} > ${TEST_SRC}; \
 	    zcat $@.shuffled.gz | cut -f2 | tail -${TESTSIZE} > ${TEST_TRG}; \
 	    echo "testset = top ${TESTSIZE} lines of $@.shuffled!" >> ${dir $@}/README; \
@@ -1042,9 +1045,9 @@ ${SPMSRCMODEL}: ${LOCAL_TRAIN_SRC}
 ifeq ($(wildcard ${SPMSRCMODEL}),)
 	mkdir -p ${dir $@}
 ifeq ($(TRGLANGS),${firstword ${TRGLANGS}})
-	grep . $< | shuf > $<.text
+	grep . $< | ${SHUFFLE} > $<.text
 else
-	cut -f2- -d ' ' $< | grep . | shuf > $<.text
+	cut -f2- -d ' ' $< | grep . | ${SHUFFLE} > $<.text
 endif
 	${MAKE} ${LOCAL_TRAIN_SRC}.charfreq
 	if [ `cat ${LOCAL_TRAIN_SRC}.charfreq | wc -l` -gt 1000 ]; then \
@@ -1073,7 +1076,7 @@ endif
 ${SPMTRGMODEL}: ${LOCAL_TRAIN_TRG}
 ifeq ($(wildcard ${SPMTRGMODEL}),)
 	mkdir -p ${dir $@}
-	grep . $< | shuf > $<.text
+	grep . $< | ${SHUFFLE} > $<.text
 	${MAKE} ${LOCAL_TRAIN_TRG}.charfreq
 	if [ `cat ${LOCAL_TRAIN_TRG}.charfreq | wc -l` -gt 1000 ]; then \
 	  ${SPM_HOME}/spm_train ${SPMEXTRA} \
@@ -1157,7 +1160,7 @@ endif
 ${SPMMODEL}: ${LOCAL_MONO_DATA}.${PRE}
 ifeq ($(wildcard ${SPMMODEL}),)
 	mkdir -p ${dir $@}
-	grep . $< | shuf > $<.text
+	grep . $< | ${SHUFFLE} > $<.text
 	${MAKE} ${LOCAL_MONO_DATA}.${PRE}.charfreq
 	if [ `cat ${LOCAL_MONO_DATA}.${PRE}.charfreq | wc -l` -gt 1000 ]; then \
 	  ${SPM_HOME}/spm_train ${SPMEXTRA} \
