@@ -7,6 +7,12 @@ MEMAD_LANGS = de en fi fr nl sv
 # models for the MeMAD project
 #-------------------------------------------------------------------
 
+
+memad-multi:
+	${MAKE} SRCLANGS="${MEMAD_LANGS}" TRGLANGS="${MEMAD_LANGS}" MODELTYPE=transformer data
+	${MAKE} SRCLANGS="${MEMAD_LANGS}" TRGLANGS="${MEMAD_LANGS}" MODELTYPE=transformer \
+		WALLTIME=72 HPC_MEM=8g HPC_CORES=1 train.submit-multigpu
+
 memad2en:
 	${MAKE} LANGS="${MEMAD_LANGS}" PIVOT=en all2pivot
 
@@ -169,7 +175,7 @@ en-fiet:
 
 
 
-memad-multi:
+memad-multi1:
 	for s in "${SCANDINAVIAN}" "en fr" "et hu fi" "${WESTGERMANIC}" "ca es fr ga it la oc pt_br pt"; do \
 	      ${MAKE} SRCLANGS="$$s" TRGLANGS="$$s" traindata devdata; \
 	      ${MAKE} SRCLANGS="$$s" TRGLANGS="$$s" HPC_MEM=4g HPC_CORES=1 train.submit-multigpu; \
