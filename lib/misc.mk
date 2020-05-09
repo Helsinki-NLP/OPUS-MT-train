@@ -49,3 +49,49 @@ fix-missing-val:
 	    fi; \
 	  fi \
 	done
+
+
+## TODO: this does not seem to work as the config does not match
+## (optmiser cannot contintue to run ....)
+## move model files to a new name
+## (useful if using as starting point for another modeltyp
+##  for example, continue training without guided alignment)
+
+OLDMODEL_BASE  = ${WORKDIR}/${MODEL}.${OLDMODELTYPE}.model${NR}
+NEWMODEL_BASE  = ${WORKDIR}/${MODEL}.${NEWMODELTYPE}.model${NR}
+
+move-model:
+ifeq (${wildcard ${NEWMODEL_BASE}.npz},)
+	cp ${OLDMODEL_BASE}.npz ${NEWMODEL_BASE}.npz
+	cp ${OLDMODEL_BASE}.npz.best-perplexity.npz ${NEWMODEL_BASE}.npz.best-perplexity.npz
+	cp ${OLDMODEL_BASE}.npz.optimizer.npz ${NEWMODEL_BASE}.npz.optimizer.npz
+	cp ${OLDMODEL_BASE}.npz.orig.npz ${NEWMODEL_BASE}.npz.orig.npz
+	cp ${OLDMODEL_BASE}.npz.progress.yml ${NEWMODEL_BASE}.npz.progress.yml
+	cp ${OLDMODEL_BASE}.npz.yml ${NEWMODEL_BASE}.npz.yml
+	sed 's/${OLDMODELTYPE}/${NEWMODELTYPE}/' \
+		< ${OLDMODEL_BASE}.npz.decoder.yml \
+		> ${NEWMODEL_BASE}.npz.decoder.yml
+	sed 's/${OLDMODELTYPE}/${NEWMODELTYPE}/' \
+		< ${OLDMODEL_BASE}.npz.best-perplexity.npz.decoder.yml \
+		> ${NEWMODEL_BASE}.npz.best-perplexity.npz.decoder.yml
+else
+	@echo "new model ${NEWMODEL_BASE}.npz exists already!"
+endif
+
+
+
+
+
+## make symbolic links to spm-models
+## (previously we had data-specific models but now we want to re-use existing ones)
+
+fix-spm-models:
+	cd work-spm; \
+	for l in ${ALL_LANG_PAIRS}; do \
+	  cd $$l/train; \
+	  if [ ! -e opus.src.spm32k-model ]; then \
+	    ln -s *.src.spm32k-model opus.src.spm32k-model; \
+	    ln -s *.trg.spm32k-model opus.trg.spm32k-model; \
+	  fi; \
+	  cd ../..; \
+	done

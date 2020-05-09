@@ -83,8 +83,6 @@ DATA_TRG := ${sort ${CLEAN_TRAIN_TRG} ${CLEAN_TUNE_TRG} ${CLEAN_DEV_TRG} ${CLEAN
 REV_LANGSTR = ${subst ${SPACE},+,$(TRGLANGS)}-${subst ${SPACE},+,$(SRCLANGS)}
 REV_WORKDIR = ${WORKHOME}/${REV_LANGSTR}
 
-
-
 reverse-data:
 ifeq (${PRE_SRC},${PRE_TRG})
 ifeq (${words ${SRCLANGS}},1)
@@ -141,33 +139,6 @@ ifndef NEWMODELTYPE
   NEWMODELTYPE=transformer
 endif
 
-
-## TODO: this does not seem to work as the config does not match
-## (optmiser cannot contintue to run ....)
-## move model files to a new name
-## (useful if using as starting point for another modeltyp
-##  for example, continue training without guided alignment)
-
-OLDMODEL_BASE  = ${WORKDIR}/${MODEL}.${OLDMODELTYPE}.model${NR}
-NEWMODEL_BASE  = ${WORKDIR}/${MODEL}.${NEWMODELTYPE}.model${NR}
-
-move-model:
-ifeq (${wildcard ${NEWMODEL_BASE}.npz},)
-	cp ${OLDMODEL_BASE}.npz ${NEWMODEL_BASE}.npz
-	cp ${OLDMODEL_BASE}.npz.best-perplexity.npz ${NEWMODEL_BASE}.npz.best-perplexity.npz
-	cp ${OLDMODEL_BASE}.npz.optimizer.npz ${NEWMODEL_BASE}.npz.optimizer.npz
-	cp ${OLDMODEL_BASE}.npz.orig.npz ${NEWMODEL_BASE}.npz.orig.npz
-	cp ${OLDMODEL_BASE}.npz.progress.yml ${NEWMODEL_BASE}.npz.progress.yml
-	cp ${OLDMODEL_BASE}.npz.yml ${NEWMODEL_BASE}.npz.yml
-	sed 's/${OLDMODELTYPE}/${NEWMODELTYPE}/' \
-		< ${OLDMODEL_BASE}.npz.decoder.yml \
-		> ${NEWMODEL_BASE}.npz.decoder.yml
-	sed 's/${OLDMODELTYPE}/${NEWMODELTYPE}/' \
-		< ${OLDMODEL_BASE}.npz.best-perplexity.npz.decoder.yml \
-		> ${NEWMODEL_BASE}.npz.best-perplexity.npz.decoder.yml
-else
-	@echo "new model ${NEWMODEL_BASE}.npz exists already!"
-endif
 
 
 clean-data:
@@ -236,30 +207,13 @@ ${TRAIN_ALG}: 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 	rm -f ${LOCAL_TRAIN_SRC}.algtmp ${LOCAL_TRAIN_TRG}.algtmp
 
 
-## old way of word alignment with all the data in one process
-## --> this may take a long time for very large corpora
-## --> may also take a lot of memory (split instead, see above)
-
-# ${TRAIN_ALG}: 	${TRAIN_SRC}.${PRE_SRC}${TRAINSIZE}.gz \
-# 		${TRAIN_TRG}.${PRE_TRG}${TRAINSIZE}.gz
-# 	${MAKE} ${LOCAL_TRAIN_SRC}.algtmp ${LOCAL_TRAIN_TRG}.algtmp
-# 	if  [ `head $(LOCAL_TRAIN_SRC).algtmp | wc -l` -gt 0 ]; then \
-# 	  ${WORDALIGN} -s $(LOCAL_TRAIN_SRC).algtmp -t $(LOCAL_TRAIN_TRG).algtmp \
-# 		--overwrite -f $(LOCAL_TRAIN_SRC).fwd -r $(LOCAL_TRAIN_TRG).rev; \
-# 	  ${ATOOLS} -c grow-diag-final -i $(LOCAL_TRAIN_SRC).fwd -j $(LOCAL_TRAIN_TRG).rev |\
-# 	  gzip -c > $@; \
-# 	fi
-# 	rm -f ${LOCAL_TRAIN_SRC}.algtmp ${LOCAL_TRAIN_TRG}.algtmp
-# 	rm -f $(LOCAL_TRAIN_SRC).fwd $(LOCAL_TRAIN_TRG).rev
-
-
 
 
 
 ## copy OPUS data
 ## (check that the OPUS file really exists! if not, create and empty file)
 ##
-## TODO: should e read all data from scratch using opus_read?
+## TODO: should we read all data from scratch using opus_read?
 ## - also: langid filtering and link prob filtering?
 
 %.${SRCEXT}.raw:
@@ -298,40 +252,6 @@ ${TRAIN_ALG}: 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 ## - should we apply some other cleanup scripts here to get rid of some messy stuff?
 
 
-# ## this is too strict for non-latin languages
-# #	grep -i '[a-zäöå0-9]' |\
-
-## OLD:
-##
-# %.clean.${SRCEXT}.gz: %.${SRCEXT}.${PRE} %.${TRGEXT}.${PRE}
-# 	rm -f $@.${SRCEXT} $@.${TRGEXT}
-# 	ln -s ${word 1,$^} $@.${SRCEXT}
-# 	ln -s ${word 2,$^} $@.${TRGEXT}
-# 	$(MOSESSCRIPTS)/training/clean-corpus-n.perl $@ $(SRCEXT) $(TRGEXT) ${@:.${SRCEXT}.gz=} 0 100
-# 	rm -f $@.${SRCEXT} $@.${TRGEXT}
-# 	paste ${@:.gz=} ${@:.${SRCEXT}.gz=.${TRGEXT}} |\
-# 	perl -CS -pe 'tr[\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}][]cd;' > $@.tmp
-# 	rm -f ${@:.gz=} ${@:.${SRCEXT}.gz=.${TRGEXT}}
-# 	cut -f1 $@.tmp | gzip -c > $@
-# 	cut -f2 $@.tmp | gzip -c > ${@:.${SRCEXT}.gz=.${TRGEXT}.gz}
-# 	rm -f $@.tmp
-
-
-# %.clean.${TRGEXT}.gz: %.clean.${SRCEXT}.gz
-# 	@echo "done!"
-
-
-
-# %.clean.${SRCEXT}.gz: %.${SRCEXT}.${PRE} %.${TRGEXT}.${PRE}
-# 	cat $< |\
-# 	perl -CS -pe 'tr[\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}][]cd;' |\
-# 	gzip -c > $@
-
-# %.clean.${TRGEXT}.gz: %.${TRGEXT}.${PRE}
-# 	cat $< |\
-# 	perl -CS -pe 'tr[\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}][]cd;' |\
-# 	gzip -c > $@
-
 
 
 %.clean.${SRCEXT}.gz: %.${SRCEXT}.${PRE} %.${TRGEXT}.${PRE}
@@ -347,11 +267,6 @@ ${TRAIN_ALG}: 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 	cut -f2 $@.bitext | gzip -c > $(@:.clean.${SRCEXT}.gz=.clean.${TRGEXT}.gz)
 	rm -f $@.bitext $@.1 $@.2
 
-#	paste $@.${SRCEXT} $@.${TRGEXT} |\
-#	python3 bitext-match-lang.py -s ${SRC} -t ${TRG} > $@.bitext
-#	cut -f1 $@.bitext > $@
-#	cut -f2 $@.bitext > $(@:.src.clean.${PRE_SRC}=.trg.clean.${PRE_TRG})
-
 %.clean.${TRGEXT}.gz: %.clean.${SRCEXT}.gz
 	@echo "done!"
 
@@ -361,6 +276,9 @@ ${TRAIN_ALG}: 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 ${LOCAL_TRAIN_SRC}: ${DEV_SRC} ${DEV_TRG}
 	mkdir -p ${dir $@}
 	rm -f ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG}
+	echo ""                           > ${dir $@}README.md
+	echo "# ${notdir ${TRAIN_BASE}}" >> ${dir $@}README.md
+	echo ""                          >> ${dir $@}README.md
 	-for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
 	    if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
@@ -378,13 +296,12 @@ ${LOCAL_TRAIN_SRC}: ${DEV_SRC} ${DEV_TRG}
 	done
 ifeq (${USE_REST_DEVDATA},1)
 	if [ -e ${DEV_SRC}.notused.gz ]; then \
+	  echo "* unused dev/test data is added to training data" >> ${dir $@}README.md; \
 	  zcat ${DEV_SRC}.notused.gz >> ${LOCAL_TRAIN_SRC}; \
 	  zcat ${DEV_TRG}.notused.gz >> ${LOCAL_TRAIN_TRG}; \
 	fi
 endif
 
-
-# 	    ${MAKE} DATASET=${DATASET} SRC:=$$s TRG:=$$t add-to-local-train-data; \
 
 ${LOCAL_TRAIN_TRG}: ${LOCAL_TRAIN_SRC}
 	@echo "done!"
@@ -396,7 +313,7 @@ add-to-local-train-data: ${CLEAN_TRAIN_SRC} ${CLEAN_TRAIN_TRG}
 	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
 	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
 	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
-	  echo "source and target are not of same lengt!"; \
+	  echo "source and target are not of same length!"; \
 	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
 	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
 	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
@@ -404,7 +321,11 @@ add-to-local-train-data: ${CLEAN_TRAIN_SRC} ${CLEAN_TRAIN_TRG}
 	  echo ${CLEAN_TRAIN_TRG}; \
 	fi
 ifneq (${CLEAN_TRAIN_SRC},)
-	echo "${CLEAN_TRAIN_SRC}" >> ${dir ${LOCAL_TRAIN_SRC}}/README
+	echo "* ${LANGPAIR}: ${TRAINSET}" >> ${dir ${LOCAL_TRAIN_SRC}}README.md
+ifeq (${USE_BACKTRANS},1)
+	echo "* ${LANGPAIR} backtranslations: ${basename ${basename ${dir ${BACKTRANS_SRC}}}}" \
+		>> ${dir ${LOCAL_TRAIN_SRC}}README.md
+endif
 ifneq (${words ${TRGLANGS}},1)
 	echo "more than one target language";
 	zcat ${CLEAN_TRAIN_SRC} |\
@@ -423,7 +344,11 @@ endif
 ## extract training data but keep some heldout data for each dataset
 add-to-local-train-and-heldout-data: ${CLEAN_TRAIN_SRC} ${CLEAN_TRAIN_TRG}
 ifneq (${CLEAN_TRAIN_SRC},)
-	echo "${CLEAN_TRAIN_SRC}" >> ${dir ${LOCAL_TRAIN_SRC}}/README
+	echo "* ${LANGPAIR}: ${TRAINSET}" >> ${dir ${LOCAL_TRAIN_SRC}}README.md
+ifeq (${USE_BACKTRANS},1)
+	echo "* ${LANGPAIR} backtranslations: ${basename ${basename ${BACKTRANS_SRC}}}" \
+		>> ${dir ${LOCAL_TRAIN_SRC}}README.md
+endif
 	mkdir -p ${HELDOUT_DIR}/${SRC}-${TRG}
 ifneq (${words ${TRGLANGS}},1)
 	echo "more than one target language";
@@ -472,6 +397,8 @@ endif
 ${DEV_SRC}.shuffled.gz:
 	mkdir -p ${dir $@}
 	rm -f ${DEV_SRC} ${DEV_TRG}
+	echo "# Validation data"                         > ${dir ${DEV_SRC}}/README.md
+	echo ""                                         >> ${dir ${DEV_SRC}}/README.md
 	-for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
 	    if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
@@ -524,72 +451,30 @@ else
 	zcat $@.shuffled.gz | cut -f1 | tail -n +$$((${DEVSIZE} + 1)) | gzip -c > ${DEV_SRC}.notused.gz
 	zcat $@.shuffled.gz | cut -f2 | tail -n +$$((${DEVSIZE} + 1)) | gzip -c > ${DEV_TRG}.notused.gz
 endif
-	echo -n "devset = top "                         >> ${dir ${DEV_SRC}}/README
-	wc -l < ${DEV_SRC} | tr "\n" ' '                >> ${dir ${DEV_SRC}}/README
-	echo " lines of ${notdir $@}.shuffled!"         >> ${dir ${DEV_SRC}}/README
+	echo ""                                         >> ${dir ${DEV_SRC}}/README.md
+	echo -n "* devset = top "                       >> ${dir ${DEV_SRC}}/README.md
+	wc -l < ${DEV_SRC} | tr "\n" ' '                >> ${dir ${DEV_SRC}}/README.md
+	echo " lines of ${notdir $@}.shuffled!"         >> ${dir ${DEV_SRC}}/README.md
 ifeq (${DEVSET},${TESTSET})
-	echo -n "testset = last "                       >> ${dir ${TEST_SRC}}/README
-	wc -l < ${TEST_SRC} | tr "\n" ' '               >> ${dir ${TEST_SRC}}/README
-	echo " lines of ../val/${notdir $@}.shuffled!"  >> ${dir ${TEST_SRC}}/README
+	echo -n "* testset = next "                     >> ${dir ${DEV_SRC}}/README.md
+	wc -l < ${TEST_SRC} | tr "\n" ' '               >> ${dir ${DEV_SRC}}/README.md
+	echo " lines of ${notdir $@}.shuffled!"         >> ${dir ${DEV_SRC}}/README.md
+	echo "* remaining lines are added to traindata" >> ${dir ${DEV_SRC}}/README.md
+	echo "# Test data"                               > ${dir ${TEST_SRC}}/README.md
+	echo ""                                         >> ${dir ${TEST_SRC}}/README.md
+	echo -n "testset = next "                       >> ${dir ${TEST_SRC}}/README.md
+	wc -l < ${TEST_SRC} | tr "\n" ' '               >> ${dir ${TEST_SRC}}/README.md
+	echo " lines of ../val/${notdir $@}.shuffled!"  >> ${dir ${TEST_SRC}}/README.md
 endif
-
-
-
-#	  zcat $@.shuffled.gz | cut -f1 | tail -${TESTSIZE} > ${TEST_SRC}; \
-#	  zcat $@.shuffled.gz | cut -f2 | tail -${TESTSIZE} > ${TEST_TRG}; \
 
 
 ${DEV_TRG}: ${DEV_SRC}
 	@echo "done!"
 
 
-
-### OLD: extract data from training data as dev/test set if the devdata is too small
-### ---> this is confusing - skip this
-###
-### otherwise copy this directly after the target for ${DEV_SRC} above!
-### and add dependency on train-data for ${DEV_SRC}.shuffled.gz like this:
-### ${DEV_SRC}.shuffled.gz: ${TRAIN_SRC}.${PRE_SRC}.gz ${TRAIN_TRG}.${PRE_TRG}.gz
-### and remove dependency on dev-data for ${LOCAL_TRAIN_SRC}, change
-### ${LOCAL_TRAIN_SRC}: ${DEV_SRC} ${DEV_TRG}                 to
-### ${LOCAL_TRAIN_SRC}:
-#
-#	if (( `zcat $@.shuffled.gz | wc -l` < $$((${DEVMINSIZE} + ${DEVMINSIZE})) )); then \
-#	  echo "Need more devdata - take some from traindata!"; \
-#	  echo ".......... (1) extract top $$((${DEVSIZE} + ${TESTSIZE})) lines"; \
-#	  echo "Too little dev/test data in ${DEVSET}!"                                   >> ${dir $@}/README; \
-#	  echo "Add top $$((${DEVSIZE} + ${TESTSIZE})) lines from ${DATASET} to dev/test" >> ${dir $@}/README; \
-#	  echo "and remove those lines from training data"                                >> ${dir $@}/README; \
-#	  zcat ${TRAIN_SRC}.${PRE_SRC}.gz | \
-#		head -$$((${DEVSIZE} + ${TESTSIZE})) | \
-#		sed 's/\@\@ //g' > $@.extra.${SRC}; \
-#	  zcat ${TRAIN_TRG}.${PRE_TRG}.gz | \
-#		head -$$((${DEVSIZE} + ${TESTSIZE})) | \
-#		sed 's/\@\@ //g' > $@.extra.${TRG}; \
-#	  echo ".......... (2) remaining lines for training"; \
-#	  zcat ${TRAIN_SRC}.${PRE_SRC}.gz | \
-#		tail -n +$$((${DEVSIZE} + ${TESTSIZE} + 1)) | \
-#		sed 's/\@\@ //g' | gzip -c > $@.remaining.${SRC}.gz; \
-#	  zcat ${TRAIN_TRG}.${PRE_TRG}.gz | \
-#		tail -n +$$((${DEVSIZE} + ${TESTSIZE} + 1)) | \
-#		sed 's/\@\@ //g' | gzip -c > $@.remaining.${TRG}.gz; \
-#	  mv -f $@.remaining.${SRC}.gz ${TRAIN_SRC}.${PRE_SRC}.gz; \
-#	  mv -f $@.remaining.${TRG}.gz ${TRAIN_TRG}.${PRE_TRG}.gz; \
-#	  echo ".......... (3) append to devdata"; \
-#	  mv $@.shuffled.gz $@.oldshuffled.gz; \
-#	  paste $@.extra.${SRC} $@.extra.${TRG} > $@.shuffled; \
-#	  zcat $@.oldshuffled.gz >> $@.shuffled; \
-#	  rm $@.oldshuffled.gz; \
-#	  gzip -f $@.shuffled; \
-#	  rm -f $@.extra.${SRC} $@.extra.${TRG}; \
-#	fi
-
-
-
-
-
 add-to-dev-data: ${CLEAN_DEV_SRC} ${CLEAN_DEV_TRG}
 ifneq (${CLEAN_DEV_SRC},)
+	echo "* ${LANGPAIR}: ${DEVSET}" >> ${dir ${DEV_SRC}}README.md
 ifneq (${words ${TRGLANGS}},1)
 	echo "more than one target language";
 	zcat ${CLEAN_DEV_SRC} |\
@@ -616,6 +501,8 @@ ${TEST_SRC}: ${DEV_SRC}
 ifneq (${TESTSET},${DEVSET})
 	mkdir -p ${dir $@}
 	rm -f ${TEST_SRC} ${TEST_TRG}
+	echo "# Test data"                         > ${dir ${TEST_SRC}}/README.md
+	echo ""                                   >> ${dir ${TEST_SRC}}/README.md
 	if [ -e ${TESTSET_DIR}/${TESTSET}.${SRCEXT}.${PRE}.gz ]; then \
 	  ${MAKE} CLEAN_TEST_SRC=${TESTSET_DIR}/${TESTSET}.${SRCEXT}.${PRE}.gz \
 		  CLEAN_TEST_TRG=${TESTSET_DIR}/${TESTSET}.${TRGEXT}.${PRE}.gz \
@@ -634,7 +521,8 @@ ifneq (${TESTSET},${DEVSET})
 	    paste ${TEST_SRC} ${TEST_TRG} | ${SHUFFLE} | gzip -c > $@.shuffled.gz; \
 	    zcat $@.shuffled.gz | cut -f1 | tail -${TESTSIZE} > ${TEST_SRC}; \
 	    zcat $@.shuffled.gz | cut -f2 | tail -${TESTSIZE} > ${TEST_TRG}; \
-	    echo "testset = top ${TESTSIZE} lines of $@.shuffled!" >> ${dir $@}/README; \
+	    echo ""                                                >> ${dir $@}/README.md; \
+	    echo "testset = top ${TESTSIZE} lines of $@.shuffled!" >> ${dir $@}/README.md; \
 	  fi \
 	fi
 else
@@ -657,6 +545,7 @@ ${TEST_TRG}: ${TEST_SRC}
 
 add-to-test-data: ${CLEAN_TEST_SRC}
 ifneq (${CLEAN_TEST_SRC},)
+	echo "* ${LANGPAIR}: ${TESTSET}" >> ${dir ${TEST_SRC}}README.md
 ifneq (${words ${TRGLANGS}},1)
 	echo "more than one target language";
 	zcat ${CLEAN_TEST_SRC} |\
@@ -678,11 +567,6 @@ ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz: ${TRAIN_SRC}.clean.${PRE_SRC}.gz
 ${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz: ${TRAIN_TRG}.clean.${PRE_TRG}.gz
 	zcat $< | head -${TRAINSIZE} | gzip -c > $@
 endif
-
-
-# %.clean.gz: %.gz
-#	mkdir -p ${TMPDIR}/${LANGPAIRSTR}/cleanup
-#	gzip -cd < $< >  ${TMPDIR}/${LANGPAIRSTR}/cleanup/$(notdir $@).${SRCEXT}
 
 
 ########################
@@ -906,13 +790,6 @@ MAX_NR_TOKENS = 250
 	rm -f $<.${SRCEXT} $<.${TRGEXT}
 	mv $@.${SRCEXT} $@
 	mv $@.${TRGEXT} $(@:.src.clean.${PRE_SRC}=.trg.clean.${PRE_TRG})
-
-#	paste $@.${SRCEXT} $@.${TRGEXT} |\
-#	scripts/filter/bitext-match-lang.py -s ${SRC} -t ${TRG} > $@.bitext
-#	cut -f1 $@.bitext > $@
-#	cut -f2 $@.bitext > $(@:.src.clean.${PRE_SRC}=.trg.clean.${PRE_TRG})
-#	rm -f $@.${SRCEXT} $@.${TRGEXT} $@.bitext
-
 
 %.trg.clean.${PRE_TRG}: %.src.clean.${PRE_SRC}
 	@echo "done!"
@@ -1273,6 +1150,7 @@ endif
 ${WORKDIR}/%.clean.${PRE_SRC}.gz: ${TMPDIR}/${LANGPAIRSTR}/%.clean.${PRE_SRC}
 	mkdir -p ${dir $@}
 	gzip -c < $< > $@
+	-cat ${dir $<}README.md >> ${dir $@}README.md
 
 ifneq (${PRE_SRC},${PRE_TRG})
 ${WORKDIR}/%.clean.${PRE_TRG}.gz: ${TMPDIR}/${LANGPAIRSTR}/%.clean.${PRE_TRG}
@@ -1282,17 +1160,3 @@ endif
 
 
 
-
-## make symbolic links to spm-models
-## (previously we had data-specific models but now we want to re-use existing ones)
-
-fix-spm-models:
-	cd work-spm; \
-	for l in ${ALL_LANG_PAIRS}; do \
-	  cd $$l/train; \
-	  if [ ! -e opus.src.spm32k-model ]; then \
-	    ln -s *.src.spm32k-model opus.src.spm32k-model; \
-	    ln -s *.trg.spm32k-model opus.trg.spm32k-model; \
-	  fi; \
-	  cd ../..; \
-	done

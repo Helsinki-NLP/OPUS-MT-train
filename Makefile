@@ -11,7 +11,8 @@
 # make translate .......... translate test set
 # make eval ............... evaluate
 #
-# make train-job .......... create data and submit training job
+# make all-job ............ create config, data and submit training job
+# make train-job .......... submit training job
 #
 #--------------------------------------------------------------------
 # general parameters / variables (see lib/config.mk)
@@ -197,10 +198,18 @@ all: ${WORKDIR}/config.mk
 	${MAKE} eval
 	${MAKE} compare
 
-.PHONY: train-job
-train-job: ${WORKDIR}/config.mk
+.PHONY: all-job
+all-job: ${WORKDIR}/config.mk
 	${MAKE} data
+	${MAKE} train-and-eval-job
+
+.PHONY: train-job
+train-job:
 	${MAKE} HPC_CORES=1 HPC_MEM=${GPUJOB_HPC_MEM} train.submit${GPUJOB_SUBMIT}
+
+.PHONY: train-and-eval-job
+train-and-eval-job:
+	${MAKE} HPC_CORES=1 HPC_MEM=${GPUJOB_HPC_MEM} train-and-eval.submit${GPUJOB_SUBMIT}
 
 #------------------------------------------------------------------------
 # make various data sets (and word alignment)
@@ -235,6 +244,8 @@ wordalign:	${TRAIN_ALG}
 ## other model types
 vocab: ${MODEL_VOCAB}
 train: ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
+train-and-eval: ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
+	${MAKE} ${WORKDIR}/${TESTSET}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}.compare
 translate: ${WORKDIR}/${TESTSET}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}
 eval: ${WORKDIR}/${TESTSET}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}.eval
 compare: ${WORKDIR}/${TESTSET}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}.compare

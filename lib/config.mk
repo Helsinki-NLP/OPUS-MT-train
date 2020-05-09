@@ -145,25 +145,25 @@ endif
 
 
 ## in case we want to use some additional data sets
-EXTRA_TRAINSET =
+# EXTRA_TRAINSET =
 
 ## TESTSET= DEVSET, TRAINSET = OPUS - WMT-News,DEVSET.TESTSET
-TESTSET  = ${DEVSET}
-TRAINSET = $(filter-out WMT-News MPC1 ${DEVSET} ${TESTSET},${OPUSCORPORA} ${EXTRA_TRAINSET})
-TUNESET  = OpenSubtitles
-MONOSET  = $(filter-out WMT-News MPC1 ${DEVSET} ${TESTSET},${OPUSMONOCORPORA} ${EXTRA_TRAINSET})
+TESTSET  ?= ${DEVSET}
+TRAINSET ?= $(filter-out WMT-News MPC1 ${DEVSET} ${TESTSET},${OPUSCORPORA} ${EXTRA_TRAINSET})
+TUNESET  ?= OpenSubtitles
+MONOSET  ?= $(filter-out WMT-News MPC1 ${DEVSET} ${TESTSET},${OPUSMONOCORPORA} ${EXTRA_TRAINSET})
 
 ## 1 = use remaining data from dev/test data for training
-USE_REST_DEVDATA = 1
+USE_REST_DEVDATA ?= 1
 
 
 ##----------------------------------------------------------------------------
 ## pre-processing and vocabulary
 ##----------------------------------------------------------------------------
 
-BPESIZE    = 32000
-SRCBPESIZE = ${BPESIZE}
-TRGBPESIZE = ${BPESIZE}
+BPESIZE    ?= 32000
+SRCBPESIZE ?= ${BPESIZE}
+TRGBPESIZE ?= ${BPESIZE}
 
 VOCABSIZE  ?= $$((${SRCBPESIZE} + ${TRGBPESIZE} + 1000))
 
@@ -225,15 +225,32 @@ LOCAL_TRAIN_SRC = ${TMPDIR}/${LANGPAIRSTR}/train/${DATASET}.src
 LOCAL_TRAIN_TRG = ${TMPDIR}/${LANGPAIRSTR}/train/${DATASET}.trg
 LOCAL_MONO_DATA = ${TMPDIR}/${LANGSTR}/train/${DATASET}.mono
 
-
 TUNE_SRC  = ${WORKDIR}/tune/${TUNESET}.src
 TUNE_TRG  = ${WORKDIR}/tune/${TUNESET}.trg
 
-DEV_SRC   = ${WORKDIR}/val/${DEVSET}.src
-DEV_TRG   = ${WORKDIR}/val/${DEVSET}.trg
+## dev and test data come from one specific data set
+## if we have a bilingual model
 
-TEST_SRC  = ${WORKDIR}/test/${TESTSET}.src
-TEST_TRG  = ${WORKDIR}/test/${TESTSET}.trg
+ifeq (${words ${SRCLANGS}},1)
+ifeq (${words ${TRGLANGS}},1)
+
+  DEV_SRC   = ${WORKDIR}/val/${DEVSET}.src
+  DEV_TRG   = ${WORKDIR}/val/${DEVSET}.trg
+
+  TEST_SRC  = ${WORKDIR}/test/${TESTSET}.src
+  TEST_TRG  = ${WORKDIR}/test/${TESTSET}.trg
+
+endif
+endif
+
+## otherwise we give them a generic name
+
+DEV_SRC   ?= ${WORKDIR}/val/${DATASET}-dev.src
+DEV_TRG   ?= ${WORKDIR}/val/${DATASET}-dev.trg
+
+TEST_SRC  ?= ${WORKDIR}/test/${DATASET}-test.src
+TEST_TRG  ?= ${WORKDIR}/test/${DATASET}-test.trg
+
 
 
 ## heldout data directory (keep one set per data set)
@@ -326,6 +343,7 @@ endif
 
 
 ## make some data size-specific configuration parameters
+## TODO: is it OK to delete LOCAL_TRAIN data?
 
 local-config: ${WORKDIR}/config.mk
 
@@ -336,25 +354,26 @@ ${WORKDIR}/config.mk:
 	else \
 	  ${MAKE} ${LOCAL_TRAIN_SRC}; \
 	  s=`head -10000001 ${LOCAL_TRAIN_SRC} | wc -l`; \
+	  rm -f ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG}; \
 	fi; \
 	if [ $$s -gt 10000000 ]; then \
-	  echo "# ${LANGPAIRSTR} bigger than 10 million" > $@; \
+	  echo "# ${LANGPAIRSTR} training data bigger than 10 million" > $@; \
 	  echo "GPUJOB_HPC_MEM = 8g"       >> $@; \
 	  echo "GPUJOB_SUBMIT  = -multipu" >> $@; \
 	elif [ $$s -gt 1000000 ]; then \
-	  echo "# ${LANGPAIRSTR} bigger than 1 million" > $@; \
+	  echo "# ${LANGPAIRSTR} training data bigger than 1 million" > $@; \
 	  echo "GPUJOB_HPC_MEM = 8g"       >> $@; \
 	  echo "GPUJOB_SUBMIT  = "         >> $@; \
 	  echo "MARIAN_VALID_FREQ = 2500"  >> $@; \
 	elif [ $$s -gt 500000 ]; then \
-	  echo "# ${LANGPAIRSTR} bigger than 500k" > $@; \
+	  echo "# ${LANGPAIRSTR} training data bigger than 500k" > $@; \
 	  echo "GPUJOB_HPC_MEM = 4g"       >> $@; \
 	  echo "GPUJOB_SUBMIT  = "         >> $@; \
 	  echo "MARIAN_VALID_FREQ = 2500"  >> $@; \
 	  echo "MARIAN_WORKSPACE  = 10000" >> $@; \
 	  echo "BPESIZE = 12000"           >> $@; \
 	elif [ $$s -gt 100000 ]; then \
-	  echo "# ${LANGPAIRSTR} bigger than 100k" > $@; \
+	  echo "# ${LANGPAIRSTR} training data bigger than 100k" > $@; \
 	  echo "GPUJOB_HPC_MEM = 4g"       >> $@; \
 	  echo "GPUJOB_SUBMIT  = "         >> $@; \
 	  echo "MARIAN_VALID_FREQ = 1000"  >> $@; \
@@ -366,7 +385,7 @@ ${WORKDIR}/config.mk:
 	  echo "TESTSIZE    = 1000"        >> $@; \
 	  echo "DEVMINSIZE  = 250"         >> $@; \
 	elif [ $$s -gt 10000 ]; then \
-	  echo "# ${LANGPAIRSTR} bigger than 10k" > $@; \
+	  echo "# ${LANGPAIRSTR} training data less than 100k" > $@; \
 	  echo "GPUJOB_HPC_MEM = 4g"       >> $@; \
 	  echo "GPUJOB_SUBMIT  = "         >> $@; \
 	  echo "MARIAN_VALID_FREQ = 1000"  >> $@; \

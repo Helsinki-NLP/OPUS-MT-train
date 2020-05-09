@@ -153,12 +153,12 @@ ifneq ("$(wildcard ${BPESRCMODEL})","")
   PREPROCESS_TYPE = bpe
   PREPROCESS_SRCMODEL = ${BPESRCMODEL}
   PREPROCESS_TRGMODEL = ${BPETRGMODEL}
-  PREPROCESS_DESCRIPTION = normalization + tokenization + BPE
+  PREPROCESS_DESCRIPTION = normalization + tokenization + BPE (${PRE_SRC},${PRE_TRG})
 else
   PREPROCESS_TYPE = spm
   PREPROCESS_SRCMODEL = ${SPMSRCMODEL}
   PREPROCESS_TRGMODEL = ${SPMTRGMODEL}
-  PREPROCESS_DESCRIPTION = normalization + SentencePiece
+  PREPROCESS_DESCRIPTION = normalization + SentencePiece (${PRE_SRC},${PRE_TRG})
 endif
 
 ifneq (${words ${TRGLANGS}},1)
@@ -184,6 +184,9 @@ endif
 	@echo '' >> ${WORKDIR}/README.md
 	@echo "* dataset: ${DATASET}" >> ${WORKDIR}/README.md
 	@echo "* model: ${MODELTYPE}" >> ${WORKDIR}/README.md
+	@echo "* source language(s): ${SRCLANGS}" >> ${WORKDIR}/README.md
+	@echo "* target language(s): ${TRGLANGS}" >> ${WORKDIR}/README.md
+	@echo "* model: ${MODELTYPE}" >> ${WORKDIR}/README.md
 	@echo "* pre-processing: ${PREPROCESS_DESCRIPTION}" >> ${WORKDIR}/README.md
 	@cp ${PREPROCESS_SRCMODEL} ${WORKDIR}/source.${PREPROCESS_TYPE}
 	@cp ${PREPROCESS_TRGMODEL} ${WORKDIR}/target.${PREPROCESS_TYPE}
@@ -198,6 +201,18 @@ endif
 	  echo "* test set translations: [$(notdir ${@:.zip=})-${DATE}.test.txt](${MODELS_URL}/${LANGPAIRSTR}/$(notdir ${@:.zip=})-${DATE}.test.txt)" >> ${WORKDIR}/README.md; \
 	  echo "* test set scores: [$(notdir ${@:.zip=})-${DATE}.eval.txt](${MODELS_URL}/${LANGPAIRSTR}/$(notdir ${@:.zip=})-${DATE}.eval.txt)" >> ${WORKDIR}/README.md; \
 	  echo '' >> ${WORKDIR}/README.md; \
+	  if [ -e ${WORKDIR}/train/README.md ]; then \
+	    echo -n "## Training data: " >> ${WORKDIR}/README.md; \
+	    tr "\n" "~"  < ${WORKDIR}/train/README.md |\
+	    tr "#" "\n" | grep '${DATASET}' | \
+	    tail -1 | tr "~" "\n" >> ${WORKDIR}/README.md; \
+	    echo '' >> ${WORKDIR}/README.md; \
+	  fi; \
+	  if [ -e ${WORKDIR}/val/README.md ]; then \
+	    echo -n "#"                  >> ${WORKDIR}/README.md; \
+	    cat ${WORKDIR}/val/README.md >> ${WORKDIR}/README.md; \
+	    echo ''                      >> ${WORKDIR}/README.md; \
+	  fi; \
 	  echo '## Benchmarks' >> ${WORKDIR}/README.md; \
 	  echo '' >> ${WORKDIR}/README.md; \
 	  cd ${WORKDIR}; \
