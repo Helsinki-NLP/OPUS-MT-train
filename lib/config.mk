@@ -210,9 +210,10 @@ endif
 ## DATADIR = directory where the train/dev/test data are
 ## WORKDIR = directory used for training
 
-DATADIR = ${WORKHOME}/data
-WORKDIR = ${WORKHOME}/${LANGPAIRSTR}
-SPMDIR  = ${WORKHOME}/SentencePieceModels
+DATADIR  = ${WORKHOME}/data
+WORKDIR  = ${WORKHOME}/${LANGPAIRSTR}
+MODELDIR = ${WORKHOME}/models/${LANGPAIRSTR}
+SPMDIR   = ${WORKHOME}/SentencePieceModels
 
 ## data sets
 TRAIN_BASE = ${WORKDIR}/train/${DATASET}

@@ -11,8 +11,23 @@ DIST_PACKAGE = ${MODELSHOME}/${LANGPAIRSTR}/${DATASET}.zip
 ## minimum BLEU score for models to be accepted as distribution package
 MIN_BLEU_SCORE = 20
 
-.PHONY: dist
+.PHONY: dist local-dist global-dist release
 dist: ${DIST_PACKAGE}
+
+## local distribution in workhome, no restrictions about BLEU
+local-dist:
+	${MAKE} MODELSHOME=${WORKHOME}/models \
+		MODELS_URL=https://object.pouta.csc.fi/OPUS-MT-dev \
+	dist
+
+## global distribution in models-dir, restrictions on BLEU
+global-dist release:
+	if  [ `grep BLEU $(TEST_EVALUATION) | cut -f3 -d ' ' | cut -f1 -d '.'` -ge ${MIN_BLEU_SCORE} ]; then \
+	  ${MAKE} MODELSHOME=${PWD}/models \
+		  MODELS_URL=https://object.pouta.csc.fi/OPUS-MT-models
+	  dist; \
+	fi
+
 
 .PHONY: scores
 scores:
@@ -22,14 +37,15 @@ scores:
 
 ## get the best model from all kind of alternative setups
 ## in the following sub directories (add prefix work-)
+## scan various work directories - specify alternative dir's below
 
 ALT_MODEL_BASE = work-
 # ALT_MODEL_DIR = bpe-old bpe-memad bpe spm-noalign bpe-align spm
 # ALT_MODEL_DIR = spm langid
 ALT_MODEL_DIR = langid
 
-
-best_dist_all:
+.PHONY: best_dist_all best-dist-all
+best-dist-all best_dist_all:
 	for l in $(sort ${shell ls ${ALT_MODEL_BASE}* | grep -- '-' | grep -v old | grep -v work}); do \
 	  if  [ `find work*/$$l -name '*.npz' | wc -l` -gt 0 ]; then \
 	    d=`find work-spm/$$l -name '*.best-perplexity.npz' -exec basename {} \; | cut -f1 -d.`; \
@@ -40,14 +56,6 @@ best_dist_all:
 	done
 
 
-# best_dist_all:
-# 	for l in $(sort ${shell ls work* | grep -- '-' | grep -v old | grep -v work}); do \
-# 	  if  [ `find work*/$$l -name '${DATASET}${TRAINSIZE}.*.npz' | wc -l` -gt 0 ]; then \
-# 	    ${MAKE} SRCLANGS="`echo $$l | cut -f1 -d'-' | sed 's/\\+/ /g'`" \
-# 		    TRGLANGS="`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`" best_dist; \
-# 	  fi \
-# 	done
-
 
 
 ## find the best model according to test set scores
@@ -55,43 +63,12 @@ best_dist_all:
 ## (BLEU needs to be above MIN_BLEU_SCORE)
 ## NEW: don't trust models tested with GNOME test sets!
 
-
-## OLD version of finding the best model
-## --> this didn't properly look at different variants in the same folder
-best_dist_old:
-	@m=0;\
-	s=''; \
-	echo "------------------------------------------------"; \
-	echo "search best model for ${LANGPAIRSTR}"; \
-	for d in ${ALT_MODEL_DIR}; do \
-	  e=`ls work-$$d/${LANGPAIRSTR}/val/*.trg | xargs basename | sed 's/\.trg//'`; \
-	  echo "evaldata = $$e"; \
-	  if [ "$$e" != "GNOME" ]; then \
-	    if ls work-$$d/${LANGPAIRSTR}/$$e*.eval 1> /dev/null 2>&1; then \
-	      b=`grep 'BLEU+' work-$$d/${LANGPAIRSTR}/$$e*.eval | cut -f3 -d' '`; \
-	      if (( $$(echo "$$m-$$b < 1" |bc -l) )); then \
-	        echo "$$d ($$b) is better or not much worse than $$s ($$m)!"; \
-	        m=$$b; \
-	        s=$$d; \
-	      else \
-	        echo "$$d ($$b) is  worse than $$s ($$m)!"; \
-	      fi \
-	    fi \
-	  fi \
-	done; \
-	echo "------------------------------------------------"; \
-	if [ "$$s" != "" ]; then \
-	  if (( $$(echo "$$m > ${MIN_BLEU_SCORE}" |bc -l) )); then \
-	    ${MAKE} MODELSHOME=${PWD}/models \
-		MODELS_URL=https://object.pouta.csc.fi/OPUS-MT-models dist-$$s; \
-	  fi; \
-	fi
-
-
 ## new version of finding the best model
 ## --> look at different model variants in each work-dir
 ## --> take only the best one to publish
-best_dist:
+
+.PHONY: best_dist best-dist
+best-dist best_dist:
 	@m=0;\
 	s=''; \
 	echo "------------------------------------------------"; \
@@ -273,6 +250,7 @@ endif
 # - make upload-eval .... benchmark tests from models in WORKHOME
 # - make upload-images .. images of VMs that run OPUS-MT
 
+.PHONY: upload
 upload:
 	find models/ -type l | tar -cf models-links.tar -T -
 	find models/ -type l -delete
@@ -285,6 +263,7 @@ upload:
 	rm -f index.txt
 
 
+.PHONY: upload-models
 upload-models:
 	find ${WORKHOME}/models -type l | tar -cf dev-models-links.tar -T -
 	find ${WORKHOME}/models -type l -delete
@@ -296,14 +275,17 @@ upload-models:
 	swift upload OPUS-MT-dev index.txt
 	rm -f index.txt
 
+.PHONY: upload-scores
 upload-scores: scores
 	cd ${WORKHOME} && swift upload OPUS-MT-eval --changed --skip-identical eval/scores.txt
 	swift post OPUS-MT-eval --read-acl ".r:*"
 
+.PHONY: upload-eval
 upload-eval: scores
 	cd ${WORKHOME} && swift upload OPUS-MT-eval --changed --skip-identical eval
 	swift post OPUS-MT-eval --read-acl ".r:*"
 
+.PHONY: upload-images
 upload-images:
 	cd ${WORKHOME} && swift upload OPUS-MT --changed --skip-identical \
 		--use-slo --segment-size 5G opusMT-images

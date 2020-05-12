@@ -91,6 +91,7 @@ ifeq (${words ${TRGLANGS}},1)
 	  mkdir -p ${REV_WORKDIR}/train; \
 	  ln -s ${TRAIN_SRC}.clean.${PRE_SRC}.gz ${REV_WORKDIR}/train/${notdir ${TRAIN_TRG}.clean.${PRE_TRG}.gz}; \
 	  ln -s ${TRAIN_TRG}.clean.${PRE_TRG}.gz ${REV_WORKDIR}/train/${notdir ${TRAIN_SRC}.clean.${PRE_SRC}.gz}; \
+	  cp ${WORKDIR}/train/README.md ${REV_WORKDIR}/train/README.md; \
 	fi
 	-if [ -e ${SPMSRCMODEL} ]; then \
 	  ln -s ${SPMSRCMODEL} ${REV_WORKDIR}/train/${notdir ${SPMTRGMODEL}}; \
@@ -115,14 +116,21 @@ ifeq (${words ${TRGLANGS}},1)
 	  ln -s ${DEV_SRC}.shuffled.gz ${REV_WORKDIR}/val/${notdir ${DEV_SRC}.shuffled.gz}; \
 	  ln -s ${DEV_SRC}.notused.gz ${REV_WORKDIR}/val/${notdir ${DEV_TRG}.notused.gz}; \
 	  ln -s ${DEV_TRG}.notused.gz ${REV_WORKDIR}/val/${notdir ${DEV_SRC}.notused.gz}; \
+	  cp ${WORKDIR}/val/README.md ${REV_WORKDIR}/val/README.md; \
 	fi
 	-if [ -e ${TEST_SRC} ]; then \
 	  mkdir -p ${REV_WORKDIR}/test; \
 	  ln -s ${TEST_SRC} ${REV_WORKDIR}/test/${notdir ${TEST_TRG}}; \
 	  ln -s ${TEST_TRG} ${REV_WORKDIR}/test/${notdir ${TEST_SRC}}; \
+	  cp ${WORKDIR}/test/README.md ${REV_WORKDIR}/test/README.md; \
 	fi
 	-if [ -e ${MODEL_VOCAB} ]; then \
 	  ln -s ${MODEL_VOCAB} ${REV_WORKDIR}/${notdir ${MODEL_VOCAB}}; \
+	fi
+	-if [ -e ${WORKDIR}/config.mk ]; then \
+	   if [ ! -e ${REV_WORKDIR}/config.mk ]; then \
+	     cp ${WORKDIR}/config.mk ${REV_WORKDIR}/config.mk; \
+	   fi \
 	fi
 endif
 endif

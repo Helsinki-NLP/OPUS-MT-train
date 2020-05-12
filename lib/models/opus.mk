@@ -35,7 +35,7 @@ OPUSLANGS = fi sv fr es de ar he "cmn cn yue ze_zh zh_cn zh_CN zh_HK zh_tw zh_TW
 
 allopus2pivot:
 	for l in ${filter-out ${PIVOT},${OPUSLANGS}}; do \
-	  ${MAKE} WALLTIME=72 SRCLANGS="$$l" bilingual-dynamic; \
+	  ${MAKE} WALLTIME=72 SRCLANGS="$$l" TRGLANGS=${PIVOT} bilingual-dynamic; \
 	done
 
 ## this looks dangerous ....
@@ -52,3 +52,38 @@ allopus:
 all2en:
 	${MAKE} PIVOT=en allopus2pivot
 
+
+
+
+
+
+allopus2pivot-small:
+	for l in $(sort ${filter-out ${PIVOT},${OPUSLANGS}}); do \
+	  ${MAKE} SRCLANGS="$$l" TRGLANGS=${PIVOT} local-config; \
+	  ${MAKE} WALLTIME=72 SRCLANGS="$$l" TRGLANGS=${PIVOT} train-if-small; \
+	done
+
+
+train-if-small:
+	if [ ${BPESIZE} -lt 12000 ]; then \
+	  ${MAKE} data; \
+	  ${MAKE} train-and-eval-job; \
+	  ${MAKE} reverse-data; \
+	  ${MAKE} TRGLANGS="${SRCLANGS}" SRCLANGS='${TRGLANGS}' train-and-eval-job; \
+	fi
+
+
+
+
+## make models with backtranslations in both directions
+## for English-to-other language models
+##
+## --> xx-to-English-to backtranslations is on al parts of all wikis
+## --> English-to-xx backtranslations is only one part of wikipedia
+##
+## NOTE: this does not work for multilingual models!
+
+opus-enxx:
+	${MAKE} SRCLANGS=${TRG} TRGLANGS=${SRC} all-and-backtranslate-allwikis
+	${MAKE} all-and-backtranslate-bt
+	${MAKE} SRCLANGS=${TRG} TRGLANGS=${SRC} all-bt

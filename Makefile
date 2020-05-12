@@ -198,6 +198,42 @@ all: ${WORKDIR}/config.mk
 	${MAKE} eval
 	${MAKE} compare
 
+
+## TODO: does not look good to remove index.html from backtranlsation dir
+##       but we need to refresh the file from time to time (new wiki packages!)
+
+.PHONY: all-and-backtranslate
+all-and-backtranslate: ${WORKDIR}/config.mk
+	${MAKE} data
+	${MAKE} train
+	${MAKE} eval
+	${MAKE} compare
+	${MAKE} local-dist
+	rm -f backtranslate/index.html
+	${MAKE} -C backtranslate index.html
+	${MAKE} -C backtranslate SRC=${SRC} TRG=${TRG} MODELHOME=${MODELDIR} all
+
+.PHONY: all-and-backtranslate-allwikis
+all-and-backtranslate-allwikis: ${WORKDIR}/config.mk
+	${MAKE} data
+	${MAKE} train
+	${MAKE} eval
+	${MAKE} compare
+	${MAKE} local-dist
+	rm -f backtranslate/index.html
+	${MAKE} -C backtranslate index.html
+	-${MAKE} -C backtranslate SRC=${SRC} TRG=${TRG} MODELHOME=${MODELDIR} all-wikitext
+	${MAKE} -C backtranslate SRC=${SRC} TRG=${TRG} MODELHOME=${MODELDIR} translate-all-wikis
+
+
+.PHONY: all-with-bt
+all-with-bt:
+	${MAKE} all
+	${MAKE} SRCLANGS="${TRGLANGS}" TRGLANGS="${SRCLANGS}" all-and-backtranslate
+	${MAKE} all-bt
+
+
+
 .PHONY: all-job
 all-job: ${WORKDIR}/config.mk
 	${MAKE} data
@@ -244,8 +280,6 @@ wordalign:	${TRAIN_ALG}
 ## other model types
 vocab: ${MODEL_VOCAB}
 train: ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
-train-and-eval: ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
-	${MAKE} ${WORKDIR}/${TESTSET}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}.compare
 translate: ${WORKDIR}/${TESTSET}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}
 eval: ${WORKDIR}/${TESTSET}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}.eval
 compare: ${WORKDIR}/${TESTSET}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}.compare
@@ -255,4 +289,19 @@ translate-ensemble: ${WORKDIR}/${TESTSET}.${MODEL}${NR}.${MODELTYPE}.ensemble.${
 eval-ensemble: ${WORKDIR}/${TESTSET}.${MODEL}${NR}.${MODELTYPE}.ensemble.${SRC}.${TRG}.eval
 
 
+
+
+## combined tasks:
+
+
+## train and evaluate
+train-and-eval: ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
+	${MAKE} ${WORKDIR}/${TESTSET}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}.compare
+
+## train model and start back-translation jobs once the model is ready
+## (requires to create a dist package)
+train-and-start-bt-jobs: ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
+	${MAKE} ${WORKDIR}/${TESTSET}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}.compare
+	${MAKE} local-dist
+	${MAKE} -C backtranslate MODELHOME=${MODELDIR} translate-all-wikis-jobs
 

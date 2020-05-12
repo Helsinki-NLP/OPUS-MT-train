@@ -27,6 +27,7 @@ PART = aa
 
 LANGPAIR = ${SRC}-${TRG}
 
+PWD := $(shell pwd)
 
 MODELHOME = ../models/${LANGPAIR}
 ## standard sort is different from UTF8-based sort
@@ -101,15 +102,26 @@ all: index.html
 # WIKISOURCES = wiki wikibooks wikinews wikiquote wikisource wiktionary
 WIKISOURCES = wiki wikibooks wikinews wikiquote wikisource
 
-all-wikis: ${LANGPAIR}/${MODELNAME}/decoder.yml
+translate-all-wikis: ${LANGPAIR}/${MODELNAME}/decoder.yml
 	for w in ${WIKISOURCES}; do \
 	  ${MAKE} WIKISOURCE=$$w extract-text; \
 	  echo "find ${WIKI_DIR} -name '$$w.${LANGID}.${PART}.gz'"; \
 	  if  [ `find ${WIKI_DIR} -name "$$w.${LANGID}.${PART}.gz" | wc -l` -gt 0 ]; then \
-	    echo "${MAKE} WIKISOURCE=$$w HPC_CORES=1 WALLTIME=72 translate.submit"; \
-	    ${MAKE} WIKISOURCE=$$w HPC_MEM=4g HPC_CORES=1 WALLTIME=72 submit-translate-all-parts; \
+	    echo "${MAKE} WIKISOURCE=$$w translate-all-parts"; \
+	    ${MAKE} WIKISOURCE=$$w translate-all-parts; \
 	  fi \
 	done
+
+translate-all-wikis-jobs: ${LANGPAIR}/${MODELNAME}/decoder.yml
+	for w in ${WIKISOURCES}; do \
+	  ${MAKE} WIKISOURCE=$$w extract-text; \
+	  echo "find ${WIKI_DIR} -name '$$w.${LANGID}.${PART}.gz'"; \
+	  if  [ `find ${WIKI_DIR} -name "$$w.${LANGID}.${PART}.gz" | wc -l` -gt 0 ]; then \
+	    echo "${MAKE} WIKISOURCE=$$w translate-all-parts"; \
+	    ${MAKE} WIKISOURCE=$$w HPC_MEM=4g HPC_CORES=1 WALLTIME=72 translate-all-parts-jobs; \
+	  fi \
+	done
+
 
 all-wikitext:
 	for w in ${WIKISOURCES}; do \
@@ -410,7 +422,7 @@ translate-all-parts: ${LANGPAIR}/${MODELNAME}/decoder.yml
 	done
 
 ## create jobs for translating all parts
-submit-translate-all-parts: ${LANGPAIR}/${MODELNAME}/decoder.yml
+translate-all-parts-jobs: ${LANGPAIR}/${MODELNAME}/decoder.yml
 	for p in ${PARTS}; do \
 	  ${MAKE} PART=$$p translate.submit; \
 	done
