@@ -42,26 +42,29 @@ endif
 ## e.g. OPUSREAD_ARGS = -a certainty -tr 0.3
 OPUSREAD_ARGS = 
 
-## all of OPUS (NEW: don't require MOSES format)
-# OPUSCORPORA  = ${patsubst %/latest/moses/${LANGPAIR}.txt.zip,%,\
-#		${patsubst ${OPUSHOME}/%,%,\
-#		${shell ls ${OPUSHOME}/*/latest/moses/${LANGPAIR}.txt.zip}}}
-OPUSCORPORA  = ${patsubst %/latest/xml/${LANGPAIR}.xml.gz,%,\
+## ELRA corpora
+ELRA_CORPORA = ${patsubst %/latest/xml/${LANGPAIR}.xml.gz,%,\
 		${patsubst ${OPUSHOME}/%,%,\
-		${shell ls ${OPUSHOME}/*/latest/xml/${LANGPAIR}.xml.gz}}}
+		${shell ls ${OPUSHOME}/ELRA-*/latest/xml/${LANGPAIR}.xml.gz}}}
+
+## exclude certain data sets
+## TODO: include ELRA corpora
+EXCLUDE_CORPORA ?= WMT-News MPC1 ${ELRA_CORPORA}
+
+## all of OPUS (NEW: don't require MOSES format)
+OPUSCORPORA  = $(filter-out ${EXCLUDE_CORPORA} ,${patsubst %/latest/xml/${LANGPAIR}.xml.gz,%,\
+		${patsubst ${OPUSHOME}/%,%,\
+		${shell ls ${OPUSHOME}/*/latest/xml/${LANGPAIR}.xml.gz}}})
 
 ## monolingual data
-OPUSMONOCORPORA  = ${patsubst %/latest/mono/${LANGID}.txt.gz,%,\
+OPUSMONOCORPORA = $(filter-out ${EXCLUDE_CORPORA} ,${patsubst %/latest/mono/${LANGID}.txt.gz,%,\
 		${patsubst ${OPUSHOME}/%,%,\
-		${shell ls ${OPUSHOME}/*/latest/mono/${LANGID}.txt.gz}}}
+		${shell ls ${OPUSHOME}/*/latest/mono/${LANGID}.txt.gz}}})
 
 
 ALL_LANG_PAIRS = ${shell ls ${WORKHOME} | grep -- '-' | grep -v old}
 ALL_BILINGUAL_MODELS = ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" |  grep -v -- '\+'}
 ALL_MULTILINGUAL_MODELS = ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" | grep -- '\+'}
-
-# ALL_BILINGUAL_MODELS = ${shell ls ${WORKHOME} | grep -- '-' | grep -v old | grep -v -- '\+'}
-# ALL_MULTILINGUAL_MODELS = ${shell ls ${WORKHOME} | grep -- '-' | grep -v old | grep -- '\+'}
 
 
 ## size of dev data, test data and BPE merge operations
@@ -149,9 +152,9 @@ endif
 
 ## TESTSET= DEVSET, TRAINSET = OPUS - WMT-News,DEVSET.TESTSET
 TESTSET  ?= ${DEVSET}
-TRAINSET ?= $(filter-out WMT-News MPC1 ${DEVSET} ${TESTSET},${OPUSCORPORA} ${EXTRA_TRAINSET})
+TRAINSET ?= $(filter-out ${EXCLUDE_CORPORA} ${DEVSET} ${TESTSET},${OPUSCORPORA} ${EXTRA_TRAINSET})
 TUNESET  ?= OpenSubtitles
-MONOSET  ?= $(filter-out WMT-News MPC1 ${DEVSET} ${TESTSET},${OPUSMONOCORPORA} ${EXTRA_TRAINSET})
+MONOSET  ?= $(filter-out ${EXCLUDE_CORPORA} ${DEVSET} ${TESTSET},${OPUSMONOCORPORA} ${EXTRA_TRAINSET})
 
 ## 1 = use remaining data from dev/test data for training
 USE_REST_DEVDATA ?= 1

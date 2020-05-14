@@ -1,16 +1,9 @@
 # -*-makefile-*-
 
-ifndef SRCLANGS
-  SRCLANGS=${SRC}
-endif
 
-ifndef SRCLANGS
-  TRGLANGS=${TRG}
-endif
-
-ifndef THREADS
-  THREADS=${HPC_CORES}
-endif
+SRCLANGS ?= ${SRC}
+TRGLANGS ?= ${TRG}
+THREADS ?= ${HPC_CORES}
 
 
 ## SKIP_LANGPAIRS can be used to skip certain language pairs
@@ -20,9 +13,7 @@ endif
 ## must be a pattern that can be matched by egrep
 ## e.g. en-de|en-fr
 
-ifndef SKIP_LANGPAIRS
-  SKIP_LANGPAIRS = "nothing"
-endif
+SKIP_LANGPAIRS ?= "nothing"
 
 
 ## look for cleanup scripts and put them into a pipe
@@ -279,6 +270,8 @@ ${TRAIN_ALG}: 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 	@echo "done!"
 
 
+.INTERMEDIATE: ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG} ${LOCAL_TRAIN_SRC}.charfreq ${LOCAL_TRAIN_TRG}.charfreq
+
 ## add training data for each language combination
 ## and put it together in local space
 ${LOCAL_TRAIN_SRC}: ${DEV_SRC} ${DEV_TRG}
@@ -401,6 +394,17 @@ endif
 ####################
 # development data
 ####################
+
+show-devdata:
+	@echo "${CLEAN_DEV_SRC}" 
+	@echo "${CLEAN_DEV_TRG}"
+	@echo ${SPMSRCMODEL}
+	@echo ${SPMTRGMODEL}
+	@echo "${DEV_SRC}.${PRE_SRC}"
+	@echo "${DEV_TRG}.${PRE_TRG}"
+
+raw-devdata: ${DEV_SRC} ${DEV_TRG}
+
 
 ${DEV_SRC}.shuffled.gz:
 	mkdir -p ${dir $@}
@@ -819,6 +823,8 @@ tokenize-testsets prepare-testsets: ${ALLTEST}
 ## BPE
 ##----------------------------------------------
 
+bpe-models: ${BPESRCMODEL} ${BPETRGMODEL}
+
 ## source/target specific bpe
 ## - make sure to leave the language flags alone!
 ## - make sure that we do not delete the BPE code files
@@ -838,37 +844,28 @@ BPETRGMODEL = ${WORKDIR}/train/${BPEMODELNAME}.trg.bpe${TRGBPESIZE:000=}k-model
 
 
 .PRECIOUS: ${BPESRCMODEL} ${BPETRGMODEL}
-.INTERMEDIATE: ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG} ${LOCAL_TRAIN_SRC}.charfreq ${LOCAL_TRAIN_TRG}.charfreq
 
 # ${BPESRCMODEL}: ${WORKDIR}/%.bpe${SRCBPESIZE:000=}k-model: ${TMPDIR}/${LANGPAIRSTR}/%
-${BPESRCMODEL}: ${LOCAL_TRAIN_SRC}
-ifeq ($(wildcard ${BPESRCMODEL}),)
+# ${BPESRCMODEL}: ${LOCAL_TRAIN_SRC}
+${BPESRCMODEL}: 
+	${MAKE} ${LOCAL_TRAIN_SRC}
 	mkdir -p ${dir $@}
 ifeq ($(TRGLANGS),${firstword ${TRGLANGS}})
-	python3 ${SNMTPATH}/learn_bpe.py -s $(SRCBPESIZE) < $< > $@
+	python3 ${SNMTPATH}/learn_bpe.py -s $(SRCBPESIZE) < ${LOCAL_TRAIN_SRC} > $@
 else
-	cut -f2- -d ' ' $< > $<.text
-	python3 ${SNMTPATH}/learn_bpe.py -s $(SRCBPESIZE) < $<.text > $@
-	rm -f $<.text
+	cut -f2- -d ' ' ${LOCAL_TRAIN_SRC} > ${LOCAL_TRAIN_SRC}.text
+	python3 ${SNMTPATH}/learn_bpe.py -s $(SRCBPESIZE) < ${LOCAL_TRAIN_SRC}.text > $@
+	rm -f ${LOCAL_TRAIN_SRC}.text
 endif
-else
-	@echo "$@ already exists!"
-	@echo "WARNING! No new BPE model is created even though the data has changed!"
-	@echo "WARNING! Delete the file if you want to start from scratch!"
-endif
+
 
 ## no labels on the target language side
 # ${BPETRGMODEL}: ${WORKDIR}/%.bpe${TRGBPESIZE:000=}k-model: ${TMPDIR}/${LANGPAIRSTR}/%
-${BPETRGMODEL}: ${LOCAL_TRAIN_TRG}
-ifeq ($(wildcard ${BPETRGMODEL}),)
+# ${BPETRGMODEL}: ${LOCAL_TRAIN_TRG}
+${BPETRGMODEL}: 
+	${MAKE} ${LOCAL_TRAIN_TRG}
 	mkdir -p ${dir $@}
-	python3 ${SNMTPATH}/learn_bpe.py -s $(TRGBPESIZE) < $< > $@
-else
-	@echo "$@ already exists!"
-	@echo "WARNING! No new BPE codes are created!"
-	@echo "WARNING! Delete the file if you want to start from scratch!"
-endif
-
+	python3 ${SNMTPATH}/learn_bpe.py -s $(TRGBPESIZE) < ${LOCAL_TRAIN_TRG} > $@
 
 
 %.src.bpe${SRCBPESIZE:000=}k: %.src ${BPESRCMODEL}
@@ -909,6 +906,7 @@ endif
 ## sentence piece
 ##----------------------------------------------
 
+spm-models: ${SPMSRCMODEL} ${SPMTRGMODEL}
 
 # SPMSRCMODEL = ${TRAIN_SRC}.spm${SRCBPESIZE:000=}k-model
 # SPMTRGMODEL = ${TRAIN_TRG}.spm${TRGBPESIZE:000=}k-model
@@ -926,62 +924,52 @@ SPMEXTRA =
 GENERATE_SPM_VOC = 0
 
 # ${SPMSRCMODEL}: ${WORKDIR}/%.spm${SRCBPESIZE:000=}k-model: ${TMPDIR}/${LANGPAIRSTR}/%
-${SPMSRCMODEL}: ${LOCAL_TRAIN_SRC}
-ifeq ($(wildcard ${SPMSRCMODEL}),)
+${SPMSRCMODEL}: 
+	${MAKE} ${LOCAL_TRAIN_SRC}
 	mkdir -p ${dir $@}
 ifeq ($(TRGLANGS),${firstword ${TRGLANGS}})
-	grep . $< | ${SHUFFLE} > $<.text
+	grep . ${LOCAL_TRAIN_SRC} | ${SHUFFLE} > ${LOCAL_TRAIN_SRC}.text
 else
-	cut -f2- -d ' ' $< | grep . | ${SHUFFLE} > $<.text
+	cut -f2- -d ' ' ${LOCAL_TRAIN_SRC} | grep . | ${SHUFFLE} > ${LOCAL_TRAIN_SRC}.text
 endif
 	${MAKE} ${LOCAL_TRAIN_SRC}.charfreq
 	if [ `cat ${LOCAL_TRAIN_SRC}.charfreq | wc -l` -gt 1000 ]; then \
 	  ${SPM_HOME}/spm_train ${SPMEXTRA} \
-		--model_prefix=$@ --vocab_size=$(SRCBPESIZE) --input=$<.text \
+		--model_prefix=$@ --vocab_size=$(SRCBPESIZE) --input=${LOCAL_TRAIN_SRC}.text \
 		--character_coverage=0.9995 --hard_vocab_limit=false; \
 	else \
 	  ${SPM_HOME}/spm_train ${SPMEXTRA} \
-		--model_prefix=$@ --vocab_size=$(SRCBPESIZE) --input=$<.text \
+		--model_prefix=$@ --vocab_size=$(SRCBPESIZE) --input=${LOCAL_TRAIN_SRC}.text \
 		--character_coverage=1.0 --hard_vocab_limit=false; \
 	fi
 	mv $@.model $@
 ifeq (${GENERATE_SPM_VOC},1)
-	${SPM_HOME}/spm_encode --model=$@ --generate_vocabulary < $<.text > $@.voc
+	${SPM_HOME}/spm_encode --model=$@ --generate_vocabulary < ${LOCAL_TRAIN_SRC}.text > $@.voc
 endif
-	rm -f $<.text
-else
-	@echo "$@ already exists!"
-	@echo "WARNING! No new SPM model is created even though the data has changed!"
-	@echo "WARNING! Delete the file if you want to start from scratch!"
-endif
+	rm -f ${LOCAL_TRAIN_SRC}.text
 
 
 ## no labels on the target language side
 # ${SPMTRGMODEL}: ${WORKDIR}/%.spm${TRGBPESIZE:000=}k-model: ${TMPDIR}/${LANGPAIRSTR}/%
-${SPMTRGMODEL}: ${LOCAL_TRAIN_TRG}
-ifeq ($(wildcard ${SPMTRGMODEL}),)
+${SPMTRGMODEL}: 
+	${MAKE} ${LOCAL_TRAIN_TRG}
 	mkdir -p ${dir $@}
-	grep . $< | ${SHUFFLE} > $<.text
+	grep . ${LOCAL_TRAIN_TRG} | ${SHUFFLE} > ${LOCAL_TRAIN_TRG}.text
 	${MAKE} ${LOCAL_TRAIN_TRG}.charfreq
 	if [ `cat ${LOCAL_TRAIN_TRG}.charfreq | wc -l` -gt 1000 ]; then \
 	  ${SPM_HOME}/spm_train ${SPMEXTRA} \
-		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=$<.text \
+		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=${LOCAL_TRAIN_TRG}.text \
 		--character_coverage=0.9995 --hard_vocab_limit=false; \
 	else \
 	  ${SPM_HOME}/spm_train ${SPMEXTRA} \
-		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=$<.text \
+		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=${LOCAL_TRAIN_TRG}.text \
 		--character_coverage=1.0 --hard_vocab_limit=false; \
 	fi
 	mv $@.model $@
 ifeq (${GENERATE_SPM_VOC},1)
-	${SPM_HOME}/spm_encode --model=$@ --generate_vocabulary < $<.text > $@.voc
+	${SPM_HOME}/spm_encode --model=$@ --generate_vocabulary < ${LOCAL_TRAIN_TRG}.text > $@.voc
 endif
-	rm -f $<.text
-else
-	@echo "$@ already exists!"
-	@echo "WARNING! No new SPM model created!"
-	@echo "WARNING! Delete the file if you want to start from scratch!"
-endif
+	rm -f ${LOCAL_TRAIN_TRG}.text
 
 
 
