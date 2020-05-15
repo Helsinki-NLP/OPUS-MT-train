@@ -204,11 +204,17 @@ all-and-backtranslate: ${WORKDIR}/config.mk
 	${MAKE} eval
 	${MAKE} compare
 	${MAKE} local-dist
-	${MAKE} -C backtranslate \
-		SRC=${SRC} TRG=${TRG} \
+	-for t in ${TRGLANGS}; do \
+	  for s in ${SRCLANGS}; do \
+	    if [ "$$s" != "$$t" ]; then \
+	      ${MAKE} -C backtranslate \
+		SRC=$$s TRG=$$t \
 		MODELHOME=${MODELDIR} \
 		MAX_SENTENCES=${shell ${TRAIN_SRC}.clean.${PRE_SRC}.gz | head -1000000 | wc -l} \
-		all
+		all; \
+	    fi \
+	  done
+	done
 
 .PHONY: all-and-backtranslate-allwikis
 all-and-backtranslate-allwikis: ${WORKDIR}/config.mk
@@ -217,20 +223,63 @@ all-and-backtranslate-allwikis: ${WORKDIR}/config.mk
 	${MAKE} eval
 	${MAKE} compare
 	${MAKE} local-dist
-	-${MAKE} -C backtranslate SRC=${SRC} TRG=${TRG} MODELHOME=${MODELDIR} all-wikitext
-	${MAKE} -C backtranslate \
-		SRC=${SRC} TRG=${TRG} \
+	-for t in ${TRGLANGS}; do \
+	  for s in ${SRCLANGS}; do \
+	    if [ "$$s" != "$$t" ]; then \
+	      ${MAKE} -C backtranslate SRC=$$s TRG=$$t all-wikitext; \
+	      ${MAKE} -C backtranslate \
+		SRC=$$s TRG=$$t \
 		MAX_SENTENCES=${shell ${TRAIN_SRC}.clean.${PRE_SRC}.gz | head -1000000 | wc -l} \
 		MODELHOME=${MODELDIR} \
-		translate-all-wikis
+		translate-all-wikis; \
+	    fi \
+	  done
+	done
 
+## train a model with backtranslations of wikipedia data
+## (1) train a model in the opposite direction and backtranslate wikipedia data
+## (2) train a model with backtranslated data
 .PHONY: all-with-bt
 all-with-bt:
-	${MAKE} all
+	${MAKE} SRCLANGS="${TRGLANGS}" TRGLANGS="${SRCLANGS}" all-and-backtranslate
+	${MAKE} all-bt
+
+## train a model with backtranslations of ALL wikimedia wiki data
+.PHONY: all-with-bt-all
+all-with-bt-all:
+	${MAKE} SRCLANGS="${TRGLANGS}" TRGLANGS="${SRCLANGS}" all-and-backtranslate-allwikis
+	${MAKE} all-bt
+
+
+
+
+
+
+## job1: submit jobs to create data, train models, backtranslate all, and train again
+
+job1: ${WORKDIR}/config.mk
+	${MAKE} HPC_MEM=12g HPC_CORES=4 job1-step1.submitcpu
+
+job1-step1:
+	${MAKE} data
+	${MAKE} reverse-data
+	${MAKE} SRCLANGS="${TRGLANGS}" TRGLANGS="${SRCLANGS}" data
+	-for t in ${TRGLANGS}; do \
+	  ${MAKE} -C backtranslate SRC=${SRC} TRG=$$t all-wikitext; \
+	done
+	${MAKE} SRCLANGS="${TRGLANGS}" TRGLANGS="${SRCLANGS}" \
+		HPC_CORES=1 HPC_MEM=${GPUJOB_HPC_MEM} job1-step2.submit${GPUJOB_SUBMIT}
+
+job1-step2:
 	${MAKE} SRCLANGS="${TRGLANGS}" TRGLANGS="${SRCLANGS}" \
 		MAX_SENTENCES=${shell ${TRAIN_SRC}.clean.${PRE_SRC}.gz | head -1000000 | wc -l} \
-		all-and-backtranslate
+		all-and-backtranslate-allwikis
+	${MAKE} SRCLANGS="${TRGLANGS}" TRGLANGS="${SRCLANGS}" \
+		HPC_CORES=1 HPC_MEM=${GPUJOB_HPC_MEM} job1-step3.submit${GPUJOB_SUBMIT}
+
+job1-step3:
 	${MAKE} all-bt
+
 
 
 
