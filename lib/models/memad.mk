@@ -11,7 +11,7 @@ MEMAD_LANGS = de en fi fr nl sv
 memad-multi:
 	${MAKE} SRCLANGS="${MEMAD_LANGS}" TRGLANGS="${MEMAD_LANGS}" MODELTYPE=transformer data
 	${MAKE} SRCLANGS="${MEMAD_LANGS}" TRGLANGS="${MEMAD_LANGS}" MODELTYPE=transformer \
-		WALLTIME=72 HPC_MEM=8g HPC_CORES=1 train.submit-multigpu
+		WALLTIME=72 HPC_MEM=8g HPC_CORES=1 HPC_DISK=1500 train.submit-multigpu
 
 memad2en:
 	${MAKE} LANGS="${MEMAD_LANGS}" PIVOT=en all2pivot

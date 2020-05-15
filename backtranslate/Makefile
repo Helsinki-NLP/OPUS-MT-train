@@ -19,11 +19,16 @@ MULTI_TARGET_MODEL = 0
 ## can be general wikipedia, wikinews, wikibooks, ...
 WIKISOURCE = wiki
 
+## split size in nr-of-lines
+## default part to be selected = aa
+SPLIT_SIZE = 1000000
+PART = aa
+
 ## maximum input length (number sentence piece segments)
 ## maximum number of sentences to be translated (top N lines)
-MAX_LENGTH = 100
-MAX_SENTENCES = 1000000
-PART = aa
+MAX_LENGTH    = 100
+MAX_SENTENCES = ${SPLIT_SIZE}
+
 
 LANGPAIR = ${SRC}-${TRG}
 
@@ -304,7 +309,7 @@ giellatekno/${SRC}/corp.${SRC}.aa.gz:
 	find victorio.uit.no/biggies/trunk/langs/${SRC}/corp -type f -regex '.*/[^.]*.txt' |\
 	xargs cat | grep . | sed 's/ ¶//' |\
 	$(TOKENIZER)/detokenizer.perl -l fi | \
-	split -l ${MAX_SENTENCES} - giellatekno/${SRC}/corp.${SRC}.
+	split -l ${SPLIT_SIZE} - giellatekno/${SRC}/corp.${SRC}.
 	gzip -f giellatekno/${SRC}/corp.${SRC}.*
 
 victorio.uit.no/biggies/trunk/langs/${SRC}:
@@ -567,7 +572,7 @@ ${WIKI_TXT}: ${WIKI_JSON}
 	sed 's/  */ /g;s/^ *//g;s/ *$$//g' |\
 	python3 ../scripts/filter/mono-match-lang.py -l ${LANGID} |\
 	${SORT} -u | ${SHUFFLE} |\
-	split -l ${MAX_SENTENCES} - ${patsubst %${PART}.gz,%,$@}
+	split -l ${SPLIT_SIZE} - ${patsubst %${PART}.gz,%,$@}
 	gzip -f ${patsubst %${PART}.gz,%,$@}*
 
 

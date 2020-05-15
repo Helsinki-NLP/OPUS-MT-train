@@ -63,15 +63,18 @@ allopus2pivot-small:
 	  ${MAKE} WALLTIME=72 SRCLANGS="$$l" TRGLANGS=${PIVOT} train-if-small; \
 	done
 
-
 train-if-small:
+	if [ ${BPESIZE} -lt 12000 ]; then \
+	  ${MAKE} HPC_CORES=1 HPC_MEM=4g opus-enxx.submit; \
+	fi
+
+train-if-small-old:
 	if [ ${BPESIZE} -lt 12000 ]; then \
 	  ${MAKE} data; \
 	  ${MAKE} train-and-eval-job; \
 	  ${MAKE} reverse-data; \
 	  ${MAKE} TRGLANGS="${SRCLANGS}" SRCLANGS='${TRGLANGS}' train-and-eval-job; \
 	fi
-
 
 
 
@@ -86,4 +89,6 @@ train-if-small:
 opus-enxx:
 	${MAKE} SRCLANGS=${TRG} TRGLANGS=${SRC} all-and-backtranslate-allwikis
 	${MAKE} all-and-backtranslate-bt
+	${MAKE} best_dist
 	${MAKE} SRCLANGS=${TRG} TRGLANGS=${SRC} all-bt
+	${MAKE} SRCLANGS=${TRG} TRGLANGS=${SRC} best_dist

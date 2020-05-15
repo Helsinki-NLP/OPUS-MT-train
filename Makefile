@@ -181,15 +181,6 @@ include lib/models/doclevel.mk
 include lib/models/simplify.mk
 
 
-# include Makefile.env
-# include Makefile.config
-# include Makefile.dist
-# include Makefile.tasks
-# include Makefile.data
-# include Makefile.doclevel
-# include Makefile.generic
-# include Makefile.slurm
-
 
 .PHONY: all
 all: ${WORKDIR}/config.mk
@@ -199,8 +190,12 @@ all: ${WORKDIR}/config.mk
 	${MAKE} compare
 
 
-## TODO: does not look good to remove index.html from backtranlsation dir
-##       but we need to refresh the file from time to time (new wiki packages!)
+#---------------------------------------------------------------------
+# run everything including backtranslation of wiki-data
+#
+## TODO: need to refrehs backtranslate/index.html from time to time!
+## ---> necessary for fetching latest wikidump with the correct link
+#---------------------------------------------------------------------
 
 .PHONY: all-and-backtranslate
 all-and-backtranslate: ${WORKDIR}/config.mk
@@ -209,9 +204,11 @@ all-and-backtranslate: ${WORKDIR}/config.mk
 	${MAKE} eval
 	${MAKE} compare
 	${MAKE} local-dist
-	rm -f backtranslate/index.html
-	${MAKE} -C backtranslate index.html
-	${MAKE} -C backtranslate SRC=${SRC} TRG=${TRG} MODELHOME=${MODELDIR} all
+	${MAKE} -C backtranslate \
+		SRC=${SRC} TRG=${TRG} \
+		MODELHOME=${MODELDIR} \
+		MAX_SENTENCES=${shell ${TRAIN_SRC}.clean.${PRE_SRC}.gz | head -1000000 | wc -l} \
+		all
 
 .PHONY: all-and-backtranslate-allwikis
 all-and-backtranslate-allwikis: ${WORKDIR}/config.mk
@@ -220,19 +217,26 @@ all-and-backtranslate-allwikis: ${WORKDIR}/config.mk
 	${MAKE} eval
 	${MAKE} compare
 	${MAKE} local-dist
-	rm -f backtranslate/index.html
-	${MAKE} -C backtranslate index.html
 	-${MAKE} -C backtranslate SRC=${SRC} TRG=${TRG} MODELHOME=${MODELDIR} all-wikitext
-	${MAKE} -C backtranslate SRC=${SRC} TRG=${TRG} MODELHOME=${MODELDIR} translate-all-wikis
-
+	${MAKE} -C backtranslate \
+		SRC=${SRC} TRG=${TRG} \
+		MAX_SENTENCES=${shell ${TRAIN_SRC}.clean.${PRE_SRC}.gz | head -1000000 | wc -l} \
+		MODELHOME=${MODELDIR} \
+		translate-all-wikis
 
 .PHONY: all-with-bt
 all-with-bt:
 	${MAKE} all
-	${MAKE} SRCLANGS="${TRGLANGS}" TRGLANGS="${SRCLANGS}" all-and-backtranslate
+	${MAKE} SRCLANGS="${TRGLANGS}" TRGLANGS="${SRCLANGS}" \
+		MAX_SENTENCES=${shell ${TRAIN_SRC}.clean.${PRE_SRC}.gz | head -1000000 | wc -l} \
+		all-and-backtranslate
 	${MAKE} all-bt
 
 
+
+#------------------------------------------------------------------------
+# create slurm jobs
+#------------------------------------------------------------------------
 
 .PHONY: all-job
 all-job: ${WORKDIR}/config.mk
@@ -250,7 +254,6 @@ train-and-eval-job:
 #------------------------------------------------------------------------
 # make various data sets (and word alignment)
 #------------------------------------------------------------------------
-
 
 .PHONY: data
 data:	${TRAIN_SRC}.clean.${PRE_SRC}.gz ${TRAIN_TRG}.clean.${PRE_TRG}.gz \
