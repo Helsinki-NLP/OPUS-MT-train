@@ -15,6 +15,23 @@ THREADS ?= ${HPC_CORES}
 
 SKIP_LANGPAIRS ?= "nothing"
 
+## training data size (generates count if not in README.md)
+TRAINDATA_SIZE = ${shell \
+	if [ -e ${WORKDIR}/train/README.md ]; then \
+	  if [ `grep 'total size (${DATASET}):' ${WORKDIR}/train/README.md | wc -l` -gt 0 ]; then \
+	    grep 'total size (${DATASET}):' ${WORKDIR}/train/README.md | cut -f2 -d':' ; \
+	  elif [ -e ${TRAIN_SRC}.clean.${PRE_SRC}.gz ]; then \
+	    echo -n '* total size (${DATASET}): ' >> ${WORKDIR}/train/README.md; \
+	    zcat ${TRAIN_SRC}.clean.${PRE_SRC}.gz | wc -l >> ${WORKDIR}/train/README.md; \
+	    grep 'total size (${DATASET}):' ${WORKDIR}/train/README.md | cut -f2 -d':' ; \
+	  fi \
+	elif [ -e ${TRAIN_SRC}.clean.${PRE_SRC}.gz ]; then \
+	  echo '\# ${DATASET}'                  >> ${WORKDIR}/train/README.md; \
+	  echo ''                               >> ${WORKDIR}/train/README.md; \
+	  echo -n '* total size (${DATASET}): ' >> ${WORKDIR}/train/README.md; \
+	  zcat ${TRAIN_SRC}.clean.${PRE_SRC}.gz | wc -l >> ${WORKDIR}/train/README.md; \
+	  grep 'total size (${DATASET}):' ${WORKDIR}/train/README.md | cut -f2 -d':' ; \
+	fi }
 
 ## look for cleanup scripts and put them into a pipe
 ## they should be executable and should basically read STDIN and print to STDOUT
@@ -38,6 +55,10 @@ ifneq (${wildcard backtranslate/${TRG}-${SRC}/latest},)
 else
   BACKTRANS_DIR = backtranslate/${TRG}-${SRC}
 endif
+
+
+## TODO: make it possible to select only parts of the BT data
+## ---> use TRAINDATA_SIZE to take max the same amount of all shuffled BT data
 
 BACKTRANS_SRC = ${sort ${wildcard ${BACKTRANS_DIR}/*.${SRCEXT}.gz}}
 BACKTRANS_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${BACKTRANS_SRC}}
@@ -322,10 +343,12 @@ add-to-local-train-data: ${CLEAN_TRAIN_SRC} ${CLEAN_TRAIN_TRG}
 	  echo ${CLEAN_TRAIN_TRG}; \
 	fi
 ifneq (${CLEAN_TRAIN_SRC},)
-	echo "* ${LANGPAIR}: ${TRAINSET}" >> ${dir ${LOCAL_TRAIN_SRC}}README.md
+	echo -n "* ${LANGPAIR}: ${TRAINSET}, " >> ${dir ${LOCAL_TRAIN_SRC}}README.md
+	zcat ${CLEAN_TRAIN_SRC} | wc -l        >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 ifeq (${USE_BACKTRANS},1)
-	echo "* ${LANGPAIR} backtranslations: ${basename ${basename ${dir ${BACKTRANS_SRC}}}}" \
+	echo -n "* ${LANGPAIR} backtranslations: ${basename ${basename ${dir ${BACKTRANS_SRC}}}}, " \
 		>> ${dir ${LOCAL_TRAIN_SRC}}README.md
+	zcat ${BACKTRANS_SRC} | wc -l         >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 endif
 ifneq (${words ${TRGLANGS}},1)
 	echo "more than one target language";
@@ -345,10 +368,12 @@ endif
 ## extract training data but keep some heldout data for each dataset
 add-to-local-train-and-heldout-data: ${CLEAN_TRAIN_SRC} ${CLEAN_TRAIN_TRG}
 ifneq (${CLEAN_TRAIN_SRC},)
-	echo "* ${LANGPAIR}: ${TRAINSET}" >> ${dir ${LOCAL_TRAIN_SRC}}README.md
+	echo -n "* ${LANGPAIR}: ${TRAINSET}, " >> ${dir ${LOCAL_TRAIN_SRC}}README.md
+	zcat ${CLEAN_TRAIN_SRC} | wc -l        >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 ifeq (${USE_BACKTRANS},1)
-	echo "* ${LANGPAIR} backtranslations: ${basename ${basename ${BACKTRANS_SRC}}}" \
+	echo -n "* ${LANGPAIR} backtranslations: ${basename ${basename ${BACKTRANS_SRC}}}, " \
 		>> ${dir ${LOCAL_TRAIN_SRC}}README.md
+	zcat ${BACKTRANS_SRC} | wc -l        >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 endif
 	mkdir -p ${HELDOUT_DIR}/${SRC}-${TRG}
 ifneq (${words ${TRGLANGS}},1)
@@ -421,8 +446,8 @@ ${DEV_SRC}.shuffled.gz:
 	  done \
 	done
 	paste ${DEV_SRC} ${DEV_TRG} | ${SHUFFLE} | gzip -c > $@
-
-#	paste ${DEV_SRC} ${DEV_TRG} | shuf | gzip -c > $@
+	echo -n "* total size of shuffled dev data: " >> ${dir ${DEV_SRC}}README.md
+	zcat $@ | wc -l                               >> ${dir ${DEV_SRC}}README.md
 
 
 
@@ -486,7 +511,8 @@ ${DEV_TRG}: ${DEV_SRC}
 
 add-to-dev-data: ${CLEAN_DEV_SRC} ${CLEAN_DEV_TRG}
 ifneq (${CLEAN_DEV_SRC},)
-	echo "* ${LANGPAIR}: ${DEVSET}" >> ${dir ${DEV_SRC}}README.md
+	echo -n "* ${LANGPAIR}: ${DEVSET}, " >> ${dir ${DEV_SRC}}README.md
+	zcat ${CLEAN_DEV_SRC} | wc -l        >> ${dir ${DEV_SRC}}README.md
 ifneq (${words ${TRGLANGS}},1)
 	echo "more than one target language";
 	zcat ${CLEAN_DEV_SRC} |\
@@ -802,6 +828,9 @@ MAX_NR_TOKENS = 250
 	rm -f $<.${SRCEXT} $<.${TRGEXT}
 	mv $@.${SRCEXT} $@
 	mv $@.${TRGEXT} $(@:.src.clean.${PRE_SRC}=.trg.clean.${PRE_TRG})
+	echo -n "* total size (${DATASET}): " >> ${dir $@}README.md
+	cat $@ | wc -l >> ${dir $@}README.md
+
 
 %.trg.clean.${PRE_TRG}: %.src.clean.${PRE_SRC}
 	@echo "done!"
@@ -1072,7 +1101,7 @@ endif
 ## python-based char-counter (seems to be the fastest version)
 %.charfreq: %
 	head -10000000 $< > $<.10m
-	python -c "import collections, pprint; pprint.pprint(dict(collections.Counter(open('$<.10m', 'r').read())))" > $@
+	-python -c "import collections, pprint; pprint.pprint(dict(collections.Counter(open('$<.10m', 'r').read())))" > $@
 	rm -f $<.10m
 
 ## slow version

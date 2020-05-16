@@ -363,7 +363,7 @@ ${WORKDIR}/config.mk:
 	if [ $$s -gt 10000000 ]; then \
 	  echo "# ${LANGPAIRSTR} training data bigger than 10 million" > $@; \
 	  echo "GPUJOB_HPC_MEM = 8g"       >> $@; \
-	  echo "GPUJOB_SUBMIT  = -multipu" >> $@; \
+	  echo "GPUJOB_SUBMIT  = -multigpu" >> $@; \
 	elif [ $$s -gt 1000000 ]; then \
 	  echo "# ${LANGPAIRSTR} training data bigger than 1 million" > $@; \
 	  echo "GPUJOB_HPC_MEM = 8g"       >> $@; \

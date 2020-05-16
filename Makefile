@@ -236,6 +236,26 @@ all-and-backtranslate-allwikis: ${WORKDIR}/config.mk
 	  done
 	done
 
+.PHONY: all-and-backtranslate-allwikiparts
+all-and-backtranslate-allwikiparts: ${WORKDIR}/config.mk
+	${MAKE} data
+	${MAKE} train
+	${MAKE} eval
+	${MAKE} compare
+	${MAKE} local-dist
+	-for t in ${TRGLANGS}; do \
+	  for s in ${SRCLANGS}; do \
+	    if [ "$$s" != "$$t" ]; then \
+	      ${MAKE} -C backtranslate SRC=$$s TRG=$$t all-wikitext; \
+	      ${MAKE} -C backtranslate \
+		SRC=$$s TRG=$$t \
+		MAX_SENTENCES=${shell ${TRAIN_SRC}.clean.${PRE_SRC}.gz | head -1000000 | wc -l} \
+		MODELHOME=${MODELDIR} \
+		translate-all-wikiparts; \
+	    fi \
+	  done
+	done
+
 ## train a model with backtranslations of wikipedia data
 ## (1) train a model in the opposite direction and backtranslate wikipedia data
 ## (2) train a model with backtranslated data
@@ -248,6 +268,12 @@ all-with-bt:
 .PHONY: all-with-bt-all
 all-with-bt-all:
 	${MAKE} SRCLANGS="${TRGLANGS}" TRGLANGS="${SRCLANGS}" all-and-backtranslate-allwikis
+	${MAKE} all-bt
+
+## and now with all parts of all wikis
+.PHONY: all-with-bt-allparts
+all-with-bt-allparts:
+	${MAKE} SRCLANGS="${TRGLANGS}" TRGLANGS="${SRCLANGS}" all-and-backtranslate-allwikiparts
 	${MAKE} all-bt
 
 

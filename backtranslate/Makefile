@@ -101,7 +101,8 @@ UDPIPE_MODEL = ${notdir $(shell ${LOAD_MODULES} find ${UDPIPE_MODELS}/ -name "${
 
 
 all: index.html
-	${MAKE} ${WIKI_LATEST_SRC} ${WIKI_LATEST_TRG}
+	${MAKE} ${WIKI_LATEST_TRG}
+	${MAKE} ${WIKI_LATEST_SRC}
 
 
 # WIKISOURCES = wiki wikibooks wikinews wikiquote wikisource wiktionary
@@ -112,12 +113,33 @@ translate-all-wikis: ${LANGPAIR}/${MODELNAME}/decoder.yml
 	  ${MAKE} WIKISOURCE=$$w extract-text; \
 	  echo "find ${WIKI_DIR} -name '$$w.${LANGID}.${PART}.gz'"; \
 	  if  [ `find ${WIKI_DIR} -name "$$w.${LANGID}.${PART}.gz" | wc -l` -gt 0 ]; then \
+	    echo "${MAKE} WIKISOURCE=$$w translate"; \
+	    ${MAKE} WIKISOURCE=$$w translate; \
+	  fi \
+	done
+
+translate-all-wikiparts: ${LANGPAIR}/${MODELNAME}/decoder.yml
+	for w in ${WIKISOURCES}; do \
+	  ${MAKE} WIKISOURCE=$$w extract-text; \
+	  echo "find ${WIKI_DIR} -name '$$w.${LANGID}.${PART}.gz'"; \
+	  if  [ `find ${WIKI_DIR} -name "$$w.${LANGID}.${PART}.gz" | wc -l` -gt 0 ]; then \
 	    echo "${MAKE} WIKISOURCE=$$w translate-all-parts"; \
 	    ${MAKE} WIKISOURCE=$$w translate-all-parts; \
 	  fi \
 	done
 
+
 translate-all-wikis-jobs: ${LANGPAIR}/${MODELNAME}/decoder.yml
+	for w in ${WIKISOURCES}; do \
+	  ${MAKE} WIKISOURCE=$$w extract-text; \
+	  echo "find ${WIKI_DIR} -name '$$w.${LANGID}.${PART}.gz'"; \
+	  if  [ `find ${WIKI_DIR} -name "$$w.${LANGID}.${PART}.gz" | wc -l` -gt 0 ]; then \
+	    echo "${MAKE} WIKISOURCE=$$w translate"; \
+	    ${MAKE} WIKISOURCE=$$w HPC_MEM=4g HPC_CORES=1 WALLTIME=72 translate.submit; \
+	  fi \
+	done
+
+translate-all-wikiparts-jobs: ${LANGPAIR}/${MODELNAME}/decoder.yml
 	for w in ${WIKISOURCES}; do \
 	  ${MAKE} WIKISOURCE=$$w extract-text; \
 	  echo "find ${WIKI_DIR} -name '$$w.${LANGID}.${PART}.gz'"; \
@@ -418,7 +440,8 @@ extract-text: ${WIKI_TXT}
 extract-doc: ${WIKI_DOC}
 prepare-model: ${LANGPAIR}/${MODELNAME}/decoder.yml
 prepare-data: ${WIKI_PRE}
-translate: ${WIKI_LATEST_SRC} ${WIKI_LATEST_TRG}
+translate: ${WIKI_LATEST_TRG}
+	${MAKE} ${WIKI_LATEST_SRC}
 
 ## translate all parts
 translate-all-parts: ${LANGPAIR}/${MODELNAME}/decoder.yml
