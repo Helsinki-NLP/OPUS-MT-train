@@ -242,7 +242,7 @@ listallmodels:
 ## include all backtranslation data as well in training
 ## start from the pre-trained opus model if it exists
 
-BT_MODEL       = ${MODEL_SUBDIR}opus+bt${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
+BT_MODEL       = ${MODEL_SUBDIR}${DATASET}+bt${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
 BT_MODEL_BASE  = ${BT_MODEL}.${MODELTYPE}.model${NR}
 BT_MODEL_START = ${WORKDIR}/${BT_MODEL_BASE}.npz
 BT_MODEL_VOCAB = ${WORKDIR}/${BT_MODEL}.vocab.${MODEL_VOCABTYPE}
@@ -264,6 +264,24 @@ endif
 #		CLEAN_TRAIN_TRG="${CLEAN_TRAIN_TRG} ${BACKTRANS_TRG}" \
 
 
+
+PIVOT_MODEL       = ${MODEL_SUBDIR}${DATASET}+pivot${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
+PIVOT_MODEL_BASE  = ${PIVOT_MODEL}.${MODELTYPE}.model${NR}
+PIVOT_MODEL_START = ${WORKDIR}/${PIVOT_MODEL_BASE}.npz
+PIVOT_MODEL_VOCAB = ${WORKDIR}/${PIVOT_MODEL}.vocab.${MODEL_VOCABTYPE}
+
+%-pivot:
+ifneq (${wildcard ${MODEL_FINAL}},)
+ifeq (${wildcard ${PIVOT_MODEL_START}},)
+	cp ${MODEL_FINAL} ${PIVOT_MODEL_START}
+	cp ${MODEL_VOCAB} ${PIVOT_MODEL_VOCAB}
+endif
+endif
+	rm -f ${WORKHOME}/${LANGPAIRSTR}/train.submit
+	${MAKE} DATASET=${DATASET}+pivot \
+		USE_BACKTRANS=1 USE_PIVOTING=1 \
+		MARIAN_EARLY_STOPPING=15 \
+	${@:-pivot=}
 
 
 

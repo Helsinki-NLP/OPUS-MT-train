@@ -45,7 +45,7 @@ OPUSREAD_ARGS =
 ## ELRA corpora
 ELRA_CORPORA = ${patsubst %/latest/xml/${LANGPAIR}.xml.gz,%,\
 		${patsubst ${OPUSHOME}/%,%,\
-		${shell ls ${OPUSHOME}/ELRA-*/latest/xml/${LANGPAIR}.xml.gz}}}
+		${shell ls ${OPUSHOME}/ELRA-*/latest/xml/${LANGPAIR}.xml.gz 2>/dev/null}}}
 
 ## exclude certain data sets
 ## TODO: include ELRA corpora
@@ -85,7 +85,10 @@ DEVMINSIZE    = 250
 
 ## size of heldout data for each sub-corpus
 ## (only if there is at least twice as many examples in the corpus)
-HELDOUTSIZE = ${DEVSIZE}
+## NEW: set to 0
+
+# HELDOUTSIZE = ${DEVSIZE}
+HELDOUTSIZE = 0
 
 ##----------------------------------------------------------------------------
 ## train/dev/test data

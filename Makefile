@@ -190,6 +190,7 @@ all: ${WORKDIR}/config.mk
 	${MAKE} compare
 
 
+
 #---------------------------------------------------------------------
 # run everything including backtranslation of wiki-data
 #

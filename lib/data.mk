@@ -3,7 +3,7 @@
 
 SRCLANGS ?= ${SRC}
 TRGLANGS ?= ${TRG}
-THREADS ?= ${HPC_CORES}
+THREADS  ?= ${HPC_CORES}
 
 
 ## SKIP_LANGPAIRS can be used to skip certain language pairs
@@ -33,6 +33,7 @@ TRAINDATA_SIZE = ${shell \
 	  grep 'total size (${DATASET}):' ${WORKDIR}/train/README.md | cut -f2 -d':' ; \
 	fi }
 
+
 ## look for cleanup scripts and put them into a pipe
 ## they should be executable and should basically read STDIN and print to STDOUT
 ## no further arguments are supported
@@ -46,6 +47,10 @@ ifneq (${wildcard scripts/cleanup/${TRG}},)
 endif
 
 
+##-------------------------------------------------------------
+## backtranslated data and pivot-based synthetic training data
+##-------------------------------------------------------------
+
 ## back translation data
 ## - use only the latest backtranslations
 ##   if such a subdir exists
@@ -56,15 +61,23 @@ else
   BACKTRANS_DIR = backtranslate/${TRG}-${SRC}
 endif
 
-
 ## TODO: make it possible to select only parts of the BT data
 ## ---> use TRAINDATA_SIZE to take max the same amount of all shuffled BT data
 
-BACKTRANS_SRC = ${sort ${wildcard ${BACKTRANS_DIR}/*.${SRCEXT}.gz}}
+ifeq (${USE_PIVOTING},1)
+  BACKTRANS_SRC = ${sort ${wildcard ${BACKTRANS_DIR}/*.${SRCEXT}.gz}} \
+		  ${sort ${wildcard pivoting/${SRC}-${TRG}/latest/*.${SRCEXT}.gz} \
+			 ${wildcard pivoting/${TRG}-${SRC}/latest/*.${SRCEXT}.gz}}
+else
+  BACKTRANS_SRC = ${sort ${wildcard ${BACKTRANS_DIR}/*.${SRCEXT}.gz}}
+endif
+
 BACKTRANS_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${BACKTRANS_SRC}}
 
 
+##-------------------------------------------------------------
 ## data sets (train/dev/test)
+##-------------------------------------------------------------
 
 ifeq (${USE_BACKTRANS},1)
   CLEAN_TRAIN_SRC = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.clean.${SRCEXT}.gz,${TRAINSET}} ${BACKTRANS_SRC}
@@ -88,9 +101,11 @@ DATA_TRG := ${sort ${CLEAN_TRAIN_TRG} ${CLEAN_TUNE_TRG} ${CLEAN_DEV_TRG} ${CLEAN
 
 
 
+##-------------------------------------------------------------
 ## make data in reverse direction without re-doing word alignment etc ...
 ## ---> this is dangerous when things run in parallel
 ## ---> only works for bilingual models
+##-------------------------------------------------------------
 
 REV_LANGSTR = ${subst ${SPACE},+,$(TRGLANGS)}-${subst ${SPACE},+,$(SRCLANGS)}
 REV_WORKDIR = ${WORKHOME}/${REV_LANGSTR}
@@ -169,6 +184,8 @@ clean-data:
 	done
 
 clean-data-source: ${DATA_SRC} ${DATA_TRG}
+
+
 
 ## monolingual data sets (for sentence piece models)
 mono-data: ${LOCAL_MONO_DATA}.${PRE}
@@ -343,10 +360,10 @@ add-to-local-train-data: ${CLEAN_TRAIN_SRC} ${CLEAN_TRAIN_TRG}
 	  echo ${CLEAN_TRAIN_TRG}; \
 	fi
 ifneq (${CLEAN_TRAIN_SRC},)
-	echo -n "* ${LANGPAIR}: ${TRAINSET}, " >> ${dir ${LOCAL_TRAIN_SRC}}README.md
+	echo -n "* ${SRC}-${TRG}: ${TRAINSET}, " >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 	zcat ${CLEAN_TRAIN_SRC} | wc -l        >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 ifeq (${USE_BACKTRANS},1)
-	echo -n "* ${LANGPAIR} backtranslations: ${basename ${basename ${dir ${BACKTRANS_SRC}}}}, " \
+	echo -n "* ${SRC}-${TRG} (synthetic): ${basename ${patsubst %.${SRC}.gz,%,${notdir ${BACKTRANS_SRC}}}}, " \
 		>> ${dir ${LOCAL_TRAIN_SRC}}README.md
 	zcat ${BACKTRANS_SRC} | wc -l         >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 endif

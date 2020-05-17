@@ -14,6 +14,8 @@ parser.add_argument('-s','--supported','--supported-languages', action='store_tr
                    help='list all supported languages')
 parser.add_argument('-c','--checklang','--check-language-support', action='store_true',
                    help='show whether languages are supported')
+parser.add_argument('-v','--verbose', action='store_true',
+                   help='verbose output')
 args = parser.parse_args()
 
 def supported_language(lang):
@@ -25,9 +27,9 @@ def supported_language(lang):
 
 
 def is_accepted(line,accept,reject):
-    # isReliable, textBytesFound, details = cld2.detect(line, hintLanguage=args.lang)
-    isReliable, textBytesFound, details = cld2.detect(line, bestEffort=True)
+    # isReliable, textBytesFound, details = cld2.detect(line, bestEffort=True)
     if accept:
+        isReliable, textBytesFound, details = cld2.detect(line, hintLanguage=accept, bestEffort=True)
         if details[0][1] == accept:
             if isReliable:
                 # print("ACCEPT")
@@ -41,7 +43,10 @@ def is_accepted(line,accept,reject):
         #     print("REJECT", file=sys.stderr)
         #     print(details, file=sys.stderr)
         #     print(line, file=sys.stderr)
+        if args.verbose:
+            print("language mismatch: " + details[0][1] + " != " + accept + ", " + line, file=sys.stderr)
     else:
+        isReliable, textBytesFound, details = cld2.detect(line, bestEffort=True)
         if details[0][1] != reject:
             # print("ACCEPT")
             # print(details)
@@ -50,6 +55,9 @@ def is_accepted(line,accept,reject):
         #     print("REJECT", file=sys.stderr)
         #     print(details, file=sys.stderr)
         #     print(line, file=sys.stderr)
+        if args.verbose:
+            print("reject because detected: " + details[0][1] + ", " + line, file=sys.stderr)
+
 
 
 

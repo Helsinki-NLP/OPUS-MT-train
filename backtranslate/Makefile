@@ -11,10 +11,6 @@ include ../lib/slurm.mk
 SRC = af
 TRG = en
 
-## set to 1 if the model for backtranslation is a multi-target model
-## --> need to use pre-processing script differently
-MULTI_TARGET_MODEL = 0
-
 ## various sources are available
 ## can be general wikipedia, wikinews, wikibooks, ...
 WIKISOURCE = wiki
@@ -34,7 +30,7 @@ LANGPAIR = ${SRC}-${TRG}
 
 PWD := $(shell pwd)
 
-MODELHOME = ../models/${LANGPAIR}
+MODELHOME ?= ../models/${LANGPAIR}
 ## standard sort is different from UTF8-based sort
 ## --> prefer models with augmented data sets (separated by +)
 ##     we need the UTF8 sort order
@@ -43,13 +39,21 @@ MODELHOME = ../models/${LANGPAIR}
 MODELZIP  = ${lastword ${shell ls ${MODELHOME}/*-20*.zip | LANG=en_US.UTF-8 sort}}
 MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
 
-
 ifeq (${MODELNAME},)
   MODELHOME = ../work-langid/models/${LANGPAIR}
   # MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/*-20*.zip}}}
   MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/opus-20*.zip}}}
   MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
 endif
+
+## set to 1 if the model for backtranslation is a multi-target model
+## --> need to use pre-processing script differently
+ifeq ($(words $(subst +, ,$(lastword $(subst -, ,$(notdir ${MODELHOME}))))),1)
+  MULTI_TARGET_MODEL = 0
+else
+  MULTI_TARGET_MODEL = 1
+endif
+
 
 ifdef LOCAL_SCRATCH
   TMPDIR = ${LOCAL_SCRATCH}
