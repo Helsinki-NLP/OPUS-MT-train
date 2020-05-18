@@ -164,6 +164,13 @@ all-wikilangs: index.html
 	  ${MAKE} LANGID=$$l extract-text; \
 	done
 
+all-wikis-all-langs: index.html
+	for l in ${WIKILANGS}; do \
+	  for w in ${WIKISOURCES}; do \
+	    ${MAKE} WIKISOURCE=$$w LANGID=$$l extract-text; \
+	  done \
+	done
+
 
 ## aux function to pring the selected modelname
 .PHONY: print-modelname
@@ -799,3 +806,5 @@ check-length:
 # enwiktionary-20191209-cirrussearch-content.json..> 10-Dec-2019 17:23           918503424
 # enwiktionary-20191209-cirrussearch-general.json.gz 10-Dec-2019 17:42           848846623
 # enwiktionary-20191209-cirrussearch-general.json..> 10-Dec-2019 17:40           661585920
+
+

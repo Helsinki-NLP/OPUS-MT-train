@@ -360,13 +360,20 @@ add-to-local-train-data: ${CLEAN_TRAIN_SRC} ${CLEAN_TRAIN_TRG}
 	  echo ${CLEAN_TRAIN_TRG}; \
 	fi
 ifneq (${CLEAN_TRAIN_SRC},)
-	echo -n "* ${SRC}-${TRG}: ${TRAINSET}, " >> ${dir ${LOCAL_TRAIN_SRC}}README.md
-	zcat ${CLEAN_TRAIN_SRC} | wc -l        >> ${dir ${LOCAL_TRAIN_SRC}}README.md
-ifeq (${USE_BACKTRANS},1)
-	echo -n "* ${SRC}-${TRG} (synthetic): ${basename ${patsubst %.${SRC}.gz,%,${notdir ${BACKTRANS_SRC}}}}, " \
-		>> ${dir ${LOCAL_TRAIN_SRC}}README.md
-	zcat ${BACKTRANS_SRC} | wc -l         >> ${dir ${LOCAL_TRAIN_SRC}}README.md
-endif
+	echo -n "* ${SRC}-${TRG}: "                    >> ${dir ${LOCAL_TRAIN_SRC}}README.md
+	for d in ${CLEAN_TRAIN_SRC}; do \
+	  l=`zcat $$d | wc -l`; \
+	  if [ $$l -gt 0 ]; then \
+	    echo "$$d" | xargs basename | \
+	    sed -e 's#.${SRC}.gz$$##' \
+		-e 's#.clean$$##'\
+		-e 's#.${LANGPAIR}$$##' | tr "\n" ' '  >> ${dir ${LOCAL_TRAIN_SRC}}README.md; \
+	    echo -n "($$l) "                           >> ${dir ${LOCAL_TRAIN_SRC}}README.md; \
+	  fi \
+	done
+	echo ""                                        >> ${dir ${LOCAL_TRAIN_SRC}}README.md
+	echo -n "* ${SRC}-${TRG}: total size = "       >> ${dir ${LOCAL_TRAIN_SRC}}README.md
+	zcat ${CLEAN_TRAIN_SRC} | wc -l                >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 ifneq (${words ${TRGLANGS}},1)
 	echo "more than one target language";
 	zcat ${CLEAN_TRAIN_SRC} |\
@@ -381,17 +388,41 @@ endif
 
 
 
+#	echo "* ${SRC}-${TRG}: ${TRAINSET}"              >> ${dir ${LOCAL_TRAIN_SRC}}README.md
+#	echo -n "* ${SRC}-${TRG}: total size = "         >> ${dir ${LOCAL_TRAIN_SRC}}README.md
+#	zcat ${CLEAN_TRAIN_SRC} | wc -l                  >> ${dir ${LOCAL_TRAIN_SRC}}README.md
+#	for d in ${CLEAN_TRAIN_SRC}; do \
+#	  l=`zcat $$d | wc -l`; \
+#	  if [ $$l -gt 0 ]; then \
+#	    echo -n "* ${SRC}-${TRG}: "                  >> ${dir ${LOCAL_TRAIN_SRC}}README.md; \
+#	    echo -n "$$d" | xargs basename | \
+#	    sed -e 's#.${SRC}.gz$$##' \
+#		-e 's#.clean$$##'\
+#		-e 's#.${LANGPAIR}$$##' | tr "\n" ' '    >> ${dir ${LOCAL_TRAIN_SRC}}README.md; \
+#	    echo " = $$l lines"                          >> ${dir ${LOCAL_TRAIN_SRC}}README.md; \
+#	  fi \
+#	done
+
+
+
 
 ## extract training data but keep some heldout data for each dataset
 add-to-local-train-and-heldout-data: ${CLEAN_TRAIN_SRC} ${CLEAN_TRAIN_TRG}
 ifneq (${CLEAN_TRAIN_SRC},)
-	echo -n "* ${LANGPAIR}: ${TRAINSET}, " >> ${dir ${LOCAL_TRAIN_SRC}}README.md
-	zcat ${CLEAN_TRAIN_SRC} | wc -l        >> ${dir ${LOCAL_TRAIN_SRC}}README.md
-ifeq (${USE_BACKTRANS},1)
-	echo -n "* ${LANGPAIR} backtranslations: ${basename ${basename ${BACKTRANS_SRC}}}, " \
-		>> ${dir ${LOCAL_TRAIN_SRC}}README.md
-	zcat ${BACKTRANS_SRC} | wc -l        >> ${dir ${LOCAL_TRAIN_SRC}}README.md
-endif
+	echo -n "* ${SRC}-${TRG}: "                    >> ${dir ${LOCAL_TRAIN_SRC}}README.md
+	for d in ${CLEAN_TRAIN_SRC}; do \
+	  l=`zcat $$d | wc -l`; \
+	  if [ $$l -gt 0 ]; then \
+	    echo "$$d" | xargs basename | \
+	    sed -e 's#.${SRC}.gz$$##' \
+		-e 's#.clean$$##'\
+		-e 's#.${LANGPAIR}$$##' | tr "\n" ' '  >> ${dir ${LOCAL_TRAIN_SRC}}README.md; \
+	    echo -n "($$l) "                           >> ${dir ${LOCAL_TRAIN_SRC}}README.md; \
+	  fi \
+	done
+	echo ""                                        >> ${dir ${LOCAL_TRAIN_SRC}}README.md
+	echo -n "* ${SRC}-${TRG}: total size = "       >> ${dir ${LOCAL_TRAIN_SRC}}README.md
+	zcat ${CLEAN_TRAIN_SRC} | wc -l                >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 	mkdir -p ${HELDOUT_DIR}/${SRC}-${TRG}
 ifneq (${words ${TRGLANGS}},1)
 	echo "more than one target language";

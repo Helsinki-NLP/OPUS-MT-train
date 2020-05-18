@@ -3,11 +3,23 @@
 # models for Celtic languages
 #-------------------------------------------------------------------
 
+# examples:
+#
+#   make train-celtic-english
+#   make train-bt-celtic-english
+#   make train-pivot-bt-celtic-english
+#
+#   make HPC_CORES=2 HPC_MEM=8g all-job-pivot-bt-english-celtic.submitcpu
+#   make HPC_CORES=2 HPC_MEM=8g CELTIC_BPESIZE=12000 all-job-pivot-bt-celtic-english.submitcpu
 
-## only OPUS data
+
+## reduce vocabulary
 
 # CELTIC_BPESIZE = 12000
 CELTIC_BPESIZE = 4000
+
+
+## only OPUS data
 
 %-celtic-english-opus:
 	${MAKE} HELDOUTSIZE=0 BPESIZE=${CELTIC_BPESIZE} SRCLANGS="ga cy br gd kw gv" TRGLANGS=en ${@:-celtic-english-opus=}

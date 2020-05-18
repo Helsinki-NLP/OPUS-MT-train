@@ -3,6 +3,15 @@
 # some helper functions
 #------------------------------------------------------------------------
 
+ALL_DATA_SETS = ${patsubst %.${SRCEXT}.gz,%,${CLEAN_TRAIN_SRC}}
+
+check-bitext-length:
+	for d in ${ALL_DATA_SETS}; do \
+	  if [ `zcat $$d.${SRCEXT}.gz | wc -l` != `zcat $$d.${TRGEXT}.gz | wc -l` ]; then \
+	    echo "not the same number of lines in $$d"; \
+	  fi \
+	done
+
 
 ## check whether a model is converged or not
 finished:

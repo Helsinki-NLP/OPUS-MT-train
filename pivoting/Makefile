@@ -2,6 +2,9 @@
 # pivoting - translate training data via pivot models
 #
 #
+# TODO: exclude certain corpora like GNOME Ubuntu, (bible-uedin) ...
+#       ---> this will basically be the same for all languages
+#
 
 PWD := $(shell pwd)
 
@@ -12,6 +15,15 @@ TRG = se
 ## pivot language
 PIVOT  = nb
 
+## set EXCLUDE_SELECTED to 1 if you want to exclude only selected corpora
+## otherwise: exclude all corpora that also include the target language pair
+EXCLUDE_SELECTED = 0
+EXCLUDE = bible-uedin DGT GlobalVoices GNOME infopankki KDE4 KDEdoc Tanzil Ubuntu
+
+## always include those data sets even if they have the same target language pair
+INCLUDE = Tatoeba OpenSubtitles
+
+
 ## langpair (sorted lang id's) of the original data
 ## to be translated from PIVOT to SRC
 ORIGINAL_LANGPAIR = ${firstword ${sort ${PIVOT} ${TRG}}}-${lastword ${sort ${PIVOT} ${TRG}}}
@@ -21,9 +33,25 @@ include ../lib/env.mk
 include ../lib/config.mk
 include ../lib/slurm.mk
 
+
 ORIGINAL_DATADIR     ?= ${PWD}/../work/data
-ORIGINAL_DATASETS_SRC = ${wildcard ${ORIGINAL_DATADIR}/${PRE}/*.${ORIGINAL_LANGPAIR}.clean.${PIVOT}.gz}
-ORIGINAL_DATASETS_TRG = ${patsubst %.${PIVOT}.gz,%.${TRG}.gz,${ORIGINAL_DATASRC}}
+
+ifeq (${EXCLUDE_SELECTED},1)
+  EXCLUDE_PATTERN     = ${patsubst %,${ORIGINAL_DATADIR}/${PRE}/%.${LANGPAIR}.clean.${TRG}.gz,${EXCLUDE}}
+  EXCLUDE_DATASETS    = ${filter-out \
+			 ${patsubst %,${ORIGINAL_DATADIR}/${PRE}/%.${ORIGINAL_LANGPAIR}.clean.${TRG}.gz,${INCLUDE}},\
+			  ${patsubst %.${LANGPAIR}.clean.${TRG}.gz,%.${ORIGINAL_LANGPAIR}.clean.${TRG}.gz,\
+			   ${filter ${EXCLUDE_PATTERN}, \
+			    ${wildcard ${ORIGINAL_DATADIR}/${PRE}/*.${LANGPAIR}.clean.${TRG}.gz}}}}
+else
+  EXCLUDE_DATASETS    = ${filter-out \
+			 ${patsubst %,${ORIGINAL_DATADIR}/${PRE}/%.${ORIGINAL_LANGPAIR}.clean.${TRG}.gz,${INCLUDE}},\
+			  ${patsubst %.${LANGPAIR}.clean.${TRG}.gz,%.${ORIGINAL_LANGPAIR}.clean.${TRG}.gz,\
+			   ${wildcard ${ORIGINAL_DATADIR}/${PRE}/*.${LANGPAIR}.clean.${TRG}.gz}}}
+endif
+ORIGINAL_DATASETS_TRG = ${filter-out ${EXCLUDE_DATASETS},\
+			${wildcard ${ORIGINAL_DATADIR}/${PRE}/*.${ORIGINAL_LANGPAIR}.clean.${TRG}.gz}}
+ORIGINAL_DATASETS_SRC = ${patsubst %.${TRG}.gz,%.${PIVOT}.gz,${ORIGINAL_DATASETS_TRG}}
 
 ORIGINAL_DATASRC     ?= ${firstword ${ORIGINAL_DATASETS_SRC}}
 ORIGINAL_DATATRG     ?= ${firstword ${ORIGINAL_DATASETS_TRG}}
@@ -166,6 +194,10 @@ print-all-data:
 	@echo "${ALL_TRANSLATED_LATEST_SRC}"
 	@echo "${ALL_TRANSLATED_LATEST_TRG}"
 
+print-excludes:
+	@echo ${patsubst %,%.${ORIGINAL_LANGPAIR}.clean.${TRG}.gz,${INCLUDE}}
+	@echo "${EXCLUDE_PATTERN}"
+	@echo "${EXCLUDE_DATASETS}"
 
 
 ## fetch the latest model
