@@ -98,8 +98,14 @@ WIKI_JSON = $(shell grep -o '${LANGID}${WIKISOURCE}-[0-9]*-cirrussearch-content.
 ifndef UDPIPE_MODELS
   UDPIPE_MODELS=/projappl/nlpl/software/modules/udpipe/1.2.1-devel/models
 endif
+
 LANGNAME = ${shell ${LOAD_MODULES} opus-iso639 -e ${LANGID} | \
 		cut -f1 -d';' | tr ' ' '-' | tr '[:upper:]' '[:lower:]'}
+
+ifeq (${LANGNAME},)
+  LANGNAME = xx
+endif
+
 UDPIPE_MODEL = ${notdir $(shell ${LOAD_MODULES} find ${UDPIPE_MODELS}/ -name "${LANGNAME}*.udpipe" | head -1)}
 
 
@@ -181,6 +187,13 @@ print-modelname:
 
 
 
+
+all-wikidocs-all-langs: index.html
+	for l in ${WIKILANGS}; do \
+	  for w in ${WIKISOURCES}; do \
+	    ${MAKE} SRC=$$l WIKISOURCE=$$w extract-doc; \
+	  done \
+	done
 
 
 ## nordic language wikis
@@ -581,16 +594,30 @@ ${WIKI_JSON}:
 	wget -nv https://dumps.wikimedia.org/other/cirrussearch/current/${WIKI_JSON}
 
 
+
+
+## languages with nonbreaking prefix files 
+## (i.e. support for the Moses sentence splitter)
+# ca cs de el en es fi fr ga hu is it lt lv nl pl pt ro ru sk sl sv ta yue zh
+
+# MOSES_LANGS = ca cs de el en es fi fr ga hu is it lt lv nl pl pt ro ru sk sl sv ta yue zh
+MOSES_LANGS = ca cs de el en es fi fr ga hu is it lt lv nl pl pt ro ru sk sl sv ta
+
 ## check whether there is a UDPipe model
-## backoff to moses tools
+## and LANGID is not supported by moses tools (they are much faster!)
+
 ifneq (${UDPIPE_MODEL},)
+ifneq ($(filter-out ${MOSES_LANGS},${LANGID}),)
   SENTSPLITTER = udpipe --input=horizontal --tokenize \
 		${UDPIPE_MODELS}/${UDPIPE_MODEL} |\
 		grep '^\# *text *= *\|\# newpar' |\
 		sed 's/^\# *text *= *//'
-else
-  SENTSPLITTER = ${MOSESSCRIPTS}/ems/support/split-sentences.perl -l ${LANGID}
 endif
+endif
+
+## fallback = moses tools
+SENTSPLITTER ?= ${MOSESSCRIPTS}/ems/support/split-sentences.perl -l ${LANGID}
+
 
 ## extract sentences and normalize
 ## - requires jq, udpipe, and moses-scripts

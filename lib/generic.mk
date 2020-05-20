@@ -279,8 +279,8 @@ endif
 endif
 	rm -f ${WORKHOME}/${LANGPAIRSTR}/train.submit
 	${MAKE} DATASET=${DATASET}+pivot \
-		USE_BACKTRANS=1 USE_PIVOTING=1 \
-		MARIAN_EARLY_STOPPING=15 \
+		USE_PIVOTING=1 \
+		MARIAN_EARLY_STOPPING=10 \
 	${@:-pivot=}
 
 

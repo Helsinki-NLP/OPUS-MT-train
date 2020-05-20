@@ -54,7 +54,7 @@ EXCLUDE_CORPORA ?= WMT-News MPC1 ${ELRA_CORPORA}
 ## all of OPUS (NEW: don't require MOSES format)
 OPUSCORPORA  = $(filter-out ${EXCLUDE_CORPORA} ,${patsubst %/latest/xml/${LANGPAIR}.xml.gz,%,\
 		${patsubst ${OPUSHOME}/%,%,\
-		${shell ls ${OPUSHOME}/*/latest/xml/${LANGPAIR}.xml.gz}}})
+		${shell ls ${OPUSHOME}/*/latest/xml/${LANGPAIR}.xml.gz 2>/dev/null}}})
 
 ## monolingual data
 OPUSMONOCORPORA = $(filter-out ${EXCLUDE_CORPORA} ,${patsubst %/latest/mono/${LANGID}.txt.gz,%,\
@@ -156,7 +156,6 @@ endif
 ## TESTSET= DEVSET, TRAINSET = OPUS - WMT-News,DEVSET.TESTSET
 TESTSET  ?= ${DEVSET}
 TRAINSET ?= $(filter-out ${EXCLUDE_CORPORA} ${DEVSET} ${TESTSET},${OPUSCORPORA} ${EXTRA_TRAINSET})
-TUNESET  ?= OpenSubtitles
 MONOSET  ?= $(filter-out ${EXCLUDE_CORPORA} ${DEVSET} ${TESTSET},${OPUSMONOCORPORA} ${EXTRA_TRAINSET})
 
 ## 1 = use remaining data from dev/test data for training
@@ -232,9 +231,6 @@ LOCAL_TRAIN_SRC = ${TMPDIR}/${LANGPAIRSTR}/train/${DATASET}.src
 LOCAL_TRAIN_TRG = ${TMPDIR}/${LANGPAIRSTR}/train/${DATASET}.trg
 LOCAL_MONO_DATA = ${TMPDIR}/${LANGSTR}/train/${DATASET}.mono
 
-TUNE_SRC  = ${WORKDIR}/tune/${TUNESET}.src
-TUNE_TRG  = ${WORKDIR}/tune/${TUNESET}.trg
-
 ## dev and test data come from one specific data set
 ## if we have a bilingual model
 
@@ -247,18 +243,20 @@ ifeq (${words ${TRGLANGS}},1)
   TEST_SRC  = ${WORKDIR}/test/${TESTSET}.src
   TEST_TRG  = ${WORKDIR}/test/${TESTSET}.trg
 
+  TESTSET_NAME = ${TESTSET}
+
 endif
 endif
 
 ## otherwise we give them a generic name
 
-DEV_SRC   ?= ${WORKDIR}/val/${DATASET}-dev.src
-DEV_TRG   ?= ${WORKDIR}/val/${DATASET}-dev.trg
+DEV_SRC   ?= ${WORKDIR}/val/opus-dev.src
+DEV_TRG   ?= ${WORKDIR}/val/opus-dev.trg
 
-TEST_SRC  ?= ${WORKDIR}/test/${DATASET}-test.src
-TEST_TRG  ?= ${WORKDIR}/test/${DATASET}-test.trg
+TEST_SRC  ?= ${WORKDIR}/test/opus-test.src
+TEST_TRG  ?= ${WORKDIR}/test/opus-test.trg
 
-
+TESTSET_NAME ?= opus-test
 
 ## heldout data directory (keep one set per data set)
 HELDOUT_DIR  = ${WORKDIR}/heldout
@@ -280,7 +278,7 @@ MODEL_DECODER   = ${MODEL_FINAL}.decoder.yml
 
 ## test set translation and scores
 
-TEST_TRANSLATION = ${WORKDIR}/${TESTSET}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}
+TEST_TRANSLATION = ${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}
 TEST_EVALUATION  = ${TEST_TRANSLATION}.eval
 TEST_COMPARISON  = ${TEST_TRANSLATION}.compare
 

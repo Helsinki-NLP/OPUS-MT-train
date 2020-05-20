@@ -40,7 +40,7 @@ eval-heldout:
 
 ENSEMBLE = ${wildcard ${WORKDIR}/${MODEL}.${MODELTYPE}.model*.npz.best-perplexity.npz}
 
-${WORKDIR}/${TESTSET}.${MODEL}${NR}.${MODELTYPE}.ensemble.${SRC}.${TRG}: ${TEST_SRC}.${PRE_SRC} ${ENSEMBLE}
+${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.ensemble.${SRC}.${TRG}: ${TEST_SRC}.${PRE_SRC} ${ENSEMBLE}
 	mkdir -p ${dir $@}
 	grep . $< > $@.input
 	${LOADMODS} && ${MARIAN}/marian-decoder -i $@.input \
@@ -63,7 +63,7 @@ endif
 # for comparing system to reference translations
 #------------------------------------------------------------------------
 
-${WORKDIR}/${TESTSET}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}: ${TEST_SRC}.${PRE_SRC} ${MODEL_FINAL}
+${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}: ${TEST_SRC}.${PRE_SRC} ${MODEL_FINAL}
 	mkdir -p ${dir $@}
 	grep . $< > $@.input
 	${LOADMODS} && ${MARIAN}/marian-decoder -i $@.input \

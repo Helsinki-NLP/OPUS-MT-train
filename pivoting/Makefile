@@ -21,7 +21,7 @@ EXCLUDE_SELECTED = 0
 EXCLUDE = bible-uedin DGT GlobalVoices GNOME infopankki KDE4 KDEdoc Tanzil Ubuntu
 
 ## always include those data sets even if they have the same target language pair
-INCLUDE = Tatoeba OpenSubtitles
+INCLUDE = OpenSubtitles
 
 
 ## langpair (sorted lang id's) of the original data
@@ -32,6 +32,8 @@ PIVOT_LANGPAIR    = ${PIVOT}-${SRC}
 include ../lib/env.mk
 include ../lib/config.mk
 include ../lib/slurm.mk
+
+include lib/models.mk
 
 
 ORIGINAL_DATADIR     ?= ${PWD}/../work/data

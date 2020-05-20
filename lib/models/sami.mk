@@ -4,7 +4,8 @@
 #-------------------------------------------------------------------
 
 # sami-data: fetch-sami-tmx convert-sami-tmx move-sami-data convert-sami-gloss
-sami-data: fetch-sami-tmx convert-sami-tmx merge-sami-data convert-sami-gloss
+sami-data: 
+	${MAKE} -j 1 fetch-sami-tmx convert-sami-tmx merge-sami-data convert-sami-gloss
 	${MAKE} data-sami
 
 sami-train: train-dynamic-sami
