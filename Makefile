@@ -176,6 +176,7 @@ include lib/models/romance.mk
 include lib/models/russian.mk
 include lib/models/sami.mk
 include lib/models/wikimedia.mk
+include lib/models/wikimatrix.mk
 
 include lib/models/doclevel.mk
 include lib/models/simplify.mk

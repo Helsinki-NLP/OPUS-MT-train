@@ -58,13 +58,24 @@ all2en:
 
 
 allopus2pivot-small:
-	for l in $(sort ${filter-out ${PIVOT},${OPUSLANGS}}); do \
-	  ${MAKE} SRCLANGS="$$l" TRGLANGS=${PIVOT} local-config; \
-	  ${MAKE} WALLTIME=72 SRCLANGS="$$l" TRGLANGS=${PIVOT} train-if-small; \
+	for l in ${OPUSLANGS}; do \
+	  if [ "$$l" != "${PIVOT}" ]; then \
+	    ${MAKE} SRCLANGS="$$l" TRGLANGS=${PIVOT} opus-config; \
+	    ${MAKE} WALLTIME=72 SRCLANGS="$$l" TRGLANGS=${PIVOT} train-if-small; \
+	  fi \
 	done
+
+opus-config:
+ifeq ($(words ${SRCLANGS}),1)
+ifeq ($(words ${TRGLANGS}),1)
+	${MAKE} local-config
+endif
+endif
 
 
 train-if-small:
+ifeq ($(words ${SRCLANGS}),1)
+ifeq ($(words ${TRGLANGS}),1)
 ifeq ($(filter ${EXISTING_WIKI_DATA},${SRCLANG}),${SRCLANG})
 	if [ ${BPESIZE} -lt 12000 ]; then \
 	  ${MAKE} data; \
@@ -77,6 +88,8 @@ else
 	  ${MAKE} reverse-data; \
 	  ${MAKE} all-job; \
 	fi
+endif
+endif
 endif
 
 

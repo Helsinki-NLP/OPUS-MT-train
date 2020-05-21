@@ -15,14 +15,11 @@ TRG = se
 ## pivot language
 PIVOT  = nb
 
-## set EXCLUDE_SELECTED to 1 if you want to exclude only selected corpora
-## otherwise: exclude all corpora that also include the target language pair
-EXCLUDE_SELECTED = 0
-EXCLUDE = bible-uedin DGT GlobalVoices GNOME infopankki KDE4 KDEdoc Tanzil Ubuntu
-
 ## always include those data sets even if they have the same target language pair
 INCLUDE = OpenSubtitles
 
+## specify additional data sets to exclude
+# EXCLUDE = bible-uedin DGT GlobalVoices GNOME infopankki KDE4 KDEdoc Tanzil Ubuntu
 
 ## langpair (sorted lang id's) of the original data
 ## to be translated from PIVOT to SRC
@@ -38,19 +35,13 @@ include lib/models.mk
 
 ORIGINAL_DATADIR     ?= ${PWD}/../work/data
 
-ifeq (${EXCLUDE_SELECTED},1)
-  EXCLUDE_PATTERN     = ${patsubst %,${ORIGINAL_DATADIR}/${PRE}/%.${LANGPAIR}.clean.${TRG}.gz,${EXCLUDE}}
-  EXCLUDE_DATASETS    = ${filter-out \
+EXCLUDE_DATASETS    = ${sort \
+			${filter-out \
 			 ${patsubst %,${ORIGINAL_DATADIR}/${PRE}/%.${ORIGINAL_LANGPAIR}.clean.${TRG}.gz,${INCLUDE}},\
 			  ${patsubst %.${LANGPAIR}.clean.${TRG}.gz,%.${ORIGINAL_LANGPAIR}.clean.${TRG}.gz,\
-			   ${filter ${EXCLUDE_PATTERN}, \
-			    ${wildcard ${ORIGINAL_DATADIR}/${PRE}/*.${LANGPAIR}.clean.${TRG}.gz}}}}
-else
-  EXCLUDE_DATASETS    = ${filter-out \
-			 ${patsubst %,${ORIGINAL_DATADIR}/${PRE}/%.${ORIGINAL_LANGPAIR}.clean.${TRG}.gz,${INCLUDE}},\
-			  ${patsubst %.${LANGPAIR}.clean.${TRG}.gz,%.${ORIGINAL_LANGPAIR}.clean.${TRG}.gz,\
-			   ${wildcard ${ORIGINAL_DATADIR}/${PRE}/*.${LANGPAIR}.clean.${TRG}.gz}}}
-endif
+			   ${wildcard ${ORIGINAL_DATADIR}/${PRE}/*.${LANGPAIR}.clean.${TRG}.gz}}} \
+			${patsubst %,${ORIGINAL_DATADIR}/${PRE}/%.${ORIGINAL_LANGPAIR}.clean.${TRG}.gz,${EXCLUDE}}}
+
 ORIGINAL_DATASETS_TRG = ${filter-out ${EXCLUDE_DATASETS},\
 			${wildcard ${ORIGINAL_DATADIR}/${PRE}/*.${ORIGINAL_LANGPAIR}.clean.${TRG}.gz}}
 ORIGINAL_DATASETS_SRC = ${patsubst %.${TRG}.gz,%.${PIVOT}.gz,${ORIGINAL_DATASETS_TRG}}
@@ -180,21 +171,21 @@ print-modelname:
 
 .PHONY: print-data
 print-data:
-	@echo ${ORIGINAL_DATASRC}
+#	@echo ${ORIGINAL_DATASRC}
 	@echo ${DATASET_NAME}
-	@echo ${TRANSLATED_SRC}
-	@echo ${TRANSLATED_TRG}
-	@echo ${TRANSLATED_LATEST_SRC}
-	@echo ${TRANSLATED_LATEST_TRG}
+#	@echo ${TRANSLATED_SRC}
+#	@echo ${TRANSLATED_TRG}
+#	@echo ${TRANSLATED_LATEST_SRC}
+#	@echo ${TRANSLATED_LATEST_TRG}
 
 .PHONY: print-all-data
 print-all-data:
-	@echo "${ORIGINAL_DATASETS_SRC}"
+#	@echo "${ORIGINAL_DATASETS_TRG}"
 	@echo "${DATASET_NAMES}"
-	@echo "${ALL_TRANSLATED_SRC}"
-	@echo "${ALL_TRANSLATED_TRG}"
-	@echo "${ALL_TRANSLATED_LATEST_SRC}"
-	@echo "${ALL_TRANSLATED_LATEST_TRG}"
+#	@echo "${ALL_TRANSLATED_SRC}"
+#	@echo "${ALL_TRANSLATED_TRG}"
+#	@echo "${ALL_TRANSLATED_LATEST_SRC}"
+#	@echo "${ALL_TRANSLATED_LATEST_TRG}"
 
 print-excludes:
 	@echo ${patsubst %,%.${ORIGINAL_LANGPAIR}.clean.${TRG}.gz,${INCLUDE}}
