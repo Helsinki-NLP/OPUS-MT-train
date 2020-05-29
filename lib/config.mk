@@ -250,13 +250,15 @@ endif
 
 ## otherwise we give them a generic name
 
-DEV_SRC   ?= ${WORKDIR}/val/opus-dev.src
-DEV_TRG   ?= ${WORKDIR}/val/opus-dev.trg
-
-TEST_SRC  ?= ${WORKDIR}/test/opus-test.src
-TEST_TRG  ?= ${WORKDIR}/test/opus-test.trg
-
+DEVSET_NAME  ?= opus-dev
 TESTSET_NAME ?= opus-test
+
+DEV_SRC   ?= ${WORKDIR}/val/${DEVSET_NAME}.src
+DEV_TRG   ?= ${WORKDIR}/val/${DEVSET_NAME}.trg
+
+TEST_SRC  ?= ${WORKDIR}/test/${TESTSET_NAME}.src
+TEST_TRG  ?= ${WORKDIR}/test/${TESTSET_NAME}.trg
+
 
 ## heldout data directory (keep one set per data set)
 HELDOUT_DIR  = ${WORKDIR}/heldout

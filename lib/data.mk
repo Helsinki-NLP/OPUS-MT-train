@@ -355,8 +355,8 @@ ${LOCAL_TRAIN_TRG}: ${LOCAL_TRAIN_SRC}
 ##      of extra data that do not exist for a particular language pair
 ##      in multilingual data sets
 add-to-local-train-data: 
-	${MAKE} ${CLEAN_TRAIN_SRC} ${CLEAN_TRAIN_TRG}
 ifneq (${wildcard ${CLEAN_TRAIN_SRC}},)
+	${MAKE} ${CLEAN_TRAIN_SRC} ${CLEAN_TRAIN_TRG}
 	@if [ `zcat ${wildcard ${CLEAN_TRAIN_SRC}} | wc -l` != `zcat ${wildcard ${CLEAN_TRAIN_TRG}} | wc -l` ]; then \
 	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
 	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
@@ -403,8 +403,8 @@ endif
 ##      of extra data that do not exist for a particular language pair
 ##      in multilingual data sets
 add-to-local-train-and-heldout-data:
-	${MAKE} ${CLEAN_TRAIN_SRC} ${CLEAN_TRAIN_TRG}
 ifneq (${wildcard ${CLEAN_TRAIN_SRC}},)
+	${MAKE} ${CLEAN_TRAIN_SRC} ${CLEAN_TRAIN_TRG}
 	echo -n "* ${SRC}-${TRG}: "                    >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 	for d in ${wildcard ${CLEAN_TRAIN_SRC}}; do \
 	  l=`zcat $$d | wc -l`; \

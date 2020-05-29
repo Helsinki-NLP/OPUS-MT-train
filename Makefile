@@ -212,10 +212,10 @@ all-and-backtranslate: ${WORKDIR}/config.mk
 	      ${MAKE} -C backtranslate \
 		SRC=$$s TRG=$$t \
 		MODELHOME=${MODELDIR} \
-		MAX_SENTENCES=${shell ${TRAIN_SRC}.clean.${PRE_SRC}.gz | head -1000000 | wc -l} \
+		MAX_SENTENCES=${shell zcat ${TRAIN_SRC}.clean.${PRE_SRC}.gz | head -1000000 | wc -l} \
 		all; \
 	    fi \
-	  done
+	  done \
 	done
 
 .PHONY: all-and-backtranslate-allwikis
@@ -231,11 +231,11 @@ all-and-backtranslate-allwikis: ${WORKDIR}/config.mk
 	      ${MAKE} -C backtranslate SRC=$$s TRG=$$t all-wikitext; \
 	      ${MAKE} -C backtranslate \
 		SRC=$$s TRG=$$t \
-		MAX_SENTENCES=${shell ${TRAIN_SRC}.clean.${PRE_SRC}.gz | head -1000000 | wc -l} \
+		MAX_SENTENCES=${shell zcat ${TRAIN_SRC}.clean.${PRE_SRC}.gz | head -1000000 | wc -l} \
 		MODELHOME=${MODELDIR} \
 		translate-all-wikis; \
 	    fi \
-	  done
+	  done \
 	done
 
 .PHONY: all-and-backtranslate-allwikiparts
@@ -251,11 +251,11 @@ all-and-backtranslate-allwikiparts: ${WORKDIR}/config.mk
 	      ${MAKE} -C backtranslate SRC=$$s TRG=$$t all-wikitext; \
 	      ${MAKE} -C backtranslate \
 		SRC=$$s TRG=$$t \
-		MAX_SENTENCES=${shell ${TRAIN_SRC}.clean.${PRE_SRC}.gz | head -1000000 | wc -l} \
+		MAX_SENTENCES=${shell zcat ${TRAIN_SRC}.clean.${PRE_SRC}.gz | head -1000000 | wc -l} \
 		MODELHOME=${MODELDIR} \
 		translate-all-wikiparts; \
 	    fi \
-	  done
+	  done \
 	done
 
 ## train a model with backtranslations of wikipedia data
@@ -300,7 +300,7 @@ job1-step1:
 
 job1-step2:
 	${MAKE} SRCLANGS="${TRGLANGS}" TRGLANGS="${SRCLANGS}" \
-		MAX_SENTENCES=${shell ${TRAIN_SRC}.clean.${PRE_SRC}.gz | head -1000000 | wc -l} \
+		MAX_SENTENCES=${shell zcat ${TRAIN_SRC}.clean.${PRE_SRC}.gz | head -1000000 | wc -l} \
 		all-and-backtranslate-allwikis
 	${MAKE} SRCLANGS="${TRGLANGS}" TRGLANGS="${SRCLANGS}" \
 		HPC_CORES=1 HPC_MEM=${GPUJOB_HPC_MEM} job1-step3.submit${GPUJOB_SUBMIT}

@@ -43,3 +43,28 @@
 |-----------------------|-------|-------|
 | Tatoeba.gl.en 	| 42.4 	| 0.612 |
 
+# opus+bt-2020-05-23.zip
+
+* dataset: opus+bt
+* model: transformer-align
+* source language(s): gl
+* target language(s): en
+* model: transformer-align
+* pre-processing: normalization + SentencePiece (spm4k,spm4k)
+* download: [opus+bt-2020-05-23.zip](https://object.pouta.csc.fi/OPUS-MT-models/gl-en/opus+bt-2020-05-23.zip)
+* test set translations: [opus+bt-2020-05-23.test.txt](https://object.pouta.csc.fi/OPUS-MT-models/gl-en/opus+bt-2020-05-23.test.txt)
+* test set scores: [opus+bt-2020-05-23.eval.txt](https://object.pouta.csc.fi/OPUS-MT-models/gl-en/opus+bt-2020-05-23.eval.txt)
+
+## Training data:  opus+bt
+
+* gl-en: GNOME (3200) KDE4 (67826) OpenSubtitles (126339) QED (26362) Ubuntu (3155) 
+* gl-en: total size = 226882
+* total size (opus+bt): 226522
+
+
+## Benchmarks
+
+| testset               | BLEU  | chr-F |
+|-----------------------|-------|-------|
+| Tatoeba.gl.en 	| 44.0 	| 0.618 |
+

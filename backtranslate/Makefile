@@ -8,22 +8,22 @@ include ../lib/env.mk
 include ../lib/config.mk
 include ../lib/slurm.mk
 
-SRC = af
-TRG = en
+SRC ?= af
+TRG ?= en
 
 ## various sources are available
 ## can be general wikipedia, wikinews, wikibooks, ...
-WIKISOURCE = wiki
+WIKISOURCE ?= wiki
 
 ## split size in nr-of-lines
 ## default part to be selected = aa
-SPLIT_SIZE = 1000000
-PART = aa
+SPLIT_SIZE ?= 1000000
+PART       ?= aa
 
 ## maximum input length (number sentence piece segments)
 ## maximum number of sentences to be translated (top N lines)
-MAX_LENGTH    = 100
-MAX_SENTENCES = ${SPLIT_SIZE}
+MAX_LENGTH    ?= 100
+MAX_SENTENCES ?= ${SPLIT_SIZE}
 
 
 LANGPAIR = ${SRC}-${TRG}

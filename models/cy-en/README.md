@@ -28,3 +28,36 @@
 |-----------------------|-------|-------|
 | Tatoeba.cy.en 	| 33.0 	| 0.525 |
 
+# opus+bt-2020-05-23.zip
+
+* dataset: opus+bt
+* model: transformer-align
+* source language(s): cy
+* target language(s): en
+* model: transformer-align
+* pre-processing: normalization + SentencePiece (spm4k,spm4k)
+* download: [opus+bt-2020-05-23.zip](https://object.pouta.csc.fi/OPUS-MT-models/cy-en/opus+bt-2020-05-23.zip)
+* test set translations: [opus+bt-2020-05-23.test.txt](https://object.pouta.csc.fi/OPUS-MT-models/cy-en/opus+bt-2020-05-23.test.txt)
+* test set scores: [opus+bt-2020-05-23.eval.txt](https://object.pouta.csc.fi/OPUS-MT-models/cy-en/opus+bt-2020-05-23.eval.txt)
+
+## Training data:  opus+bt
+
+* cy-en: EUbookshop (3045) GNOME (181936) JW300 (27922) KDE4 (38347) QED (18302) Ubuntu (13697) 
+* cy-en: total size = 283249
+* total size (opus+bt): 282458
+
+
+## Validation data
+
+* cy-en: Tatoeba
+
+* devset = top 250  lines of Tatoeba.src.shuffled!
+* testset = next 430  lines of Tatoeba.src.shuffled!
+* remaining lines are added to traindata
+
+## Benchmarks
+
+| testset               | BLEU  | chr-F |
+|-----------------------|-------|-------|
+| Tatoeba.cy.en 	| 36.2 	| 0.537 |
+

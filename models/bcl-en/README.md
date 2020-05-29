@@ -43,3 +43,29 @@
 |-----------------------|-------|-------|
 | JW300.bcl.en 	| 56.1 	| 0.697 |
 
+# opus+bt-2020-05-23.zip
+
+* dataset: opus+bt
+* model: transformer-align
+* source language(s): bcl
+* target language(s): en
+* model: transformer-align
+* pre-processing: normalization + SentencePiece (spm4k,spm4k)
+* download: [opus+bt-2020-05-23.zip](https://object.pouta.csc.fi/OPUS-MT-models/bcl-en/opus+bt-2020-05-23.zip)
+* test set translations: [opus+bt-2020-05-23.test.txt](https://object.pouta.csc.fi/OPUS-MT-models/bcl-en/opus+bt-2020-05-23.test.txt)
+* test set scores: [opus+bt-2020-05-23.eval.txt](https://object.pouta.csc.fi/OPUS-MT-models/bcl-en/opus+bt-2020-05-23.eval.txt)
+
+## Training data:  opus+bt
+
+* bcl-en: wikimedia (1106) 
+* bcl-en: total size = 1106
+* unused dev/test data is added to training data
+* total size (opus+bt): 458304
+
+
+## Benchmarks
+
+| testset               | BLEU  | chr-F |
+|-----------------------|-------|-------|
+| JW300.bcl.en 	| 57.6 	| 0.712 |
+

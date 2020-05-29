@@ -28,3 +28,37 @@
 |-----------------------|-------|-------|
 | JW300.efi.en 	| 35.4 	| 0.510 |
 
+# opus+bt-2020-05-23.zip
+
+* dataset: opus+bt
+* model: transformer-align
+* source language(s): efi
+* target language(s): en
+* model: transformer-align
+* pre-processing: normalization + SentencePiece (spm4k,spm4k)
+* download: [opus+bt-2020-05-23.zip](https://object.pouta.csc.fi/OPUS-MT-models/efi-en/opus+bt-2020-05-23.zip)
+* test set translations: [opus+bt-2020-05-23.test.txt](https://object.pouta.csc.fi/OPUS-MT-models/efi-en/opus+bt-2020-05-23.test.txt)
+* test set scores: [opus+bt-2020-05-23.eval.txt](https://object.pouta.csc.fi/OPUS-MT-models/efi-en/opus+bt-2020-05-23.eval.txt)
+
+## Training data:  opus+bt
+
+* efi-en: QED (186) 
+* efi-en: total size = 186
+* unused dev/test data is added to training data
+* total size (opus+bt): 326571
+
+
+## Validation data
+
+* efi-en: JW300
+
+* devset = top 2500  lines of JW300.src.shuffled!
+* testset = next 2500  lines of JW300.src.shuffled!
+* remaining lines are added to traindata
+
+## Benchmarks
+
+| testset               | BLEU  | chr-F |
+|-----------------------|-------|-------|
+| JW300.efi.en 	| 36.7 	| 0.523 |
+

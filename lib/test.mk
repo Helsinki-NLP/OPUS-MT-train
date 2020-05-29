@@ -29,7 +29,7 @@ eval-heldout:
 %-testsets-langpair: ${TESTSETS_PRESRC} ${TESTSETS_PRETRG}
 	@echo "testsets: ${TESTSET_DIR}/*.${SRCEXT}.gz"
 	for t in ${TESTSETS}; do \
-	  ${MAKE} TESTSET=$$t ${@:-testsets-langpair=}; \
+	  ${MAKE} TESTSET=$$t TESTSET_NAME=$$t ${@:-testsets-langpair=}; \
 	done
 
 

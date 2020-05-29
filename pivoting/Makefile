@@ -32,6 +32,10 @@ include ../lib/slurm.mk
 
 include lib/models.mk
 
+## max number of sentences to translate
+## TODO: should also support splitting and translating subsets in parallel
+MAX_PIVOT_SENTENCES ?= 1000000
+
 
 ORIGINAL_DATADIR     ?= ${PWD}/../work/data
 
@@ -219,6 +223,7 @@ ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
 	${MAKE} ${DECODER}
 	zcat $< |\
+	head -${MAX_PIVOT_SENTENCES} |\
 	${OUTPUT_DIR}/${MODELNAME}/preprocess.sh ${PREPROCESS_ARGS} |\
 	gzip -c > $@
 endif
