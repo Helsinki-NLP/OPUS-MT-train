@@ -4,6 +4,11 @@ TATOEBA_DATA   = https://object.pouta.csc.fi/Tatoeba-Challenge
 TATOEBA_RAWGIT = https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
 TATOEBA_WORK   = ${PWD}/work-tatoeba
 
+tatoeba-job:
+	${MAKE} tatoeba-prepare
+	${MAKE} all-job-tatoeba
+	${MAKE} reverse-data-tatoeba
+	${MAKE} SRCLANGS="${TRGLANGS}" TRGLANGS="${SRCLANGS}" all-job-tatoeba
 
 tatoeba-prepare:
 	${MAKE} local-config-tatoeba
@@ -21,11 +26,9 @@ tatoeba-%: tatoeba-%.md
 	for l in `grep '\[' $< | cut -f2 -d '[' | cut -f1 -d ']'`; do \
 	  s=`echo $$l | cut -f1 -d '-'`; \
 	  t=`echo $$l | cut -f2 -d '-'`; \
-	  ${MAKE} SRCLANGS=$$s TRGLANGS=$$t tatoeba-prepare; \
-	  ${MAKE} SRCLANGS=$$s TRGLANGS=$$t all-job-tatoeba; \
-	  ${MAKE} SRCLANGS=$$s TRGLANGS=$$t reverse-data-tatoeba; \
-	  ${MAKE} SRCLANGS=$$t TRGLANGS=$$s all-job-tatoeba; \
+	  ${MAKE} SRCLANGS=$$s TRGLANGS=$$t tatoeba-job; \
 	done
+
 
 ## get the markdown page for a specific subset
 tatoeba-%.md:
@@ -45,6 +48,7 @@ tatoeba-%.md:
 		TESTSIZE=10000 \
 		DEVMINSIZE=200 \
 		WORKHOME=${TATOEBA_WORK} \
+		EMAIL= \
 	${@:-tatoeba=}
 
 
@@ -74,7 +78,7 @@ tatoeba-%.md:
 	  zcat $@.d/data/${LANGPAIR}/train.src.gz | tail -n +1001 | gzip -c > ${dir $@}Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.gz; \
 	  zcat $@.d/data/${LANGPAIR}/train.trg.gz | tail -n +1001 | gzip -c > ${dir $@}Tatoeba-train.${LANGPAIR}.clean.${TRGEXT}.gz; \
 	  zcat $@.d/data/${LANGPAIR}/train.src.gz | head -1000 | gzip -c > ${dir $@}Tatoeba-dev.${LANGPAIR}.clean.${SRCEXT}.gz; \
-	  zcat $@.d/data/${LANGPAIR}/train.trg.gz | head -1000 | gzip -c > ${dir $@}Tatoeba-dev.${LANGPAIR}.clean.${SRCEXT}.gz; \
+	  zcat $@.d/data/${LANGPAIR}/train.trg.gz | head -1000 | gzip -c > ${dir $@}Tatoeba-dev.${LANGPAIR}.clean.${TRGEXT}.gz; \
 	fi
 	rm -f $@.d/data/${LANGPAIR}/*
 	rmdir $@.d/data/${LANGPAIR}
