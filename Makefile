@@ -181,6 +181,7 @@ include lib/models/wikimatrix.mk
 include lib/models/doclevel.mk
 include lib/models/simplify.mk
 
+include lib/models/tatoeba.mk
 
 
 .PHONY: all

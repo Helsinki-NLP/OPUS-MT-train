@@ -354,6 +354,12 @@ endif
 
 local-config: ${WORKDIR}/config.mk
 
+SMALLEST_TRAINSIZE = 10000
+SMALL_TRAINSIZE    = 100000
+MEDIUM_TRAINSIZE   = 500000
+LARGE_TRAINSIZE    = 1000000
+LARGEST_TRAINSIZE  = 10000000
+
 ${WORKDIR}/config.mk:
 	mkdir -p ${dir $@}
 	if [ -e ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz ]; then \
@@ -363,23 +369,23 @@ ${WORKDIR}/config.mk:
 	  s=`head -10000001 ${LOCAL_TRAIN_SRC} | wc -l`; \
 	  rm -f ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG}; \
 	fi; \
-	if [ $$s -gt 10000000 ]; then \
+	if [ $$s -gt ${LARGEST_TRAINSIZE} ]; then \
 	  echo "# ${LANGPAIRSTR} training data bigger than 10 million" > $@; \
 	  echo "GPUJOB_HPC_MEM = 8g"       >> $@; \
 	  echo "GPUJOB_SUBMIT  = -multigpu" >> $@; \
-	elif [ $$s -gt 1000000 ]; then \
+	elif [ $$s -gt ${LARGE_TRAINSIZE} ]; then \
 	  echo "# ${LANGPAIRSTR} training data bigger than 1 million" > $@; \
 	  echo "GPUJOB_HPC_MEM = 8g"       >> $@; \
 	  echo "GPUJOB_SUBMIT  = "         >> $@; \
 	  echo "MARIAN_VALID_FREQ = 2500"  >> $@; \
-	elif [ $$s -gt 500000 ]; then \
+	elif [ $$s -gt ${MEDIUM_TRAINSIZE} ]; then \
 	  echo "# ${LANGPAIRSTR} training data bigger than 500k" > $@; \
 	  echo "GPUJOB_HPC_MEM = 4g"       >> $@; \
 	  echo "GPUJOB_SUBMIT  = "         >> $@; \
 	  echo "MARIAN_VALID_FREQ = 2500"  >> $@; \
 	  echo "MARIAN_WORKSPACE  = 10000" >> $@; \
 	  echo "BPESIZE = 12000"           >> $@; \
-	elif [ $$s -gt 100000 ]; then \
+	elif [ $$s -gt ${SMALL_TRAINSIZE} ]; then \
 	  echo "# ${LANGPAIRSTR} training data bigger than 100k" > $@; \
 	  echo "GPUJOB_HPC_MEM = 4g"       >> $@; \
 	  echo "GPUJOB_SUBMIT  = "         >> $@; \
@@ -391,7 +397,7 @@ ${WORKDIR}/config.mk:
 	  echo "DEVSIZE     = 1000"        >> $@; \
 	  echo "TESTSIZE    = 1000"        >> $@; \
 	  echo "DEVMINSIZE  = 250"         >> $@; \
-	elif [ $$s -gt 10000 ]; then \
+	elif [ $$s -gt ${SMALLEST_TRAINSIZE} ]; then \
 	  echo "# ${LANGPAIRSTR} training data less than 100k" > $@; \
 	  echo "GPUJOB_HPC_MEM = 4g"       >> $@; \
 	  echo "GPUJOB_SUBMIT  = "         >> $@; \

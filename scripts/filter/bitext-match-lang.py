@@ -3,6 +3,7 @@
 
 
 import pycld2 as cld2
+from iso639 import languages
 import sys
 import argparse
 
@@ -63,6 +64,23 @@ if args.checklang:
         else:
             print(args.trglang + " is not supported")
     quit()
+
+
+if not supported_language(args.srclang):
+    if len(args.srclang) == 3:
+        # print(args.srclang + " is 3 characters long")
+        langid = languages.get(part3=args.srclang).part1
+        if langid:
+            args.srclang = langid
+            # print("set to " + args.srclang)
+
+if not supported_language(args.trglang):
+    if len(args.trglang) == 3:
+        # print(args.trglang + " is 3 characters long")
+        langid = languages.get(part3=args.trglang).part1
+        if langid:
+            args.trglang = langid
+            # print("set to " + args.trglang)
 
 
 if not supported_language(args.srclang):

@@ -557,6 +557,7 @@ ${DEV_TRG}: ${DEV_SRC}
 
 
 add-to-dev-data: ${CLEAN_DEV_SRC} ${CLEAN_DEV_TRG}
+	mkdir -p ${dir ${DEV_SRC}}
 ifneq (${wildcard ${CLEAN_DEV_SRC}},)
 	echo -n "* ${LANGPAIR}: ${DEVSET}, " >> ${dir ${DEV_SRC}}README.md
 	zcat ${CLEAN_DEV_SRC} | wc -l        >> ${dir ${DEV_SRC}}README.md
