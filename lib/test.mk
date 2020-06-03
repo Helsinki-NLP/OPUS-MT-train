@@ -23,9 +23,6 @@ eval-testsets:
 	  done \
 	done
 
-eval-heldout:
-	${MAKE} TESTSET_HOME=${HELDOUT_DIR} eval-testsets
-
 %-testsets-langpair: ${TESTSETS_PRESRC} ${TESTSETS_PRETRG}
 	@echo "testsets: ${TESTSET_DIR}/*.${SRCEXT}.gz"
 	for t in ${TESTSETS}; do \

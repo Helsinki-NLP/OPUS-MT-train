@@ -8,6 +8,23 @@ This package includes scripts for training NMT models using MarianNMT and OPUS d
 The subdirectory [models](https://github.com/Helsinki-NLP/Opus-MT-train/tree/master/models) contains information about pre-trained models that can be downloaded from this project. They are distribted with a [CC-BY 4.0 license](https://creativecommons.org/licenses/by/4.0/) license.
 
 
+## Prerequisites
+
+Running the scripts does not work out of the box because many settings are adjusted for the local installations on our IT infrastructure at [CSC](https://docs.csc.fi/). Here is an incomplete list of prerequisites needed for running a process. It is on our TODO list to make the training procedures and setting more transparent and self-contained but this will take time ...
+
+* [marian-nmt](https://github.com/marian-nmt/): The essential NMT toolkit we use in OPUS-MT; make sure you compile a version with GPU and SentencePiece support!
+* [Moses scripts](https://github.com/moses-smt/mosesdecoder): various pre- and post-processing scripts from the Moses SMT toolkit (also bundled here: [marian-nmt](https://github.com/marian-nmt/moses-scripts))
+* [OpusTools](https://pypi.org/project/opustools): library and tools for accessing OPUS data
+* [OpusTools-perl](https://github.com/Helsinki-NLP/OpusTools-perl): additional tools for accessing OPUS data
+* [iso-639](https://pypi.org/project/iso-639/): a Python package for ISO 639 language codes
+
+Optional software:
+
+* [terashuf](https://github.com/alexandres/terashuf): efficiently shuffle massive data sets
+* [pigz](https://zlib.net/pigz/): multithreaded gzip
+
+
+
 ## Structure of the training scripts
 
 Essential files for making new models:

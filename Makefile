@@ -31,7 +31,6 @@
 #
 # DEVSIZE ................. nr of sentences in validation data
 # TESTSIZE ................ nr of sentences in test data
-# HELDOUTSIZE ............. nr of sentence in heldout data from each train corpus
 #
 # TESTSMALLSIZE ........... reduced size for low-resource settings
 # DEVSMALLSIZE ............ reduced size for low-resource settings
@@ -344,7 +343,6 @@ endif
 
 
 traindata: 	${TRAIN_SRC}.clean.${PRE_SRC}.gz ${TRAIN_TRG}.clean.${PRE_TRG}.gz
-tunedata: 	${TUNE_SRC}.${PRE_SRC} ${TUNE_TRG}.${PRE_TRG}
 testdata:	${TEST_SRC}.${PRE_SRC} ${TEST_TRG}
 devdata:	${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG}
 devdata-raw:	${DEV_SRC} ${DEV_TRG}

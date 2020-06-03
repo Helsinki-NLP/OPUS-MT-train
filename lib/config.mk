@@ -7,11 +7,28 @@
 # SRCLANGS = da no sv
 # TRGLANGS = fi
 
-SRCLANGS = sv
-TRGLANGS = fi
+## if LANGS is set with more than one language
+##  --> assume multilingual model with the same languages on both sides
+##      unless SRCLANGS and TRGLANGS are set to something else
+ifeq (${words ${LANGS}},1)
+  SRCLANGS ?= ${LANGS}
+  TRGLANGS ?= ${LANGS}
+endif
 
+## set to SRC and TRG if necessary
+ifndef SRCLANGS
+  SRCLANGS := ${SRC}
+  TRGLANGS := ${TRG}
+endif
+
+## Swedish - Finnish as default if nothing is set
+SRCLANGS ?= sv
+TRGLANGS ?= fi
+
+## set SRC and TRG unless they are specified already
 SRC ?= ${firstword ${SRCLANGS}}
 TRG ?= ${lastword ${TRGLANGS}}
+
 
 
 # sorted languages and langpair used to match resources in OPUS
@@ -30,6 +47,7 @@ LANGSTR ?= ${subst ${SPACE},+,$(LANGS)}
 
 
 ## for same language pairs: add numeric extension
+## (this is neccessary to keep source and target files separate)
 ifeq (${SRC},$(TRG))
   SRCEXT = ${SRC}1
   TRGEXT = ${SRC}2
@@ -37,6 +55,7 @@ else
   SRCEXT = ${SRC}
   TRGEXT = ${TRG}
 endif
+
 
 ## set additional argument options for opus_read (if it is used)
 ## e.g. OPUSREAD_ARGS = -a certainty -tr 0.3
@@ -83,12 +102,6 @@ DEVSMALLSIZE  = 1000
 TESTSMALLSIZE = 1000
 DEVMINSIZE    = 250
 
-## size of heldout data for each sub-corpus
-## (only if there is at least twice as many examples in the corpus)
-## NEW: set to 0
-
-# HELDOUTSIZE = ${DEVSIZE}
-HELDOUTSIZE = 0
 
 ##----------------------------------------------------------------------------
 ## train/dev/test data
@@ -99,6 +112,7 @@ HELDOUTSIZE = 0
 ## - check that there are at least 2 x DEVMINSIZE examples
 ## TODO: this does not work well for multilingual models!
 ## TODO: find a better solution than looking into *.info files (use OPUS API?)
+## ---> query for corpora bigger than a certain size and look for a suitable test/dev corpus
 
 ifneq ($(wildcard ${OPUSHOME}/Tatoeba/latest/moses/${LANGPAIR}.txt.zip),)
 ifeq ($(shell if (( `head -1 ${OPUSHOME}/Tatoeba/latest/info/${LANGPAIR}.txt.info` \
@@ -260,9 +274,6 @@ TEST_SRC  ?= ${WORKDIR}/test/${TESTSET_NAME}.src
 TEST_TRG  ?= ${WORKDIR}/test/${TESTSET_NAME}.trg
 
 
-## heldout data directory (keep one set per data set)
-HELDOUT_DIR  = ${WORKDIR}/heldout
-
 MODEL_SUBDIR =
 MODEL        = ${MODEL_SUBDIR}${DATASET}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
 MODELTYPE    = transformer-align
@@ -392,7 +403,6 @@ ${WORKDIR}/config.mk:
 	  echo "MARIAN_VALID_FREQ = 1000"  >> $@; \
 	  echo "MARIAN_WORKSPACE  = 5000"  >> $@; \
 	  echo "MARIAN_VALID_MINI_BATCH = 8" >> $@; \
-	  echo "HELDOUTSIZE = 0"           >> $@; \
 	  echo "BPESIZE     = 4000"        >> $@; \
 	  echo "DEVSIZE     = 1000"        >> $@; \
 	  echo "TESTSIZE    = 1000"        >> $@; \
@@ -405,7 +415,6 @@ ${WORKDIR}/config.mk:
 	  echo "MARIAN_WORKSPACE  = 3500"  >> $@; \
 	  echo "MARIAN_DROPOUT    = 0.5"   >> $@; \
 	  echo "MARIAN_VALID_MINI_BATCH = 4" >> $@; \
-	  echo "HELDOUTSIZE = 0"           >> $@; \
 	  echo "BPESIZE     = 1000"        >> $@; \
 	  echo "DEVSIZE     = 500"         >> $@; \
 	  echo "TESTSIZE    = 1000"        >> $@; \

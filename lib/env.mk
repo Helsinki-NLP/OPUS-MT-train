@@ -131,3 +131,5 @@ SHUFFLE = ${shell which terashuf 2>/dev/null}
 ifeq (${SHUFFLE},)
   SHUFFLE = ${SORT} --random-sort
 endif
+GZIP := ${shell which pigz 2>/dev/null}
+GZIP ?= gzip

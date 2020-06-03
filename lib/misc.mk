@@ -66,6 +66,14 @@ fix-missing-val:
 ## (useful if using as starting point for another modeltyp
 ##  for example, continue training without guided alignment)
 
+ifndef OLDMODELTYPE
+  OLDMODELTYPE=transformer-align
+endif
+
+ifndef NEWMODELTYPE
+  NEWMODELTYPE=transformer
+endif
+
 OLDMODEL_BASE  = ${WORKDIR}/${MODEL}.${OLDMODELTYPE}.model${NR}
 NEWMODEL_BASE  = ${WORKDIR}/${MODEL}.${NEWMODELTYPE}.model${NR}
 

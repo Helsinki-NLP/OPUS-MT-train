@@ -37,13 +37,13 @@ def is_accepted(line,accept,reject):
             if isReliable:
                 return True
         if args.verbose:
-            print("language mismatch: " + details[0][1] + " != " + accept + ", " + line, file=sys.stderr)
+            print("language mismatch: " + details[0][1] + " != " + accept + ", " + line, file=sys.stderr, flush=True)
     else:
         isReliable, textBytesFound, details = cld2.detect(line, bestEffort=True)
         if details[0][1] != reject:
             return True
         if args.verbose:
-            print("reject because detected: " + details[0][1] + ", " + line, file=sys.stderr)
+            print("reject because detected: " + details[0][1] + ", " + line, file=sys.stderr, flush=True)
 
 
 
@@ -68,23 +68,21 @@ if args.checklang:
 
 if not supported_language(args.srclang):
     if len(args.srclang) == 3:
-        # print(args.srclang + " is 3 characters long")
         langid = languages.get(part3=args.srclang).part1
         if langid:
             args.srclang = langid
-            # print("set to " + args.srclang)
+            print("set srclang to " + args.srclang, file=sys.stderr, flush=True)
 
 if not supported_language(args.trglang):
     if len(args.trglang) == 3:
-        # print(args.trglang + " is 3 characters long")
         langid = languages.get(part3=args.trglang).part1
         if langid:
             args.trglang = langid
-            # print("set to " + args.trglang)
+            print("set trglang to " + args.trglang, file=sys.stderr, flush=True)
 
 
 if not supported_language(args.srclang):
-    # print(args.srclang + " is not supported")
+    print(args.srclang + " is not supported (reject 'en' instead)", file=sys.stderr, flush=True)
     srcreject = 'en'
     srcaccept = ''
 else:
@@ -92,7 +90,7 @@ else:
     srcreject = ''
 
 if not supported_language(args.trglang):
-    # print(args.trglang + " is not supported")
+    print(args.trglang + " is not supported (reject 'en' instead)", file=sys.stderr, flush=True)
     trgreject = 'en'
     trgaccept = ''
 else:
@@ -102,6 +100,7 @@ else:
 
 
 for line in sys.stdin:
+    # line = ''.join(x for x in line if x.isprintable())
     text = line.rstrip().split("\t")
     if len(text) > 1:
         if text[0] and text[1]:
