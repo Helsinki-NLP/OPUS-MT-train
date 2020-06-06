@@ -133,3 +133,4 @@ ifeq (${SHUFFLE},)
 endif
 GZIP := ${shell which pigz 2>/dev/null}
 GZIP ?= gzip
+ZCAT = ${GZIP} -cd <

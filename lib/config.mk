@@ -29,6 +29,19 @@ TRGLANGS ?= fi
 SRC ?= ${firstword ${SRCLANGS}}
 TRG ?= ${lastword ${TRGLANGS}}
 
+## set SHUFFLE_DATA if you want to shuffle data for 
+## each language pair to be added to the training data
+## --> especially useful in connection with FIT_DATA_SIZE
+##  
+# SHUFFLE_DATA = 1
+
+## set FIT_DATA_SIZE to a specific value to fit the training data
+## to a certain number of lines for each language pair in the collection
+## --> especially useful for multilingual models for balancing the 
+##     the size for each language pair
+## the script does both, over- and undersampling
+##
+# FIT_DATA_SIZE = 100000
 
 
 # sorted languages and langpair used to match resources in OPUS
@@ -54,6 +67,12 @@ ifeq (${SRC},$(TRG))
 else
   SRCEXT = ${SRC}
   TRGEXT = ${TRG}
+endif
+
+## set a flag to use target language labels
+## in multi-target models
+ifneq (${words ${TRGLANGS}},1)
+  USE_TARGET_LABELS = 1
 endif
 
 
@@ -374,10 +393,17 @@ LARGEST_TRAINSIZE  = 10000000
 ${WORKDIR}/config.mk:
 	mkdir -p ${dir $@}
 	if [ -e ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz ]; then \
+	  ${MAKE} ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.charfreq \
+		  ${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.charfreq; \
 	  s=`zcat ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz | head -10000001 | wc -l`; \
+	  S=`cat ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.charfreq | wc -l`; \
+	  T=`cat ${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.charfreq | wc -l`; \
 	else \
 	  ${MAKE} ${LOCAL_TRAIN_SRC}; \
+	  ${MAKE} ${LOCAL_TRAIN_SRC}.charfreq ${LOCAL_TRAIN_TRG}.charfreq; \
 	  s=`head -10000001 ${LOCAL_TRAIN_SRC} | wc -l`; \
+	  S=`cat ${LOCAL_TRAIN_SRC}.charfreq | wc -l`; \
+	  T=`cat ${LOCAL_TRAIN_TRG}.charfreq | wc -l`; \
 	  rm -f ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG}; \
 	fi; \
 	if [ $$s -gt ${LARGEST_TRAINSIZE} ]; then \
@@ -421,5 +447,14 @@ ${WORKDIR}/config.mk:
 	  echo "DEVMINSIZE  = 100"         >> $@; \
 	else \
 	    echo "${LANGPAIRSTR} too small"; \
+	fi; \
+	if [ -e $@ ]; then \
+	  if [ $$S -gt 1000 ]; then \
+	    echo "SRCBPESIZE  = 32000"     >> $@; \
+	  fi; \
+	  if [ $$T -gt 1000 ]; then \
+	    echo "TRGBPESIZE  = 32000"     >> $@; \
+	  fi; \
 	fi
+
 

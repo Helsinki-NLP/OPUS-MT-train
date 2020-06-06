@@ -15,13 +15,21 @@ make SRCLANGS=afr TRGLANGS=epo tatoeba-train
 make SRCLANGS=afr TRGLANGS=epo tatoeba-eval
 ```
 
-## Start job for a single language pair in both directions
+
+## Start job for a single language pair
 
 For example, for Afrikaans-Esperanto:
 
 ```
 make SRCLANGS=afr TRGLANGS=epo tatoeba-job
 ```
+
+You can also initiate jobs for transation models in both directions:
+
+```
+make SRCLANGS=afr TRGLANGS=epo tatoeba-bidirectional-job
+```
+
 
 
 ## Start jobs for all pairs in an entire subset

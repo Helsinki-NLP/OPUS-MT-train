@@ -14,6 +14,8 @@ parser.add_argument('-t','--trglang','--target-language', type=str, default='de'
                    help='accepted language')
 parser.add_argument('-l','--supported','--supported-languages', action='store_true',
                    help='list all supported languages')
+parser.add_argument('-f','--print-flag','--print-accept-flag', action='store_true',
+                   help='print only a flag about acceptance')
 parser.add_argument('-c','--checklang','--check-language-support', action='store_true',
                    help='show whether languages are supported')
 parser.add_argument('-v','--verbose', action='store_true',
@@ -68,15 +70,21 @@ if args.checklang:
 
 if not supported_language(args.srclang):
     if len(args.srclang) == 3:
-        langid = languages.get(part3=args.srclang).part1
-        if langid:
+        try:
+            langid = languages.get(part3=args.srclang).part1
+        except:
+            print("language code not found: " + args.srclang, file=sys.stderr, flush=True)
+        else:
             args.srclang = langid
             print("set srclang to " + args.srclang, file=sys.stderr, flush=True)
 
 if not supported_language(args.trglang):
     if len(args.trglang) == 3:
-        langid = languages.get(part3=args.trglang).part1
-        if langid:
+        try:
+            langid = languages.get(part3=args.trglang).part1
+        except:
+            print("language code not found: " + args.trglang, file=sys.stderr, flush=True)
+        else:
             args.trglang = langid
             print("set trglang to " + args.trglang, file=sys.stderr, flush=True)
 
@@ -102,9 +110,13 @@ else:
 for line in sys.stdin:
     # line = ''.join(x for x in line if x.isprintable())
     text = line.rstrip().split("\t")
+    accept = '0'
     if len(text) > 1:
         if text[0] and text[1]:
             if is_accepted(text[0],srcaccept,srcreject):
                 if is_accepted(text[1],trgaccept,trgreject):
-                    print(text[0] + "\t" + text[1])
-
+                    accept = '1'
+                    if not args.print_flag:
+                        print(text[0] + "\t" + text[1])
+    if args.print_flag:
+        print(accept)

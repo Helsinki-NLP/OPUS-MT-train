@@ -32,12 +32,12 @@ BPETRGMODEL = ${WORKDIR}/train/${BPEMODELNAME}.trg.bpe${TRGBPESIZE:000=}k-model
 ${BPESRCMODEL}: 
 	${MAKE} ${LOCAL_TRAIN_SRC}
 	mkdir -p ${dir $@}
-ifeq ($(TRGLANGS),${firstword ${TRGLANGS}})
-	python3 ${SNMTPATH}/learn_bpe.py -s $(SRCBPESIZE) < ${LOCAL_TRAIN_SRC} > $@
-else
+ifeq (${USE_TARGET_LABELS},1)
 	cut -f2- -d ' ' ${LOCAL_TRAIN_SRC} > ${LOCAL_TRAIN_SRC}.text
 	python3 ${SNMTPATH}/learn_bpe.py -s $(SRCBPESIZE) < ${LOCAL_TRAIN_SRC}.text > $@
 	rm -f ${LOCAL_TRAIN_SRC}.text
+else
+	python3 ${SNMTPATH}/learn_bpe.py -s $(SRCBPESIZE) < ${LOCAL_TRAIN_SRC} > $@
 endif
 
 
@@ -50,15 +50,16 @@ ${BPETRGMODEL}:
 	python3 ${SNMTPATH}/learn_bpe.py -s $(TRGBPESIZE) < ${LOCAL_TRAIN_TRG} > $@
 
 
+# 
 %.src.bpe${SRCBPESIZE:000=}k: %.src ${BPESRCMODEL}
-ifeq ($(TRGLANGS),${firstword ${TRGLANGS}})
-	python3 ${SNMTPATH}/apply_bpe.py -c $(word 2,$^) < $< > $@
-else
+ifeq (${USE_TARGET_LABELS},1)
 	cut -f1 -d ' ' $< > $<.labels
 	cut -f2- -d ' ' $< > $<.txt
 	python3 ${SNMTPATH}/apply_bpe.py -c $(word 2,$^) < $<.txt > $@.txt
 	paste -d ' ' $<.labels $@.txt > $@
 	rm -f $<.labels $<.txt $@.txt
+else
+	python3 ${SNMTPATH}/apply_bpe.py -c $(word 2,$^) < $< > $@
 endif
 
 %.trg.bpe${TRGBPESIZE:000=}k: %.trg ${BPETRGMODEL}

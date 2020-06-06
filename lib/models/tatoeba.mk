@@ -12,9 +12,11 @@
 #   make SRCLANGS=afr TRGLANGS=epo tatoeba-eval
 #
 #
-# start job for a single language pair in both directions, for example:
+# start job for a single language pair in one direction or
+# in both directions, for example:
 #
 #   make SRCLANGS=afr TRGLANGS=epo tatoeba-job
+#   make SRCLANGS=afr TRGLANGS=epo tatoeba-bidirectional-job
 #
 #
 # start jobs for all pairs in an entire subset:
@@ -49,12 +51,18 @@ print-langs:
 tatoeba-job:
 	${MAKE} tatoeba-prepare
 	${MAKE} all-job-tatoeba
+
+tatoeba-bidirectional-job:
+	${MAKE} tatoeba-prepare
+	${MAKE} all-job-tatoeba
 ifneq (${SRCLANGS},${TRGLANGS})
 	${MAKE} reverse-data-tatoeba
+	${MAKE} SRCLANGS="${TRGLANGS}" TRGLANGS="${SRCLANGS}" tatoeba-prepare
 	${MAKE} SRCLANGS="${TRGLANGS}" TRGLANGS="${SRCLANGS}" all-job-tatoeba
 endif
 
 tatoeba-prepare:
+	${MAKE} clean-data-tatoeba
 	${MAKE} local-config-tatoeba
 	${MAKE} data-tatoeba
 
@@ -70,7 +78,7 @@ tatoeba-subset-%: tatoeba-%.md
 	for l in `grep '\[' $< | cut -f2 -d '[' | cut -f1 -d ']'`; do \
 	  s=`echo $$l | cut -f1 -d '-'`; \
 	  t=`echo $$l | cut -f2 -d '-'`; \
-	  ${MAKE} SRCLANGS=$$s TRGLANGS=$$t tatoeba-job; \
+	  ${MAKE} SRCLANGS=$$s TRGLANGS=$$t tatoeba-bidirectional-job; \
 	done
 
 ## set FIT_DATA_SIZE for under/over-sampling of data!
@@ -103,11 +111,16 @@ tatoeba-%.md:
 
 
 
+tttt:
+	echo ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels
+	echo ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIRSTR}.clean.${TRGEXT}.labels
+
 
 
 ## generic target for tatoeba challenge jobs
-%-tatoeba: ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.gz
-	echo $<
+# %-tatoeba: ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.gz
+%-tatoeba: 	${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels \
+		${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIRSTR}.clean.${TRGEXT}.labels
 	${MAKE} TRAINSET=Tatoeba-train \
 		DEVSET=Tatoeba-dev \
 		TESTSET=Tatoeba-test \
@@ -119,8 +132,47 @@ tatoeba-%.md:
 		TESTSIZE=10000 \
 		DEVMINSIZE=200 \
 		WORKHOME=${TATOEBA_WORK} \
+		SRCLANGS="${shell cat $(word 1,$^)}" \
+		TRGLANGS="${shell cat $(word 2,$^)}" \
+		LANGPAIRSTR=${LANGPAIRSTR} \
 		EMAIL= \
 	${@:-tatoeba=}
+
+
+${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels:
+	for s in ${SRCLANGS}; do \
+	  for t in ${TRGLANGS}; do \
+	    if [ "$$s" \< "$$t" ]; then \
+	      ${MAKE} SRCLANGS=$$s TRGLANGS=$$t \
+		${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.gz; \
+	    fi \
+	  done \
+	done
+	if [ ! -e $@ ]; then \
+	  for s in ${SRCLANGS}; do \
+	    for t in ${TRGLANGS}; do \
+	      if [ -e ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.labels ]; then \
+		cat ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.labels \
+		>> $@; \
+	      fi \
+	    done \
+	  done \
+	fi
+	if [ ! -e $(@:.${SRCEXT}.labels=.${TRGEXT}.labels) ]; then \
+	  for s in ${SRCLANGS}; do \
+	    for t in ${TRGLANGS}; do \
+	      if [ -e ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIR}.clean.${TRGEXT}.labels ]; then \
+		cat ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIR}.clean.${TRGEXT}.labels \
+		>> $(@:.${SRCEXT}.labels=.${TRGEXT}.labels); \
+	      fi \
+	    done \
+	  done \
+	fi
+
+%.${LANGPAIRSTR}.clean.${SRCEXT}.labels: %.${LANGPAIRSTR}.clean.${SRCEXT}.labels
+	echo "done"
+
+
 
 
 
@@ -133,46 +185,101 @@ tatoeba-%.md:
 	${TATOEBA_WORK}/data/${PRE}/Tatoeba-test.${LANGPAIR}.clean.${TRGEXT}.gz
 
 
-BASIC_FILTERS = | perl -CS -pe 'tr[\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}][]cd;' \
-		| perl -CS -pe 's/\&\s*\#\s*160\s*\;/ /g' \
-		| $(TOKENIZER)/remove-non-printing-char.perl \
-		| $(TOKENIZER)/deescape-special-chars.perl
+## modify language IDs in training data to adjust them to test sets
+## --> fix codes for chinese
+## --> take away regional codes
+## --> take away script extension that may come with some codes
+FIXLANGIDS = 	| sed 's/zho\(\)_HK/yue\1/;s/zho\(\)_CN/cmn\1/;s/zho\(\)_TW/cmn\1/;' \
+		| sed 's/\_[A-Z][A-Z]//' \
+		| sed 's/\-[a-z]*//'
 
-## TODO: should we add $(TOKENIZER)/replace-unicode-punctuation.perl ?
-## TODO: add this? sed 's/_/ /g'
-## this sed line from https://github.com/aboSamoor/polyglot/issues/71 does not seem to work
-#		| sed 's/[\00\01\02\03\04\05\06\07\08\0b\0e\0f\10\11\12\13\14\15\16\17\18\19\1a\1b\1c\1d\1e\1f\7f\80\81\82\83\84\85\86\87\88\89\8a\8b\8c\8d\8e\8f\90\91\92\93\94\95\96\97\98\99\9a\9b\9c\9d\9e\9f]//g'
-
-
+## convert Tatoeba Challenge data into the format we need
+## - move the data into the right location with the suitable name
+## - create devset if not given (part of training data)
+## - divide into individual language pairs 
+##   (if there is more than one language pair in the collection)
+## 
 ## TODO: should we do some filtering like bitext-match, OPUS-filter ...
 %/Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.gz:
 	mkdir -p $@.d
 	wget -q -O $@.d/train.tar ${TATOEBA_DATA}/${LANGPAIR}.tar
 	tar -C $@.d -xf $@.d/train.tar
-	${GZIP} -c < $@.d/data/${LANGPAIR}/test.src > ${dir $@}Tatoeba-test.${LANGPAIR}.clean.${SRCEXT}.gz
-	${GZIP} -c < $@.d/data/${LANGPAIR}/test.trg > ${dir $@}Tatoeba-test.${LANGPAIR}.clean.${TRGEXT}.gz
-	${GZIP} -cd < $@.d/data/${LANGPAIR}/train.src.gz ${BASIC_FILTERS} > $@.1
-	${GZIP} -cd < $@.d/data/${LANGPAIR}/train.trg.gz ${BASIC_FILTERS} > $@.2
-	paste $@.1 $@.2 | scripts/filter/bitext-match-lang.py -s ${SRC} -t ${TRG} > $@.bitext
-	rm -f $@.1 $@.2
+	mv $@.d/data/${LANGPAIR}/test.src ${dir $@}Tatoeba-test.${LANGPAIR}.clean.${SRCEXT}
+	mv $@.d/data/${LANGPAIR}/test.trg ${dir $@}Tatoeba-test.${LANGPAIR}.clean.${TRGEXT}
+	mv $@.d/data/${LANGPAIR}/test.id  ${dir $@}Tatoeba-test.${LANGPAIR}.clean.id
 	if [ -e $@.d/data/${LANGPAIR}/dev.src ]; then \
-	  ${GZIP} -c < $@.d/data/${LANGPAIR}/dev.src > ${dir $@}Tatoeba-dev.${LANGPAIR}.clean.${SRCEXT}.gz; \
-	  ${GZIP} -c < $@.d/data/${LANGPAIR}/dev.trg > ${dir $@}Tatoeba-dev.${LANGPAIR}.clean.${TRGEXT}.gz; \
-	  cut -f1 $@.bitext | ${GZIP} -c > ${dir $@}Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.gz; \
-	  cut -f2 $@.bitext | ${GZIP} -c > ${dir $@}Tatoeba-train.${LANGPAIR}.clean.${TRGEXT}.gz; \
+	  mv $@.d/data/${LANGPAIR}/dev.src > ${dir $@}Tatoeba-dev.${LANGPAIR}.clean.${SRCEXT}; \
+	  mv $@.d/data/${LANGPAIR}/dev.trg > ${dir $@}Tatoeba-dev.${LANGPAIR}.clean.${TRGEXT}; \
+	  mv $@.d/data/${LANGPAIR}/dev.id > ${dir $@}Tatoeba-dev.${LANGPAIR}.clean.id; \
+	  ${ZCAT} $@.d/data/${LANGPAIR}/train.src.gz > ${dir $@}Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}; \
+	  ${ZCAT} $@.d/data/${LANGPAIR}/train.trg.gz > ${dir $@}Tatoeba-train.${LANGPAIR}.clean.${TRGEXT}; \
+	  ${ZCAT} $@.d/data/${LANGPAIR}/train.id.gz | cut -f2,3 $(FIXLANGIDS) > ${dir $@}Tatoeba-train.${LANGPAIR}.clean.id; \
 	else \
 	  echo "no devdata available - get top 1000 from training data!"; \
-	  cut -f1 $@.bitext | head -1000 | ${GZIP} -c > ${dir $@}Tatoeba-dev.${LANGPAIR}.clean.${SRCEXT}.gz; \
-	  cut -f2 $@.bitext | head -1000 | ${GZIP} -c > ${dir $@}Tatoeba-dev.${LANGPAIR}.clean.${TRGEXT}.gz; \
-	  cut -f1 $@.bitext | tail -n +1001 | ${GZIP} -c > ${dir $@}Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.gz; \
-	  cut -f2 $@.bitext | tail -n +1001 | ${GZIP} -c > ${dir $@}Tatoeba-train.${LANGPAIR}.clean.${TRGEXT}.gz; \
+	  ${ZCAT} $@.d/data/${LANGPAIR}/train.src.gz | head -1000 > ${dir $@}Tatoeba-dev.${LANGPAIR}.clean.${SRCEXT}; \
+	  ${ZCAT} $@.d/data/${LANGPAIR}/train.trg.gz | head -1000 > ${dir $@}Tatoeba-dev.${LANGPAIR}.clean.${TRGEXT}; \
+	  ${ZCAT} $@.d/data/${LANGPAIR}/train.id.gz  | head -1000 | cut -f2,3 $(FIXLANGIDS) > ${dir $@}Tatoeba-dev.${LANGPAIR}.clean.id; \
+	  ${ZCAT} $@.d/data/${LANGPAIR}/train.src.gz | tail -n +1001 > ${dir $@}Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}; \
+	  ${ZCAT} $@.d/data/${LANGPAIR}/train.trg.gz | tail -n +1001 > ${dir $@}Tatoeba-train.${LANGPAIR}.clean.${TRGEXT}; \
+	  ${ZCAT} $@.d/data/${LANGPAIR}/train.id.gz  | tail -n +1001 | cut -f2,3 $(FIXLANGIDS) > ${dir $@}Tatoeba-train.${LANGPAIR}.clean.id; \
 	fi
-	rm -f $@.bitext
+	cut -f1 ${dir $@}Tatoeba-*.${LANGPAIR}.clean.id | sort -u | tr "\n" ' ' > $(@:.${SRCEXT}.gz=.${SRCEXT}.labels)
+	cut -f2 ${dir $@}Tatoeba-*.${LANGPAIR}.clean.id | sort -u | tr "\n" ' ' > $(@:.${SRCEXT}.gz=.${TRGEXT}.labels)
 	rm -f $@.d/data/${LANGPAIR}/*
 	rmdir $@.d/data/${LANGPAIR}
 	rmdir $@.d/data
 	rm -f $@.d/train.tar
 	rmdir $@.d
+#######################################
+# make data sets for individual 
+# language pairs from the Tatoeba data
+#######################################
+	for s in `cat $(@:.${SRCEXT}.gz=.${SRCEXT}.labels)`; do \
+	  for t in `cat $(@:.${SRCEXT}.gz=.${TRGEXT}.labels)`; do \
+	    if [ "$$s" \< "$$t" ]; then \
+	      echo "extract $$s-$$t data"; \
+	      for d in dev test train; do \
+	        paste ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id \
+		      ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT} \
+		      ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT} |\
+	        grep -P "$$s\t$$t\t" > ${dir $@}Tatoeba-$$d.$$s-$$t; \
+	        if [ -s ${dir $@}Tatoeba-$$d.$$s-$$t ]; then \
+	          cut -f3 ${dir $@}Tatoeba-$$d.$$s-$$t | ${GZIP} -c > ${dir $@}Tatoeba-$$d.$$s-$$t.clean.$$s.gz; \
+	          cut -f4 ${dir $@}Tatoeba-$$d.$$s-$$t | ${GZIP} -c > ${dir $@}Tatoeba-$$d.$$s-$$t.clean.$$t.gz; \
+	        fi; \
+	        rm -f ${dir $@}Tatoeba-$$d.$$s-$$t; \
+	      done \
+	    else \
+	      echo "extract $$t-$$s data"; \
+	      for d in dev test train; do \
+	        paste ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id \
+		      ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT} \
+		      ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT} |\
+	        grep -P "$$s\t$$t\t" > ${dir $@}Tatoeba-$$d.$$t-$$s; \
+	        if [ -s ${dir $@}Tatoeba-$$d.$$t-$$s ]; then \
+	          cut -f3 ${dir $@}Tatoeba-$$d.$$t-$$s | ${GZIP} -c > ${dir $@}Tatoeba-$$d.$$t-$$s.clean.$$t.gz; \
+	          cut -f4 ${dir $@}Tatoeba-$$d.$$t-$$s | ${GZIP} -c > ${dir $@}Tatoeba-$$d.$$t-$$s.clean.$$s.gz; \
+	        fi; \
+	        rm -f ${dir $@}Tatoeba-$$d.$$t-$$s; \
+	      done \
+	    fi \
+	  done \
+	done
+#######################################
+# finally, compress the big datafiles
+# and cleanup
+#######################################
+	for d in dev test train; do \
+	  if [ ! -e ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.gz ]; then \
+	    ${GZIP} -f ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}; \
+	    ${GZIP} -f ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}; \
+	  else \
+	    rm -f ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}; \
+	    rm -f ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}; \
+	  fi; \
+	  rm -f ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id; \
+	done
+
 
 %/Tatoeba-train.${LANGPAIR}.clean.${TRGEXT}.gz: %/Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.gz
 	echo "done!"

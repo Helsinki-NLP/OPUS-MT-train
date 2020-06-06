@@ -27,10 +27,10 @@ GENERATE_SPM_VOC = 0
 ${SPMSRCMODEL}: 
 	${MAKE} ${LOCAL_TRAIN_SRC}
 	mkdir -p ${dir $@}
-ifeq ($(TRGLANGS),${firstword ${TRGLANGS}})
-	grep . ${LOCAL_TRAIN_SRC} | ${SHUFFLE} > ${LOCAL_TRAIN_SRC}.text
-else
+ifeq (${USE_TARGET_LABELS},1)
 	cut -f2- -d ' ' ${LOCAL_TRAIN_SRC} | grep . | ${SHUFFLE} > ${LOCAL_TRAIN_SRC}.text
+else
+	grep . ${LOCAL_TRAIN_SRC} | ${SHUFFLE} > ${LOCAL_TRAIN_SRC}.text
 endif
 	${MAKE} ${LOCAL_TRAIN_SRC}.charfreq
 	if [ `cat ${LOCAL_TRAIN_SRC}.charfreq | wc -l` -gt 1000 ]; then \
@@ -175,6 +175,12 @@ endif
 	-python -c "import collections, pprint; pprint.pprint(dict(collections.Counter(open('$<.10m', 'r').read())))" > $@
 	rm -f $<.10m
 
+%.charfreq: %.gz
+	${GZIP} -cd < $< | head -10000000 > $<.10m
+	-python -c "import collections, pprint; pprint.pprint(dict(collections.Counter(open('$<.10m', 'r').read())))" > $@
+	rm -f $<.10m
+
+
 ## slow version
 %.charfreq2: %
 	head -10000000 $< |\
@@ -189,14 +195,14 @@ endif
 ## see https://github.com/google/sentencepiece#c-from-source
 
 %.src.spm${SRCBPESIZE:000=}k: %.src ${SPMSRCMODEL}
-ifeq ($(TRGLANGS),${firstword ${TRGLANGS}})
-	${SPM_HOME}/spm_encode --model $(word 2,$^) < $< > $@
-else
+ifeq (${USE_TARGET_LABELS},1)
 	cut -f1 -d ' ' $< > $<.labels
 	cut -f2- -d ' ' $< > $<.txt
 	${SPM_HOME}/spm_encode --model $(word 2,$^) < $<.txt > $@.txt
 	paste -d ' ' $<.labels $@.txt > $@
 	rm -f $<.labels $<.txt $@.txt
+else
+	${SPM_HOME}/spm_encode --model $(word 2,$^) < $< > $@
 endif
 
 %.trg.spm${TRGBPESIZE:000=}k: %.trg ${SPMTRGMODEL}

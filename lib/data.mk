@@ -76,19 +76,18 @@ endif
 ## data sets (train/dev/test)
 ##-------------------------------------------------------------
 
-CLEAN_TRAIN_SRC = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.clean.${SRCEXT}.gz,${TRAINSET}} \
+CLEAN_TRAIN_SRC    = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.clean.${SRCEXT}.gz,${TRAINSET}} \
 			${BACKTRANS_SRC} ${PIVOTING_SRC}
-CLEAN_TRAIN_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_TRAIN_SRC}}
+CLEAN_TRAIN_TRG    = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_TRAIN_SRC}}
 
-CLEAN_DEV_SRC   = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.clean.${SRCEXT}.gz,${DEVSET}}
-CLEAN_DEV_TRG   = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_DEV_SRC}}
+CLEAN_DEV_SRC      = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.clean.${SRCEXT}.gz,${DEVSET}}
+CLEAN_DEV_TRG      = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_DEV_SRC}}
 
-CLEAN_TEST_SRC  = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.clean.${SRCEXT}.gz,${TESTSET}}
-CLEAN_TEST_TRG  = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_TEST_SRC}}
+CLEAN_TEST_SRC     = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.clean.${SRCEXT}.gz,${TESTSET}}
+CLEAN_TEST_TRG     = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_TEST_SRC}}
 
 DATA_SRC := ${sort ${CLEAN_TRAIN_SRC} ${CLEAN_DEV_SRC} ${CLEAN_TEST_SRC}}
 DATA_TRG := ${sort ${CLEAN_TRAIN_TRG} ${CLEAN_DEV_TRG} ${CLEAN_TEST_TRG}}
-
 
 
 ##-------------------------------------------------------------
@@ -334,11 +333,10 @@ ifneq (${wildcard ${CLEAN_TRAIN_SRC}},)
 	echo -n "* ${SRC}-${TRG}: total size = "              >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 	${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_SRC}} | wc -l  >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 ######################################
-# multiple target languages?
-#    --> add language labels
+# do we need to add target language labels?
 ######################################
-ifneq (${words ${TRGLANGS}},1)
-	echo "more than one target language";
+ifeq (${USE_TARGET_LABELS},1)
+	echo "set target language labels";
 	${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_SRC}} |\
 	sed "s/^/>>${TRG}<< /" > ${LOCAL_TRAIN_SRC}.src
 else
@@ -346,17 +344,23 @@ else
 	${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_SRC}} > ${LOCAL_TRAIN_SRC}.src
 endif
 	${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_TRG}} > ${LOCAL_TRAIN_TRG}.trg
-endif
 ######################################
-#  FIT_DATA_SIZE is set?
-#    --> shuffle data and fit the
-#        data sets to a specific size
+#  SHUFFLE_DATA is set?
+#    --> shuffle data for each langpair
+#    --> do this when FIT_DATA_SIZE is set!
 ######################################
-ifdef FIT_DATA_SIZE
+ifdef SHUFFLE_DATA
 	paste ${LOCAL_TRAIN_SRC}.src ${LOCAL_TRAIN_TRG}.trg | ${SHUFFLE} > ${LOCAL_TRAIN_SRC}.shuffled
 	cut -f1 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_SRC}.src
 	cut -f2 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_TRG}.trg
 	rm -f ${LOCAL_TRAIN_SRC}.shuffled
+endif
+######################################
+#  FIT_DATA_SIZE is set?
+#    --> fit data to speciic size
+#    --> under/over sampling!
+######################################
+ifdef FIT_DATA_SIZE
 	scripts/fit-data-size.pl ${FIT_DATA_SIZE} ${LOCAL_TRAIN_SRC}.src >> ${LOCAL_TRAIN_SRC}
 	scripts/fit-data-size.pl ${FIT_DATA_SIZE} ${LOCAL_TRAIN_TRG}.trg >> ${LOCAL_TRAIN_TRG}
 else
@@ -364,7 +368,7 @@ else
 	cat ${LOCAL_TRAIN_TRG}.trg >> ${LOCAL_TRAIN_TRG}
 endif
 	rm -f ${LOCAL_TRAIN_SRC}.src ${LOCAL_TRAIN_TRG}.trg
-
+endif
 
 
 
@@ -467,7 +471,7 @@ add-to-dev-data: ${CLEAN_DEV_SRC} ${CLEAN_DEV_TRG}
 ifneq (${wildcard ${CLEAN_DEV_SRC}},)
 	echo -n "* ${LANGPAIR}: ${DEVSET}, " >> ${dir ${DEV_SRC}}README.md
 	${GZIP} -cd < ${CLEAN_DEV_SRC} | wc -l        >> ${dir ${DEV_SRC}}README.md
-ifneq (${words ${TRGLANGS}},1)
+ifeq (${USE_TARGET_LABELS},1)
 	echo "more than one target language";
 	${GZIP} -cd < ${CLEAN_DEV_SRC} |\
 	sed "s/^/>>${TRG}<< /" >> ${DEV_SRC}
@@ -538,7 +542,7 @@ ${TEST_TRG}: ${TEST_SRC}
 add-to-test-data: ${CLEAN_TEST_SRC}
 ifneq (${wildcard ${CLEAN_TEST_SRC}},)
 	echo "* ${LANGPAIR}: ${TESTSET}" >> ${dir ${TEST_SRC}}README.md
-ifneq (${words ${TRGLANGS}},1)
+ifeq (${USE_TARGET_LABELS},1)
 	echo "more than one target language";
 	${GZIP} -cd < ${CLEAN_TEST_SRC} |\
 	sed "s/^/>>${TRG}<< /" >> ${TEST_SRC}
