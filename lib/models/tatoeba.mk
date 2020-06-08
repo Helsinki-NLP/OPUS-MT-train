@@ -71,7 +71,8 @@ tatoeba-train:
 tatoeba-eval:
 	${MAKE} compare-tatoeba
 
-tatoeba-step0: ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.gz
+tatoeba-step0: ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels
+tatoeba-step1: ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.gz
 
 
 ## run all language pairs for a given subset
@@ -129,8 +130,8 @@ tatoeba-%.md:
 		TESTSIZE=10000 \
 		DEVMINSIZE=200 \
 		WORKHOME=${TATOEBA_WORK} \
-		SRCLANGS="${shell cat $<}" \
-		TRGLANGS="${shell cat $(<:.${SRCEXT}.labels=.${TRGEXT}.labels)}" \
+		SRCLANGS="${shell cat $<  | sed 's/ *$$//'}" \
+		TRGLANGS="${shell cat $(<:.${SRCEXT}.labels=.${TRGEXT}.labels)  | sed 's/ *$$//'}" \
 		LANGPAIRSTR=${LANGPAIRSTR} \
 		EMAIL= \
 	${@:-tatoeba=}
@@ -141,32 +142,34 @@ ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.lab
 	  for t in ${TRGLANGS}; do \
 	    if [ "$$s" \< "$$t" ]; then \
 	      ${MAKE} SRCLANGS=$$s TRGLANGS=$$t \
-		${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.gz; \
+		${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.$$s-$$t.clean.$$s.gz; \
 	    fi \
 	  done \
 	done
-	if [ ! -e $@ ]; then \
-	  for s in ${SRCLANGS}; do \
+	for s in ${SRCLANGS}; do \
 	    for t in ${TRGLANGS}; do \
-	      if [ -e ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.labels ]; then \
-		cat ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.labels \
+	      if [ -e ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.$$s-$$t.clean.$$s.labels ]; then \
+		cat ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.$$s-$$t.clean.$$s.labels \
+		>> $@.src; \
+	      elif [ -e ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.$$t-$$s.clean.$$s.labels ]; then \
+		cat ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.$$t-$$s.clean.$$s.labels \
 		>> $@.src; \
 	      fi \
 	    done \
-	  done \
-	fi
-	if [ ! -e $(@:.${SRCEXT}.labels=.${TRGEXT}.labels) ]; then \
-	  for s in ${SRCLANGS}; do \
+	done
+	for s in ${SRCLANGS}; do \
 	    for t in ${TRGLANGS}; do \
-	      if [ -e ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIR}.clean.${TRGEXT}.labels ]; then \
-		cat ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIR}.clean.${TRGEXT}.labels \
+	      if [ -e ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.$$s-$$t.clean.$$t.labels ]; then \
+		cat ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.$$s-$$t.clean.$$t.labels \
+		>> $@.trg; \
+	      elif [ -e ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.$$t-$$s.clean.$$t.labels ]; then \
+		cat ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.$$t-$$s.clean.$$t.labels \
 		>> $@.trg; \
 	      fi \
 	    done \
-	  done \
-	fi
-	cat $@.src | tr ' ' "\n" | sort -u | tr "\n" ' ' > $@
-	cat $@.trg | tr ' ' "\n" | sort -u | tr "\n" ' ' > $(@:.${SRCEXT}.labels=.${TRGEXT}.labels)
+	done
+	cat $@.src | tr ' ' "\n" | sort -u | tr "\n" ' ' | sed 's/ *$$//' > $@
+	cat $@.trg | tr ' ' "\n" | sort -u | tr "\n" ' ' | sed 's/ *$$//' > $(@:.${SRCEXT}.labels=.${TRGEXT}.labels)
 	rm -f $@.src $@.trg
 
 
@@ -242,6 +245,13 @@ FIXLANGIDS = 	| sed 's/zho\(\)_HK/yue\1/;s/zho\(\)_CN/cmn\1/;s/zho\(\)_TW/cmn\1/
 #######################################
 # make data sets for individual 
 # language pairs from the Tatoeba data
+# TODO: now we only grep for langpairs 
+#       available in test data
+# --> should we also include other 
+#     training data with a dummy label?
+# --> how do we efficiently grep for 
+#     everything that is not one of the langpairs?
+#     grep -v and a big list of alternative lang-pairs ...
 #######################################
 	for s in `cat $(@:.${SRCEXT}.gz=.${SRCEXT}.labels)`; do \
 	  for t in `cat $(@:.${SRCEXT}.gz=.${TRGEXT}.labels)`; do \

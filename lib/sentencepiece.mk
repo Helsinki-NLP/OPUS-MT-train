@@ -197,15 +197,16 @@ endif
 #	awk '!/^$$/{a[$$0]++}END{for (i in a)print i,a[i];}' > $@
 
 ## python-based char-counter (seems to be the fastest version)
+## restrict to 1 million lines
 %.charfreq: %
-	head -10000000 $< > $<.10m
-	-python -c "import collections, pprint; pprint.pprint(dict(collections.Counter(open('$<.10m', 'r').read())))" > $@
-	rm -f $<.10m
+	head -1000000 $< > $<.1m
+	-python -c "import collections, pprint; pprint.pprint(dict(collections.Counter(open('$<.1m', 'r').read())))" > $@
+	rm -f $<.1m
 
 %.charfreq: %.gz
-	${GZIP} -cd < $< | head -10000000 > $<.10m
-	-python -c "import collections, pprint; pprint.pprint(dict(collections.Counter(open('$<.10m', 'r').read())))" > $@
-	rm -f $<.10m
+	${GZIP} -cd < $< | head -1000000 > $<.1m
+	-python -c "import collections, pprint; pprint.pprint(dict(collections.Counter(open('$<.1m', 'r').read())))" > $@
+	rm -f $<.1m
 
 
 ## slow version
