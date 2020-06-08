@@ -1,5 +1,17 @@
 # -*-makefile-*-
-
+#
+# create sentence piece models
+#
+#   - create models from each part of a bitext
+#   - individual models for each language in each language pair
+#   - do not create new models if the data changes
+#     ---> models need to use the same segmentation/vocab
+#
+# TODO: should we do that for monolingual files instead
+#       for creating them from the bilingual data only?
+#  ---> could use more data
+#  ---> don't need to re-create models for each language pair
+#
 
 
 ##----------------------------------------------
@@ -21,11 +33,21 @@ SPMEXTRA =
 
 .PRECIOUS: ${SPMSRCMODEL} ${SPMTRGMODEL}
 
+## set to 1 if you want to generate SPM vocab file
 GENERATE_SPM_VOC = 0
 
-# ${SPMSRCMODEL}: ${WORKDIR}/%.spm${SRCBPESIZE:000=}k-model: ${TMPDIR}/${LANGPAIRSTR}/%
-${SPMSRCMODEL}: 
-	${MAKE} ${LOCAL_TRAIN_SRC}
+
+## we keep the dependency on LOCAL_TRAIN_SRC
+## to make multi-threaded make calls behave properly
+## --> otherwise there can be multiple threads writing to the same file!
+
+${SPMSRCMODEL}: ${LOCAL_TRAIN_SRC}
+ifneq (${wildcard $@},)
+	@echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+	@echo "!!!!!!!! $@ already exists!"
+	@echo "!!!!!!!! re-use the old one even if there is new training data"
+	@echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+else
 	mkdir -p ${dir $@}
 ifeq (${USE_TARGET_LABELS},1)
 	cut -f2- -d ' ' ${LOCAL_TRAIN_SRC} | grep . | ${SHUFFLE} > ${LOCAL_TRAIN_SRC}.text
@@ -47,12 +69,17 @@ ifeq (${GENERATE_SPM_VOC},1)
 	${SPM_HOME}/spm_encode --model=$@ --generate_vocabulary < ${LOCAL_TRAIN_SRC}.text > $@.voc
 endif
 	rm -f ${LOCAL_TRAIN_SRC}.text
+endif
 
 
 ## no labels on the target language side
-# ${SPMTRGMODEL}: ${WORKDIR}/%.spm${TRGBPESIZE:000=}k-model: ${TMPDIR}/${LANGPAIRSTR}/%
-${SPMTRGMODEL}: 
-	${MAKE} ${LOCAL_TRAIN_TRG}
+${SPMTRGMODEL}: ${LOCAL_TRAIN_TRG}
+ifneq (${wildcard $@},)
+	@echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+	@echo "!!!!!!!! $@ already exists!"
+	@echo "!!!!!!!! re-use the old one even if there is new training data"
+	@echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+else
 	mkdir -p ${dir $@}
 	grep . ${LOCAL_TRAIN_TRG} | ${SHUFFLE} > ${LOCAL_TRAIN_TRG}.text
 	${MAKE} ${LOCAL_TRAIN_TRG}.charfreq
@@ -70,7 +97,7 @@ ifeq (${GENERATE_SPM_VOC},1)
 	${SPM_HOME}/spm_encode --model=$@ --generate_vocabulary < ${LOCAL_TRAIN_TRG}.text > $@.voc
 endif
 	rm -f ${LOCAL_TRAIN_TRG}.text
-
+endif
 
 
 

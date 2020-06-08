@@ -27,10 +27,17 @@ BPETRGMODEL = ${WORKDIR}/train/${BPEMODELNAME}.trg.bpe${TRGBPESIZE:000=}k-model
 
 .PRECIOUS: ${BPESRCMODEL} ${BPETRGMODEL}
 
-# ${BPESRCMODEL}: ${WORKDIR}/%.bpe${SRCBPESIZE:000=}k-model: ${TMPDIR}/${LANGPAIRSTR}/%
-# ${BPESRCMODEL}: ${LOCAL_TRAIN_SRC}
-${BPESRCMODEL}: 
-	${MAKE} ${LOCAL_TRAIN_SRC}
+## we keep the dependency on LOCAL_TRAIN_SRC
+## to make multi-threaded make calls behave properly
+## --> otherwise there can be multiple threads writing to the same file!
+
+${BPESRCMODEL}: ${LOCAL_TRAIN_SRC}
+ifneq (${wildcard $@},)
+	@echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+	@echo "!!!!!!!! $@ already exists!"
+	@echo "!!!!!!!! re-use the old one even if there is new training data"
+	@echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+else
 	mkdir -p ${dir $@}
 ifeq (${USE_TARGET_LABELS},1)
 	cut -f2- -d ' ' ${LOCAL_TRAIN_SRC} > ${LOCAL_TRAIN_SRC}.text
@@ -39,18 +46,22 @@ ifeq (${USE_TARGET_LABELS},1)
 else
 	python3 ${SNMTPATH}/learn_bpe.py -s $(SRCBPESIZE) < ${LOCAL_TRAIN_SRC} > $@
 endif
-
+endif
 
 ## no labels on the target language side
-# ${BPETRGMODEL}: ${WORKDIR}/%.bpe${TRGBPESIZE:000=}k-model: ${TMPDIR}/${LANGPAIRSTR}/%
-# ${BPETRGMODEL}: ${LOCAL_TRAIN_TRG}
-${BPETRGMODEL}: 
-	${MAKE} ${LOCAL_TRAIN_TRG}
+${BPETRGMODEL}: ${LOCAL_TRAIN_TRG}
+ifneq (${wildcard $@},)
+	@echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+	@echo "!!!!!!!! $@ already exists!"
+	@echo "!!!!!!!! re-use the old one even if there is new training data"
+	@echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+else
 	mkdir -p ${dir $@}
 	python3 ${SNMTPATH}/learn_bpe.py -s $(TRGBPESIZE) < ${LOCAL_TRAIN_TRG} > $@
+endif
 
 
-# 
+
 %.src.bpe${SRCBPESIZE:000=}k: %.src ${BPESRCMODEL}
 ifeq (${USE_TARGET_LABELS},1)
 	cut -f1 -d ' ' $< > $<.labels

@@ -1,15 +1,18 @@
 # -*-makefile-*-
+#
+# create data files for taining, validation and testing
+# 
+#  - combine all bitexts in TRAINSET
+#  - add backtranslation, pivoted data if necessary
+#  - add language labels if necessary (multi-target models)
+#  - over/under-sampling of training data if necessary (multilingual models)
+#  - shuffle dev/test data and divide into to disjoint sets
+#  - reverse data sets for the other translation direction (bilingual models only)
+#  - run word alignment if necessary (models with guded alignment = transformer-align)
 
 
 
-## SKIP_LANGPAIRS can be used to skip certain language pairs
-## in data preparation for multilingual models
-## ---> this can be good to skip BIG language pairs
-##      that would very much dominate all the data
-## must be a pattern that can be matched by egrep
-## e.g. en-de|en-fr
 
-SKIP_LANGPAIRS ?= "nothing"
 
 ## training data size (generates count if not in README.md)
 TRAINDATA_SIZE = ${shell \
@@ -255,27 +258,27 @@ ${TRAIN_ALG}: 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
 	fi
 
-## TODO: do we need this?
-##
-#	else \
-#	  touch $@; \
-#	  touch ${@:.${SRCEXT}.raw=.${TRGEXT}.raw}; \
-
 
 %.${TRGEXT}.raw: %.${SRCEXT}.raw
 	@echo "done!"
 
 
-.INTERMEDIATE: ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG} ${LOCAL_TRAIN_SRC}.charfreq ${LOCAL_TRAIN_TRG}.charfreq
+## TODO: this causes to frequently redo the same data over and over again, does it?
+##
+# .INTERMEDIATE: ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG} ${LOCAL_TRAIN_SRC}.charfreq ${LOCAL_TRAIN_TRG}.charfreq
+
+ifeq (${USE_REST_DEVDATA},1)
+  LOCAL_TRAINDATA_DEPENDENCIES = ${DEV_SRC} ${DEV_TRG}
+endif
 
 ## add training data for each language combination
 ## and put it together in local space
-${LOCAL_TRAIN_SRC}: ${DEV_SRC} ${DEV_TRG}
+${LOCAL_TRAIN_SRC}: ${LOCAL_TRAINDATA_DEPENDENCIES}
 	mkdir -p ${dir $@}
-	rm -f ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG}
 	echo ""                           > ${dir $@}README.md
 	echo "# ${notdir ${TRAIN_BASE}}" >> ${dir $@}README.md
 	echo ""                          >> ${dir $@}README.md
+	rm -f ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG}
 	-for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
 	    if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
@@ -305,8 +308,10 @@ ${LOCAL_TRAIN_TRG}: ${LOCAL_TRAIN_SRC}
 ##      in multilingual data sets
 ## TODO: introduce under and over-sampling for multilingual data sets ...
 add-to-local-train-data: 
-ifneq (${wildcard ${CLEAN_TRAIN_SRC}},)
+ifneq (${CLEAN_TRAIN_SRC},)
 	${MAKE} ${CLEAN_TRAIN_SRC} ${CLEAN_TRAIN_TRG}
+endif
+ifneq (${wildcard ${CLEAN_TRAIN_SRC}},)
 	@if [ `${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_SRC}} | wc -l` != `${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_TRG}} | wc -l` ]; then \
 	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
 	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
@@ -338,21 +343,22 @@ ifneq (${wildcard ${CLEAN_TRAIN_SRC}},)
 ifeq (${USE_TARGET_LABELS},1)
 	echo "set target language labels";
 	${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_SRC}} |\
-	sed "s/^/>>${TRG}<< /" > ${LOCAL_TRAIN_SRC}.src
+	sed "s/^/>>${TRG}<< /" > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
 else
 	echo "only one target language"
-	${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_SRC}} > ${LOCAL_TRAIN_SRC}.src
+	${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_SRC}} > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
 endif
-	${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_TRG}} > ${LOCAL_TRAIN_TRG}.trg
+	${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_TRG}} > ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
 ######################################
 #  SHUFFLE_DATA is set?
 #    --> shuffle data for each langpair
 #    --> do this when FIT_DATA_SIZE is set!
 ######################################
 ifdef SHUFFLE_DATA
-	paste ${LOCAL_TRAIN_SRC}.src ${LOCAL_TRAIN_TRG}.trg | ${SHUFFLE} > ${LOCAL_TRAIN_SRC}.shuffled
-	cut -f1 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_SRC}.src
-	cut -f2 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_TRG}.trg
+	paste ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg |\
+	${SHUFFLE} > ${LOCAL_TRAIN_SRC}.shuffled
+	cut -f1 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
+	cut -f2 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
 	rm -f ${LOCAL_TRAIN_SRC}.shuffled
 endif
 ######################################
@@ -361,13 +367,15 @@ endif
 #    --> under/over sampling!
 ######################################
 ifdef FIT_DATA_SIZE
-	scripts/fit-data-size.pl ${FIT_DATA_SIZE} ${LOCAL_TRAIN_SRC}.src >> ${LOCAL_TRAIN_SRC}
-	scripts/fit-data-size.pl ${FIT_DATA_SIZE} ${LOCAL_TRAIN_TRG}.trg >> ${LOCAL_TRAIN_TRG}
+	scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
+		${LOCAL_TRAIN_SRC}.${LANGPAIR}.src >> ${LOCAL_TRAIN_SRC}
+	scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
+		${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg >> ${LOCAL_TRAIN_TRG}
 else
-	cat ${LOCAL_TRAIN_SRC}.src >> ${LOCAL_TRAIN_SRC}
-	cat ${LOCAL_TRAIN_TRG}.trg >> ${LOCAL_TRAIN_TRG}
+	cat ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src >> ${LOCAL_TRAIN_SRC}
+	cat ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg >> ${LOCAL_TRAIN_TRG}
 endif
-	rm -f ${LOCAL_TRAIN_SRC}.src ${LOCAL_TRAIN_TRG}.trg
+	rm -f ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
 endif
 
 
@@ -469,8 +477,8 @@ ${DEV_TRG}: ${DEV_SRC}
 add-to-dev-data: ${CLEAN_DEV_SRC} ${CLEAN_DEV_TRG}
 	mkdir -p ${dir ${DEV_SRC}}
 ifneq (${wildcard ${CLEAN_DEV_SRC}},)
-	echo -n "* ${LANGPAIR}: ${DEVSET}, " >> ${dir ${DEV_SRC}}README.md
-	${GZIP} -cd < ${CLEAN_DEV_SRC} | wc -l        >> ${dir ${DEV_SRC}}README.md
+	echo -n "* ${LANGPAIR}: ${DEVSET}, "      >> ${dir ${DEV_SRC}}README.md
+	${GZIP} -cd < ${CLEAN_DEV_SRC} | wc -l    >> ${dir ${DEV_SRC}}README.md
 ifeq (${USE_TARGET_LABELS},1)
 	echo "more than one target language";
 	${GZIP} -cd < ${CLEAN_DEV_SRC} |\

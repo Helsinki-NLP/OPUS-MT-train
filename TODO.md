@@ -2,6 +2,12 @@
 # Things to do
 
 
+## Bugs
+
+* something is wrong with multi-threaded data preparation
+* balancing data for multilingual models does not work well with one lang-pair that is tiny
+
+
 ## General settings
 
 * better hyperparameters for low-resource setting (lower batch sizes, smaller vocabularies ...)

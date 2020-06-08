@@ -29,6 +29,17 @@ TRGLANGS ?= fi
 SRC ?= ${firstword ${SRCLANGS}}
 TRG ?= ${lastword ${TRGLANGS}}
 
+
+## SKIP_LANGPAIRS can be used to skip certain language pairs
+## in data preparation for multilingual models
+## ---> this can be good to skip BIG language pairs
+##      that would very much dominate all the data
+## must be a pattern that can be matched by egrep
+## e.g. en-de|en-fr
+
+SKIP_LANGPAIRS ?= "nothing"
+
+
 ## set SHUFFLE_DATA if you want to shuffle data for 
 ## each language pair to be added to the training data
 ## --> especially useful in connection with FIT_DATA_SIZE
@@ -42,6 +53,10 @@ TRG ?= ${lastword ${TRGLANGS}}
 ## the script does both, over- and undersampling
 ##
 # FIT_DATA_SIZE = 100000
+
+## maximum number of repeating the same data set 
+## in oversampling
+MAX_OVER_SAMPLING ?= 50
 
 
 # sorted languages and langpair used to match resources in OPUS
