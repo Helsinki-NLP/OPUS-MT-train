@@ -30,6 +30,7 @@
 #
 # start jobs for multilingual models from one of the subsets
 #
+#   make tatoeba-multilingual-subset-zero
 #   make tatoeba-multilingual-subset-lowest
 #   make tatoeba-multilingual-subset-lower
 #   make tatoeba-multilingual-subset-medium
@@ -44,9 +45,6 @@ TATOEBA_DATA   = https://object.pouta.csc.fi/Tatoeba-Challenge
 TATOEBA_RAWGIT = https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
 TATOEBA_WORK   = ${PWD}/work-tatoeba
 
-print-langs:
-	echo "${SRCLANGS}"
-	echo "${TRGLANGS}"
 
 tatoeba-job:
 	${MAKE} tatoeba-prepare
@@ -61,6 +59,8 @@ ifneq (${SRCLANGS},${TRGLANGS})
 	${MAKE} SRCLANGS="${TRGLANGS}" TRGLANGS="${SRCLANGS}" all-job-tatoeba
 endif
 
+
+
 tatoeba-prepare: ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.gz
 	${MAKE} local-config-tatoeba
 	${MAKE} data-tatoeba
@@ -71,17 +71,21 @@ tatoeba-train:
 tatoeba-eval:
 	${MAKE} compare-tatoeba
 
-tatoeba-step0: ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels
-tatoeba-step1: ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.gz
+tatoeba-labels: ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels
+
+
+
 
 
 ## run all language pairs for a given subset
+## in both directions
 tatoeba-subset-%: tatoeba-%.md
 	for l in `grep '\[' $< | cut -f2 -d '[' | cut -f1 -d ']'`; do \
 	  s=`echo $$l | cut -f1 -d '-'`; \
 	  t=`echo $$l | cut -f2 -d '-'`; \
 	  ${MAKE} SRCLANGS=$$s TRGLANGS=$$t tatoeba-bidirectional-job; \
 	done
+
 
 ## set FIT_DATA_SIZE for under/over-sampling of data!
 ## set of language pairs is directly taken from the markdown page at github
@@ -93,7 +97,7 @@ tatoeba-multilingual-subset-%: tatoeba-%.md
 	done
 	${MAKE} ${patsubst tatoeba-%.md,tatoeba-trainsize-%.txt,$<}
 	( l=`grep '\[' $< | cut -f2 -d '[' | cut -f1 -d ']' | tr ' -' "\n\n" | sort -u | tr "\n" ' ' | sed 's/ *$$//'`; \
-	  s=`head -1 ${patsubst tatoeba-%.md,tatoeba-trainsize-%.txt,$<} | cut -f2 -d' '`; \
+	  s=`sort -k2,2nr ${patsubst tatoeba-%.md,tatoeba-trainsize-%.txt,$<} | head -1 | cut -f2 -d' '`; \
 	  ${MAKE} FIT_DATA_SIZE=$$s \
 		SRCLANGS="$$l" TRGLANGS="$$l" \
 		LANGPAIRSTR=${<:.md=} tatoeba-job )
@@ -149,22 +153,22 @@ ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.lab
 	for s in ${SRCLANGS}; do \
 	    for t in ${TRGLANGS}; do \
 	      if [ -e ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.$$s-$$t.clean.$$s.labels ]; then \
-		cat ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.$$s-$$t.clean.$$s.labels \
-		>> $@.src; \
+		cat ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.$$s-$$t.clean.$$s.labels >> $@.src; \
+		echo -n ' ' >> $@.src; \
 	      elif [ -e ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.$$t-$$s.clean.$$s.labels ]; then \
-		cat ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.$$t-$$s.clean.$$s.labels \
-		>> $@.src; \
+		cat ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.$$t-$$s.clean.$$s.labels >> $@.src; \
+		echo -n ' ' >> $@.src; \
 	      fi \
 	    done \
 	done
 	for s in ${SRCLANGS}; do \
 	    for t in ${TRGLANGS}; do \
 	      if [ -e ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.$$s-$$t.clean.$$t.labels ]; then \
-		cat ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.$$s-$$t.clean.$$t.labels \
-		>> $@.trg; \
+		cat ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.$$s-$$t.clean.$$t.labels >> $@.trg; \
+		echo -n ' ' >> $@.trg; \
 	      elif [ -e ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.$$t-$$s.clean.$$t.labels ]; then \
-		cat ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.$$t-$$s.clean.$$t.labels \
-		>> $@.trg; \
+		cat ${PWD}/work-tatoeba/data/${PRE}/Tatoeba-train.$$t-$$s.clean.$$t.labels >> $@.trg; \
+		echo -n ' ' >> $@.trg; \
 	      fi \
 	    done \
 	done

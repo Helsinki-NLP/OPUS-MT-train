@@ -335,8 +335,6 @@ ifneq (${wildcard ${CLEAN_TRAIN_SRC}},)
 	  fi \
 	done
 	echo ""                                               >> ${dir ${LOCAL_TRAIN_SRC}}README.md
-	echo -n "* ${SRC}-${TRG}: total size = "              >> ${dir ${LOCAL_TRAIN_SRC}}README.md
-	${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_SRC}} | wc -l  >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 ######################################
 # do we need to add target language labels?
 ######################################
@@ -366,12 +364,16 @@ endif
 #    --> fit data to speciic size
 #    --> under/over sampling!
 ######################################
+	echo -n "* ${SRC}-${TRG}: total size = " >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 ifdef FIT_DATA_SIZE
+	scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
+		${LOCAL_TRAIN_SRC}.${LANGPAIR}.src | wc -l >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 	scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
 		${LOCAL_TRAIN_SRC}.${LANGPAIR}.src >> ${LOCAL_TRAIN_SRC}
 	scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
 		${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg >> ${LOCAL_TRAIN_TRG}
 else
+	cat ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src | wc -l >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 	cat ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src >> ${LOCAL_TRAIN_SRC}
 	cat ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg >> ${LOCAL_TRAIN_TRG}
 endif
