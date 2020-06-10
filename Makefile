@@ -376,6 +376,7 @@ eval-ensemble: ${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.ensemble.${
 ## train and evaluate
 train-and-eval: ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
 	${MAKE} ${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}.compare
+	${MAKE} eval-testsets
 
 ## train model and start back-translation jobs once the model is ready
 ## (requires to create a dist package)

@@ -111,6 +111,7 @@ endif
 
 ## other tools and their locations
 
+SCRIPTDIR    = ${PWD}/scripts
 WORDALIGN    = ${EFLOMAL_HOME}align.py
 ATOOLS       = ${FASTALIGN_HOME}atools
 

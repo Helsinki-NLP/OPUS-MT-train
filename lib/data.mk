@@ -169,7 +169,7 @@ clean-data-source: ${DATA_SRC} ${DATA_TRG}
 
 
 ## monolingual data sets (for sentence piece models)
-.INTERMEDIATE: ${LOCAL_MONO_DATA}.${PRE} ${LOCAL_MONO_DATA}.raw ${LOCAL_MONO_DATA}.${PRE}.charfreq
+.INTERMEDIATE: ${LOCAL_MONO_DATA}.${PRE} ${LOCAL_MONO_DATA}.raw
 
 mono-data: ${LOCAL_MONO_DATA}.${PRE}
 
@@ -265,7 +265,7 @@ ${TRAIN_ALG}: 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 
 ## TODO: this causes to frequently redo the same data over and over again, does it?
 ##
-.INTERMEDIATE: ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG} ${LOCAL_TRAIN_SRC}.charfreq ${LOCAL_TRAIN_TRG}.charfreq
+.INTERMEDIATE: ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG}
 
 ifeq (${USE_REST_DEVDATA},1)
   LOCAL_TRAINDATA_DEPENDENCIES = ${DEV_SRC} ${DEV_TRG}
@@ -274,6 +274,7 @@ endif
 ## add training data for each language combination
 ## and put it together in local space
 ${LOCAL_TRAIN_SRC}: ${LOCAL_TRAINDATA_DEPENDENCIES}
+# ifeq (${wildcard $@},)
 	mkdir -p ${dir $@}
 	echo ""                           > ${dir $@}README.md
 	echo "# ${notdir ${TRAIN_BASE}}" >> ${dir $@}README.md
@@ -295,10 +296,29 @@ ifeq (${USE_REST_DEVDATA},1)
 	  ${GZIP} -cd < ${DEV_TRG}.notused.gz >> ${LOCAL_TRAIN_TRG}; \
 	fi
 endif
+# else
+#	@echo "*****************************************"
+#	@echo "local training data $@ exists already!"
+#	@echo "delete if it needs to be re-done!!!"
+#	@echo "*****************************************"
+# endif
 
 
 ${LOCAL_TRAIN_TRG}: ${LOCAL_TRAIN_SRC}
 	@echo "done!"
+
+
+
+
+
+## cut the data sets immediately if we don't have 
+## to shuffle first! This saves a lot of time!
+
+ifndef SHUFFLE_DATA
+ifdef FIT_DATA_SIZE
+  CUT_DATA_SETS = | head -${FIT_DATA_SIZE}
+endif
+endif
 
 
 ## add to the training data
@@ -306,12 +326,13 @@ ${LOCAL_TRAIN_TRG}: ${LOCAL_TRAIN_SRC}
 ##      to avoid re-doing existing data and also avoid problems
 ##      of extra data that do not exist for a particular language pair
 ##      in multilingual data sets
-## TODO: introduce under and over-sampling for multilingual data sets ...
+
 add-to-local-train-data: 
 ifneq (${CLEAN_TRAIN_SRC},)
 	${MAKE} ${CLEAN_TRAIN_SRC} ${CLEAN_TRAIN_TRG}
 endif
 ifneq (${wildcard ${CLEAN_TRAIN_SRC}},)
+ifdef CHECK_TRAINDATA_SIZE
 	@if [ `${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_SRC}} | wc -l` != `${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_TRG}} | wc -l` ]; then \
 	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
 	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
@@ -323,9 +344,10 @@ ifneq (${wildcard ${CLEAN_TRAIN_SRC}},)
 	  echo ${CLEAN_TRAIN_SRC}; \
 	  echo ${CLEAN_TRAIN_TRG}; \
 	fi
+endif
 	echo -n "* ${SRC}-${TRG}: "                           >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 	for d in ${wildcard ${CLEAN_TRAIN_SRC}}; do \
-	  l=`${GZIP} -cd < $$d | wc -l`; \
+	  l=`${GZIP} -cd < $$d ${CUT_DATA_SETS} | wc -l`; \
 	  if [ $$l -gt 0 ]; then \
 	    echo "$$d" | xargs basename | \
 	    sed -e 's#.${SRC}.gz$$##' \
@@ -340,13 +362,13 @@ ifneq (${wildcard ${CLEAN_TRAIN_SRC}},)
 ######################################
 ifeq (${USE_TARGET_LABELS},1)
 	echo "set target language labels";
-	${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_SRC}} |\
+	${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_SRC}} ${CUT_DATA_SETS} |\
 	sed "s/^/>>${TRG}<< /" > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
 else
 	echo "only one target language"
-	${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_SRC}} > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
+	${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_SRC}} ${CUT_DATA_SETS} > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
 endif
-	${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_TRG}} > ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
+	${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_TRG}} ${CUT_DATA_SETS} > ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
 ######################################
 #  SHUFFLE_DATA is set?
 #    --> shuffle data for each langpair

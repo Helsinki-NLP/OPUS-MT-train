@@ -3,27 +3,61 @@
 # model configurations
 #
 
+## various ways of setting the model languages
 
-# SRCLANGS = da no sv
-# TRGLANGS = fi
+## (1) explicitly set source and target languages, for example:
+##     SRCLANGS="da no sv" TRGLANGS="fi da"
+##
+## (2) specify language pairs, for example:
+##     LANGPAIRS="de-en fi-sv da-es"
+##     this will set SRCLANGS="de fi da" TRGLANGS="en sv es"
+##
+## (3) specify language pairs but make a symmetric model, for example:
+##     LANGPAIRS="de-en fi-sv da-es" SYMMETRIC=1
+##     this will set SRCLANGS="da de en es fi sv" TRGLANGS="da de en es fi sv"
+##
+## (4) only specify LANGS, for example
+##     LANGS="de en sv"
+##     this will set SRCLANGS="de en sv" SRCLANGS="de en sv"
 
-## if LANGS is set with more than one language
-##  --> assume multilingual model with the same languages on both sides
-##      unless SRCLANGS and TRGLANGS are set to something else
-ifeq (${words ${LANGS}},1)
+
+
+## if LANGPAIRS is not set but SRC and TRG are set
+## then set LANGPAIRS to SRC-TRG
+ifndef LANGPAIRS
+ifdef SRC
+ifdef TRG
+  LANGPAIRS := ${SRC}-${TRG}
+endif
+endif
+endif
+
+## if LANGPAIRS are set and the model is not supposed to be SYMMETRIC
+## then set SRCLANGS and TRGLANGS to the languages in LANGPAIRS
+ifdef LANGPAIRS
+ifneq (${SYMMETRIC},1)
+  SRCLANGS ?= ${sort ${shell echo "${LANGPAIRS}" | tr ' ' "\n" | cut -f1 -d '-'}}
+  TRGLANGS ?= ${sort ${shell echo "${LANGPAIRS}" | tr ' ' "\n" | cut -f2 -d '-'}}
+endif
+endif
+
+## if LANGPAIRS is set and LANGS is not 
+## then get all languages in LANGPAIRS
+ifdef LANGPAIRS
+  LANGS ?= ${sort ${subst -, ,${LANGPAIRS}}}
+endif
+
+## if more than one language is in LANGS
+## then assume a symmetric multilingual model
+ifneq (${words ${LANGS}},1)
   SRCLANGS ?= ${LANGS}
   TRGLANGS ?= ${LANGS}
 endif
 
-## set to SRC and TRG if necessary
-ifndef SRCLANGS
-  SRCLANGS := ${SRC}
-  TRGLANGS := ${TRG}
-endif
-
-## Swedish - Finnish as default if nothing is set
+## final default is sv-fi
 SRCLANGS ?= sv
 TRGLANGS ?= fi
+
 
 ## set SRC and TRG unless they are specified already
 SRC ?= ${firstword ${SRCLANGS}}
@@ -57,6 +91,13 @@ SKIP_LANGPAIRS ?= "nothing"
 ## maximum number of repeating the same data set 
 ## in oversampling
 MAX_OVER_SAMPLING ?= 50
+
+
+## set CHECK_TRAINDATA_SIZE if you want to check that each
+## bitext has equal number of lines in source and target
+## ---> this only prints a warning if not
+##
+# CHECK_TRAINDATA_SIZE
 
 
 # sorted languages and langpair used to match resources in OPUS
@@ -419,7 +460,6 @@ ${WORKDIR}/config.mk:
 	  s=`head -10000001 ${LOCAL_TRAIN_SRC} | wc -l`; \
 	  S=`cat ${LOCAL_TRAIN_SRC}.charfreq | wc -l`; \
 	  T=`cat ${LOCAL_TRAIN_TRG}.charfreq | wc -l`; \
-	  rm -f ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG}; \
 	fi; \
 	if [ $$s -gt ${LARGEST_TRAINSIZE} ]; then \
 	  echo "# ${LANGPAIRSTR} training data bigger than 10 million" > $@; \

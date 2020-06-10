@@ -13,6 +13,8 @@
 #  ---> don't need to re-create models for each language pair
 #
 
+.INTERMEDIATE: ${LOCAL_MONO_DATA}.${PRE}.charfreq
+.INTERMEDIATE: ${LOCAL_TRAIN_SRC}.charfreq ${LOCAL_TRAIN_TRG}.charfreq
 
 ##----------------------------------------------
 ## sentence piece
@@ -240,7 +242,7 @@ endif
 ## document-level models (with guided alignment)
 %.src.spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE}.gz:
 	${MAKE} PRE_SRC=spm${SRCBPESIZE:000=}k PRE_TRG=spm${TRGBPESIZE:000=}k wordalign
-	./large-context.pl -l ${CONTEXT_SIZE} \
+	${SCRIPTDIR}/large-context.pl -l ${CONTEXT_SIZE} \
 		${patsubst %.src.spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE}.gz,%.src.spm${SRCBPESIZE:000=}k.gz,$@} \
 		${patsubst %.src.spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE}.gz,%.trg.spm${TRGBPESIZE:000=}k.gz,$@} \
 		${patsubst %.src.spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE}.gz,%.spm${SRCBPESIZE:000=}k-spm${TRGBPESIZE:000=}k.src-trg.alg.gz,$@} \

@@ -1,4 +1,18 @@
 
+# related projects
+
+* https://browser.mt (bergamot project)
+* https://nteu.eu
+* https://gourmet-project.eu
+* https://elitr.eu
+* https://www.european-language-grid.eu
+
+Multilingual data:
+
+* http://lr-coordination.eu (ELRC)
+* https://www.pret-a-llod.eu
+* https://www.taus.net
+
 
 further resources: (from http://techiaith.cymru/translation/demo/?lang=en)
 contact: Dewi Jones (d.b.jones@bangor.ac.uk)
