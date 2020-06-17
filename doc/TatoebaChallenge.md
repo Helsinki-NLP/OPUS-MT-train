@@ -32,6 +32,30 @@ make SRCLANGS=afr TRGLANGS=epo tatoeba-bidirectional-job
 
 
 
+## Multilingual models
+
+
+Multilingual models that include all combinations of given source and target languages can be trained by calling the following special target, which first fetches the necessary data for all language pairs and then starts a training job. Here is an example with Afrikaans+Dutch as source languages and German+English+Spanish as target languages:
+
+```
+make SRCLANGS="afr nld" TRGLANGS="deu eng spa" tatoeba-multilingual-train
+```
+
+In order to evaluate all language pairs using Tatoeba test data one can run:
+
+```
+make SRCLANGS="afr nld" TRGLANGS="deu eng spa" tatoeba-multilingual-eval
+```
+
+In order to skip certain language pairs one can set `SKIP_LANGPAIRS`, for example to skip `afr-eng` and `nld-spa` one can run:
+
+```
+make SRCLANGS="afr nld" TRGLANGS="deu eng spa" SKIP_LANGPAIRS="afr-eng|nld-spa" tatoeba-multilingual-train
+```
+
+
+
+
 ## Start jobs for all pairs in an entire subset
 
 
@@ -45,12 +69,25 @@ make MODELTYPE=transformer tatoeba-subset-higher
 make MODELTYPE=transformer tatoeba-subset-highest
 ```
 
+Release packages can also be created for the entire subset (`medium` in the example below) by running:
+
+```
+make tatoeba-distsubset-medium
+```
+
+If training did not converge in time or jobs are interrupted then evaluation can also be invoked for the entire subset (`medium` in the example again) by running:
+
+```
+make tatoeba-evalsubset-medium
+```
+
 
 ## Start jobs for multilingual models from one of the subsets
 
 The commands below can be used to create mulitlingual NMT models with all languages involved in each of the Tatoeba Challenge subsets. First, all data sets will be created (which will take substantial amount of time) and after that the training jobs are submitted using SLURM. Data selections are automatically under/over-sampled to include equal amounts of training data for each language pair (base on the number of lines in the data).
 
 ```
+make tatoeba-multilingual-subset-zero
 make tatoeba-multilingual-subset-lowest
 make tatoeba-multilingual-subset-lower
 make tatoeba-multilingual-subset-medium
@@ -59,3 +96,32 @@ make tatoeba-multilingual-subset-highest
 ```
 
 Note that this includes many languages and may not work well and training will take a lot of time as well.
+
+Similar to the subset targets above, there are also special targets for creating release packages and for evaluating multilingual models. A release package is created by running:
+
+```
+make tatoeba-multilingual-distsubset-zero
+make tatoeba-multilingual-distsubset-lowest
+...
+```
+
+Another special thing is that multilingual models cover many language pairs. In order to run all test sets for all language pairs one can run:
+
+```
+make tatoeba-multilingual-evalsubset-zero
+make tatoeba-multilingual-evalsubset-lowest
+...
+```
+
+Note that this can be quite a lot of language pairs!
+
+
+
+## Generate evaluation tables
+
+Various lists and tables can be generated from the evaluated model files. Remove old files and generat new ones by running:
+
+```
+rm -f tatoeba-results* results/*.md
+make tatoeba-results-md
+```

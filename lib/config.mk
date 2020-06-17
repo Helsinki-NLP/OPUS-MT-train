@@ -12,47 +12,15 @@
 ##     LANGPAIRS="de-en fi-sv da-es"
 ##     this will set SRCLANGS="de fi da" TRGLANGS="en sv es"
 ##
-## (3) specify language pairs but make a symmetric model, for example:
-##     LANGPAIRS="de-en fi-sv da-es" SYMMETRIC=1
-##     this will set SRCLANGS="da de en es fi sv" TRGLANGS="da de en es fi sv"
-##
-## (4) only specify LANGS, for example
-##     LANGS="de en sv"
-##     this will set SRCLANGS="de en sv" SRCLANGS="de en sv"
 
-
-
-## if LANGPAIRS is not set but SRC and TRG are set
-## then set LANGPAIRS to SRC-TRG
-ifndef LANGPAIRS
-ifdef SRC
-ifdef TRG
-  LANGPAIRS := ${SRC}-${TRG}
-endif
-endif
-endif
 
 ## if LANGPAIRS are set and the model is not supposed to be SYMMETRIC
 ## then set SRCLANGS and TRGLANGS to the languages in LANGPAIRS
 ifdef LANGPAIRS
-ifneq (${SYMMETRIC},1)
   SRCLANGS ?= ${sort ${shell echo "${LANGPAIRS}" | tr ' ' "\n" | cut -f1 -d '-'}}
   TRGLANGS ?= ${sort ${shell echo "${LANGPAIRS}" | tr ' ' "\n" | cut -f2 -d '-'}}
 endif
-endif
 
-## if LANGPAIRS is set and LANGS is not 
-## then get all languages in LANGPAIRS
-ifdef LANGPAIRS
-  LANGS ?= ${sort ${subst -, ,${LANGPAIRS}}}
-endif
-
-## if more than one language is in LANGS
-## then assume a symmetric multilingual model
-ifneq (${words ${LANGS}},1)
-  SRCLANGS ?= ${LANGS}
-  TRGLANGS ?= ${LANGS}
-endif
 
 ## final default is sv-fi
 SRCLANGS ?= sv

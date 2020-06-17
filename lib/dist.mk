@@ -4,9 +4,10 @@
 # and upload them to cPouta ObjectStorage
 #
 
-MODELSHOME   = ${WORKHOME}/models
-DIST_PACKAGE = ${MODELSHOME}/${LANGPAIRSTR}/${DATASET}.zip
-
+MODELSHOME          = ${WORKHOME}/models
+DIST_PACKAGE        = ${MODELSHOME}/${LANGPAIRSTR}/${DATASET}.zip
+MODEL_CONTAINER     = OPUS-MT-models
+DEV_MODEL_CONTAINER = OPUS-MT-dev
 
 ## minimum BLEU score for models to be accepted as distribution package
 MIN_BLEU_SCORE = 20
@@ -17,14 +18,14 @@ dist: ${DIST_PACKAGE}
 ## local distribution in workhome, no restrictions about BLEU
 local-dist:
 	${MAKE} MODELSHOME=${WORKHOME}/models \
-		MODELS_URL=https://object.pouta.csc.fi/OPUS-MT-dev \
+		MODELS_URL=https://object.pouta.csc.fi/${DEV_MODEL_CONTAINER} \
 	dist
 
 ## global distribution in models-dir, restrictions on BLEU
 global-dist release:
 	if  [ `grep BLEU $(TEST_EVALUATION) | cut -f3 -d ' ' | cut -f1 -d '.'` -ge ${MIN_BLEU_SCORE} ]; then \
 	  ${MAKE} MODELSHOME=${PWD}/models \
-		  MODELS_URL=https://object.pouta.csc.fi/OPUS-MT-models
+		  MODELS_URL=https://object.pouta.csc.fi/${MODEL_CONTAINER}
 	  dist; \
 	fi
 
@@ -107,7 +108,7 @@ best-dist best_dist:
 		PRE_SRC=$$x PRE_TRG=$$y \
 		DATASET=$$z \
 		MODELTYPE=$$v   \
-		MODELS_URL=https://object.pouta.csc.fi/OPUS-MT-models dist-$$s; \
+		MODELS_URL=https://object.pouta.csc.fi/${MODEL_CONTAINER} dist-$$s; \
 	  fi; \
 	fi
 
@@ -120,7 +121,7 @@ best-dist best_dist:
 # 	if  [ `grep BLEU $(TEST_EVALUATION) | cut -f3 -d ' ' | cut -f1 -d '.'` -ge ${MIN_BLEU_SCORE} ]; then \
 
 DATE = ${shell date +%F}
-MODELS_URL = https://object.pouta.csc.fi/OPUS-MT-dev
+MODELS_URL = https://object.pouta.csc.fi/${DEV_MODEL_CONTAINER}
 SKIP_DIST_EVAL = 0
 
 
@@ -178,23 +179,25 @@ endif
 	  echo "* test set translations: [$(notdir ${@:.zip=})-${DATE}.test.txt](${MODELS_URL}/${LANGPAIRSTR}/$(notdir ${@:.zip=})-${DATE}.test.txt)" >> ${WORKDIR}/README.md; \
 	  echo "* test set scores: [$(notdir ${@:.zip=})-${DATE}.eval.txt](${MODELS_URL}/${LANGPAIRSTR}/$(notdir ${@:.zip=})-${DATE}.eval.txt)" >> ${WORKDIR}/README.md; \
 	  echo '' >> ${WORKDIR}/README.md; \
-	  if [ -e ${WORKDIR}/train/README.md ]; then \
-	    echo -n "## Training data: " >> ${WORKDIR}/README.md; \
-	    tr "\n" "~"  < ${WORKDIR}/train/README.md |\
-	    tr "#" "\n" | grep '${DATASET}' | \
-	    tail -1 | tr "~" "\n" >> ${WORKDIR}/README.md; \
-	    echo '' >> ${WORKDIR}/README.md; \
-	  fi; \
-	  if [ -e ${WORKDIR}/val/README.md ]; then \
-	    echo -n "#"                  >> ${WORKDIR}/README.md; \
-	    cat ${WORKDIR}/val/README.md >> ${WORKDIR}/README.md; \
-	    echo ''                      >> ${WORKDIR}/README.md; \
+	  if [ "${SKIP_DATA_DETAILS}" != "1" ]; then \
+	    if [ -e ${WORKDIR}/train/README.md ]; then \
+	      echo -n "## Training data: " >> ${WORKDIR}/README.md; \
+	      tr "\n" "~"  < ${WORKDIR}/train/README.md |\
+	      tr "#" "\n" | grep '${DATASET}' | \
+	      tail -1 | tr "~" "\n" >> ${WORKDIR}/README.md; \
+	      echo '' >> ${WORKDIR}/README.md; \
+	    fi; \
+	    if [ -e ${WORKDIR}/val/README.md ]; then \
+	      echo -n "#"                  >> ${WORKDIR}/README.md; \
+	      cat ${WORKDIR}/val/README.md >> ${WORKDIR}/README.md; \
+	      echo ''                      >> ${WORKDIR}/README.md; \
+	    fi; \
 	  fi; \
 	  echo '## Benchmarks' >> ${WORKDIR}/README.md; \
 	  echo '' >> ${WORKDIR}/README.md; \
 	  cd ${WORKDIR}; \
 	  grep -H BLEU *.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | \
-		tr '.' '/' | cut -f1,5,6 -d '/' | tr '/' "." > $@.1; \
+		sed 's/^\(.*\)\.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}\.\(.*\)\.eval:.*$$/\1.\2/' > $@.1; \
 	  grep BLEU *.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | cut -f3 -d ' ' > $@.2; \
 	  grep chrF *.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | cut -f3 -d ' ' > $@.3; \
 	  echo '| testset               | BLEU  | chr-F |' >> README.md; \
@@ -231,6 +234,10 @@ endif
 	@rm -f ${WORKDIR}/preprocess.sh ${WORKDIR}/postprocess.sh
 
 
+#	  grep -H BLEU *.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | \
+#		tr '.' '/' | cut -f1,5,6 -d '/' | tr '/' "." > $@.1; \
+
+
 
 ## do this only if the flag is set
 ## --> avoid expensive wildcard searches each time make is called
@@ -252,14 +259,14 @@ endif
 
 .PHONY: upload
 upload:
-	find models/ -type l | tar -cf models-links.tar -T -
-	find models/ -type l -delete
-	cd models && swift upload OPUS-MT-models --changed --skip-identical *
+	find ${MODELSHOME}/ -type l | tar -cf models-links.tar -T -
+	find ${MODELSHOME}/ -type l -delete
+	cd ${MODELSHOME} && swift upload ${MODEL_CONTAINER} --changed --skip-identical *
 	tar -xf models-links.tar
 	rm -f models-links.tar
-	swift post OPUS-MT-models --read-acl ".r:*"
-	swift list OPUS-MT-models > index.txt
-	swift upload OPUS-MT-models index.txt
+	swift post ${MODEL_CONTAINER} --read-acl ".r:*"
+	swift list ${MODEL_CONTAINER} > index.txt
+	swift upload ${MODEL_CONTAINER} index.txt
 	rm -f index.txt
 
 
@@ -267,12 +274,12 @@ upload:
 upload-models:
 	find ${WORKHOME}/models -type l | tar -cf dev-models-links.tar -T -
 	find ${WORKHOME}/models -type l -delete
-	cd ${WORKHOME} && swift upload OPUS-MT-dev --changed --skip-identical models
+	cd ${WORKHOME} && swift upload ${DEV_MODEL_CONTAINER} --changed --skip-identical models
 	tar -xf dev-models-links.tar
 	rm -f dev-models-links.tar
-	swift post OPUS-MT-dev --read-acl ".r:*"
-	swift list OPUS-MT-dev > index.txt
-	swift upload OPUS-MT-dev index.txt
+	swift post ${DEV_MODEL_CONTAINER} --read-acl ".r:*"
+	swift list ${DEV_MODEL_CONTAINER} > index.txt
+	swift upload ${DEV_MODEL_CONTAINER} index.txt
 	rm -f index.txt
 
 .PHONY: upload-scores
