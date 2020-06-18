@@ -76,7 +76,8 @@ else ifneq ($(wildcard /wrk/tiedeman/research),)
 else
   # CSCPROJECT   = project_2001194
   # CSCPROJECT   = project_2000309
-  CSCPROJECT   = project_2002688
+  # CSCPROJECT   = project_2002688
+  CSCPROJECT   = project_2002982
   DATAHOME     = ${HOME}/work/opentrans/data/${LANGPAIR}
   WORKHOME     = ${shell realpath ${PWD}/work-langid}
   APPLHOME     = ${HOME}/projappl

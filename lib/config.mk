@@ -433,18 +433,29 @@ ${WORKDIR}/config.mk:
 	  echo "# ${LANGPAIRSTR} training data bigger than 10 million" > $@; \
 	  echo "GPUJOB_HPC_MEM = 8g"       >> $@; \
 	  echo "GPUJOB_SUBMIT  = -multigpu" >> $@; \
+	  echo "BPESIZE    = ${BPESIZE}"    >> $@; \
+	  echo "DEVSIZE    = ${DEVSIZE}"    >> $@; \
+	  echo "TESTSIZE   = ${TESTSIZE}"   >> $@; \
+	  echo "DEVMINSIZE = ${DEVMINSIZE}" >> $@; \
 	elif [ $$s -gt ${LARGE_TRAINSIZE} ]; then \
 	  echo "# ${LANGPAIRSTR} training data bigger than 1 million" > $@; \
 	  echo "GPUJOB_HPC_MEM = 8g"       >> $@; \
 	  echo "GPUJOB_SUBMIT  = "         >> $@; \
 	  echo "MARIAN_VALID_FREQ = 2500"  >> $@; \
+	  echo "BPESIZE    = ${BPESIZE}"    >> $@; \
+	  echo "DEVSIZE    = ${DEVSIZE}"    >> $@; \
+	  echo "TESTSIZE   = ${TESTSIZE}"   >> $@; \
+	  echo "DEVMINSIZE = ${DEVMINSIZE}" >> $@; \
 	elif [ $$s -gt ${MEDIUM_TRAINSIZE} ]; then \
 	  echo "# ${LANGPAIRSTR} training data bigger than 500k" > $@; \
 	  echo "GPUJOB_HPC_MEM = 4g"       >> $@; \
 	  echo "GPUJOB_SUBMIT  = "         >> $@; \
 	  echo "MARIAN_VALID_FREQ = 2500"  >> $@; \
 	  echo "MARIAN_WORKSPACE  = 10000" >> $@; \
-	  echo "BPESIZE = 12000"           >> $@; \
+	  echo "BPESIZE    = 12000"         >> $@; \
+	  echo "DEVSIZE    = ${DEVSIZE}"    >> $@; \
+	  echo "TESTSIZE   = ${TESTSIZE}"   >> $@; \
+	  echo "DEVMINSIZE = ${DEVMINSIZE}" >> $@; \
 	elif [ $$s -gt ${SMALL_TRAINSIZE} ]; then \
 	  echo "# ${LANGPAIRSTR} training data bigger than 100k" > $@; \
 	  echo "GPUJOB_HPC_MEM = 4g"       >> $@; \
@@ -479,5 +490,25 @@ ${WORKDIR}/config.mk:
 	    echo "TRGBPESIZE  = 32000"     >> $@; \
 	  fi; \
 	fi
-
-
+	echo "SRCLANGS    = ${SRCLANGS}"    >> $@
+	echo "TRGLANGS    = ${TRGLANGS}"    >> $@
+	echo "SKIPLANGS   = ${SKIPLANGS}"   >> $@
+	echo "LANGPAIRSTR = ${LANGPAIRSTR}" >> $@
+	echo "DATASET     = ${DATASET}"     >> $@
+	echo "TRAINSET    = ${TRAINSET}"    >> $@
+	echo "DEVSET      = ${DEVSET}"      >> $@
+	echo "TESTSET     = ${TESTSET}"     >> $@
+	echo "PRE         = ${PRE}"         >> $@
+	echo "PRE_SRC     = ${PRE_SRC}"     >> $@
+	echo "PRE_TRG     = ${PRE_TRG}"     >> $@
+ifdef SHUFFLE_DATA
+	echo "SHUFFLE_DATA      = ${SHUFFLE_DATA}"       >> $@
+endif
+ifdef FIT_DATA_SIZE
+	echo "FIT_DATA_SIZE     = ${FIT_DATA_SIZE}"      >> $@
+endif
+	echo "MAX_OVER_SAMPLING = ${MAX_OVER_SAMPLING}"  >> $@
+	echo "USE_REST_DEVDATA  = ${USE_REST_DEVDATA}"   >> $@
+ifdef USE_TARGET_LABELS
+	echo "USE_TARGET_LABELS = ${USE_TARGET_LABELS}"  >> $@
+endif

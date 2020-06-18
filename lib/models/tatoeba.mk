@@ -81,11 +81,13 @@ TATOEBA_MODEL_CONTAINER = Tatoeba-MT-models
 
 ## start unidirectional training job
 ## - make data first, then submit a job
+.PHONY: tatoeba-job
 tatoeba-job:
 	${MAKE} tatoeba-prepare
 	${MAKE} all-job-tatoeba
 
 ## start jobs in both translation directions
+.PHONY: tatoeba-bidirectional-job
 tatoeba-bidirectional-job:
 	${MAKE} tatoeba-prepare
 	${MAKE} all-job-tatoeba
@@ -97,26 +99,37 @@ endif
 
 
 ## prepare data (config, train.dev.test data, labels)
+.PHONY: tatoeba-prepare
 tatoeba-prepare: ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.gz
 	${MAKE} local-config-tatoeba
 	${MAKE} data-tatoeba
 
 ## train a model
+.PHONY: tatoeba-train
 tatoeba-train:
 	${MAKE} train-tatoeba
 
 ## evaluate a model
+.PHONY: tatoeba-eval
 tatoeba-eval:
 	${MAKE} compare-tatoeba
 
 ## fetch the essential data and get labels for language variants
 ## (this is done by the data targets above as well)
+.PHONY: tatoeba-data tatoeba-labels
 tatoeba-data: ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.gz
 tatoeba-labels: ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels
+
+
+.PHONY: tatoeba-results
+tatoeba-results:
+	rm -f tatoeba-results* results/*.md
+	${MAKE} tatoeba-results-md
 
 ## create result tables in various variants and for various subsets
 ## markdown pages are for reading on-line in the Tatoeba Challenge git
 ## ---> link results dir to the local copy of the Tatoeba Challenge git
+.PHONY: tatoeba-results-md
 tatoeba-results-md: tatoeba-results-sorted tatoeba-results-sorted-model tatoeba-results-sorted-langpair \
 		results/tatoeba-results-sorted.md \
 		results/tatoeba-results-sorted-model.md \
@@ -258,7 +271,7 @@ tatoeba-trainsize-%.txt: tatoeba-%.md
 ## generic targets for working with multilingual models
 ###############################################################################
 
-
+.PHONY: tatoeba-multilingual-train
 tatoeba-multilingual-train:
 	-for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
@@ -273,6 +286,7 @@ tatoeba-multilingual-train:
 
 
 ## evaluate all individual language pairs for a multilingual model
+.PHONY: tatoeba-multilingual-eval
 tatoeba-multilingual-eval:
 	${MAKE} tatoeba-multilingual-testsets
 	for s in ${SRCLANGS}; do \
@@ -298,6 +312,7 @@ tatoeba-multilingual-eval:
 
 
 ## copy testsets into the multilingual model's test directory
+.PHONY: tatoeba-multilingual-testsets
 tatoeba-multilingual-testsets:
 	for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
@@ -419,14 +434,24 @@ ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels:
 
 ## modify language IDs in training data to adjust them to test sets
 ## --> fix codes for chinese and take away script information (not reliable!)
+##     except the distinction betwee traditional and simplified
 ## --> take away regional codes
 ## --> take away script extension that may come with some codes
-FIXLANGIDS = 	| sed 's/zho\(.*\)_HK/yue\1/;s/zho\(.*\)_CN/cmn\1/;s/zho\(.*\)_TW/cmn\1/;' \
-		| sed 's/\_[A-Z][A-Z]//' \
-		| sed 's/\-[a-z]*//' \
-		| sed 's/jpn_[A-Za-z]*/jpn/' \
-		| sed 's/kor_[A-Za-z]*/kor/' \
-		| sed 's/\(cjy\|cmn\|gan\|lzh\|nan\|wuu\|yue\|zho\)_[A-Za-z]*/\1/' \
+FIXLANGIDS = 	| sed 's/zho\(.*\)_HK/yue\1/g;s/zho\(.*\)_CN/cmn\1/g;s/zho\(.*\)_TW/cmn\1/g;' \
+		| sed 's/\_[A-Z][A-Z]//g' \
+		| sed 's/\-[a-z]*//g' \
+		| sed 's/jpn_[A-Za-z]*/jpn/g' \
+		| sed 's/kor_[A-Za-z]*/kor/g' \
+		| perl -pe 'if (/(cjy|cmn|gan|lzh|nan|wuu|yue|zho)_([A-Za-z]{4})/){if ($$2 ne "Hans" && $$2 ne "Hant"){s/(cjy|cmn|gan|lzh|nan|wuu|yue|zho)_([A-Za-z]{4})/$$1/} }'
+
+
+## assume that all zho is Mandarin Chinese?
+#		| sed 's/zho/cmn/g'
+
+## take away all script info for Chinese? even tranditional vs simplified?
+#		| sed 's/\(cjy\|cmn\|gan\|lzh\|nan\|wuu\|yue\|zho\)_[A-Za-z]*/\1/'
+
+
 
 
 ## convert Tatoeba Challenge data into the format we need
@@ -471,7 +496,7 @@ FIXLANGIDS = 	| sed 's/zho\(.*\)_HK/yue\1/;s/zho\(.*\)_CN/cmn\1/;s/zho\(.*\)_TW/
 # - simplified vs traditional script
 #
 # TODO: should not manipulate test data like this!!!!
-# ---> du Chinese script detectiont properl in data releases!
+# ---> do Chinese script detectiont properl in data releases!
 #######################################
 ifeq ($(filter cjy cmn gan lzh nan wuu yue zho,${SRC}),${SRC})
 	@echo "treating source language Chinese"
@@ -507,11 +532,19 @@ endif
 # labels in the data
 # TODO: should we take all in all data sets?
 # NOW: only look for the ones in test data
+# special treatment for Chinese: 
+#    add the generic zho labels as well
 #######################################
 #	cut -f1 ${dir $@}Tatoeba-*.${LANGPAIR}.clean.id | sort -u | tr "\n" ' ' > $(@:.${SRCEXT}.gz=.${SRCEXT}.labels)
 #	cut -f2 ${dir $@}Tatoeba-*.${LANGPAIR}.clean.id | sort -u | tr "\n" ' ' > $(@:.${SRCEXT}.gz=.${TRGEXT}.labels)
 	cut -f1 ${dir $@}Tatoeba-test.${LANGPAIR}.clean.id | sort -u | tr "\n" ' ' > $(@:.${SRCEXT}.gz=.${SRCEXT}.labels)
 	cut -f2 ${dir $@}Tatoeba-test.${LANGPAIR}.clean.id | sort -u | tr "\n" ' ' > $(@:.${SRCEXT}.gz=.${TRGEXT}.labels)
+ifeq (${SRC},zho)
+	echo -n 'zho zho_Hans zho_Hant cmn' >> $(@:.${SRCEXT}.gz=.${SRCEXT}.labels)
+endif
+ifeq (${TRG},zho)
+	echo -n 'zho zho_Hans zho_Hant cmn' >> $(@:.${SRCEXT}.gz=.${TRGEXT}.labels)
+endif
 	rm -f $@.d/data/${LANGPAIR}/*
 	rmdir $@.d/data/${LANGPAIR}
 	rmdir $@.d/data
@@ -596,11 +629,6 @@ testsets/${LANGPAIR}/Tatoeba-test.${LANGPAIR}.%: ${TATOEBA_DATA}/Tatoeba-test.${
 ###############################################################################
 ## generate result tables
 ###############################################################################
-
-
-too-small-ref: tatoeba-results-BLEU-sorted-model
-	grep -P 'ref_len = 1?[0-9]?[0-9]\)' $< | cut -f2 | sort -u | tr "\n" '|' | sed 's/|$$//'
-
 
 results/tatoeba-results%.md: tatoeba-results% tatoeba-results-BLEU-sorted-model
 	mkdir -p ${dir $@}
