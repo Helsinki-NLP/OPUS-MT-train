@@ -406,6 +406,7 @@ endif
 ## make some data size-specific configuration parameters
 ## TODO: is it OK to delete LOCAL_TRAIN data?
 
+.PHONY: local-config
 local-config: ${WORKDIR}/config.mk
 
 SMALLEST_TRAINSIZE = 10000

@@ -222,6 +222,9 @@ endif
 		${notdir ${MODEL_VALIDLOG}} \
 		${notdir ${MODEL_TRAINLOG}} \
 		source.* target.* decoder.yml preprocess.sh postprocess.sh
+	@if [ -e ${WORKDIR}/config.mk ]; then \
+	  cd ${WORKDIR} && zip -u ${notdir $@} config.mk; \
+	fi
 	@mkdir -p ${dir $@}
 	@mv -f ${WORKDIR}/${notdir $@} ${@:.zip=}-${DATE}.zip
 	if [ -e $(TEST_EVALUATION) ]; then \

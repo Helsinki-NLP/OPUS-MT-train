@@ -492,43 +492,6 @@ FIXLANGIDS = 	| sed 's/zho\(.*\)_HK/yue\1/g;s/zho\(.*\)_CN/cmn\1/g;s/zho\(.*\)_T
 	touch ${dir $@}Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}
 	touch ${dir $@}Tatoeba-train.${LANGPAIR}.clean.${TRGEXT}
 #######################################
-# special treatment for Chinese
-# - simplified vs traditional script
-#
-# TODO: should not manipulate test data like this!!!!
-# ---> do Chinese script detectiont properl in data releases!
-#######################################
-ifeq ($(filter cjy cmn gan lzh nan wuu yue zho,${SRC}),${SRC})
-	@echo "treating source language Chinese"
-	for d in dev test train; do \
-	  cat ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT} | \
-	  ${SCRIPTDIR}/detect_chinese_script.pl > ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.script; \
-	  cut -f1 ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id > ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.langid; \
-	  paste -d '' ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.langid ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.script \
-		> ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.id; \
-	  cut -f2 ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id > ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.id; \
-	  paste ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.id ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.id \
-		> ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id; \
-	  rm -f ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.langid ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.script; \
-	  rm -f ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.id ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.id; \
-	done
-endif
-ifeq ($(filter cjy cmn gan lzh nan wuu yue zho,${TRG}),${TRG})
-	@echo "treating target language Chinese"
-	for d in dev test train; do \
-	  cat ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT} | \
-	  ${SCRIPTDIR}/detect_chinese_script.pl > ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.script; \
-	  cut -f2 ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id > ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.langid; \
-	  paste -d '' ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.langid ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.script \
-		> ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.id; \
-	  cut -f1 ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id > ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.id; \
-	  paste ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.id ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.id \
-		> ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id; \
-	  rm -f ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.langid ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.script; \
-	  rm -f ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.id ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.id; \
-	done
-endif
-#######################################
 # labels in the data
 # TODO: should we take all in all data sets?
 # NOW: only look for the ones in test data
@@ -606,6 +569,48 @@ endif
 	  fi; \
 	  rm -f ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id; \
 	done
+
+
+
+# #######################################
+# # special treatment for Chinese
+# # - simplified vs traditional script
+# #
+# # TODO: should not manipulate test data like this!!!!
+# # ---> do Chinese script detectiont properl in data releases!
+# #######################################
+# ifeq ($(filter cjy cmn gan lzh nan wuu yue zho,${SRC}),${SRC})
+# 	@echo "treating source language Chinese"
+# 	for d in dev test train; do \
+# 	  cat ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT} | \
+# 	  ${SCRIPTDIR}/detect_chinese_script.pl > ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.script; \
+# 	  cut -f1 ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id > ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.langid; \
+# 	  paste -d '' ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.langid ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.script \
+# 		> ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.id; \
+# 	  cut -f2 ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id > ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.id; \
+# 	  paste ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.id ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.id \
+# 		> ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id; \
+# 	  rm -f ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.langid ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.script; \
+# 	  rm -f ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.id ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.id; \
+# 	done
+# endif
+# ifeq ($(filter cjy cmn gan lzh nan wuu yue zho,${TRG}),${TRG})
+# 	@echo "treating target language Chinese"
+# 	for d in dev test train; do \
+# 	  cat ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT} | \
+# 	  ${SCRIPTDIR}/detect_chinese_script.pl > ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.script; \
+# 	  cut -f2 ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id > ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.langid; \
+# 	  paste -d '' ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.langid ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.script \
+# 		> ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.id; \
+# 	  cut -f1 ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id > ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.id; \
+# 	  paste ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.id ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.id \
+# 		> ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id; \
+# 	  rm -f ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.langid ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.script; \
+# 	  rm -f ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.id ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.id; \
+# 	done
+# endif
+
+
 
 
 %/Tatoeba-train.${LANGPAIR}.clean.${TRGEXT}.gz: %/Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.gz
