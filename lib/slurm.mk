@@ -20,9 +20,9 @@ endif
 %.submit:
 	mkdir -p ${WORKDIR}
 	echo '#!/bin/bash -l' > $@
-	echo '#SBATCH -J "${LANGSTR}-${DATASET}-${@:.submit=}"' >>$@
-	echo '#SBATCH -o ${LANGSTR}-${DATASET}-${@:.submit=}.out.%j' >> $@
-	echo '#SBATCH -e ${LANGSTR}-${DATASET}-${@:.submit=}.err.%j' >> $@
+	echo '#SBATCH -J "${LANGPAIRSTR}-${DATASET}-${@:.submit=}"' >>$@
+	echo '#SBATCH -o ${LANGPAIRSTR}-${DATASET}-${@:.submit=}.out.%j' >> $@
+	echo '#SBATCH -e ${LANGPAIRSTR}-${DATASET}-${@:.submit=}.err.%j' >> $@
 	echo '#SBATCH --mem=${HPC_MEM}' >> $@
 	echo '#SBATCH --exclude=r18g08' >> $@
 ifdef EMAIL
@@ -35,6 +35,7 @@ endif
 ifeq (${shell hostname --domain},bullx)
 	echo '#SBATCH --account=${CSCPROJECT}' >> $@
 	echo '#SBATCH --gres=gpu:${GPU}:${NR_GPUS},nvme:${HPC_DISK}' >> $@
+#	echo '#SBATCH --exclude=r18g02' >> $@
 else
 	echo '#SBATCH --gres=gpu:${GPU}:${NR_GPUS}' >> $@
 endif

@@ -90,9 +90,9 @@ else
   # MARIAN       = ${APPLHOME}/marian-dev/build-spm
   # MARIANCPU    = ${APPLHOME}/marian-dev/build-cpu
   # MARIANSPM    = ${APPLHOME}/marian-dev/build-spm
-  MARIAN       = ${APPLHOME}/marian-dev/build-new
-  MARIANCPU    = ${APPLHOME}/marian-dev/build-new
-  MARIANSPM    = ${APPLHOME}/marian-dev/build-new
+  MARIAN       = ${APPLHOME}/marian-dev/build
+  MARIANCPU    = ${APPLHOME}/marian-dev/build
+  MARIANSPM    = ${APPLHOME}/marian-dev/build
   # GPU_MODULES  = cuda intel-mkl
   GPU          = v100
   GPU_MODULES  = python-env 

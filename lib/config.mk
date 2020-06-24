@@ -124,6 +124,12 @@ OPUSMONOCORPORA = $(filter-out ${EXCLUDE_CORPORA} ,${patsubst %/latest/mono/${LA
 		${shell ls ${OPUSHOME}/*/latest/mono/${LANGID}.txt.gz}}})
 
 
+## all languages in OPUS (requires the opus-langs.txt file)
+ifneq (${wildcard opus-langs.txt},)
+  OPUSLANGS = ${filter-out simple,${shell head -1 opus-langs.txt}}
+endif
+
+
 ALL_LANG_PAIRS = ${shell ls ${WORKHOME} | grep -- '-' | grep -v old}
 ALL_BILINGUAL_MODELS = ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" |  grep -v -- '\+'}
 ALL_MULTILINGUAL_MODELS = ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" | grep -- '\+'}
@@ -401,6 +407,13 @@ else
   SEED=1234
 endif
 
+
+
+## list of all languages in OPUS
+opus-langs.txt:
+	wget -O $@.tmp http://opus.nlpl.eu/opusapi/?languages=true
+	grep '",' $@.tmp | tr '",' '  ' | sort | tr "\n" ' ' | sed 's/  */ /g' > $@
+	rm -f $@.tmp
 
 
 ## make some data size-specific configuration parameters
