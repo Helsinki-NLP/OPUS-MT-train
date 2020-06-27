@@ -28,8 +28,23 @@ TRGLANGS ?= fi
 
 
 ## set SRC and TRG unless they are specified already
-SRC ?= ${firstword ${SRCLANGS}}
-TRG ?= ${lastword ${TRGLANGS}}
+ifneq (${words ${SRCLANGS}},1)
+  SRC ?= multi
+else
+  SRC = ${SRCLANGS}
+endif
+ifneq (${words ${TRGLANGS}},1)
+  TRG ?= multi
+else
+  TRG = ${TRGLANGS}
+endif
+
+
+## OLD: set to first and last lang
+## --> this makes the evaluation look like it is one lang-pair
+##
+# SRC ?= ${firstword ${SRCLANGS}}
+# TRG ?= ${lastword ${TRGLANGS}}
 
 
 ## SKIP_LANGPAIRS can be used to skip certain language pairs

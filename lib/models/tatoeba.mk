@@ -55,26 +55,57 @@
 #---------------------------------------------------------------------
 
 
+## general parameters for Tatoeba models
+
+TATOEBA_DATAURL = https://object.pouta.csc.fi/Tatoeba-Challenge
+TATOEBA_RAWGIT  = https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
+TATOEBA_WORK    = ${PWD}/work-tatoeba
+TATOEBA_DATA    = ${TATOEBA_WORK}/data/${PRE}
+
+TATOEBA_MODEL_CONTAINER = Tatoeba-MT-models
+
+TATOEBA_PARAMS = TRAINSET=Tatoeba-train \
+		DEVSET=Tatoeba-dev \
+		TESTSET=Tatoeba-test \
+		TESTSET_NAME=Tatoeba-test \
+		SMALLEST_TRAINSIZE=1000 \
+		USE_REST_DEVDATA=0 \
+		HELDOUTSIZE=0 \
+		DEVSIZE=5000 \
+		TESTSIZE=10000 \
+		DEVMINSIZE=200 \
+		WORKHOME=${TATOEBA_WORK} \
+		MODELSHOME=${PWD}/models-tatoeba \
+                MODELS_URL=https://object.pouta.csc.fi/${TATOEBA_MODEL_CONTAINER} \
+		MODEL_CONTAINER=${TATOEBA_MODEL_CONTAINER} \
+		ALT_MODEL_DIR=tatoeba \
+		SKIP_DATA_DETAILS=1 \
+		MIN_BLEU_SCORE=10 \
+
+
 
 ## taken from the Tatoeba-Challenge Makefile
 ## requires local data for setting TATOEBA_LANGS
+
 ISO639         = iso639
 GET_ISO_CODE   = ${ISO639} -m
 TATOEBA_LANGS  = ${sort ${patsubst %.txt.gz,%,${notdir ${wildcard ${OPUSHOME}/Tatoeba/latest/mono/*.txt.gz}}}}
 TATOEBA_LANGS3 = ${sort ${filter-out xxx,${shell ${GET_ISO_CODE} ${TATOEBA_LANGS}}}}
+TATOEBA_LANGPARENTS = ${sort ${shell langgroup -p -n ${TATOEBA_LANGS3} 2>/dev/null}}
 TATOEBA_LANGGROUPS  = ${shell langgroup -g -n ${TATOEBA_LANGS3} 2>/dev/null | tr " " "\n" | grep '+'}
 TATOEBA_LANGGROUPS2 = ${shell langgroup -G -n ${TATOEBA_LANGS3} 2>/dev/null | tr " " "\n" | grep '+'}
 
 ## OPUS LANGS
 OPUS_LANGS3      = ${sort ${filter-out xxx,${shell ${GET_ISO_CODE} ${OPUSLANGS}}}}
+OPUS_LANGPARENTS = ${sort ${shell langgroup -p -n ${OPUS_LANGS3} 2>/dev/null}}
 OPUS_LANGGROUPS  = ${shell langgroup -g -n ${OPUS_LANGS3} 2>/dev/null | tr " " "\n" | grep '+'}
 OPUS_LANGGROUPS2 = ${shell langgroup -G -n ${OPUS_LANGS3} 2>/dev/null | tr " " "\n" | grep '+'}
 
 ## combined (to make sure we don't miss anything)
-OPUSTATOEBA_LANGS3 = ${sort ${OPUS_LANGS3} ${TATOEBA_LANGS3}}
-OPUSTATOEBA_LANGGROUPS  = ${shell langgroup -g -n ${OPUSTATOEBA_LANGS3} 2>/dev/null | tr " " "\n" | grep '+'}
-OPUSTATOEBA_LANGGROUPS2 = ${shell langgroup -G -n ${OPUSTATOEBA_LANGS3} 2>/dev/null | tr " " "\n" | grep '+'}
-
+OPUSTATOEBA_LANGS3       = ${sort ${OPUS_LANGS3} ${TATOEBA_LANGS3}}
+OPUSTATOEBA_LANGPARENTS  = ${sort ${OPUS_LANGPARENTS} ${TATOEBA_LANGPARENTS}}
+OPUSTATOEBA_LANGGROUPS   = ${shell langgroup -g -n ${OPUSTATOEBA_LANGS3} 2>/dev/null | tr " " "\n" | grep '+'}
+OPUSTATOEBA_LANGGROUPS2  = ${shell langgroup -G -n ${OPUSTATOEBA_LANGS3} 2>/dev/null | tr " " "\n" | grep '+'}
 
 
 
@@ -103,71 +134,224 @@ tatoeba-westgermanice-eval:
 tatoeba-langgroups:
 	@echo ${TATOEBA_LANGGROUPS}
 	@echo ${TATOEBA_LANGGROUPS2}
+	@echo ${TATOEBA_LANGPARENTS}
 
 opus-langgroups:
 	@echo ${OPUSTATOEBA_LANGGROUPS}
 	@echo ${OPUSTATOEBA_LANGGROUPS2}
+	@echo ${OPUSTATOEBA_LANGPARENTS}
 
 
-## multilingual models for language groups
-tatoeba-langgroup:
-	for g in ${TATOEBA_LANGGROUPS}; do \
-	  l=`echo $$g | sed 's/\+/ /g'`; \
-	  n=`langgroup -p $$l | cut -f1 -d' '`; \
-	  ${MAKE} LANGPAIRSTR="$$n-$$n" TRGLANGS="$$l" SRCLANGS="$$l" \
-		MODELTYPE=transformer FIT_DATA_SIZE=1000000 tatoeba-multilingual-train; \
-	done
+# ## multilingual models for language groups
+# tatoeba-langgroup:
+# 	for g in ${TATOEBA_LANGGROUPS}; do \
+# 	  l=`echo $$g | sed 's/\+/ /g'`; \
+# 	  n=`langgroup -p $$l | cut -f1 -d' '`; \
+# 	  ${MAKE} LANGPAIRSTR="$$n-$$n" TRGLANGS="$$l" SRCLANGS="$$l" \
+# 		MODELTYPE=transformer FIT_DATA_SIZE=1000000 tatoeba-multilingual-train; \
+# 	done
 
-## models for language groups to English
-tatoeba-group2eng:
-	for g in ${TATOEBA_LANGGROUPS}; do \
-	  l=`echo $$g | sed 's/\+/ /g'`; \
-	  n=`langgroup -p $$l | cut -f1 -d' '`; \
-	  ${MAKE} LANGPAIRSTR="$$n-eng" SRCLANGS="$$l" TRGLANGS=eng \
-		MODELTYPE=transformer FIT_DATA_SIZE=1000000 tatoeba-multilingual-train; \
-	done
+# ## models for language groups to English
+# tatoeba-group2eng:
+# 	for g in ${TATOEBA_LANGGROUPS}; do \
+# 	  l=`echo $$g | sed 's/\+/ /g'`; \
+# 	  n=`langgroup -p $$l | cut -f1 -d' '`; \
+# 	  ${MAKE} LANGPAIRSTR="$$n-eng" SRCLANGS="$$l" TRGLANGS=eng \
+# 		MODELTYPE=transformer FIT_DATA_SIZE=1000000 tatoeba-multilingual-train; \
+# 	done
 
-## models for English to language groups
-tatoeba-eng2group:
-	for g in ${TATOEBA_LANGGROUPS}; do \
-	  l=`echo $$g | sed 's/\+/ /g'`; \
-	  n=`langgroup -p $$l | cut -f1 -d' '`; \
-	  ${MAKE} LANGPAIRSTR="eng-$$n" TRGLANGS="$$l" SRCLANGS=eng \
-		MODELTYPE=transformer FIT_DATA_SIZE=1000000 tatoeba-multilingual-train; \
-	done
+# ## models for English to language groups
+# tatoeba-eng2group:
+# 	for g in ${TATOEBA_LANGGROUPS}; do \
+# 	  l=`echo $$g | sed 's/\+/ /g'`; \
+# 	  n=`langgroup -p $$l | cut -f1 -d' '`; \
+# 	  ${MAKE} LANGPAIRSTR="eng-$$n" TRGLANGS="$$l" SRCLANGS=eng \
+# 		MODELTYPE=transformer FIT_DATA_SIZE=1000000 tatoeba-multilingual-train; \
+# 	done
 
 
-##-------------------------------------------------------------------
-## multilingual models 
-## with all OPUS data not only the languages that have Tatoeba data
-##-------------------------------------------------------------------
 
-## multilingual models for language groups
-tatoeba-all-langgroup:
-	for g in ${OPUSTATOEBA_LANGGROUPS}; do \
-	  l=`echo $$g | sed 's/\+/ /g'`; \
-	  n=`langgroup -p $$l | cut -f1 -d' '`; \
-	  ${MAKE} LANGPAIRSTR="all-$$n-$$n" TRGLANGS="$$l" SRCLANGS="$$l" \
-		MODELTYPE=transformer FIT_DATA_SIZE=1000000 tatoeba-multilingual-train; \
-	done
 
-## models for language groups to English
-tatoeba-all-group2eng:
-	for g in ${OPUSTATOEBA_LANGGROUPS}; do \
-	  l=`echo $$g | sed 's/\+/ /g'`; \
-	  n=`langgroup -p $$l | cut -f1 -d' '`; \
-	  ${MAKE} LANGPAIRSTR="all-$$n-eng" SRCLANGS="$$l" TRGLANGS=eng \
-		MODELTYPE=transformer FIT_DATA_SIZE=1000000 tatoeba-multilingual-train; \
-	done
 
-## models for English to language groups
-tatoeba-all-eng2group:
-	for g in ${OPUSTATOEBA_LANGGROUPS}; do \
-	  l=`echo $$g | sed 's/\+/ /g'`; \
-	  n=`langgroup -p $$l | cut -f1 -d' '`; \
-	  ${MAKE} LANGPAIRSTR="all-eng-$$n" TRGLANGS="$$l" SRCLANGS=eng \
-		MODELTYPE=transformer FIT_DATA_SIZE=1000000 tatoeba-multilingual-train; \
-	done
+# ##-------------------------------------------------------------------
+# ## multilingual models 
+# ## with all OPUS data not only the languages that have Tatoeba data
+# ##-------------------------------------------------------------------
+
+# ## multilingual models for language groups
+# tatoeba-all-langgroup:
+# 	for g in ${OPUSTATOEBA_LANGGROUPS}; do \
+# 	  l=`echo $$g | sed 's/\+/ /g'`; \
+# 	  n=`langgroup -p $$l | cut -f1 -d' '`; \
+# 	  ${MAKE} LANGPAIRSTR="all-$$n-$$n" TRGLANGS="$$l" SRCLANGS="$$l" \
+# 		MODELTYPE=transformer FIT_DATA_SIZE=1000000 tatoeba-multilingual-train; \
+# 	done
+
+# ## models for language groups to English
+# tatoeba-all-group2eng:
+# 	for g in ${OPUSTATOEBA_LANGGROUPS}; do \
+# 	  l=`echo $$g | sed 's/\+/ /g'`; \
+# 	  n=`langgroup -p $$l | cut -f1 -d' '`; \
+# 	  ${MAKE} LANGPAIRSTR="all-$$n-eng" SRCLANGS="$$l" TRGLANGS=eng \
+# 		MODELTYPE=transformer FIT_DATA_SIZE=1000000 tatoeba-multilingual-train; \
+# 	done
+
+# ## models for English to language groups
+# tatoeba-all-eng2group:
+# 	for g in ${OPUSTATOEBA_LANGGROUPS}; do \
+# 	  l=`echo $$g | sed 's/\+/ /g'`; \
+# 	  n=`langgroup -p $$l | cut -f1 -d' '`; \
+# 	  ${MAKE} LANGPAIRSTR="all-eng-$$n" TRGLANGS="$$l" SRCLANGS=eng \
+# 		MODELTYPE=transformer FIT_DATA_SIZE=1000000 tatoeba-multilingual-train; \
+# 	done
+
+
+
+
+
+
+
+
+#### language-group to English
+
+GROUP2ENG_JOB     = $(patsubst %,tatoeba-%2eng-job,${TATOEBA_LANGPARENTS})
+GROUP2ENG_TRAIN   = $(patsubst %,tatoeba-%2eng-train,${TATOEBA_LANGPARENTS})
+GROUP2ENG_EVAL    = $(patsubst %,tatoeba-%2eng-eval,${TATOEBA_LANGPARENTS})
+GROUP2ENG_EVALALL = $(patsubst %,tatoeba-%2eng-evalall,${TATOEBA_LANGPARENTS})
+GROUP2ENG_DIST    = $(patsubst %,tatoeba-%2eng-dist,${TATOEBA_LANGPARENTS})
+
+tatoeba-group2eng: ${GROUP2ENG_JOB}
+
+${GROUP2ENG_JOB}:
+	${MAKE} $(patsubst %-job,%-train,$@)
+	${MAKE} $(patsubst %-job,%-eval,$@)
+	${MAKE} $(patsubst %-job,%-evalall,$@)
+	${MAKE} $(patsubst %-job,%-dist,$@)
+
+${GROUP2ENG_TRAIN}:
+	${MAKE} LANGPAIRSTR=$(patsubst tatoeba-%2eng-train,%,$@)-eng \
+		SRCLANGS="${shell langgroup -n $(patsubst tatoeba-%2eng-train,%,$@)}" \
+		TRGLANGS=eng MODELTYPE=transformer FIT_DATA_SIZE=1000000 \
+	tatoeba-multilingual-train
+
+${GROUP2ENG_EVAL}:
+	${MAKE} LANGPAIRSTR=$(patsubst tatoeba-%2eng-eval,%,$@)-eng \
+		SRCLANGS="${shell langgroup -n $(patsubst tatoeba-%2eng-eval,%,$@)}" \
+		TRGLANGS=eng \
+		MODELTYPE=transformer \
+		${TATOEBA_PARAMS} \
+	compare
+
+${GROUP2ENG_EVALALL}:
+	${MAKE} LANGPAIRSTR=$(patsubst tatoeba-%2eng-evalall,%,$@)-eng \
+		SRCLANGS="${shell langgroup -n $(patsubst tatoeba-%2eng-evalall,%,$@)}" \
+		TRGLANGS=eng MODELTYPE=transformer FIT_DATA_SIZE=1000000 \
+	tatoeba-multilingual-eval
+
+${GROUP2ENG_DIST}:
+	${MAKE} LANGPAIRSTR=$(patsubst tatoeba-%2eng-dist,%,$@)-eng \
+		SRCLANGS="${shell langgroup -n $(patsubst tatoeba-%2eng-dist,%,$@)}" \
+		TRGLANGS=eng \
+		MODELTYPE=transformer \
+		${TATOEBA_PARAMS} \
+	best-dist
+
+
+#### English to language group
+
+ENG2GROUP_JOB     = $(patsubst %,tatoeba-eng2%-job,${TATOEBA_LANGPARENTS})
+ENG2GROUP_TRAIN   = $(patsubst %,tatoeba-eng2%-train,${TATOEBA_LANGPARENTS})
+ENG2GROUP_EVAL    = $(patsubst %,tatoeba-eng2%-eval,${TATOEBA_LANGPARENTS})
+ENG2GROUP_EVALALL = $(patsubst %,tatoeba-eng2%-evalall,${TATOEBA_LANGPARENTS})
+ENG2GROUP_DIST    = $(patsubst %,tatoeba-eng2%-dist,${TATOEBA_LANGPARENTS})
+
+tatoeba-eng2group: ${ENG2GROUP_JOB}
+
+${ENG2GROUP_JOB}:
+	${MAKE} $(patsubst %-job,%-train,$@)
+	${MAKE} $(patsubst %-job,%-eval,$@)
+	${MAKE} $(patsubst %-job,%-evalall,$@)
+	${MAKE} $(patsubst %-job,%-dist,$@)
+
+${ENG2GROUP_TRAIN}:
+	${MAKE} LANGPAIRSTR=eng-$(patsubst tatoeba-eng2%-train,%,$@) \
+		TRGLANGS="${shell langgroup -n $(patsubst tatoeba-eng2%-train,%,$@)}" \
+		SRCLANGS=eng MODELTYPE=transformer FIT_DATA_SIZE=1000000 \
+	tatoeba-multilingual-train
+
+${ENG2GROUP_EVAL}:
+	${MAKE} LANGPAIRSTR=eng-$(patsubst tatoeba-eng2%-eval,%,$@) \
+		SRCLANGS=eng \
+		TRGLANGS="${shell langgroup -n $(patsubst tatoeba-eng2%-eval,%,$@)}" \
+		MODELTYPE=transformer \
+		${TATOEBA_PARAMS} \
+	compare
+
+${ENG2GROUP_EVALALL}:
+	${MAKE} LANGPAIRSTR=eng-$(patsubst tatoeba-eng2%-evalall,%,$@) \
+		TRGLANGS="${shell langgroup -n $(patsubst tatoeba-eng2%-evalall,%,$@)}" \
+		SRCLANGS=eng MODELTYPE=transformer FIT_DATA_SIZE=1000000 \
+	tatoeba-multilingual-eval
+
+${ENG2GROUP_DIST}:
+	${MAKE} LANGPAIRSTR=eng-$(patsubst tatoeba-eng2%-dist,%,$@) \
+		SRCLANGS=eng \
+		TRGLANGS="${shell langgroup -n $(patsubst tatoeba-eng2%-dist,%,$@)}" \
+		MODELTYPE=transformer \
+		${TATOEBA_PARAMS} \
+	best-dist
+
+
+
+#### multilingual language-group (bi-directional
+
+LANGGROUP_JOB     = $(patsubst %,tatoeba-%-job,${TATOEBA_LANGPARENTS})
+LANGGROUP_TRAIN   = $(patsubst %,tatoeba-%-train,${TATOEBA_LANGPARENTS})
+LANGGROUP_EVAL    = $(patsubst %,tatoeba-%-eval,${TATOEBA_LANGPARENTS})
+LANGGROUP_EVALALL = $(patsubst %,tatoeba-%-evalall,${TATOEBA_LANGPARENTS})
+LANGGROUP_DIST    = $(patsubst %,tatoeba-%-dist,${TATOEBA_LANGPARENTS})
+
+tatoeba-langgroup: ${LANGGROUP_JOB}
+
+${LANGGROUP_JOB}:
+	${MAKE} $(patsubst %-job,%-train,$@)
+	${MAKE} $(patsubst %-job,%-eval,$@)
+	${MAKE} $(patsubst %-job,%-evalall,$@)
+	${MAKE} $(patsubst %-job,%-dist,$@)
+
+
+${LANGGROUP_TRAIN}:
+	${MAKE} LANGPAIRSTR=$(patsubst tatoeba-%-train,%,$@)-$(patsubst tatoeba-%-train,%,$@) \
+		TRGLANGS="${shell langgroup -n $(patsubst tatoeba-%-train,%,$@)}" \
+		SRCLANGS="${shell langgroup -n $(patsubst tatoeba-%-train,%,$@)}" \
+		MODELTYPE=transformer FIT_DATA_SIZE=1000000 \
+	tatoeba-multilingual-train
+
+${LANGGROUP_EVAL}:
+	${MAKE} LANGPAIRSTR=$(patsubst tatoeba-%-train,%,$@)-$(patsubst tatoeba-%-eval,%,$@) \
+		SRCLANGS="${shell langgroup -n $(patsubst tatoeba-%-eval,%,$@)}" \
+		TRGLANGS="${shell langgroup -n $(patsubst tatoeba-%-eval,%,$@)}" \
+		MODELTYPE=transformer \
+		${TATOEBA_PARAMS} \
+	compare
+
+${LANGGROUP_EVALALL}:
+	${MAKE} LANGPAIRSTR=$(patsubst tatoeba-%-train,%,$@)-$(patsubst tatoeba-%-evalall,%,$@) \
+		TRGLANGS="${shell langgroup -n $(patsubst tatoeba-%-evalall,%,$@)}" \
+		SRCLANGS="${shell langgroup -n $(patsubst tatoeba-%-evalall,%,$@)}" \
+		MODELTYPE=transformer FIT_DATA_SIZE=1000000 \
+	tatoeba-multilingual-eval
+
+${LANGGROUP_DIST}:
+	${MAKE} LANGPAIRSTR=$(patsubst tatoeba-%-train,%,$@)-$(patsubst tatoeba-%-dist,%,$@) \
+		SRCLANGS="${shell langgroup -n $(patsubst tatoeba-%-dist,%,$@)}" \
+		TRGLANGS="${shell langgroup -n $(patsubst tatoeba-%-dist,%,$@)}" \
+		MODELTYPE=transformer \
+		${TATOEBA_PARAMS} \
+	best-dist
+
+
+
 
 ###########################################################################################
 
@@ -175,14 +359,6 @@ tatoeba-all-eng2group:
 
 
 
-
-
-TATOEBA_DATAURL = https://object.pouta.csc.fi/Tatoeba-Challenge
-TATOEBA_RAWGIT  = https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
-TATOEBA_WORK    = ${PWD}/work-tatoeba
-TATOEBA_DATA    = ${TATOEBA_WORK}/data/${PRE}
-
-TATOEBA_MODEL_CONTAINER = Tatoeba-MT-models
 
 
 ## start unidirectional training job
@@ -409,12 +585,12 @@ tatoeba-multilingual-eval:
 		TESTSIZE=10000 \
 		DEVMINSIZE=200 \
 		WORKHOME=${TATOEBA_WORK} \
-		USE_TARGET_LABELS=1 \
 	      compare; \
 	    fi \
 	  done \
 	done
 
+#		USE_TARGET_LABELS=1 \
 
 
 ## copy testsets into the multilingual model's test directory
@@ -426,16 +602,28 @@ tatoeba-multilingual-testsets:
 	      wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt ${TATOEBA_RAWGIT}/data/test/$$s-$$t/test.txt; \
 	      if [ -s ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt ]; then \
 	        echo "make Tatoeba-test.$$s-$$t"; \
-	        cut -f2,3 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt | sed 's/^\([^ ]*\)	/>>\1<< /' \
-		> ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.src; \
+		if [ "${words ${TRGLANGS}}" == "1" ]; then \
+		  cut -f3 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt \
+		  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.src; \
+		else \
+	          cut -f2,3 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt | \
+		  sed 's/^\([^ ]*\)	/>>\1<< /' \
+		  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.src; \
+		fi; \
 	        cut -f4 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt \
 		> ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.trg; \
 	      else \
 	        wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt ${TATOEBA_RAWGIT}/data/test/$$t-$$s/test.txt; \
 	        if [ -s ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt ]; then \
 	          echo "make Tatoeba-test.$$s-$$t"; \
-	          cut -f1,4 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt | sed 's/^\([^ ]*\)	/>>\1<< /' \
-		  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.src; \
+		  if [ "${words ${TRGLANGS}}" == "1" ]; then \
+		    cut -f4 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt \
+		    > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.src; \
+		  else \
+	            cut -f1,4 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt | \
+		    sed 's/^\([^ ]*\)	/>>\1<< /' \
+		    > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.src; \
+		  fi; \
 	          cut -f3 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt \
 		  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.trg; \
 		fi \
@@ -876,6 +1064,10 @@ tatoeba-results-subset-%: tatoeba-%.md tatoeba-results-sorted-langpair
 	( l="${shell grep '\[' $< | cut -f2 -d '[' | cut -f1 -d ']' | sort -u  | tr "\n" '|' | tr '-' '.' | sed 's/|$$//;s/\./\\\./g'}"; \
 	  grep -P "$$l" ${word 2,$^} > $@ )
 
+tatoeba-results-langgroup: tatoeba-results-sorted-langpair
+	grep -P "${subst ${SPACE},-eng|,${OPUSTATOEBA_LANGPARENTS}}-eng" $< >> $@
+	grep -P "eng-${subst ${SPACE},|eng-,${OPUSTATOEBA_LANGPARENTS}}" $< >> $@
+	grep -P "`echo '${OPUSTATOEBA_LANGPARENTS}' | sed 's/\([^ ][^ ]*\)/\1-\1/g;s/ /\|/g'`" $< >> $@
 
 
 ###############################################################################
