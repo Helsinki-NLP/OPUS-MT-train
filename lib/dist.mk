@@ -70,12 +70,16 @@ best-dist-all best_dist_all:
 
 .PHONY: best_dist best-dist
 best-dist best_dist:
-	@m=0;\
+	m=0;\
 	s=''; \
 	echo "------------------------------------------------"; \
 	echo "search best model for ${LANGPAIRSTR}"; \
 	for d in ${ALT_MODEL_DIR}; do \
-	  e=`ls work-$$d/${LANGPAIRSTR}/test/*.trg | tail -1 | xargs basename | sed 's/\.trg//'`; \
+	  if [ -e "work-$$d/${LANGPAIRSTR}/test/${TESTSET}.trg" ]; then \
+	    e=`basename work-$$d/${LANGPAIRSTR}/test/${TESTSET}.trg | sed 's/\.trg$$//'`; \
+	  else \
+	    e=`ls work-$$d/${LANGPAIRSTR}/test/*.trg | tail -1 | xargs basename | sed 's/\.trg$$//'`; \
+	  fi; \
 	  echo "evaldata = $$e"; \
 	  if [ "$$e" != "GNOME" ]; then \
 	    I=`find work-$$d/${LANGPAIRSTR}/ -maxdepth 1 -name "$$e.*.eval" -printf "%f\n"`; \
@@ -84,15 +88,17 @@ best-dist best_dist:
 	      y=`echo $$i | cut -f3 -d. | cut -f2 -d- | sed 's/[0-9]$$//'`; \
 	      z=`echo $$i | cut -f2 -d.`; \
 	      v=`echo $$i | cut -f4 -d.`; \
-	      b=`grep 'BLEU+' work-$$d/${LANGPAIRSTR}/$$e.$$z.$$x-$$y[0-9].$$v.*.eval | cut -f3 -d' '`; \
-	      if (( $$(echo "$$m-$$b < 0" |bc -l) )); then \
-	        echo "$$d/$$i ($$b) is better than $$s ($$m)!"; \
-	        m=$$b; \
-	        E=$$i; \
-	        s=$$d; \
-	      else \
-	        echo "$$d/$$i ($$b) is  worse than $$s ($$m)!"; \
-	      fi \
+	      if [ `find work-$$d/${LANGPAIRSTR} -name "$$e.$$z.$$x-$$y[0-9].$$v.*.eval" | wc -l ` -gt 0 ]; then \
+	        b=`grep 'BLEU+' work-$$d/${LANGPAIRSTR}/$$e.$$z.$$x-$$y[0-9].$$v.*.eval | cut -f3 -d' ' | head -1`; \
+	        if (( $$(echo "$$m-$$b < 0" |bc -l) )); then \
+	          echo "$$d/$$i ($$b) is better than $$s ($$m)!"; \
+	          m=$$b; \
+	          E=$$i; \
+	          s=$$d; \
+	        else \
+	          echo "$$d/$$i ($$b) is  worse than $$s ($$m)!"; \
+	        fi; \
+	      fi; \
 	    done; \
 	  fi \
 	done; \
