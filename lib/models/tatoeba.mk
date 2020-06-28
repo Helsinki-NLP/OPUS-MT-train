@@ -87,43 +87,25 @@ TATOEBA_PARAMS = TRAINSET=Tatoeba-train \
 ## taken from the Tatoeba-Challenge Makefile
 ## requires local data for setting TATOEBA_LANGS
 
+# EXCLUDE_LANGGROUPS = afa
+
 ISO639         = iso639
 GET_ISO_CODE   = ${ISO639} -m
-TATOEBA_LANGS  = ${sort ${patsubst %.txt.gz,%,${notdir ${wildcard ${OPUSHOME}/Tatoeba/latest/mono/*.txt.gz}}}}
-TATOEBA_LANGS3 = ${sort ${filter-out xxx,${shell ${GET_ISO_CODE} ${TATOEBA_LANGS}}}}
-TATOEBA_LANGPARENTS = ${sort ${shell langgroup -p -n ${TATOEBA_LANGS3} 2>/dev/null}}
-TATOEBA_LANGGROUPS  = ${shell langgroup -g -n ${TATOEBA_LANGS3} 2>/dev/null | tr " " "\n" | grep '+'}
-TATOEBA_LANGGROUPS2 = ${shell langgroup -G -n ${TATOEBA_LANGS3} 2>/dev/null | tr " " "\n" | grep '+'}
 
-## OPUS LANGS
-OPUS_LANGS3      = ${sort ${filter-out xxx,${shell ${GET_ISO_CODE} ${OPUSLANGS}}}}
-OPUS_LANGPARENTS = ${sort ${shell langgroup -p -n ${OPUS_LANGS3} 2>/dev/null}}
-OPUS_LANGGROUPS  = ${shell langgroup -g -n ${OPUS_LANGS3} 2>/dev/null | tr " " "\n" | grep '+'}
-OPUS_LANGGROUPS2 = ${shell langgroup -G -n ${OPUS_LANGS3} 2>/dev/null | tr " " "\n" | grep '+'}
+# TATOEBA_LANGS       = ${sort ${patsubst %.txt.gz,%,${notdir ${wildcard ${OPUSHOME}/Tatoeba/latest/mono/*.txt.gz}}}}
+# TATOEBA_LANGS3      = ${sort ${filter-out xxx,${shell ${GET_ISO_CODE} ${TATOEBA_LANGS}}}}
+# TATOEBA_LANGGROUPS  = ${sort ${shell langgroup -p -n ${TATOEBA_LANGS3} 2>/dev/null}}
+# TATOEBA_LANGGROUPS1 = ${shell langgroup -g -n ${TATOEBA_LANGS3} 2>/dev/null | tr " " "\n" | grep '+'}
+# TATOEBA_LANGGROUPS2 = ${shell langgroup -G -n ${TATOEBA_LANGS3} 2>/dev/null | tr " " "\n" | grep '+'}
 
-## combined (to make sure we don't miss anything)
-OPUSTATOEBA_LANGS3       = ${sort ${OPUS_LANGS3} ${TATOEBA_LANGS3}}
-OPUSTATOEBA_LANGPARENTS  = ${sort ${OPUS_LANGPARENTS} ${TATOEBA_LANGPARENTS}}
-OPUSTATOEBA_LANGGROUPS   = ${shell langgroup -g -n ${OPUSTATOEBA_LANGS3} 2>/dev/null | tr " " "\n" | grep '+'}
-OPUSTATOEBA_LANGGROUPS2  = ${shell langgroup -G -n ${OPUSTATOEBA_LANGS3} 2>/dev/null | tr " " "\n" | grep '+'}
+OPUS_LANGS3            = ${sort ${filter-out xxx,${shell ${GET_ISO_CODE} ${OPUSLANGS}}}}
+OPUS_LANG_PARENTS      = ${sort ${shell langgroup -p -n ${OPUS_LANGS3} 2>/dev/null}}
+OPUS_LANG_GRANDPARENTS = ${sort ${shell langgroup -p -n ${OPUS_LANG_PARENTS} 2>/dev/null}}
+OPUS_LANG_GROUPS       = ${sort ${OPUS_LANG_PARENTS} ${OPUS_LANG_GRANDPARENTS}}
 
+# OPUS_LANGGROUPS1 = ${shell langgroup -g -n ${OPUS_LANGS3} 2>/dev/null | tr " " "\n" | grep '+'}
+# OPUS_LANGGROUPS2 = ${shell langgroup -G -n ${OPUS_LANGS3} 2>/dev/null | tr " " "\n" | grep '+'}
 
-
-# some special language models
-
-TATOEBA_WESTGERMANIC = ${sort eng nld gos hrx swg prg nld yid deu ltz fry nds afr bar ang enm sco}
-tatoeba-westgermanic:
-	${MAKE} SRCLANGS="${TATOEBA_WESTGERMANIC}" TRGLANGS="${TATOEBA_WESTGERMANIC}" \
-		FIT_DATA_SIZE=100000 LANGPAIRSTR=westgermanic \
-	tatoeba-multilingual-train
-
-tatoeba-westgermanice-eval:
-	${MAKE} SRCLANGS="${TATOEBA_WESTGERMANIC}" TRGLANGS="${TATOEBA_WESTGERMANIC}" \
-		FIT_DATA_SIZE=100000 LANGPAIRSTR=westgermanic \
-	tatoeba-multilingual-eval
-	${MAKE} SRCLANGS="${TATOEBA_WESTGERMANIC}" TRGLANGS="${TATOEBA_WESTGERMANIC}" \
-		FIT_DATA_SIZE=100000 LANGPAIRSTR=westgermanic \
-	dist-tatoeba
 
 
 ###########################################################################################
@@ -131,20 +113,14 @@ tatoeba-westgermanice-eval:
 ###########################################################################################
 
 ## print language groups
-tatoeba-langgroups:
-	@echo ${TATOEBA_LANGGROUPS}
-	@echo ${TATOEBA_LANGGROUPS2}
-	@echo ${TATOEBA_LANGPARENTS}
-
 opus-langgroups:
-	@echo ${OPUSTATOEBA_LANGGROUPS}
-	@echo ${OPUSTATOEBA_LANGGROUPS2}
-	@echo ${OPUSTATOEBA_LANGPARENTS}
-
+	@echo ${OPUS_LANG_PARENTS}
+	@echo ${OPUS_LANG_GRANDPARENTS}
+	@echo ${OPUS_LANG_GROUPS}
 
 # ## multilingual models for language groups
 # tatoeba-langgroup:
-# 	for g in ${TATOEBA_LANGGROUPS}; do \
+# 	for g in ${TATOEBA_LANGGROUPS1}; do \
 # 	  l=`echo $$g | sed 's/\+/ /g'`; \
 # 	  n=`langgroup -p $$l | cut -f1 -d' '`; \
 # 	  ${MAKE} LANGPAIRSTR="$$n-$$n" TRGLANGS="$$l" SRCLANGS="$$l" \
@@ -153,7 +129,7 @@ opus-langgroups:
 
 # ## models for language groups to English
 # tatoeba-group2eng:
-# 	for g in ${TATOEBA_LANGGROUPS}; do \
+# 	for g in ${TATOEBA_LANGGROUPS1}; do \
 # 	  l=`echo $$g | sed 's/\+/ /g'`; \
 # 	  n=`langgroup -p $$l | cut -f1 -d' '`; \
 # 	  ${MAKE} LANGPAIRSTR="$$n-eng" SRCLANGS="$$l" TRGLANGS=eng \
@@ -162,7 +138,7 @@ opus-langgroups:
 
 # ## models for English to language groups
 # tatoeba-eng2group:
-# 	for g in ${TATOEBA_LANGGROUPS}; do \
+# 	for g in ${TATOEBA_LANGGROUPS1}; do \
 # 	  l=`echo $$g | sed 's/\+/ /g'`; \
 # 	  n=`langgroup -p $$l | cut -f1 -d' '`; \
 # 	  ${MAKE} LANGPAIRSTR="eng-$$n" TRGLANGS="$$l" SRCLANGS=eng \
@@ -171,56 +147,31 @@ opus-langgroups:
 
 
 
-
-
-# ##-------------------------------------------------------------------
-# ## multilingual models 
-# ## with all OPUS data not only the languages that have Tatoeba data
-# ##-------------------------------------------------------------------
-
-# ## multilingual models for language groups
-# tatoeba-all-langgroup:
-# 	for g in ${OPUSTATOEBA_LANGGROUPS}; do \
-# 	  l=`echo $$g | sed 's/\+/ /g'`; \
-# 	  n=`langgroup -p $$l | cut -f1 -d' '`; \
-# 	  ${MAKE} LANGPAIRSTR="all-$$n-$$n" TRGLANGS="$$l" SRCLANGS="$$l" \
-# 		MODELTYPE=transformer FIT_DATA_SIZE=1000000 tatoeba-multilingual-train; \
-# 	done
-
-# ## models for language groups to English
-# tatoeba-all-group2eng:
-# 	for g in ${OPUSTATOEBA_LANGGROUPS}; do \
-# 	  l=`echo $$g | sed 's/\+/ /g'`; \
-# 	  n=`langgroup -p $$l | cut -f1 -d' '`; \
-# 	  ${MAKE} LANGPAIRSTR="all-$$n-eng" SRCLANGS="$$l" TRGLANGS=eng \
-# 		MODELTYPE=transformer FIT_DATA_SIZE=1000000 tatoeba-multilingual-train; \
-# 	done
-
-# ## models for English to language groups
-# tatoeba-all-eng2group:
-# 	for g in ${OPUSTATOEBA_LANGGROUPS}; do \
-# 	  l=`echo $$g | sed 's/\+/ /g'`; \
-# 	  n=`langgroup -p $$l | cut -f1 -d' '`; \
-# 	  ${MAKE} LANGPAIRSTR="all-eng-$$n" TRGLANGS="$$l" SRCLANGS=eng \
-# 		MODELTYPE=transformer FIT_DATA_SIZE=1000000 tatoeba-multilingual-train; \
-# 	done
-
-
-
-
-
-
+tatoeba-langgroups: 
+	${MAKE} tatoeba-group2eng
+	${MAKE} tatoeba-eng2group
+	${MAKE} tatoeba-langgroup
 
 
 #### language-group to English
 
-GROUP2ENG_JOB     = $(patsubst %,tatoeba-%2eng-job,${TATOEBA_LANGPARENTS})
-GROUP2ENG_TRAIN   = $(patsubst %,tatoeba-%2eng-train,${TATOEBA_LANGPARENTS})
-GROUP2ENG_EVAL    = $(patsubst %,tatoeba-%2eng-eval,${TATOEBA_LANGPARENTS})
-GROUP2ENG_EVALALL = $(patsubst %,tatoeba-%2eng-evalall,${TATOEBA_LANGPARENTS})
-GROUP2ENG_DIST    = $(patsubst %,tatoeba-%2eng-dist,${TATOEBA_LANGPARENTS})
+GROUP2ENG_JOB     = $(patsubst %,tatoeba-%2eng-job,${OPUS_LANG_GROUPS})
+GROUP2ENG_TRAIN   = $(patsubst %,tatoeba-%2eng-train,${OPUS_LANG_GROUPS})
+GROUP2ENG_EVAL    = $(patsubst %,tatoeba-%2eng-eval,${OPUS_LANG_GROUPS})
+GROUP2ENG_EVALALL = $(patsubst %,tatoeba-%2eng-evalall,${OPUS_LANG_GROUPS})
+GROUP2ENG_DIST    = $(patsubst %,tatoeba-%2eng-dist,${OPUS_LANG_GROUPS})
 
 tatoeba-group2eng: ${GROUP2ENG_JOB}
+# tatoeba-group2eng-dist: ${GROUP2ENG_EVAL} ${GROUP2ENG_EVALALL}
+# 	${MAKE} ${GROUP2ENG_DIST}
+tatoeba-group2eng-dist:
+	for g in ${OPUS_LANG_GROUPS}; do \
+	  if [ `find ${TATOEBA_WORK}/$$g-eng -name '*.npz' | wc -l` -gt 0 ]; then \
+	    ${MAKE} tatoeba-$${g}2eng-eval; \
+	    ${MAKE} tatoeba-$${g}2eng-evalall; \
+	    ${MAKE} tatoeba-$${g}2eng-dist; \
+	  fi \
+	done
 
 ${GROUP2ENG_JOB}:
 	${MAKE} $(patsubst %-job,%-train,$@)
@@ -259,13 +210,32 @@ ${GROUP2ENG_DIST}:
 
 #### English to language group
 
-ENG2GROUP_JOB     = $(patsubst %,tatoeba-eng2%-job,${TATOEBA_LANGPARENTS})
-ENG2GROUP_TRAIN   = $(patsubst %,tatoeba-eng2%-train,${TATOEBA_LANGPARENTS})
-ENG2GROUP_EVAL    = $(patsubst %,tatoeba-eng2%-eval,${TATOEBA_LANGPARENTS})
-ENG2GROUP_EVALALL = $(patsubst %,tatoeba-eng2%-evalall,${TATOEBA_LANGPARENTS})
-ENG2GROUP_DIST    = $(patsubst %,tatoeba-eng2%-dist,${TATOEBA_LANGPARENTS})
+ENG2GROUP_JOB     = $(patsubst %,tatoeba-eng2%-job,${OPUS_LANG_GROUPS})
+ENG2GROUP_TRAIN   = $(patsubst %,tatoeba-eng2%-train,${OPUS_LANG_GROUPS})
+ENG2GROUP_EVAL    = $(patsubst %,tatoeba-eng2%-eval,${OPUS_LANG_GROUPS})
+ENG2GROUP_EVALALL = $(patsubst %,tatoeba-eng2%-evalall,${OPUS_LANG_GROUPS})
+ENG2GROUP_DIST    = $(patsubst %,tatoeba-eng2%-dist,${OPUS_LANG_GROUPS})
 
 tatoeba-eng2group: ${ENG2GROUP_JOB}
+# tatoeba-eng2group-dist: ${ENG2GROUP_EVAL} ${ENG2GROUP_EVALALL}
+#	${MAKE} ${ENG2GROUP_DIST}
+tatoeba-eng2group-dist:
+	for g in ${OPUS_LANG_GROUPS}; do \
+	  if [ `find ${TATOEBA_WORK}/eng-$$g -name '*.npz' | wc -l` -gt 0 ]; then \
+	    ${MAKE} tatoeba-eng2$${g}-eval; \
+	    ${MAKE} tatoeba-eng2$${g}-evalall; \
+	    ${MAKE} tatoeba-eng2$${g}-dist; \
+	  fi \
+	done
+
+tatoeba-eng2group-dist2:
+	for g in ${OPUS_LANG_GROUPS}; do \
+	  if [ `find ${TATOEBA_WORK}/eng-$$g -name '*.npz' | wc -l` -gt 0 ]; then \
+	    mv models-tatoeba/eng-$$g models-tatoeba/eng-$$g-old2; \
+	    ${MAKE} tatoeba-eng2$${g}-dist; \
+	  fi \
+	done
+
 
 ${ENG2GROUP_JOB}:
 	${MAKE} $(patsubst %-job,%-train,$@)
@@ -305,13 +275,24 @@ ${ENG2GROUP_DIST}:
 
 #### multilingual language-group (bi-directional
 
-LANGGROUP_JOB     = $(patsubst %,tatoeba-%-job,${TATOEBA_LANGPARENTS})
-LANGGROUP_TRAIN   = $(patsubst %,tatoeba-%-train,${TATOEBA_LANGPARENTS})
-LANGGROUP_EVAL    = $(patsubst %,tatoeba-%-eval,${TATOEBA_LANGPARENTS})
-LANGGROUP_EVALALL = $(patsubst %,tatoeba-%-evalall,${TATOEBA_LANGPARENTS})
-LANGGROUP_DIST    = $(patsubst %,tatoeba-%-dist,${TATOEBA_LANGPARENTS})
+LANGGROUP_JOB     = $(patsubst %,tatoeba-%-job,${OPUS_LANG_GROUPS})
+LANGGROUP_TRAIN   = $(patsubst %,tatoeba-%-train,${OPUS_LANG_GROUPS})
+LANGGROUP_EVAL    = $(patsubst %,tatoeba-%-eval,${OPUS_LANG_GROUPS})
+LANGGROUP_EVALALL = $(patsubst %,tatoeba-%-evalall,${OPUS_LANG_GROUPS})
+LANGGROUP_DIST    = $(patsubst %,tatoeba-%-dist,${OPUS_LANG_GROUPS})
 
 tatoeba-langgroup: ${LANGGROUP_JOB}
+# tatoeba-langgroup-dist: ${LANGGROUP_EVAL} ${LANGGROUP_EVALALL}
+#	${MAKE} ${LANGGROUP_DIST}
+tatoeba-langgroup-dist:
+	for g in ${OPUS_LANG_GROUPS}; do \
+	  if [ `find ${TATOEBA_WORK}/$$g-$$g -name '*.npz' | wc -l` -gt 0 ]; then \
+	    ${MAKE} tatoeba-$${g}-eval; \
+	    ${MAKE} tatoeba-$${g}-evalall; \
+	    ${MAKE} tatoeba-$${g}-dist; \
+	  fi \
+	done
+
 
 ${LANGGROUP_JOB}:
 	${MAKE} $(patsubst %-job,%-train,$@)
@@ -641,7 +622,8 @@ tatoeba-multilingual-testsets:
 
 
 ## generic target for tatoeba challenge jobs
-%-tatoeba: ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels
+%-tatoeba: ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels \
+	   ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${TRGEXT}.labels
 	${MAKE} TRAINSET=Tatoeba-train \
 		DEVSET=Tatoeba-dev \
 		TESTSET=Tatoeba-test \
@@ -659,20 +641,24 @@ tatoeba-multilingual-testsets:
 		ALT_MODEL_DIR=tatoeba \
 		SKIP_DATA_DETAILS=1 \
 		LANGPAIRSTR=${LANGPAIRSTR} \
-		SRCLANGS="${shell cat $<  | sed 's/ *$$//'}" \
-		TRGLANGS="${shell cat $(<:.${SRCEXT}.labels=.${TRGEXT}.labels)  | sed 's/ *$$//'}" \
+		SRCLANGS="${shell cat ${word 1,$^} | sed 's/ *$$//;s/^ *//'}" \
+		TRGLANGS="${shell cat ${word 2,$^} | sed 's/ *$$//;s/^ *//'}" \
 		SRC=${SRC} TRG=${TRG} \
 		EMAIL= \
 	${@:-tatoeba=}
 
 
 
+## don't delete intermediate label files
+.PRECIOUS: 	${TATOEBA_DATA}/Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.gz \
+		${TATOEBA_DATA}/Tatoeba-train.${LANGPAIR}.clean.${TRGEXT}.gz
+
 ## all language labels in all language pairs
 ## (each language pair may include several language variants)
 ## --> this is necessary to set the languages that are present in a model
 
 ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels:
-	for s in ${SRCLANGS}; do \
+	-for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
 	    if [ "$$s" \< "$$t" ]; then \
 	      ${MAKE} SRCLANGS=$$s TRGLANGS=$$t \
@@ -708,7 +694,8 @@ ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels:
 
 
 
-%.${LANGPAIRSTR}.clean.${SRCEXT}.labels: %.${LANGPAIRSTR}.clean.${SRCEXT}.labels
+%.${LANGPAIRSTR}.clean.${TRGEXT}.labels: %.${LANGPAIRSTR}.clean.${SRCEXT}.labels
+	if [ ! -e $@ ]; then rm $<; ${MAKE} $<; fi
 	echo "done"
 
 
@@ -866,63 +853,6 @@ endif
 
 
 
-# #######################################
-# # finally, compress the big datafiles
-# # and cleanup
-# #######################################
-# 	for d in dev test train; do \
-# 	  if [ ! -e ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.gz ]; then \
-# 	    ${GZIP} -f ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}; \
-# 	    ${GZIP} -f ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}; \
-# 	  else \
-# 	    rm -f ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}; \
-# 	    rm -f ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}; \
-# 	  fi; \
-# 	  rm -f ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id; \
-# 	done
-
-
-
-# #######################################
-# # special treatment for Chinese
-# # - simplified vs traditional script
-# #
-# # TODO: should not manipulate test data like this!!!!
-# # ---> do Chinese script detectiont properl in data releases!
-# #######################################
-# ifeq ($(filter cjy cmn gan lzh nan wuu yue zho,${SRC}),${SRC})
-# 	@echo "treating source language Chinese"
-# 	for d in dev test train; do \
-# 	  cat ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT} | \
-# 	  ${SCRIPTDIR}/detect_chinese_script.pl > ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.script; \
-# 	  cut -f1 ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id > ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.langid; \
-# 	  paste -d '' ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.langid ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.script \
-# 		> ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.id; \
-# 	  cut -f2 ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id > ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.id; \
-# 	  paste ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.id ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.id \
-# 		> ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id; \
-# 	  rm -f ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.langid ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.script; \
-# 	  rm -f ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.id ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.id; \
-# 	done
-# endif
-# ifeq ($(filter cjy cmn gan lzh nan wuu yue zho,${TRG}),${TRG})
-# 	@echo "treating target language Chinese"
-# 	for d in dev test train; do \
-# 	  cat ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT} | \
-# 	  ${SCRIPTDIR}/detect_chinese_script.pl > ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.script; \
-# 	  cut -f2 ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id > ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.langid; \
-# 	  paste -d '' ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.langid ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.script \
-# 		> ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.id; \
-# 	  cut -f1 ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id > ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.id; \
-# 	  paste ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.id ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.id \
-# 		> ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id; \
-# 	  rm -f ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.langid ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.script; \
-# 	  rm -f ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT}.id ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT}.id; \
-# 	done
-# endif
-
-
-
 
 %/Tatoeba-train.${LANGPAIR}.clean.${TRGEXT}.gz: %/Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.gz
 	echo "done!"
@@ -1065,9 +995,9 @@ tatoeba-results-subset-%: tatoeba-%.md tatoeba-results-sorted-langpair
 	  grep -P "$$l" ${word 2,$^} > $@ )
 
 tatoeba-results-langgroup: tatoeba-results-sorted-langpair
-	grep -P "${subst ${SPACE},-eng|,${OPUSTATOEBA_LANGPARENTS}}-eng" $< >> $@
-	grep -P "eng-${subst ${SPACE},|eng-,${OPUSTATOEBA_LANGPARENTS}}" $< >> $@
-	grep -P "`echo '${OPUSTATOEBA_LANGPARENTS}' | sed 's/\([^ ][^ ]*\)/\1-\1/g;s/ /\|/g'`" $< >> $@
+	grep -P "${subst ${SPACE},-eng|,${OPUS_LANG_GROUPS}}-eng" $< >> $@
+	grep -P "eng-${subst ${SPACE},|eng-,${OPUS_LANG_GROUPS}}" $< >> $@
+	grep -P "`echo '${OPUS_LANG_GROUPS}' | sed 's/\([^ ][^ ]*\)/\1-\1/g;s/ /\|/g'`" $< >> $@
 
 
 ###############################################################################
@@ -1088,4 +1018,20 @@ move-wrong:
 	    mv $$f.compare $$c.compare; \
 	    mv $$f.eval $$c.eval; \
 	  fi \
+	done
+
+
+
+remove-old-groupeval:
+	for g in ${OPUS_LANG_GROUPS}; do \
+	  rm -f work-tatoeba/$$g-eng/Tatoeba-test.opus.spm32k-spm32k1.transformer.???.eng*; \
+	  rm -f work-tatoeba/eng-$$g/Tatoeba-test.opus.spm32k-spm32k1.transformer.eng.???; \
+	  rm -f work-tatoeba/eng-$$g/Tatoeba-test.opus.spm32k-spm32k1.transformer.eng.???.*; \
+	done
+
+
+remove-old-group:
+	for g in ${OPUS_LANG_GROUPS}; do \
+	  if [ -e work-tatoeba/$$g-eng ]; then mv work-tatoeba/$$g-eng work-tatoeba/$$g-eng-old3; fi; \
+	  if [ -e work-tatoeba/eng-$$g ]; then mv work-tatoeba/eng-$$g work-tatoeba/eng-$$g-old3; fi; \
 	done
