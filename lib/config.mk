@@ -393,19 +393,26 @@ else
   MARIAN_WORKSPACE = 10000
 endif
 
-
+## check whether we have GPUs available
+## if not: use CPU mode for decoding
+NVIDIA_SMI = ${shell which nvidia-smi 2>dev/null}
+ifdef NVIDIA_SMI
 ifeq (${shell nvidia-smi | grep failed | wc -l},1)
   MARIAN = ${MARIANCPU}
   MARIAN_DECODER_FLAGS = ${MARIAN_DECODER_CPU}
   MARIAN_EXTRA = --cpu-threads ${HPC_CORES}
 endif
+else
+  MARIAN = ${MARIANCPU}
+  MARIAN_DECODER_FLAGS = ${MARIAN_DECODER_CPU}
+  MARIAN_EXTRA = --cpu-threads ${HPC_CORES}
+endif
 
-
-
-
+## weights associated with training examples
 ifneq ("$(wildcard ${TRAIN_WEIGHTS})","")
 	MARIAN_TRAIN_WEIGHTS = --data-weighting ${TRAIN_WEIGHTS}
 endif
+
 
 
 ### training a model with Marian NMT

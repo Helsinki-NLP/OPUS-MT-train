@@ -117,6 +117,52 @@ Note that this can be quite a lot of language pairs!
 
 
 
+## Working with language groups
+
+Language groups are defined according to ISO639-5. The Perl module ISO::639::5 needs to be installed 
+to retrieve the language group hierarchy. Various combinations of language groups and English can be
+trained using the following commands (note that this starts all combinations, see below for individual jobs):
+
+```
+make tatoeba-group2eng   # start train jobs for all language groups to English
+make tatoeba-eng2group   # start train jobs for English to all language groups
+make tatoeba-langgroup   # start train jobs for bi-directional models for all language groups
+```
+
+Combine all jobs above:
+
+```
+make tatoeba-langgroups
+```
+
+
+Create release packages from the language group models
+
+```
+make tatoeba-group2eng-dist  # make package for all trained group2eng models
+make tatoeba-eng2group-dist  # make package for all trained eng2group models
+make tatoeba-langgroup-dist  # make package for all trained langgroup models
+```
+
+
+Jobs for specific tasks and language groups; example task: `gmw2eng`:
+
+```
+make tateoba-gmw2eng-train    # make data and start training job
+make tateoba-gmw2eng-eval     # evaluate model with multilingual test data
+make tateoba-gmw2eng-evalall  # evaluate model with all individual language pairs
+make tateoba-gmw2eng-dist     # create release package
+```
+
+Similar jobs can be started for any supported language group from and to English
+and also as a bidirectional model for all languages in the given language group.
+Replace `gmw2eng` with, for example, `eng2gem` (English to Germanic) or 
+`gmq` (multilingual model for North Germanic languages).
+
+
+
+
+
 ## Generate evaluation tables
 
 Various lists and tables can be generated from the evaluated model files. Remove old files and generat new ones by running:
