@@ -38,7 +38,7 @@ make SRCLANGS=afr TRGLANGS=epo tatoeba-bidirectional-job
 Multilingual models that include all combinations of given source and target languages can be trained by calling the following special target, which first fetches the necessary data for all language pairs and then starts a training job. Here is an example with Afrikaans+Dutch as source languages and German+English+Spanish as target languages:
 
 ```
-make SRCLANGS="afr nld" TRGLANGS="deu eng spa" tatoeba-multilingual-train
+make SRCLANGS="afr nld" TRGLANGS="deu eng spa" tatoeba-job
 ```
 
 In order to evaluate all language pairs using Tatoeba test data one can run:
@@ -50,7 +50,7 @@ make SRCLANGS="afr nld" TRGLANGS="deu eng spa" tatoeba-multilingual-eval
 In order to skip certain language pairs one can set `SKIP_LANGPAIRS`, for example to skip `afr-eng` and `nld-spa` one can run:
 
 ```
-make SRCLANGS="afr nld" TRGLANGS="deu eng spa" SKIP_LANGPAIRS="afr-eng|nld-spa" tatoeba-multilingual-train
+make SRCLANGS="afr nld" TRGLANGS="deu eng spa" SKIP_LANGPAIRS="afr-eng|nld-spa" tatoeba-job
 ```
 
 

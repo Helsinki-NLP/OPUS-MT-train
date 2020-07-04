@@ -244,6 +244,7 @@ USE_REST_DEVDATA ?= 1
 ## pre-processing and vocabulary
 ##----------------------------------------------------------------------------
 
+SUBWORDS   ?= spm
 BPESIZE    ?= 32000
 SRCBPESIZE ?= ${BPESIZE}
 TRGBPESIZE ?= ${BPESIZE}
@@ -256,8 +257,8 @@ CONTEXT_SIZE = 100
 ## pre-processing type
 # PRE     = norm
 PRE       = simple
-PRE_SRC   = spm${SRCBPESIZE:000=}k
-PRE_TRG   = spm${TRGBPESIZE:000=}k
+PRE_SRC   = ${SUBWORDS}${SRCBPESIZE:000=}k
+PRE_TRG   = ${SUBWORDS}${TRGBPESIZE:000=}k
 
 
 ##-------------------------------------
@@ -395,8 +396,8 @@ endif
 
 ## check whether we have GPUs available
 ## if not: use CPU mode for decoding
-NVIDIA_SMI = ${shell which nvidia-smi 2>dev/null}
-ifdef NVIDIA_SMI
+NVIDIA_SMI := ${shell which nvidia-smi 2>/dev/null}
+ifneq ($(wildcard ${NVIDIA_SMI}),)
 ifeq (${shell nvidia-smi | grep failed | wc -l},1)
   MARIAN = ${MARIANCPU}
   MARIAN_DECODER_FLAGS = ${MARIAN_DECODER_CPU}
@@ -466,7 +467,7 @@ ${WORKDIR}/config.mk:
 	  T=`cat ${LOCAL_TRAIN_TRG}.charfreq | wc -l`; \
 	fi; \
 	if [ $$s -gt ${LARGEST_TRAINSIZE} ]; then \
-	  echo "# ${LANGPAIRSTR} training data bigger than 10 million" > $@; \
+	  echo "# ${LANGPAIRSTR} training data bigger than ${LARGEST_TRAINSIZE}" > $@; \
 	  echo "GPUJOB_HPC_MEM = 8g"       >> $@; \
 	  echo "GPUJOB_SUBMIT  = -multigpu" >> $@; \
 	  echo "BPESIZE    = ${BPESIZE}"    >> $@; \
@@ -474,7 +475,7 @@ ${WORKDIR}/config.mk:
 	  echo "TESTSIZE   = ${TESTSIZE}"   >> $@; \
 	  echo "DEVMINSIZE = ${DEVMINSIZE}" >> $@; \
 	elif [ $$s -gt ${LARGE_TRAINSIZE} ]; then \
-	  echo "# ${LANGPAIRSTR} training data bigger than 1 million" > $@; \
+	  echo "# ${LANGPAIRSTR} training data bigger than ${LARGE_TRAINSIZE}" > $@; \
 	  echo "GPUJOB_HPC_MEM = 8g"       >> $@; \
 	  echo "GPUJOB_SUBMIT  = "         >> $@; \
 	  echo "MARIAN_VALID_FREQ = 2500"  >> $@; \
@@ -483,7 +484,7 @@ ${WORKDIR}/config.mk:
 	  echo "TESTSIZE   = ${TESTSIZE}"   >> $@; \
 	  echo "DEVMINSIZE = ${DEVMINSIZE}" >> $@; \
 	elif [ $$s -gt ${MEDIUM_TRAINSIZE} ]; then \
-	  echo "# ${LANGPAIRSTR} training data bigger than 500k" > $@; \
+	  echo "# ${LANGPAIRSTR} training data bigger than ${MEDIUM_TRAINSIZE}" > $@; \
 	  echo "GPUJOB_HPC_MEM = 4g"       >> $@; \
 	  echo "GPUJOB_SUBMIT  = "         >> $@; \
 	  echo "MARIAN_VALID_FREQ = 2500"  >> $@; \
@@ -493,7 +494,7 @@ ${WORKDIR}/config.mk:
 	  echo "TESTSIZE   = ${TESTSIZE}"   >> $@; \
 	  echo "DEVMINSIZE = ${DEVMINSIZE}" >> $@; \
 	elif [ $$s -gt ${SMALL_TRAINSIZE} ]; then \
-	  echo "# ${LANGPAIRSTR} training data bigger than 100k" > $@; \
+	  echo "# ${LANGPAIRSTR} training data bigger than ${SMALL_TRAINSIZE}" > $@; \
 	  echo "GPUJOB_HPC_MEM = 4g"       >> $@; \
 	  echo "GPUJOB_SUBMIT  = "         >> $@; \
 	  echo "MARIAN_VALID_FREQ = 1000"  >> $@; \
@@ -504,7 +505,7 @@ ${WORKDIR}/config.mk:
 	  echo "TESTSIZE    = 1000"        >> $@; \
 	  echo "DEVMINSIZE  = 250"         >> $@; \
 	elif [ $$s -gt ${SMALLEST_TRAINSIZE} ]; then \
-	  echo "# ${LANGPAIRSTR} training data less than 100k" > $@; \
+	  echo "# ${LANGPAIRSTR} training data less than ${SMALLEST_TRAINSIZE}" > $@; \
 	  echo "GPUJOB_HPC_MEM = 4g"       >> $@; \
 	  echo "GPUJOB_SUBMIT  = "         >> $@; \
 	  echo "MARIAN_VALID_FREQ = 1000"  >> $@; \
@@ -535,8 +536,7 @@ ${WORKDIR}/config.mk:
 	echo "DEVSET      = ${DEVSET}"      >> $@
 	echo "TESTSET     = ${TESTSET}"     >> $@
 	echo "PRE         = ${PRE}"         >> $@
-	echo "PRE_SRC     = ${PRE_SRC}"     >> $@
-	echo "PRE_TRG     = ${PRE_TRG}"     >> $@
+	echo "SUBWORDS    = ${SUBWORDS}"    >> $@
 ifdef SHUFFLE_DATA
 	echo "SHUFFLE_DATA      = ${SHUFFLE_DATA}"       >> $@
 endif

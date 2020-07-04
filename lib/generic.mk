@@ -309,7 +309,7 @@ endif
 ## document level models
 %-doc:
 	${MAKE} WORKHOME=${shell realpath ${PWD}/work-spm} \
-		PRE=norm \
+		PRE=norm SUBWORDS=spm \
 		PRE_SRC=spm${SRCBPESIZE:000=}k.doc${CONTEXT_SIZE} \
 		PRE_TRG=spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE} \
 	${@:-doc=}
@@ -318,9 +318,7 @@ endif
 ## sentence-piece models
 %-spm:
 	${MAKE} WORKHOME=${shell realpath ${PWD}/work-spm} \
-		PRE=norm \
-		PRE_SRC=spm${SRCBPESIZE:000=}k \
-		PRE_TRG=spm${TRGBPESIZE:000=}k \
+		PRE=norm SUBWORDS=spm \
 	${@:-spm=}
 
 ## sentence-piece models with space-separated strings
@@ -336,17 +334,13 @@ endif
 	${MAKE} WORKHOME=${shell realpath ${PWD}/work-monospm} \
 		SPMSRCMODEL=${SPMSRCMONO} \
 		SPMTRGMODEL=${SPMTRGMONO} \
-		PRE_SRC=spm${SRCBPESIZE:000=}k \
-		PRE_TRG=spm${TRGBPESIZE:000=}k \
 	${@:-monospm=}
 
 
 %-spm-noalign:
 	${MAKE} WORKHOME=${shell realpath ${PWD}/work-spm-noalign} \
 		MODELTYPE=transformer \
-		PRE=norm \
-		PRE_SRC=spm${SRCBPESIZE:000=}k \
-		PRE_TRG=spm${TRGBPESIZE:000=}k \
+		PRE=norm SUBWORDS=spm \
 	${@:-spm-noalign=}
 
 
@@ -368,33 +362,25 @@ endif
 ## BPE models
 %-bpe:
 	${MAKE} WORKHOME=${shell realpath ${PWD}/work-bpe} \
-		PRE=tok \
+		PRE=tok SUBWORDS=bpe \
 		MODELTYPE=transformer \
-		PRE_SRC=bpe${SRCBPESIZE:000=}k \
-		PRE_TRG=bpe${TRGBPESIZE:000=}k \
 	${@:-bpe=}
 
 %-bpe-align:
 	${MAKE} WORKHOME=${shell realpath ${PWD}/work-bpe-align} \
-		PRE=tok \
-		PRE_SRC=bpe${SRCBPESIZE:000=}k \
-		PRE_TRG=bpe${TRGBPESIZE:000=}k \
+		PRE=tok SUBWORDS=bpe \
 	${@:-bpe-align=}
 
 %-bpe-memad:
 	${MAKE} WORKHOME=${shell realpath ${PWD}/work-bpe-memad} \
-		PRE=tok \
+		PRE=tok SUBWORDS=bpe \
 		MODELTYPE=transformer \
-		PRE_SRC=bpe${SRCBPESIZE:000=}k \
-		PRE_TRG=bpe${TRGBPESIZE:000=}k \
 	${@:-bpe-memad=}
 
 %-bpe-old:
 	${MAKE} WORKHOME=${shell realpath ${PWD}/work-bpe-old} \
-		PRE=tok \
+		PRE=tok SUBWORDS=bpe \
 		MODELTYPE=transformer \
-		PRE_SRC=bpe${SRCBPESIZE:000=}k \
-		PRE_TRG=bpe${TRGBPESIZE:000=}k \
 	${@:-bpe-old=}
 
 
