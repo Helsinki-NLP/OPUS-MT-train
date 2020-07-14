@@ -129,7 +129,9 @@ make tatoeba-eng2group   # start train jobs for English to all language groups
 make tatoeba-langgroup   # start train jobs for bi-directional models for all language groups
 ```
 
-Combine all jobs above:
+The targets above train models on over/under-sampled datasets to balance language pairs included in the multilingual model. The sample size per language pair is 1 million sentence pairs with a threshold of 50 for the maximum number of repeating the same data.
+
+Combine all jobs above using:
 
 ```
 make tatoeba-langgroups
@@ -144,14 +146,13 @@ make tatoeba-eng2group-dist  # make package for all trained eng2group models
 make tatoeba-langgroup-dist  # make package for all trained langgroup models
 ```
 
-
-Jobs for specific tasks and language groups; example task: `gmw2eng`:
+Jobs for specific tasks and language groups; example task: `gmw2eng` (it's recommended to use `MODELTYPE=transformer` to skip word alignment and `FIT_DATA_SIZE` controls the data size used in over- and undersampling data to balance various language pairs in the training data):
 
 ```
-make tateoba-gmw2eng-train    # make data and start training job
-make tateoba-gmw2eng-eval     # evaluate model with multilingual test data
-make tateoba-gmw2eng-evalall  # evaluate model with all individual language pairs
-make tateoba-gmw2eng-dist     # create release package
+make MODELTYPE=transformer FIT_DATA_SIZE=1000000 tateoba-gmw2eng-train    # make data and start training job
+make MODELTYPE=transformer FIT_DATA_SIZE=1000000 tateoba-gmw2eng-eval     # evaluate model with multilingual test data
+make MODELTYPE=transformer FIT_DATA_SIZE=1000000 tateoba-gmw2eng-evalall  # evaluate model with all individual language pairs
+make MODELTYPE=transformer FIT_DATA_SIZE=1000000 tateoba-gmw2eng-dist     # create release package
 ```
 
 Similar jobs can be started for any supported language group from and to English

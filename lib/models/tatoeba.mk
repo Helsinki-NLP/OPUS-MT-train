@@ -274,18 +274,18 @@ tatoeba-langgroup:
 tatoeba-group2eng-dist:
 	for g in ${OPUS_LANG_GROUPS}; do \
 	  if [ `find ${TATOEBA_WORK}/$$g-eng -name '*.npz' | wc -l` -gt 0 ]; then \
-	    ${MAKE} tatoeba-$${g}2eng-eval; \
-	    ${MAKE} tatoeba-$${g}2eng-evalall; \
-	    ${MAKE} tatoeba-$${g}2eng-dist; \
+	    ${MAKE} MODELTYPE=transformer tatoeba-$${g}2eng-eval; \
+	    ${MAKE} MODELTYPE=transformer tatoeba-$${g}2eng-evalall; \
+	    ${MAKE} MODELTYPE=transformer tatoeba-$${g}2eng-dist; \
 	  fi \
 	done
 
 tatoeba-eng2group-dist:
 	for g in ${OPUS_LANG_GROUPS}; do \
 	  if [ `find ${TATOEBA_WORK}/eng-$$g -name '*.npz' | wc -l` -gt 0 ]; then \
-	    ${MAKE} tatoeba-eng2$${g}-eval; \
-	    ${MAKE} tatoeba-eng2$${g}-evalall; \
-	    ${MAKE} tatoeba-eng2$${g}-dist; \
+	    ${MAKE} MODELTYPE=transformer tatoeba-eng2$${g}-eval; \
+	    ${MAKE} MODELTYPE=transformer tatoeba-eng2$${g}-evalall; \
+	    ${MAKE} MODELTYPE=transformer tatoeba-eng2$${g}-dist; \
 	  fi \
 	done
 
@@ -321,8 +321,8 @@ MAX_TRGLANGS ?= 7000
 tatoeba-%-train:
 	-( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))); \
 	   t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))); \
-	   S="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))) xargs iso639 -m -n}))"; \
-	   T="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))) xargs iso639 -m -n}))"; \
+	   S="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))) | xargs iso639 -m -n}))"; \
+	   T="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))) | xargs iso639 -m -n}))"; \
 	   if [ ! `find ${TATOEBA_WORK}/$$s-$$t -name '*.done' | wc -l` -gt 0 ]; then \
 	     if [ `echo $$S | tr ' ' "\n" | wc -l` -ge ${MIN_SRCLANGS} ]; then \
 	       if [ `echo $$T | tr ' ' "\n" | wc -l` -ge ${MIN_TRGLANGS} ]; then \
@@ -339,22 +339,23 @@ tatoeba-%-train:
 tatoeba-%-eval:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-eval,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-eval,%,$@))); \
-	  S="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-eval,%,$@))) xargs iso639 -m -n}))"; \
-	  T="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-eval,%,$@))) xargs iso639 -m -n}))"; \
+	  S="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-eval,%,$@))) | xargs iso639 -m -n}))"; \
+	  T="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-eval,%,$@))) | xargs iso639 -m -n}))"; \
 	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} compare )
+
 
 tatoeba-%-evalall:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))); \
-	  S="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))) xargs iso639 -m -n}))"; \
-	  T="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))) xargs iso639 -m -n}))"; \
+	  S="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))) | xargs iso639 -m -n}))"; \
+	  T="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))) | xargs iso639 -m -n}))"; \
 	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" tatoeba-multilingual-eval )
 
 tatoeba-%-dist:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))); \
-	  S="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))) xargs iso639 -m -n}))"; \
-	  T="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))) xargs iso639 -m -n}))"; \
+	  S="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))) | xargs iso639 -m -n}))"; \
+	  T="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))) | xargs iso639 -m -n}))"; \
 	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} best-dist )
 
 
@@ -671,6 +672,9 @@ tatoeba-multilingual-eval:
 	  done \
 	done
 
+
+#	( S=`${GET_ISO_CODE} -m ${SRCLANGS} | tr ' ' "\n" | sort -u | tr "\n" ' '`; \
+#	  T=`${GET_ISO_CODE} -m ${TRGLANGS} | tr ' ' "\n" | sort -u | tr "\n" ' '`; \
 
 ## copy testsets into the multilingual model's test directory
 .PHONY: tatoeba-multilingual-testsets
@@ -1022,12 +1026,29 @@ results/tatoeba-results-langgroup.md: tatoeba-results-langgroup
 	echo ""                                                                         >> $@
 	echo "| Source | Target | Model | Test Set      | chrF2 | BLEU |"               >> $@
 	echo "|--------|--------|------:|---------------|------:|-----:|"               >> $@
-	cut -f1 $< | xargs iso639 -p | tr '"' "\n" | \
+	grep multi $< | cut -f1 | xargs iso639 -p | tr '"' "\n" | \
 		grep [a-z] | \
 		sed 's/based\-/based | /' |\
 		sed 's/languages\-/languages | /' |\
 		sed 's/English\-/English | /;s/^/| /;s/$$/ /'  > $@.langpair
-	sed 's#^\([^ 	]*\)#[\1](../models/\1)#' $< |\
+	grep multi $< |\
+	sed 's#^\([^ 	]*\)#[\1](../models/\1)#' |\
+	sed 's/	/ | /g;s/^/| /;s/$$/ |/'                       > $@.rest
+	paste $@.langpair $@.rest -d ' '                                                >> $@
+	echo ""                                                                         >> $@
+	echo "## Performance on individual language pairs"                              >> $@
+	echo ""                                                                         >> $@
+	echo "Note that some of the test sets are way too small to be reliable!"        >> $@
+	echo ""                                                                         >> $@
+	echo "| Source | Target | Model | Test Set      | chrF2 | BLEU |"               >> $@
+	echo "|--------|--------|------:|---------------|------:|-----:|"               >> $@
+	grep -v multi $< | cut -f1 | xargs iso639 -p | tr '"' "\n" | \
+		grep [a-z] | \
+		sed 's/based\-/based | /' |\
+		sed 's/languages\-/languages | /' |\
+		sed 's/English\-/English | /;s/^/| /;s/$$/ /'  > $@.langpair
+	grep -v multi $< |\
+	sed 's#^\([^ 	]*\)#[\1](../models/\1)#' |\
 	sed 's/	/ | /g;s/^/| /;s/$$/ |/'                       > $@.rest
 	paste $@.langpair $@.rest -d ' '                                                >> $@
 	rm -f $@.langpair $@.rest
@@ -1161,7 +1182,7 @@ tatoeba-results-subset-%: tatoeba-%.md tatoeba-results-sorted-langpair
 	( l="${shell grep '\[' $< | cut -f2 -d '[' | cut -f1 -d ']' | sort -u  | tr "\n" '|' | tr '-' '.' | sed 's/|$$//;s/\./\\\./g'}"; \
 	  grep -P "$$l" ${word 2,$^} > $@ )
 
-tatoeba-results-langgroup: tatoeba-results-sorted-langpair
+tatoeba-results-langgroup: tatoeba-results-sorted-model
 	grep -P "${subst ${SPACE},-eng|,${OPUS_LANG_GROUPS}}-eng" $< >> $@
 	grep -P "eng-${subst ${SPACE},|eng-,${OPUS_LANG_GROUPS}}" $< >> $@
 	grep -P "`echo '${OPUS_LANG_GROUPS}' | sed 's/\([^ ][^ ]*\)/\1-\1/g;s/ /\|/g'`" $< >> $@

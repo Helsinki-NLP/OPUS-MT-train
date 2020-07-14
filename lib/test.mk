@@ -75,12 +75,16 @@ else
 endif
 	rm -f $@.input $@.output
 
-
+## adjust tokenisation to non-space-separated languages
+## TODO: is it correct to simply use 'zh' or should we use 'intl'?
+ifneq ($(filter zh zho jp jpn cmn,${TRGLANGS}),)
+  SACREBLEU_PARAMS = --tokenize zh
+endif
 
 %.eval: % ${TEST_TRG}
 	paste ${TEST_SRC}.${PRE_SRC} ${TEST_TRG} | grep $$'.\t' | cut -f2 > $@.ref
-	cat $< | sacrebleu $@.ref > $@
-	cat $< | sacrebleu --metrics=chrf --width=3 $@.ref >> $@
+	cat $< | sacrebleu ${SACREBLEU_PARAMS} $@.ref > $@
+	cat $< | sacrebleu ${SACREBLEU_PARAMS} --metrics=chrf --width=3 $@.ref >> $@
 	rm -f $@.ref
 
 
