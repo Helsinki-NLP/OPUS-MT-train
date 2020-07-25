@@ -67,6 +67,8 @@ WIKILANGS = 	${sort $(patsubst >%${WIKISOURCE}-,%,${shell grep -o '>..${WIKISOUR
 		${sort $(patsubst >%${WIKISOURCE}-,%,${shell grep -o '>...${WIKISOURCE}-' index.html})}
 
 
+
+
 LANGID     = ${SRC}
 WIKI_DIR   = wiki/${LANGID}
 OUTPUT_DIR = ${LANGPAIR}
@@ -113,6 +115,18 @@ UDPIPE_MODEL = ${notdir $(shell ${LOAD_MODULES} find ${UDPIPE_MODELS}/ -name "${
 all: index.html
 	${MAKE} ${WIKI_LATEST_TRG}
 	${MAKE} ${WIKI_LATEST_SRC}
+
+
+## make ISO639-3 conform file links
+wiki-iso639:
+	for l in ${WIKILANGS}; do \
+	  i=`iso639 -3 -n $$l`; \
+	  mkdir -p wiki-iso639-3/$$i; \
+	  for d in `ls wiki/$$l/*.gz`; do \
+	    ln -s ${PWD}/$$d wiki-iso639-3/$$i/`basename $$d | sed "s/\.$$l\.\(..\.gz\)/.$$i.\1/"`; \
+	  done \
+	done
+
 
 
 # WIKISOURCES = wiki wikibooks wikinews wikiquote wikisource wiktionary
@@ -168,6 +182,12 @@ all-wikitext:
 all-wikilangs: index.html
 	for l in ${WIKILANGS}; do \
 	  ${MAKE} LANGID=$$l extract-text; \
+	done
+
+all-wikilangs-fast: index.html
+	for l in ${WIKILANGS}; do \
+	  ${MAKE} SENTSPLITTER="${MOSESSCRIPTS}/ems/support/split-sentences.perl -l $$l" \
+		LANGID=$$l extract-text; \
 	done
 
 all-wikis-all-langs: index.html
@@ -234,6 +254,12 @@ big-wikidocs:
 	  ${MAKE} SENTSPLITTER="${MOSESSCRIPTS}/ems/support/split-sentences.perl -l $$l" \
 		SRC=$$l WIKISOURCE=wiki extract-doc; \
 	done
+
+#big-wikidocs:
+#	for l in ca cs el en es; do \
+#	  ${MAKE} SENTSPLITTER="${MOSESSCRIPTS}/ems/support/split-sentences.perl -l $$l" \
+#		SRC=$$l WIKISOURCE=wiki extract-doc; \
+#	done
 
 
 
@@ -616,7 +642,9 @@ endif
 endif
 
 ## fallback = moses tools
-SENTSPLITTER ?= ${MOSESSCRIPTS}/ems/support/split-sentences.perl -l ${LANGID}
+SENTSPLITTER ?= sed 's/^ *$$/\# newpar/' | \
+		${MOSESSCRIPTS}/ems/support/split-sentences.perl -l ${LANGID} |\
+		sed -e "s/\# newpar/\n\# newpar\n/g"
 
 
 ## extract sentences and normalize

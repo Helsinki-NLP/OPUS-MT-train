@@ -26,13 +26,25 @@ resume:
 ${MODEL_VOCAB}:	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 		${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz
 ifeq ($(wildcard ${MODEL_VOCAB}),)
+ifneq (${MODEL_LATEST_VOCAB},)
+	cp ${MODEL_LATEST_VOCAB} ${MODEL_VOCAB}
+else
 	mkdir -p ${dir $@}
 	${LOADMODS} && zcat $^ | ${MARIAN}/marian-vocab --max-size ${VOCABSIZE} > $@
+endif
 else
 	@echo "$@ already exists!"
 	@echo "WARNING! No new vocabulary is created even though the data has changed!"
 	@echo "WARNING! Delete the file if you want to start from scratch!"
 	touch $@
+endif
+
+
+print-latest:
+ifneq (${wildcard ${MODEL_LATEST}},)
+ifeq (${wildcard ${MODEL_START}},)
+	@echo "cp ${MODEL_LATEST} ${MODEL_START}"
+endif
 endif
 
 
@@ -45,6 +57,19 @@ ${WORKDIR}/${MODEL}.transformer.model${NR}.done: \
 		${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz \
 		${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG}
 	mkdir -p ${dir $@}
+##--------------------------------------------------------------------
+## in case we want to continue training from the latest existing model
+## (check lib/config.mk to see how the latest model is found)
+##--------------------------------------------------------------------
+ifeq (${wildcard ${MODEL_START}},)
+ifneq (${MODEL_LATEST},)
+ifneq (${MODEL_LATEST_VOCAB},)
+	cp ${MODEL_LATEST_VOCAB} ${MODEL_VOCAB}
+	cp ${MODEL_LATEST} ${MODEL_START}
+endif
+endif
+endif
+##--------------------------------------------------------------------
 	${LOADMODS} && ${MARIAN}/marian ${MARIAN_EXTRA} \
         --model $(@:.done=.npz) \
 	--type transformer \
@@ -96,6 +121,19 @@ ${WORKDIR}/${MODEL}.transformer-align.model${NR}.done: \
 		${TRAIN_ALG} \
 		${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG}
 	mkdir -p ${dir $@}
+##--------------------------------------------------------------------
+## in case we want to continue training from the latest existing model
+## (check lib/config.mk to see how the latest model is found)
+##--------------------------------------------------------------------
+ifeq (${wildcard ${MODEL_START}},)
+ifneq (${MODEL_LATEST},)
+ifneq (${MODEL_LATEST_VOCAB},)
+	cp ${MODEL_LATEST_VOCAB} ${MODEL_VOCAB}
+	cp ${MODEL_LATEST} ${MODEL_START}
+endif
+endif
+endif
+##--------------------------------------------------------------------
 	${LOADMODS} && ${MARIAN}/marian ${MARIAN_EXTRA} \
         --model $(@:.done=.npz) \
 	--type transformer \

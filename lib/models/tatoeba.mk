@@ -246,13 +246,13 @@ ENG2GROUP_DIST    := $(patsubst %,tatoeba-eng2%-dist,${OPUS_LANG_GROUPS})
 
 #### multilingual language-group (bi-directional
 
-LANGGROUP_TRAIN   := $(patsubst %,tatoeba-%-train,${OPUS_LANG_GROUPS})
-LANGGROUP_EVAL    := $(patsubst %,tatoeba-%-eval,${OPUS_LANG_GROUPS})
-LANGGROUP_EVALALL := $(patsubst %,tatoeba-%-evalall,${OPUS_LANG_GROUPS})
-LANGGROUP_DIST    := $(patsubst %,tatoeba-%-dist,${OPUS_LANG_GROUPS})
+LANGGROUP_TRAIN   := $(foreach G,${OPUS_LANG_GROUPS},tatoeba-${G}2${G}-train)
+LANGGROUP_EVAL    := $(patsubst %-train,%-eval,${LANGGROUP_TRAIN})
+LANGGROUP_EVALALL := $(patsubst %-train,%-evalall,${LANGGROUP_TRAIN})
+LANGGROUP_DIST    := $(patsubst %-train,%-dist,${LANGGROUP_TRAIN})
 
 
-## start all jobs for language group to English translation
+## start all jobs with 1 million sampled sentence pairs per language pair
 tatoeba-group2eng: 
 	${MAKE} MIN_SRCLANGS=2 MODELTYPE=transformer FIT_DATA_SIZE=1000000 ${GROUP2ENG_TRAIN}
 
@@ -263,6 +263,22 @@ tatoeba-langgroup:
 	${MAKE} MIN_SRCLANGS=2 MAX_SRCLANGS=25 MODELTYPE=transformer FIT_DATA_SIZE=1000000 ${LANGGROUP_TRAIN}
 
 
+## sample 2 million sentence pairs
+tatoeba-group2eng-2m: 
+	${MAKE} MIN_SRCLANGS=2 MODELTYPE=transformer CONTINUE_EXISTING=1 \
+		FIT_DATA_SIZE=2000000 DATASET=opus2m MARIAN_VALID_FREQ=10000 \
+	${GROUP2ENG_TRAIN}
+
+## sample 4 million sentence pairs
+tatoeba-group2eng-4m: 
+	${MAKE} MIN_SRCLANGS=2 MODELTYPE=transformer CONTINUE_EXISTING=1 \
+		FIT_DATA_SIZE=4000000 DATASET=opus4m MARIAN_VALID_FREQ=10000 \
+	${GROUP2ENG_TRAIN}
+
+
+
+## evaluate and create dist packages
+
 ## old: just depend on eval and dist targets
 ## --> this would also start training if there is no model
 ## --> do this only if a model exists! (see below)
@@ -270,7 +286,7 @@ tatoeba-langgroup:
 # tatoeba-eng2group-dist: ${ENG2GROUP_EVAL} ${ENG2GROUP_EVALALL}
 #	${MAKE} ${ENG2GROUP_DIST}
 
-## only start this if there is a model
+## new: only start this if there is a model
 tatoeba-group2eng-dist:
 	for g in ${OPUS_LANG_GROUPS}; do \
 	  if [ `find ${TATOEBA_WORK}/$$g-eng -name '*.npz' | wc -l` -gt 0 ]; then \
@@ -292,12 +308,15 @@ tatoeba-eng2group-dist:
 tatoeba-langgroup-dist:
 	for g in ${OPUS_LANG_GROUPS}; do \
 	  if [ `find ${TATOEBA_WORK}/$$g-$$g -name '*.npz' | wc -l` -gt 0 ]; then \
-	    ${MAKE} tatoeba-$${g}-eval; \
-	    ${MAKE} tatoeba-$${g}-evalall; \
-	    ${MAKE} tatoeba-$${g}-dist; \
+	    ${MAKE} MODELTYPE=transformer tatoeba-$${g}2$${g}-eval; \
+	    ${MAKE} MODELTYPE=transformer tatoeba-$${g}2$${g}-evalall; \
+	    ${MAKE} MODELTYPE=transformer tatoeba-$${g}2$${g}-dist; \
 	  fi \
 	done
 
+
+## special targets for some big language-group models
+## (restriction above is for max 25 languages)
 
 ine-ine:
 	    ${MAKE} LANGPAIRSTR=ine-ine \
@@ -305,7 +324,25 @@ ine-ine:
 		    TRGLANGS="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup ine | xargs iso639 -m -n}))" \
 		    MODELTYPE=transformer \
 	            FIT_DATA_SIZE=1000000 \
-	    train-and-eval-job-tatoeba; \
+		    HPC_DISK=1500 \
+	    train-and-eval-job-tatoeba
+
+sla-sla:
+	    ${MAKE} LANGPAIRSTR=sla-sla \
+		    SRCLANGS="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup sla | xargs iso639 -m -n}))" \
+		    TRGLANGS="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup sla | xargs iso639 -m -n}))" \
+		    MODELTYPE=transformer \
+	            FIT_DATA_SIZE=1000000 \
+	    train-and-eval-job-tatoeba
+
+gem-gem:
+	    ${MAKE} LANGPAIRSTR=gem-gem \
+		    SRCLANGS="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup gem | xargs iso639 -m -n}))" \
+		    TRGLANGS="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup gem | xargs iso639 -m -n}))" \
+		    MODELTYPE=transformer \
+	            FIT_DATA_SIZE=1000000 \
+	    train-and-eval-job-tatoeba
+
 
 
 ## generic targets to start combinations of languages or language groups
@@ -317,13 +354,12 @@ MIN_TRGLANGS ?= 1
 MAX_SRCLANGS ?= 7000
 MAX_TRGLANGS ?= 7000
 
-
 tatoeba-%-train:
 	-( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))); \
 	   t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))); \
 	   S="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))) | xargs iso639 -m -n}))"; \
 	   T="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))) | xargs iso639 -m -n}))"; \
-	   if [ ! `find ${TATOEBA_WORK}/$$s-$$t -name '*.done' | wc -l` -gt 0 ]; then \
+	   if [ ! `find ${TATOEBA_WORK}/$$s-$$t -name '${DATASET}.*.done' | wc -l` -gt 0 ]; then \
 	     if [ `echo $$S | tr ' ' "\n" | wc -l` -ge ${MIN_SRCLANGS} ]; then \
 	       if [ `echo $$T | tr ' ' "\n" | wc -l` -ge ${MIN_TRGLANGS} ]; then \
 	         if [ `echo $$S | tr ' ' "\n" | wc -l` -le ${MAX_SRCLANGS} ]; then \
@@ -349,7 +385,10 @@ tatoeba-%-evalall:
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))); \
 	  S="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))) | xargs iso639 -m -n}))"; \
 	  T="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))) | xargs iso639 -m -n}))"; \
+	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" eval-tatoeba; \
+	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" eval-testsets-tatoeba; \
 	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" tatoeba-multilingual-eval )
+
 
 tatoeba-%-dist:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))); \
@@ -358,165 +397,6 @@ tatoeba-%-dist:
 	  T="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))) | xargs iso639 -m -n}))"; \
 	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} best-dist )
 
-
-
-
-
-# ## start all jobs for language group to English translation
-# tatoeba-group2eng: ${GROUP2ENG_TRAIN}
-
-# # langgroup gmq | xargs iso639 -m
-
-# ${GROUP2ENG_TRAIN}:
-# 	-if [ `echo $(filter ${OPUS_LANGS3},$(sort \
-# 	              ${shell langgroup $(patsubst tatoeba-%2eng-train,%,$@) | \
-# 	                      xargs iso639 -m -n})) | \
-# 	       tr ' ' "\n" | wc -l` -gt 1 ]; then \
-# 	  if [ ! `find ${TATOEBA_WORK}/$(patsubst tatoeba-%2eng-train,%,$@)-eng -name '*.done' | wc -l` -gt 0 ]; then \
-# 	    ${MAKE} LANGPAIRSTR=$(patsubst tatoeba-%2eng-train,%,$@)-eng \
-# 	            SRCLANGS="$(filter ${OPUS_LANGS3},$(sort \
-# 	                        ${shell langgroup $(patsubst tatoeba-%2eng-train,%,$@) | \
-# 	                                xargs iso639 -m -n}))" \
-# 		    TRGLANGS=eng \
-# 		    MODELTYPE=transformer \
-# 	            FIT_DATA_SIZE=1000000 \
-# 	    tatoeba-job; \
-# 	  fi \
-# 	fi
-
-
-# ## this would be easier but does not check whether a mode exists
-# ## --> tries to build it if there is no model
-
-# # tatoeba-group2eng-dist: ${GROUP2ENG_EVAL} ${GROUP2ENG_EVALALL}
-# # 	${MAKE} ${GROUP2ENG_DIST}
-
-# ${GROUP2ENG_EVAL}:
-# 	${MAKE} LANGPAIRSTR=$(patsubst tatoeba-%2eng-eval,%,$@)-eng \
-# 		SRCLANGS="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(patsubst tatoeba-%2eng-eval,%,$@) | xargs iso639 -m -n}))" \
-# 		TRGLANGS=eng \
-# 		MODELTYPE=transformer \
-# 		${TATOEBA_PARAMS} \
-# 	compare
-
-# ${GROUP2ENG_EVALALL}:
-# 	${MAKE} LANGPAIRSTR=$(patsubst tatoeba-%2eng-evalall,%,$@)-eng \
-# 		SRCLANGS="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(patsubst tatoeba-%2eng-evalall,%,$@) | xargs iso639 -m -n}))" \
-# 		TRGLANGS=eng MODELTYPE=transformer FIT_DATA_SIZE=1000000 \
-# 	tatoeba-multilingual-eval
-
-# ${GROUP2ENG_DIST}:
-# 	${MAKE} LANGPAIRSTR=$(patsubst tatoeba-%2eng-dist,%,$@)-eng \
-# 		SRCLANGS="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(patsubst tatoeba-%2eng-dist,%,$@) | xargs iso639 -m -n}))" \
-# 		TRGLANGS=eng \
-# 		MODELTYPE=transformer \
-# 		${TATOEBA_PARAMS} \
-# 	best-dist
-
-
-
-# tatoeba-eng2group: ${ENG2GROUP_TRAIN}
-
-
-
-
-# ${ENG2GROUP_TRAIN}:
-# 	-if [ `echo $(filter ${OPUS_LANGS3},$(sort \
-# 	              ${shell langgroup $(patsubst tatoeba-eng2%-train,%,$@) | \
-# 	                      xargs iso639 -m -n})) | \
-# 	       tr ' ' "\n" | wc -l` -gt 1 ]; then \
-# 	  if [ ! `find ${TATOEBA_WORK}/eng-$(patsubst tatoeba-eng2%-train,%,$@) -name '*.done' | wc -l` -gt 0 ]; then \
-# 	    ${MAKE} LANGPAIRSTR=eng-$(patsubst tatoeba-eng2%-train,%,$@) \
-# 		    TRGLANGS="$(filter ${OPUS_LANGS3},$(sort \
-# 	                        ${shell langgroup $(patsubst tatoeba-eng2%-train,%,$@) | \
-# 	                                xargs iso639 -m -n}))" \
-# 		    SRCLANGS=eng \
-# 		    MODELTYPE=transformer \
-# 		    FIT_DATA_SIZE=1000000 \
-# 	    tatoeba-job; \
-# 	  fi \
-# 	fi
-
-# ${ENG2GROUP_EVAL}:
-# 	${MAKE} LANGPAIRSTR=eng-$(patsubst tatoeba-eng2%-eval,%,$@) \
-# 		SRCLANGS=eng \
-# 		TRGLANGS="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(patsubst tatoeba-eng2%-eval,%,$@) | xargs iso639 -m -n}))" \
-# 		MODELTYPE=transformer \
-# 		${TATOEBA_PARAMS} \
-# 	compare
-
-# ${ENG2GROUP_EVALALL}:
-# 	${MAKE} LANGPAIRSTR=eng-$(patsubst tatoeba-eng2%-evalall,%,$@) \
-# 		TRGLANGS="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(patsubst tatoeba-eng2%-evalall,%,$@) | xargs iso639 -m -n}))" \
-# 		SRCLANGS=eng MODELTYPE=transformer FIT_DATA_SIZE=1000000 \
-# 	tatoeba-multilingual-eval
-
-# ${ENG2GROUP_DIST}:
-# 	${MAKE} LANGPAIRSTR=eng-$(patsubst tatoeba-eng2%-dist,%,$@) \
-# 		SRCLANGS=eng \
-# 		TRGLANGS="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(patsubst tatoeba-eng2%-dist,%,$@) | xargs iso639 -m -n}))" \
-# 		MODELTYPE=transformer \
-# 		${TATOEBA_PARAMS} \
-# 	best-dist
-
-# tatoeba-langgroup: ${LANGGROUP_TRAIN}
-
-# ${LANGGROUP_TRAIN}:
-# 	-if [ `echo $(filter ${OPUS_LANGS3},$(sort \
-# 	              ${shell langgroup $(patsubst tatoeba-%-train,%,$@) | \
-# 	                      xargs iso639 -m -n})) | \
-# 	       tr ' ' "\n" | wc -l` -gt 1 ]; then \
-# 	 if [ `echo $(filter ${OPUS_LANGS3},$(sort \
-# 	              ${shell langgroup $(patsubst tatoeba-%-train,%,$@) | \
-# 	                      xargs iso639 -m -n})) | \
-# 	       tr ' ' "\n" | wc -l` -lt 16 ]; then \
-# 	  if [ ! `find ${TATOEBA_WORK}/$(patsubst tatoeba-%-train,%,$@)-$(patsubst tatoeba-%-train,%,$@) \
-# 			-name '*.done' | wc -l` -gt 0 ]; then \
-# 	    ${MAKE} LANGPAIRSTR=$(patsubst tatoeba-%-train,%,$@)-$(patsubst tatoeba-%-train,%,$@) \
-# 		    SRCLANGS="$(filter ${OPUS_LANGS3},$(sort \
-# 	                        ${shell langgroup $(patsubst tatoeba-%-train,%,$@) | \
-# 	                                xargs iso639 -m -n}))" \
-# 		    TRGLANGS="$(filter ${OPUS_LANGS3},$(sort \
-# 	                        ${shell langgroup $(patsubst tatoeba-%-train,%,$@) | \
-# 	                                xargs iso639 -m -n}))" \
-# 		    MODELTYPE=transformer \
-# 	            FIT_DATA_SIZE=1000000 \
-# 	    tatoeba-job; \
-# 	  fi \
-# 	fi \
-# 	fi
-
-# ${LANGGROUP_EVAL}:
-# 	${MAKE} LANGPAIRSTR=$(patsubst tatoeba-%-eval,%,$@)-$(patsubst tatoeba-%-eval,%,$@) \
-# 		SRCLANGS="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(patsubst tatoeba-%-eval,%,$@) | xargs iso639 -m -n}))" \
-# 		TRGLANGS="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(patsubst tatoeba-%-eval,%,$@) | xargs iso639 -m -n}))" \
-# 		MODELTYPE=transformer \
-# 		${TATOEBA_PARAMS} \
-# 	compare
-
-# ${LANGGROUP_EVALALL}:
-# 	${MAKE} LANGPAIRSTR=$(patsubst tatoeba-%-evalall,%,$@)-$(patsubst tatoeba-%-evalall,%,$@) \
-# 		SRCLANGS="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(patsubst tatoeba-%-evalall,%,$@) | xargs iso639 -m -n}))" \
-# 		TRGLANGS="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(patsubst tatoeba-%-evalall,%,$@) | xargs iso639 -m -n}))" \
-# 		MODELTYPE=transformer FIT_DATA_SIZE=1000000 \
-# 	tatoeba-multilingual-eval
-
-# ${LANGGROUP_DIST}:
-# 	${MAKE} LANGPAIRSTR=$(patsubst tatoeba-%-dist,%,$@)-$(patsubst tatoeba-%-dist,%,$@) \
-# 		SRCLANGS="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(patsubst tatoeba-%-dist,%,$@) | xargs iso639 -m -n}))" \
-# 		TRGLANGS="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(patsubst tatoeba-%-dist,%,$@) | xargs iso639 -m -n}))" \
-# 		MODELTYPE=transformer \
-# 		${TATOEBA_PARAMS} \
-# 	best-dist
-
-
-
-
-
-
-
-
-###########################################################################################
 
 
 
@@ -652,7 +532,7 @@ tatoeba-trainsize-%.txt: tatoeba-%.md
 ## evaluate all individual language pairs for a multilingual model
 .PHONY: tatoeba-multilingual-eval
 tatoeba-multilingual-eval:
-	${MAKE} tatoeba-multilingual-testsets
+	-${MAKE} tatoeba-multilingual-testsets
 	for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
 	    if [ -e ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.src ]; then \

@@ -353,6 +353,13 @@ MODEL_VOCABTYPE = yml
 MODEL_VOCAB     = ${WORKDIR}/${MODEL}.vocab.${MODEL_VOCABTYPE}
 MODEL_DECODER   = ${MODEL_FINAL}.decoder.yml
 
+## latest model with the same pre-processing nbut any data or modeltyp
+ifdef CONTINUE_EXISTING
+  MODEL_LATEST       = $(firstword ${shell ls -t ${WORKDIR}/*.${PRE_SRC}-${PRE_TRG}.*.best-perplexity.npz 2>/dev/null})
+  MODEL_LATEST_VOCAB = $(shell echo "${MODEL_LATEST}" | \
+			sed 's|\.${PRE_SRC}-${PRE_TRG}\..*$$|.${PRE_SRC}-${PRE_TRG}.vocab.${MODEL_VOCABTYPE}|')
+endif
+
 
 ## test set translation and scores
 

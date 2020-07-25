@@ -274,7 +274,7 @@ endif
 ## add training data for each language combination
 ## and put it together in local space
 ${LOCAL_TRAIN_SRC}: ${LOCAL_TRAINDATA_DEPENDENCIES}
-# ifeq (${wildcard $@},)
+# ifeq (${wildcard ${LOCAL_TRAIN_SRC}},)
 	mkdir -p ${dir $@}
 	echo ""                           > ${dir $@}README.md
 	echo "# ${notdir ${TRAIN_BASE}}" >> ${dir $@}README.md

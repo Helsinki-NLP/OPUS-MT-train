@@ -44,11 +44,13 @@ GENERATE_SPM_VOC = 0
 ## --> otherwise there can be multiple threads writing to the same file!
 
 ${SPMSRCMODEL}: ${LOCAL_TRAIN_SRC}
-ifneq (${wildcard $@},)
+ifneq (${wildcard ${SPMSRCMODEL}},)
 	@echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 	@echo "!!!!!!!! $@ already exists!"
 	@echo "!!!!!!!! re-use the old one even if there is new training data"
 	@echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+	@echo "!!!!!!!! back-date $<"
+	touch -r $@ $<
 else
 	mkdir -p ${dir $@}
 ifeq (${USE_TARGET_LABELS},1)
@@ -76,11 +78,13 @@ endif
 
 ## no labels on the target language side
 ${SPMTRGMODEL}: ${LOCAL_TRAIN_TRG}
-ifneq (${wildcard $@},)
+ifneq (${wildcard ${SPMTRGMODEL}},)
 	@echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 	@echo "!!!!!!!! $@ already exists!"
 	@echo "!!!!!!!! re-use the old one even if there is new training data"
 	@echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+	@echo "!!!!!!!! back-date $<"
+	touch -r $@ $<
 else
 	mkdir -p ${dir $@}
 	grep . ${LOCAL_TRAIN_TRG} | ${SHUFFLE} > ${LOCAL_TRAIN_TRG}.text

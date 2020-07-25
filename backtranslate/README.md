@@ -12,4 +12,4 @@ NOTE: this only works for SentencePiece models
 ## TODO
 
 *  download base models from ObjectStorage
-*  make it work with multilingual models (need to adjust preprocess-scripts for those models)
+*  DONE? make it work with multilingual models (need to adjust preprocess-scripts for those models)
