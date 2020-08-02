@@ -30,7 +30,8 @@ LANGPAIR = ${SRC}-${TRG}
 
 PWD := $(shell pwd)
 
-MODELHOME ?= ../models/${LANGPAIR}
+MODELSDIR ?= ../models
+MODELHOME ?= ${MODELSDIR}/${LANGPAIR}
 ## standard sort is different from UTF8-based sort
 ## --> prefer models with augmented data sets (separated by +)
 ##     we need the UTF8 sort order
@@ -69,14 +70,16 @@ WIKILANGS = 	${sort $(patsubst >%${WIKISOURCE}-,%,${shell grep -o '>..${WIKISOUR
 
 
 
-LANGID     = ${SRC}
-WIKI_DIR   = wiki/${LANGID}
-OUTPUT_DIR = ${LANGPAIR}
-WIKI_TXT   = ${WIKI_DIR}/${WIKISOURCE}.${LANGID}.${PART}.gz
-WIKI_DOC   = wikidoc/${LANGID}/${WIKISOURCE}.${LANGID}.gz
-WIKI_SRC   = ${OUTPUT_DIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.gz
-WIKI_PRE   = ${OUTPUT_DIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.spm.gz
-WIKI_TRG   = ${OUTPUT_DIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${TRG}.gz
+LANGID       = ${SRC}
+WIKI_HOME    = wiki
+WIKIDOC_HOME = wikidoc
+WIKI_DIR     = ${WIKI_HOME}/${LANGID}
+OUTPUT_DIR   = ${LANGPAIR}
+WIKI_TXT     = ${WIKI_DIR}/${WIKISOURCE}.${LANGID}.${PART}.gz
+WIKI_DOC     = ${WIKIDOC_HOME}/${LANGID}/${WIKISOURCE}.${LANGID}.gz
+WIKI_SRC     = ${OUTPUT_DIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.gz
+WIKI_PRE     = ${OUTPUT_DIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.spm.gz
+WIKI_TRG     = ${OUTPUT_DIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${TRG}.gz
 
 WIKI_LATEST_SRC = ${OUTPUT_DIR}/latest/${WIKISOURCE}.${PART}.${LANGPAIR}.${SRC}.gz
 WIKI_LATEST_TRG = ${OUTPUT_DIR}/latest/${WIKISOURCE}.${PART}.${LANGPAIR}.${TRG}.gz
@@ -117,6 +120,14 @@ all: index.html
 	${MAKE} ${WIKI_LATEST_SRC}
 
 
+## tatoeba = 3-letter codes and tatoeba-models
+%-tatoeba:
+	${MAKE}	WIKI_HOME=wiki-iso639-3 \
+		WIKIDOC_HOME=wikidoc-iso639-3 \
+		MODELSDIR=../models-tatoeba \
+	${@:-tatoeba=}
+
+
 ## make ISO639-3 conform file links
 wiki-iso639:
 	for l in ${WIKILANGS}; do \
@@ -124,6 +135,15 @@ wiki-iso639:
 	  mkdir -p wiki-iso639-3/$$i; \
 	  for d in `ls wiki/$$l/*.gz`; do \
 	    ln -s ${PWD}/$$d wiki-iso639-3/$$i/`basename $$d | sed "s/\.$$l\.\(..\.gz\)/.$$i.\1/"`; \
+	  done \
+	done
+
+wiki-iso639-doc:
+	for l in ${WIKILANGS}; do \
+	  i=`iso639 -3 -n $$l`; \
+	  mkdir -p wikidoc-iso639-3/$$i; \
+	  for d in `ls wikidoc/$$l/*.gz`; do \
+	    ln -s ${PWD}/$$d wikidoc-iso639-3/$$i/`basename $$d | sed "s/\.$$l\.\(..\.gz\)/.$$i.\1/"`; \
 	  done \
 	done
 
@@ -254,6 +274,13 @@ big-wikidocs:
 	  ${MAKE} SENTSPLITTER="${MOSESSCRIPTS}/ems/support/split-sentences.perl -l $$l" \
 		SRC=$$l WIKISOURCE=wiki extract-doc; \
 	done
+
+big-fr-wikidocs:
+	for l in fr; do \
+	  ${MAKE} SENTSPLITTER="${MOSESSCRIPTS}/ems/support/split-sentences.perl -l $$l" \
+		SRC=$$l WIKISOURCE=wiki extract-doc; \
+	done
+
 
 #big-wikidocs:
 #	for l in ca cs el en es; do \
@@ -504,8 +531,6 @@ translate-all-parts-jobs: ${LANGPAIR}/${MODELNAME}/decoder.yml
 	for p in ${PARTS}; do \
 	  ${MAKE} PART=$$p translate.submit; \
 	done
-
-
 
 print-names:
 	echo ${LANGNAME}

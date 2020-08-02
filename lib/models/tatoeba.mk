@@ -251,30 +251,48 @@ LANGGROUP_EVAL    := $(patsubst %-train,%-eval,${LANGGROUP_TRAIN})
 LANGGROUP_EVALALL := $(patsubst %-train,%-evalall,${LANGGROUP_TRAIN})
 LANGGROUP_DIST    := $(patsubst %-train,%-dist,${LANGGROUP_TRAIN})
 
+LANGGROUP_FIT_DATA_SIZE=1000000
 
 ## start all jobs with 1 million sampled sentence pairs per language pair
 tatoeba-group2eng: 
-	${MAKE} MIN_SRCLANGS=2 MODELTYPE=transformer FIT_DATA_SIZE=1000000 ${GROUP2ENG_TRAIN}
+	${MAKE} MIN_SRCLANGS=2 MODELTYPE=transformer FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} ${GROUP2ENG_TRAIN}
 
 tatoeba-eng2group: 
-	${MAKE} MIN_TRGLANGS=2 MODELTYPE=transformer FIT_DATA_SIZE=1000000 ${ENG2GROUP_TRAIN}
+	${MAKE} MIN_TRGLANGS=2 MODELTYPE=transformer FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} ${ENG2GROUP_TRAIN}
 
 tatoeba-langgroup: 
-	${MAKE} MIN_SRCLANGS=2 MAX_SRCLANGS=25 MODELTYPE=transformer FIT_DATA_SIZE=1000000 ${LANGGROUP_TRAIN}
+	${MAKE} MIN_SRCLANGS=2 MAX_SRCLANGS=25 MODELTYPE=transformer FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} ${LANGGROUP_TRAIN}
 
 
 ## sample 2 million sentence pairs
-tatoeba-group2eng-2m: 
-	${MAKE} MIN_SRCLANGS=2 MODELTYPE=transformer CONTINUE_EXISTING=1 \
-		FIT_DATA_SIZE=2000000 DATASET=opus2m MARIAN_VALID_FREQ=10000 \
-	${GROUP2ENG_TRAIN}
+tatoeba-langgroups-2m: 
+	${MAKE} CONTINUE_EXISTING=1 LANGGROUP_FIT_DATA_SIZE=2000000 DATASET=opus2m MARIAN_VALID_FREQ=10000 \
+	tatoeba-group2eng tatoeba-eng2group tatoeba-langgroup
+
+tatoeba-langgroups-fix-2m: 
+	${MAKE} CONTINUE_EXISTING=1 LANGGROUP_FIT_DATA_SIZE=2000000 DATASET=opus2m MARIAN_VALID_FREQ=10000 \
+	tatoeba-langgroup
+
+tatoeba-langgroups-2m-dist:
+	${MAKE} FIT_DATA_SIZE=2000000 DATASET=opus2m \
+	tatoeba-group2eng-dist tatoeba-eng2groug-dist tatoeba-langgroug-dist
+
+tatoeba-group2eng-2m-dist:
+	${MAKE} FIT_DATA_SIZE=2000000 DATASET=opus2m tatoeba-group2eng-dist
+
+tatoeba-eng2group-2m-dist:
+	${MAKE} FIT_DATA_SIZE=2000000 DATASET=opus2m tatoeba-eng2group-dist
+
+
 
 ## sample 4 million sentence pairs
-tatoeba-group2eng-4m: 
-	${MAKE} MIN_SRCLANGS=2 MODELTYPE=transformer CONTINUE_EXISTING=1 \
-		FIT_DATA_SIZE=4000000 DATASET=opus4m MARIAN_VALID_FREQ=10000 \
-	${GROUP2ENG_TRAIN}
+tatoeba-langgroups-4m: 
+	${MAKE} CONTINUE_EXISTING=1 LANGGROUP_FIT_DATA_SIZE=4000000 DATASET=opus4m MARIAN_VALID_FREQ=10000 \
+	tatoeba-group2eng tatoeba-eng2group tatoeba-langgroup
 
+tatoeba-langgroups-4m-dist:
+	${MAKE} FIT_DATA_SIZE=4000000 DATASET=opus4m \
+	tatoeba-group2eng-dist tatoeba-eng2groug-dist tatoeba-langgroug-dist
 
 
 ## evaluate and create dist packages
@@ -617,6 +635,20 @@ tatoeba-multilingual-testsets:
 	    ${@:-tatoeba=}; \
 	  fi \
 	fi
+
+%-bttatoeba: 	${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels \
+		${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${TRGEXT}.labels
+	for s in ${shell cat ${word 1,$^} | sed 's/ *$$//;s/^ *//'}; do \
+	  for t in ${shell cat ${word 2,$^} | sed 's/ *$$//;s/^ *//'}; do \
+	    echo "${MAKE} -C backtranslate \
+		SRC=$$s TRG=$$t \
+		WIKI_HOME=wiki-iso639-3 \
+		WIKIDOC_HOME=wikidoc-iso639-3 \
+		MODELHOME=../models-tatoeba/${LANGPAIR} \
+	    ${@:-bttatoeba=}"; \
+	  done \
+	done
+
 
 
 ## don't delete intermediate label files
@@ -1066,6 +1098,76 @@ tatoeba-results-langgroup: tatoeba-results-sorted-model
 	grep -P "${subst ${SPACE},-eng|,${OPUS_LANG_GROUPS}}-eng" $< >> $@
 	grep -P "eng-${subst ${SPACE},|eng-,${OPUS_LANG_GROUPS}}" $< >> $@
 	grep -P "`echo '${OPUS_LANG_GROUPS}' | sed 's/\([^ ][^ ]*\)/\1-\1/g;s/ /\|/g'`" $< >> $@
+
+
+
+
+
+
+
+
+
+RESULT_MDTABLE_HEADER=| Model | Language Pair | Test Set | chrF2 | BLEU | BP | Reference Length |\n|:---|----|----|----:|---:|----:|---:|\n
+
+
+results/tatoeba-results-all.md: tatoeba-results-all
+	mkdir -p ${dir $@}
+	echo "# Tatoeba translation results" >$@
+	echo "" >>$@
+	echo "Note that some links to the actual models below are broken"               >>$@
+	echo "because the models are not yet released or their performance is too poor" >> $@
+	echo "to be useful for anything."                                               >> $@
+	echo "" >>$@
+	grep -v '^model' $< | grep -v -- '----' | sort -k2,2 -k3,3 -k4,4nr |\
+	perl -pe '@a=split;print "\n${RESULT_MDTABLE_HEADER}" if ($$b ne $$a[1]);$$b=$$a[1];' |\
+	sed 's#^\([^ 	]*\)/\([^ 	]*\)#[\1/\2](../models/\1)#' |\
+	sed 's/	/ | /g;s/^/| /;s/$$/ |/;s/| *|/|/g;s/^| *|$$//'                         >> $@
+
+
+## get all results for all models and test sets
+tatoeba-results-all:
+	find work-tatoeba -name '*.eval' | sort | xargs grep chrF2 > $@.1
+	find work-tatoeba -name '*.eval' | sort | xargs grep BLEU  > $@.2
+	cut -f3 -d '/' $@.1 | sed 's/^.*\.\([^\.]*\)\.\([^\.]*\)\.eval:.*$$/\1-\2/' > $@.langpair
+	cut -f3 -d '/' $@.1 | sed 's/\.\([^\.]*\)\.spm.*$$//;s/Tatoeba-test[^	]*/Tatoeba-test/' > $@.testset
+	cut -f3 -d '/' $@.1 | sed 's/^.*\.\([^\.]*\)\.spm.*$$/\1/' > $@.dataset
+	cut -f2 -d '/' $@.1 | sed 's/^.*\.\([^\.]*\)\.spm.*$$/\1/' > $@.modeldir
+	cut -f2 -d '=' $@.1 | cut -f2 -d ' ' > $@.chrF2
+	cut -f2 -d '=' $@.2 | cut -f2 -d ' ' > $@.bleu
+	cut -f3 -d '=' $@.2 | cut -f2 -d ' ' > $@.bp
+	cut -f6 -d '=' $@.2 | cut -f2 -d ' ' | cut -f1 -d')' > $@.reflen
+	paste -d'/' $@.modeldir $@.dataset > $@.model
+	paste $@.model $@.langpair $@.testset $@.chrF2 $@.bleu $@.bp $@.reflen > $@
+	rm -f $@.model $@.langpair $@.testset $@.chrF2 $@.bleu $@.bp $@.reflen
+	rm -f $@.modeldir $@.dataset $@.1 $@.2
+
+
+tatoeba-results-all-subset-%: tatoeba-%.md tatoeba-results-all-sorted-langpair
+	( l="${shell grep '\[' $< | cut -f2 -d '[' | cut -f1 -d ']' | sort -u  | tr "\n" '|' | tr '-' '.' | sed 's/|$$//;s/\./\\\-/g'}"; \
+	  grep -P "$$l" ${word 2,$^} |\
+	  perl -pe '@a=split;print "\n${RESULT_TABLE_HEADER}" if ($$b ne $$a[1]);$$b=$$a[1];' > $@ )
+
+tatoeba-results-all-langgroup: tatoeba-results-all
+	grep -P "${subst ${SPACE},-eng|,${OPUS_LANG_GROUPS}}-eng" $< >> $@
+	grep -P "eng-${subst ${SPACE},|eng-,${OPUS_LANG_GROUPS}}" $< >> $@
+	grep -P "`echo '${OPUS_LANG_GROUPS}' | sed 's/\([^ ][^ ]*\)/\1-\1/g;s/ /\|/g'`" $< >> $@
+
+
+RESULT_TABLE_HEADER=model\tlanguage-pair\ttestset\tchrF2\tBLEU\tBP\treference-length\n--------------------------------------------------------------------------\n
+
+tatoeba-results-all-sorted-langpair: tatoeba-results-all
+	sort -k2,2 -k3,3 -k4,4nr < $< |\
+	perl -pe '@a=split;print "\n${RESULT_TABLE_HEADER}" if ($$b ne $$a[1]);$$b=$$a[1];' \
+	> $@
+
+tatoeba-results-all-sorted-chrf2: tatoeba-results-all
+	sort -k3,3 -k4,4nr < $< > $@
+
+tatoeba-results-all-sorted-bleu: tatoeba-results-all
+	sort -k3,3 -k5,5nr < $< > $@
+
+
+# perl -pe '@a=split;print "\nmodel\tlanguage-pair\ttestset\tchrF2\tBLEU\tBP\treference-length\n" if ($b ne $a[1]);$b=$a[1];' < tatoeba-results-all-sorted-langpair | less
 
 
 ###############################################################################
