@@ -206,7 +206,24 @@ tatoeba-results-md: tatoeba-results-sorted tatoeba-results-sorted-model tatoeba-
 		results/tatoeba-results-subset-medium.md \
 		results/tatoeba-results-subset-higher.md \
 		results/tatoeba-results-subset-highest.md \
-		results/tatoeba-results-langgroup.md
+		results/tatoeba-results-langgroup.md \
+		tatoeba-results-all \
+		tatoeba-results-all-subset-zero \
+		tatoeba-results-all-subset-lowest \
+		tatoeba-results-all-subset-lower \
+		tatoeba-results-all-subset-medium \
+		tatoeba-results-all-subset-higher \
+		tatoeba-results-all-subset-highest \
+		results/tatoeba-results-all.md \
+		results/tatoeba-results-all-subset-zero.md \
+		results/tatoeba-results-all-subset-lowest.md \
+		results/tatoeba-results-all-subset-lower.md \
+		results/tatoeba-results-all-subset-medium.md \
+		results/tatoeba-results-all-subset-higher.md \
+		results/tatoeba-results-all-subset-highest.md \
+		tatoeba-models-all \
+		results/tatoeba-models-all.md
+
 
 
 
@@ -926,6 +943,108 @@ testsets/${LANGPAIR}/Tatoeba-test.${LANGPAIR}.%: ${TATOEBA_DATA}/Tatoeba-test.${
 ###############################################################################
 
 
+# RESULT_MDTABLE_HEADER = | Model | Language Pair | Test Set | chrF2 | BLEU | BP | Reference Length |\n|:---|----|----|----:|---:|----:|---:|\n
+# ADD_MDHEADER = perl -pe '@a=split;print "\n${RESULT_MDTABLE_HEADER}" if ($$b ne $$a[1]);$$b=$$a[1];'
+
+results/tatoeba-results-all%.md: tatoeba-results-all%
+	mkdir -p ${dir $@}
+	echo "# Tatoeba translation results" >$@
+	echo "" >>$@
+	echo "Note that some links to the actual models below are broken"                  >> $@
+	echo "because the models are not yet released or their performance is too poor"    >> $@
+	echo "to be useful for anything."                                                  >> $@
+	echo ""                                                                            >> $@
+	echo '| Model | Test Set | chrF2 | BLEU | BP | Reference Length |' >> $@
+	echo '|:--|---|--:|--:|--:|--:|'                                                   >> $@
+	grep -v '^model' $< | grep -v -- '----' | grep . | sort -k2,2 -k3,3 -k4,4nr |\
+	perl -pe '@a=split;print "| lang = $$a[1] | | | |\n" if ($$b ne $$a[1]);$$b=$$a[1];' |\
+	cut -f1,3- | sed 's#^\([^ 	]*\)/\([^ 	]*\)#[\1/\2](../models/\1)#' |\
+	sed 's/	/ | /g;s/^/| /;s/$$/ |/;s/Tatoeba-test/tatoeba/' |\
+	sed 's/\(news[^ ]*\)-...... /\1 /;s/\(news[^ ]*\)-.... /\1 /;'                     >> $@
+
+results/tatoeba-models-all.md: tatoeba-models-all
+	mkdir -p ${dir $@}
+	echo "# Tatoeba translation models" >$@
+	echo "" >>$@
+	echo "The scores refer to results on Tatoeba-test data"                            >> $@
+	echo "For multilingual models, it is a mix of all language pairs"                  >> $@
+	echo ""                                                                            >> $@
+	echo '| Model | chrF2 | BLEU | BP | Reference Length |'                            >> $@
+	echo '|:--|--:|--:|--:|--:|'                                                   >> $@
+	cut -f1,4- $< | sed 's#^\([^ 	]*\)/\([^ 	]*\)#[\1/\2](../models/\1)#' |\
+	sed 's/	/ | /g;s/^/| /;'                                                           >> $@
+
+
+## get all results for all models and test sets
+tatoeba-results-all:
+	find work-tatoeba -name '*.eval' | sort | xargs grep chrF2 > $@.1
+	find work-tatoeba -name '*.eval' | sort | xargs grep BLEU  > $@.2
+	cut -f3 -d '/' $@.1 | sed 's/^.*\.\([^\.]*\)\.\([^\.]*\)\.eval:.*$$/\1-\2/' > $@.langpair
+	cut -f3 -d '/' $@.1 | sed 's/\.\([^\.]*\)\.spm.*$$//;s/Tatoeba-test[^	]*/Tatoeba-test/' > $@.testset
+	cut -f3 -d '/' $@.1 | sed 's/^.*\.\([^\.]*\)\.spm.*$$/\1/' > $@.dataset
+	cut -f2 -d '/' $@.1 | sed 's/^.*\.\([^\.]*\)\.spm.*$$/\1/' > $@.modeldir
+	cut -f2 -d '=' $@.1 | cut -f2 -d ' ' > $@.chrF2
+	cut -f2 -d '=' $@.2 | cut -f2 -d ' ' > $@.bleu
+	cut -f3 -d '=' $@.2 | cut -f2 -d ' ' > $@.bp
+	cut -f6 -d '=' $@.2 | cut -f2 -d ' ' | cut -f1 -d')' > $@.reflen
+	paste -d'/' $@.modeldir $@.dataset > $@.model
+	paste $@.model $@.langpair $@.testset $@.chrF2 $@.bleu $@.bp $@.reflen > $@
+	rm -f $@.model $@.langpair $@.testset $@.chrF2 $@.bleu $@.bp $@.reflen
+	rm -f $@.modeldir $@.dataset $@.1 $@.2
+
+tatoeba-models-all:
+	find work-tatoeba -name 'Tatoeba-test.opus*.eval' | sort | xargs grep chrF2 > $@.1
+	find work-tatoeba -name 'Tatoeba-test.opus*.eval' | sort | xargs grep BLEU  > $@.2
+	cut -f3 -d '/' $@.1 | sed 's/^.*\.\([^\.]*\)\.\([^\.]*\)\.eval:.*$$/\1-\2/' > $@.langpair
+	cut -f3 -d '/' $@.1 | sed 's/\.\([^\.]*\)\.spm.*$$//;s/Tatoeba-test[^	]*/Tatoeba-test/' > $@.testset
+	cut -f3 -d '/' $@.1 | sed 's/^.*\.\([^\.]*\)\.spm.*$$/\1/' > $@.dataset
+	cut -f2 -d '/' $@.1 | sed 's/^.*\.\([^\.]*\)\.spm.*$$/\1/' > $@.modeldir
+	cut -f2 -d '=' $@.1 | cut -f2 -d ' ' > $@.chrF2
+	cut -f2 -d '=' $@.2 | cut -f2 -d ' ' > $@.bleu
+	cut -f3 -d '=' $@.2 | cut -f2 -d ' ' > $@.bp
+	cut -f6 -d '=' $@.2 | cut -f2 -d ' ' | cut -f1 -d')' > $@.reflen
+	paste -d'/' $@.modeldir $@.dataset > $@.model
+	paste $@.model $@.langpair $@.testset $@.chrF2 $@.bleu $@.bp $@.reflen > $@
+	rm -f $@.model $@.langpair $@.testset $@.chrF2 $@.bleu $@.bp $@.reflen
+	rm -f $@.modeldir $@.dataset $@.1 $@.2
+
+
+
+tatoeba-results-all-subset-%: tatoeba-%.md tatoeba-results-all-sorted-langpair
+	( l="${shell grep '\[' $< | cut -f2 -d '[' | cut -f1 -d ']' | sort -u  | tr "\n" '|' | tr '-' '.' | sed 's/|$$//;s/\./\\\-/g'}"; \
+	  grep -P "$$l" ${word 2,$^} |\
+	  perl -pe '@a=split;print "\n${RESULT_TABLE_HEADER}" if ($$b ne $$a[1]);$$b=$$a[1];' > $@ )
+
+tatoeba-results-all-langgroup: tatoeba-results-all
+	grep -P "${subst ${SPACE},-eng|,${OPUS_LANG_GROUPS}}-eng" $< >> $@
+	grep -P "eng-${subst ${SPACE},|eng-,${OPUS_LANG_GROUPS}}" $< >> $@
+	grep -P "`echo '${OPUS_LANG_GROUPS}' | sed 's/\([^ ][^ ]*\)/\1-\1/g;s/ /\|/g'`" $< >> $@
+
+
+RESULT_TABLE_HEADER=model\tlanguage-pair\ttestset\tchrF2\tBLEU\tBP\treference-length\n--------------------------------------------------------------------------\n
+
+tatoeba-results-all-sorted-langpair: tatoeba-results-all
+	sort -k2,2 -k3,3 -k4,4nr < $< |\
+	perl -pe '@a=split;print "\n${RESULT_TABLE_HEADER}" if ($$b ne $$a[1]);$$b=$$a[1];' \
+	> $@
+
+tatoeba-results-all-sorted-chrf2: tatoeba-results-all
+	sort -k3,3 -k4,4nr < $< > $@
+
+tatoeba-results-all-sorted-bleu: tatoeba-results-all
+	sort -k3,3 -k5,5nr < $< > $@
+
+
+# perl -pe '@a=split;print "\nmodel\tlanguage-pair\ttestset\tchrF2\tBLEU\tBP\treference-length\n" if ($b ne $a[1]);$b=$a[1];' < tatoeba-results-all-sorted-langpair | less
+
+
+
+
+#############
+## OLD ones
+#############
+
+
 results/tatoeba-results-langgroup.md: tatoeba-results-langgroup
 	mkdir -p ${dir $@}
 	echo "# Tatoeba translation results"                                             > $@
@@ -1107,67 +1226,6 @@ tatoeba-results-langgroup: tatoeba-results-sorted-model
 
 
 
-RESULT_MDTABLE_HEADER=| Model | Language Pair | Test Set | chrF2 | BLEU | BP | Reference Length |\n|:---|----|----|----:|---:|----:|---:|\n
-
-
-results/tatoeba-results-all.md: tatoeba-results-all
-	mkdir -p ${dir $@}
-	echo "# Tatoeba translation results" >$@
-	echo "" >>$@
-	echo "Note that some links to the actual models below are broken"               >>$@
-	echo "because the models are not yet released or their performance is too poor" >> $@
-	echo "to be useful for anything."                                               >> $@
-	echo "" >>$@
-	grep -v '^model' $< | grep -v -- '----' | sort -k2,2 -k3,3 -k4,4nr |\
-	perl -pe '@a=split;print "\n${RESULT_MDTABLE_HEADER}" if ($$b ne $$a[1]);$$b=$$a[1];' |\
-	sed 's#^\([^ 	]*\)/\([^ 	]*\)#[\1/\2](../models/\1)#' |\
-	sed 's/	/ | /g;s/^/| /;s/$$/ |/;s/| *|/|/g;s/^| *|$$//'                         >> $@
-
-
-## get all results for all models and test sets
-tatoeba-results-all:
-	find work-tatoeba -name '*.eval' | sort | xargs grep chrF2 > $@.1
-	find work-tatoeba -name '*.eval' | sort | xargs grep BLEU  > $@.2
-	cut -f3 -d '/' $@.1 | sed 's/^.*\.\([^\.]*\)\.\([^\.]*\)\.eval:.*$$/\1-\2/' > $@.langpair
-	cut -f3 -d '/' $@.1 | sed 's/\.\([^\.]*\)\.spm.*$$//;s/Tatoeba-test[^	]*/Tatoeba-test/' > $@.testset
-	cut -f3 -d '/' $@.1 | sed 's/^.*\.\([^\.]*\)\.spm.*$$/\1/' > $@.dataset
-	cut -f2 -d '/' $@.1 | sed 's/^.*\.\([^\.]*\)\.spm.*$$/\1/' > $@.modeldir
-	cut -f2 -d '=' $@.1 | cut -f2 -d ' ' > $@.chrF2
-	cut -f2 -d '=' $@.2 | cut -f2 -d ' ' > $@.bleu
-	cut -f3 -d '=' $@.2 | cut -f2 -d ' ' > $@.bp
-	cut -f6 -d '=' $@.2 | cut -f2 -d ' ' | cut -f1 -d')' > $@.reflen
-	paste -d'/' $@.modeldir $@.dataset > $@.model
-	paste $@.model $@.langpair $@.testset $@.chrF2 $@.bleu $@.bp $@.reflen > $@
-	rm -f $@.model $@.langpair $@.testset $@.chrF2 $@.bleu $@.bp $@.reflen
-	rm -f $@.modeldir $@.dataset $@.1 $@.2
-
-
-tatoeba-results-all-subset-%: tatoeba-%.md tatoeba-results-all-sorted-langpair
-	( l="${shell grep '\[' $< | cut -f2 -d '[' | cut -f1 -d ']' | sort -u  | tr "\n" '|' | tr '-' '.' | sed 's/|$$//;s/\./\\\-/g'}"; \
-	  grep -P "$$l" ${word 2,$^} |\
-	  perl -pe '@a=split;print "\n${RESULT_TABLE_HEADER}" if ($$b ne $$a[1]);$$b=$$a[1];' > $@ )
-
-tatoeba-results-all-langgroup: tatoeba-results-all
-	grep -P "${subst ${SPACE},-eng|,${OPUS_LANG_GROUPS}}-eng" $< >> $@
-	grep -P "eng-${subst ${SPACE},|eng-,${OPUS_LANG_GROUPS}}" $< >> $@
-	grep -P "`echo '${OPUS_LANG_GROUPS}' | sed 's/\([^ ][^ ]*\)/\1-\1/g;s/ /\|/g'`" $< >> $@
-
-
-RESULT_TABLE_HEADER=model\tlanguage-pair\ttestset\tchrF2\tBLEU\tBP\treference-length\n--------------------------------------------------------------------------\n
-
-tatoeba-results-all-sorted-langpair: tatoeba-results-all
-	sort -k2,2 -k3,3 -k4,4nr < $< |\
-	perl -pe '@a=split;print "\n${RESULT_TABLE_HEADER}" if ($$b ne $$a[1]);$$b=$$a[1];' \
-	> $@
-
-tatoeba-results-all-sorted-chrf2: tatoeba-results-all
-	sort -k3,3 -k4,4nr < $< > $@
-
-tatoeba-results-all-sorted-bleu: tatoeba-results-all
-	sort -k3,3 -k5,5nr < $< > $@
-
-
-# perl -pe '@a=split;print "\nmodel\tlanguage-pair\ttestset\tchrF2\tBLEU\tBP\treference-length\n" if ($b ne $a[1]);$b=$a[1];' < tatoeba-results-all-sorted-langpair | less
 
 
 ###############################################################################
