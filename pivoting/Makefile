@@ -36,8 +36,8 @@ include lib/models.mk
 ## TODO: should also support splitting and translating subsets in parallel
 MAX_PIVOT_SENTENCES ?= 1000000
 
-
-ORIGINAL_DATADIR     ?= ${PWD}/../work/data
+NMT_WORKDIR        ?= ../work
+ORIGINAL_DATADIR   ?= ${PWD}/${NMT_WORKDIR}/data
 
 EXCLUDE_DATASETS    = ${sort \
 			${filter-out \
@@ -70,18 +70,19 @@ OUTPUT_DIR       = ${SRC}-${TRG}
 ##       --> need to define preference mechanism
 ## TODO: this should better come from some API or at least ObjectStorage
 ##       (not local disk)
-ifeq ($(wildcard ../models/${PIVOT_LANGPAIR}),)
-ifeq ($(wildcard ../models/*${PIVOT}*-${SRC}),)
-ifeq ($(wildcard ../models/${PIVOT}-*${SRC}*),)
-  MODELHOME = $(firstword $(wildcard ../models/*${PIVOT}*-*${SRC}*))
+MODELSDIR ?= ../models
+ifeq ($(wildcard ${MODELSDIR}/${PIVOT_LANGPAIR}),)
+ifeq ($(wildcard ${MODELSDIR}/*${PIVOT}*-${SRC}),)
+ifeq ($(wildcard ${MODELSDIR}/${PIVOT}-*${SRC}*),)
+  MODELHOME = $(firstword $(wildcard ${MODELSDIR}/*${PIVOT}*-*${SRC}*))
 else
-  MODELHOME = $(firstword $(wildcard ../models/${PIVOT}-*${SRC}*))
+  MODELHOME = $(firstword $(wildcard ${MODELSDIR}/${PIVOT}-*${SRC}*))
 endif
 else
-  MODELHOME = $(firstword $(wildcard ../models/*${PIVOT}*-${SRC}))
+  MODELHOME = $(firstword $(wildcard ${MODELSDIR}/*${PIVOT}*-${SRC}))
 endif
 else
-  MODELHOME = ../models/${PIVOT_LANGPAIR}
+  MODELHOME = ${MODELSDIR}/${PIVOT_LANGPAIR}
 endif
 
 
@@ -98,18 +99,18 @@ MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
 ## no released model found?
 ## ---> find a local one in the work directory
 ifeq (${MODELNAME},)
-ifeq ($(wildcard ../work/models/${PIVOT_LANGPAIR}),)
-ifeq ($(wildcard ../work/models/*${PIVOT}*-${SRC}),)
-ifeq ($(wildcard ../work/models/${PIVOT}-*${SRC}*),)
-  MODELHOME = $(firstword $(wildcard ../work/models/*${PIVOT}*-*${SRC}*))
+ifeq ($(wildcard ${NMT_WORKDIR}/models/${PIVOT_LANGPAIR}),)
+ifeq ($(wildcard ${NMT_WORKDIR}/models/*${PIVOT}*-${SRC}),)
+ifeq ($(wildcard ${NMT_WORKDIR}/models/${PIVOT}-*${SRC}*),)
+  MODELHOME = $(firstword $(wildcard ${NMT_WORKDIR}/models/*${PIVOT}*-*${SRC}*))
 else
-  MODELHOME = $(firstword $(wildcard ../work/models/${PIVOT}-*${SRC}*))
+  MODELHOME = $(firstword $(wildcard ${NMT_WORKDIR}/models/${PIVOT}-*${SRC}*))
 endif
 else
-  MODELHOME = $(firstword $(wildcard ../work/models/*${PIVOT}*-${SRC}))
+  MODELHOME = $(firstword $(wildcard ${NMT_WORKDIR}/models/*${PIVOT}*-${SRC}))
 endif
 else
-  MODELHOME = ../work/models/${PIVOT_LANGPAIR}
+  MODELHOME = ${NMT_WORKDIR}/models/${PIVOT_LANGPAIR}
 endif
   # MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/*-20*.zip}}}
   MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/opus-20*.zip}}}
@@ -162,6 +163,12 @@ prepare: ${TRANSLATED_PRE}
 
 translate: ${TRANSLATED_TRG}
 
+## tatoeba MT challenge ...
+%-tatoeba:
+	${MAKE} NMT_WORKDIR=../work-tatoeba \
+		MODELSDIR=../models-tatoeba \
+		INCLUDE=Tatoeba-train \
+	${@:-tatoeba=}
 
 
 

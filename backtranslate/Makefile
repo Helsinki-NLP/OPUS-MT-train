@@ -120,12 +120,21 @@ all: index.html
 	${MAKE} ${WIKI_LATEST_SRC}
 
 
-## tatoeba = 3-letter codes and tatoeba-models
+## tatoeba = tatoeba-monolingual data and tatoeba-models
+## TODO: should we loop over all labels?
+
 %-tatoeba:
-	${MAKE}	WIKI_HOME=wiki-iso639-3 \
-		WIKIDOC_HOME=wikidoc-iso639-3 \
+	${MAKE}	WIKI_HOME=../work-tatoeba/data/mono \
+		WIKISOURCES="wikipedia wikibooks wikinews wikiquote wikisource" \
 		MODELSDIR=../models-tatoeba \
 	${@:-tatoeba=}
+
+# %-tatoeba:
+#	${MAKE}	WIKI_HOME=wiki-iso639-3 \
+#		WIKIDOC_HOME=wikidoc-iso639-3 \
+#		MODELSDIR=../models-tatoeba \
+#	${@:-tatoeba=}
+
 
 
 ## make ISO639-3 conform file links

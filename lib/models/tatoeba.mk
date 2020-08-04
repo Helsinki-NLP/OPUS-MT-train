@@ -88,6 +88,8 @@ TATOEBA_DATAURL := https://object.pouta.csc.fi/Tatoeba-Challenge
 TATOEBA_RAWGIT  := https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
 TATOEBA_WORK    ?= ${PWD}/work-tatoeba
 TATOEBA_DATA    ?= ${TATOEBA_WORK}/data/${PRE}
+TATOEBA_MONO    ?= ${TATOEBA_WORK}/data/mono
+
 
 TATOEBA_MODEL_CONTAINER := Tatoeba-MT-models
 
@@ -286,10 +288,6 @@ tatoeba-langgroups-2m:
 	${MAKE} CONTINUE_EXISTING=1 LANGGROUP_FIT_DATA_SIZE=2000000 DATASET=opus2m MARIAN_VALID_FREQ=10000 \
 	tatoeba-group2eng tatoeba-eng2group tatoeba-langgroup
 
-tatoeba-langgroups-fix-2m: 
-	${MAKE} CONTINUE_EXISTING=1 LANGGROUP_FIT_DATA_SIZE=2000000 DATASET=opus2m MARIAN_VALID_FREQ=10000 \
-	tatoeba-langgroup
-
 tatoeba-langgroups-2m-dist:
 	${MAKE} FIT_DATA_SIZE=2000000 DATASET=opus2m \
 	tatoeba-group2eng-dist tatoeba-eng2groug-dist tatoeba-langgroug-dist
@@ -305,7 +303,8 @@ tatoeba-eng2group-2m-dist:
 ## sample 4 million sentence pairs
 tatoeba-langgroups-4m: 
 	${MAKE} CONTINUE_EXISTING=1 LANGGROUP_FIT_DATA_SIZE=4000000 DATASET=opus4m MARIAN_VALID_FREQ=10000 \
-	tatoeba-group2eng tatoeba-eng2group tatoeba-langgroup
+	tatoeba-group2eng tatoeba-eng2group 
+# tatoeba-langgroup
 
 tatoeba-langgroups-4m-dist:
 	${MAKE} FIT_DATA_SIZE=4000000 DATASET=opus4m \
@@ -750,6 +749,30 @@ FIXLANGIDS = 	| sed 's/zho\(.*\)_HK/yue\1/g;s/zho\(.*\)_CN/cmn\1/g;s/zho\(.*\)_T
 		| perl -pe 'if (/(cjy|cmn|gan|lzh|nan|wuu|yue|zho)_([A-Za-z]{4})/){if ($$2 ne "Hans" && $$2 ne "Hant"){s/(cjy|cmn|gan|lzh|nan|wuu|yue|zho)_([A-Za-z]{4})/$$1/} }'
 
 
+## monolingual data from Tatoeba challenge (wiki data)
+
+${TATOEBA_MONO}/%.labels:
+	mkdir -p $@.d
+	wget -q -O $@.d/mono.tar ${TATOEBA_DATAURL}/$(patsubst %.labels,%,$(notdir $@)).tar
+	tar -C $@.d -xf $@.d/mono.tar
+	rm -f $@.d/mono.tar
+	find $@.d -name '*.id.gz' | xargs zcat | sort -u | tr "\n" ' ' | sed 's/ $$//' > $@
+	for c in `find $@.d -name '*.id.gz' | sed 's/\.id\.gz//'`; do \
+	  echo "extract all data from $$c.txt.gz"; \
+	  ${GZIP} -d $$c.id.gz; \
+	  ${GZIP} -d $$c.txt.gz; \
+	  b=`basename $$c`; \
+	  for l in `sort -u $$c.id`; do \
+	    echo "extract $$l from $$b"; \
+	    mkdir -p ${TATOEBA_MONO}/$$l; \
+	    paste $$c.id $$c.txt | grep "^$$l	" | cut -f2 | grep . |\
+	    ${SORT} -u | ${SHUFFLE} | split -l 1000000 - ${TATOEBA_MONO}/$$l/$$b.$$l.; \
+	    ${GZIP} ${TATOEBA_MONO}/$$l/$$b.$$l.*; \
+	  done; \
+	  rm -f $$c.id $$c.txt; \
+	done
+	rm -fr $@.d
+
 
 ## convert Tatoeba Challenge data into the format we need
 ## - move the data into the right location with the suitable name
@@ -946,7 +969,7 @@ testsets/${LANGPAIR}/Tatoeba-test.${LANGPAIR}.%: ${TATOEBA_DATA}/Tatoeba-test.${
 # RESULT_MDTABLE_HEADER = | Model | Language Pair | Test Set | chrF2 | BLEU | BP | Reference Length |\n|:---|----|----|----:|---:|----:|---:|\n
 # ADD_MDHEADER = perl -pe '@a=split;print "\n${RESULT_MDTABLE_HEADER}" if ($$b ne $$a[1]);$$b=$$a[1];'
 
-results/tatoeba-results-all%.md: tatoeba-results-all%
+results/tatoeba-results-al%.md: tatoeba-results-al%
 	mkdir -p ${dir $@}
 	echo "# Tatoeba translation results" >$@
 	echo "" >>$@
@@ -958,9 +981,13 @@ results/tatoeba-results-all%.md: tatoeba-results-all%
 	echo '|:--|---|--:|--:|--:|--:|'                                                   >> $@
 	grep -v '^model' $< | grep -v -- '----' | grep . | sort -k2,2 -k3,3 -k4,4nr |\
 	perl -pe '@a=split;print "| lang = $$a[1] | | | |\n" if ($$b ne $$a[1]);$$b=$$a[1];' |\
-	cut -f1,3- | sed 's#^\([^ 	]*\)/\([^ 	]*\)#[\1/\2](../models/\1)#' |\
+	cut -f1,3- |\
+	perl -pe '/^(\S*)\/(\S*)\t/;if (-d "models-tatoeba/$$1"){s/^(\S*)\/(\S*)\t/[$$1\/$$2](..\/models\/$$1)\t/;}' |\
 	sed 's/	/ | /g;s/^/| /;s/$$/ |/;s/Tatoeba-test/tatoeba/' |\
 	sed 's/\(news[^ ]*\)-...... /\1 /;s/\(news[^ ]*\)-.... /\1 /;'                     >> $@
+
+# sed 's#^\([^ 	]*\)/\([^ 	]*\)#[\1/\2](../models/\1)#' |\
+
 
 results/tatoeba-models-all.md: tatoeba-models-all
 	mkdir -p ${dir $@}
@@ -970,9 +997,10 @@ results/tatoeba-models-all.md: tatoeba-models-all
 	echo "For multilingual models, it is a mix of all language pairs"                  >> $@
 	echo ""                                                                            >> $@
 	echo '| Model | chrF2 | BLEU | BP | Reference Length |'                            >> $@
-	echo '|:--|--:|--:|--:|--:|'                                                   >> $@
-	cut -f1,4- $< | sed 's#^\([^ 	]*\)/\([^ 	]*\)#[\1/\2](../models/\1)#' |\
-	sed 's/	/ | /g;s/^/| /;'                                                           >> $@
+	echo '|:--|--:|--:|--:|--:|'                                                       >> $@
+	cut -f1,4- $< | \
+	perl -pe '/^(\S*)\/(\S*)\t/;if (-d "models-tatoeba/$$1"){s/^(\S*)\/(\S*)\t/[$$1\/$$2](..\/models\/$$1)\t/;}' |\
+	sed 's/	/ | /g;s/^/| /;s/$$/ |/'                                                   >> $@
 
 
 ## get all results for all models and test sets
@@ -1085,7 +1113,7 @@ results/tatoeba-results-langgroup.md: tatoeba-results-langgroup
 	rm -f $@.langpair $@.rest
 
 
-results/tatoeba-results%.md: tatoeba-results% tatoeba-results-BLEU-sorted-model
+results/tatoeba-results-%.md: tatoeba-results-% tatoeba-results-BLEU-sorted-model
 	mkdir -p ${dir $@}
 	echo "# Tatoeba translation results" >$@
 	echo "" >>$@
