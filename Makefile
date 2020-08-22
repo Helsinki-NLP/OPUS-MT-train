@@ -191,6 +191,21 @@ all: ${WORKDIR}/config.mk
 	${MAKE} compare
 
 
+#---------------------------------------------------------------------
+# store and fetch workdata
+# (requires module load allas && allas-conf)
+#---------------------------------------------------------------------
+
+## store workdir on allas
+store:
+	cd ${WORKHOME} && a-put -b OPUS-MT_${notdir ${WORKHOME}} --override ${LANGPAIRSTR}
+#	rm -fr ${WORKHOME}/${LANGPAIRSTR}
+
+## fetch workdir from allas
+fetch:
+	cd ${WORKHOME} && a-get OPUS-MT_${notdir ${WORKHOME}}/${LANGPAIRSTR}
+
+
 
 #---------------------------------------------------------------------
 # run everything including backtranslation of wiki-data

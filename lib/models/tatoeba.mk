@@ -3,6 +3,10 @@
 # Makefile for running models with data from the Tatoeba Translation Challenge
 # https://github.com/Helsinki-NLP/Tatoeba-Challenge
 #
+# NEWS
+#
+# - MODELTYPE=transformer is now default for all Tatoeba models
+#   (no guided alignment!)
 #
 #---------------------------------------------------------------------
 # train and evaluate a single translation pair, for example:
@@ -179,8 +183,13 @@ tatoeba-labels: ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.lab
 
 .PHONY: tatoeba-results
 tatoeba-results:
-	rm -f tatoeba-results* results/*.md
+	rm -f tatoeba-results* tatoeba-models-all results/*.md
 	${MAKE} tatoeba-results-md
+	rm -f models-tatoeba/released-models.txt
+	${MAKE} models-tatoeba/released-models.txt
+
+.PHONY: tatoeba-released-models
+tatoeba-released-models: models-tatoeba/released-models.txt
 
 ## create result tables in various variants and for various subsets
 ## markdown pages are for reading on-line in the Tatoeba Challenge git
@@ -404,6 +413,22 @@ tatoeba-%-train:
 	       fi \
 	     fi \
 	   fi )
+
+tatoeba-%-data:
+	-( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-data,%,$@))); \
+	   t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-data,%,$@))); \
+	   S="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-data,%,$@))) | xargs iso639 -m -n}))"; \
+	   T="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-data,%,$@))) | xargs iso639 -m -n}))"; \
+	     if [ `echo $$S | tr ' ' "\n" | wc -l` -ge ${MIN_SRCLANGS} ]; then \
+	       if [ `echo $$T | tr ' ' "\n" | wc -l` -ge ${MIN_TRGLANGS} ]; then \
+	         if [ `echo $$S | tr ' ' "\n" | wc -l` -le ${MAX_SRCLANGS} ]; then \
+	           if [ `echo $$T | tr ' ' "\n" | wc -l` -le ${MAX_TRGLANGS} ]; then \
+	             ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" tatoeba-prepare; \
+	           fi \
+	         fi \
+	       fi \
+	   fi )
+
 
 
 tatoeba-%-eval:
@@ -646,6 +671,7 @@ tatoeba-multilingual-testsets:
 		LANGPAIRSTR=${LANGPAIRSTR} \
 		SRCLANGS="${shell cat ${word 1,$^} | sed 's/ *$$//;s/^ *//'}" \
 		TRGLANGS="${shell cat ${word 2,$^} | sed 's/ *$$//;s/^ *//'}" \
+		MODELTYPE=transformer \
 		SRC=${SRC} TRG=${TRG} \
 		EMAIL= \
 	    ${@:-tatoeba=}; \
@@ -733,6 +759,23 @@ ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels:
 	${TATOEBA_DATA}/Tatoeba-test.${LANGPAIR}.clean.${SRCEXT}.gz \
 	${TATOEBA_DATA}/Tatoeba-test.${LANGPAIR}.clean.${TRGEXT}.gz
 
+##-------------------------------------------------------------
+## take care of languages IDs
+## --> simplify some IDs from training data
+## --> decide which ones to keep that do not exist in test data
+##-------------------------------------------------------------
+
+## langids that we want to keep from the training data even if they do not exist in the Tatoeba test sets
+## (skip most lang-IDs because they mostly come from erroneous writing scripts --> errors in the data)
+## the list is based on Tatoeba-Challenge/data/langids-train-only.txt
+
+TRAIN_ONLY_LANGIDS   = ${shell cat tatoeba/langids-train-only.txt | tr "\n" ' '}
+KEEP_LANGIDS         = bos_Cyrl cmn cnr cnr_Latn csb diq dnj dty fas fqs ful fur gcf got gug hbs hbs_Cyrl hmn \
+			jak_Latn kam kmr kmr_Latn kom kur_Cyrl kuv_Arab kuv_Latn lld mol mrj msa_Latn mya_Cakm nep ngu \
+			nor nor_Latn oss_Latn pan plt pnb_Guru pob prs qug quw quy quz qvi rmn rmy ruk san swa swc \
+			syr syr_Syrc tgk_Latn thy tlh tmh toi tuk_Cyrl urd_Deva xal_Latn yid_Latn zho zlm
+SKIP_LANGIDS         = ${filter-out ${KEEP_LANGIDS},${TRAIN_ONLY_LANGIDS}}
+SKIP_LANGIDS_PATTERN = \(${subst ${SPACE},\|,${SKIP_LANGIDS}}\)
 
 ## modify language IDs in training data to adjust them to test sets
 ## --> fix codes for chinese and take away script information (not reliable!)
@@ -746,7 +789,14 @@ FIXLANGIDS = 	| sed 's/zho\(.*\)_HK/yue\1/g;s/zho\(.*\)_CN/cmn\1/g;s/zho\(.*\)_T
 		| sed 's/jpn_[A-Za-z]*/jpn/g' \
 		| sed 's/ara_Latn/ara/;s/arq_Latn/arq/;s/apc_Latn/apc/' \
 		| sed 's/kor_[A-Za-z]*/kor/g' \
+		| sed 's/nor_Latn/nor/g' \
+		| sed 's/syr_Syrc/syr/g' \
+		| sed 's/yid_Latn/yid/g' \
 		| perl -pe 'if (/(cjy|cmn|gan|lzh|nan|wuu|yue|zho)_([A-Za-z]{4})/){if ($$2 ne "Hans" && $$2 ne "Hant"){s/(cjy|cmn|gan|lzh|nan|wuu|yue|zho)_([A-Za-z]{4})/$$1/} }'
+
+
+print-skiplangids:
+	@echo ${SKIP_LANGIDS_PATTERN}
 
 
 ## monolingual data from Tatoeba challenge (wiki data)
@@ -816,33 +866,12 @@ ${TATOEBA_MONO}/%.labels:
 	  touch ${dir $@}Tatoeba-train.${LANGPAIR}.clean.${TRGEXT}; \
 	fi
 #######################################
-# save all labels in the data
-# TODO: de we also need labels from train data?
+# save all lang labels that appear the data
 #######################################
-#	cut -f1 ${dir $@}Tatoeba-*.${LANGPAIR}.clean.id | sort -u | tr "\n" ' ' > $(@:.${SRCEXT}.gz=.${SRCEXT}.labels)
-#	cut -f2 ${dir $@}Tatoeba-*.${LANGPAIR}.clean.id | sort -u | tr "\n" ' ' > $(@:.${SRCEXT}.gz=.${TRGEXT}.labels)
-	if [ -e ${dir $@}Tatoeba-test.${LANGPAIR}.clean.id ]; then \
-	  cut -f1 ${dir $@}Tatoeba-test.${LANGPAIR}.clean.id | sort -u | tr "\n" ' ' > $(@:.${SRCEXT}.gz=.${SRCEXT}.labels); \
-	  cut -f2 ${dir $@}Tatoeba-test.${LANGPAIR}.clean.id | sort -u | tr "\n" ' ' > $(@:.${SRCEXT}.gz=.${TRGEXT}.labels); \
-	fi
-#######################################
-# special treatment for Chinese: add cmn without script info
-# (because it is common in train but not in test data)
-#######################################
-ifeq (${SRC},zho)
-	if [ -e $(@:.${SRCEXT}.gz=.${SRCEXT}.labels) ]; then \
-	  if [ `grep 'cmn ' $(@:.${SRCEXT}.gz=.${SRCEXT}.labels) | wc -l` -eq 0 ]; then \
-	    echo -n 'cmn' >> $(@:.${SRCEXT}.gz=.${SRCEXT}.labels); \
-	  fi \
-	fi
-endif
-ifeq (${TRG},zho)
-	if [ -e $(@:.${SRCEXT}.gz=.${TRGEXT}.labels) ]; then \
-	  if [ `grep 'cmn ' $(@:.${SRCEXT}.gz=.${TRGEXT}.labels) | wc -l` -eq 0 ]; then \
-	    echo -n 'cmn' >> $(@:.${SRCEXT}.gz=.${TRGEXT}.labels); \
-	  fi \
-	fi
-endif
+	cut -f1 ${dir $@}Tatoeba-*.${LANGPAIR}.clean.id | sort -u | grep -v '${SKIP_LANGIDS_PATTERN}' | \
+		tr "\n" ' ' | sed 's/^ *//;s/ *$$//' > $(@:.${SRCEXT}.gz=.${SRCEXT}.labels)
+	cut -f2 ${dir $@}Tatoeba-*.${LANGPAIR}.clean.id | sort -u | grep -v '${SKIP_LANGIDS_PATTERN}' | \
+		tr "\n" ' ' | sed 's/^ *//;s/ *$$//' > $(@:.${SRCEXT}.gz=.${TRGEXT}.labels)
 #######################################
 # cleanup temporary data
 #######################################
@@ -919,24 +948,38 @@ endif
 	done
 
 
-## old fix for Chinese: add zho and variants ...
-#
-# ifeq (${SRC},zho)
-# 	if [ -e $(@:.${SRCEXT}.gz=.${SRCEXT}.labels) ]; then \
-# 	  echo -n 'zho zho_Hans zho_Hant cmn' >> $(@:.${SRCEXT}.gz=.${SRCEXT}.labels); \
-# 	  tr ' ' "\n" < $(@:.${SRCEXT}.gz=.${SRCEXT}.labels) | \
-# 	  sort -u | tr "\n" ' ' >$(@:.${SRCEXT}.gz=.${SRCEXT}.labels).tmp; \
-# 	  mv $(@:.${SRCEXT}.gz=.${SRCEXT}.labels).tmp $(@:.${SRCEXT}.gz=.${SRCEXT}.labels); \
-# 	fi
-# endif
-# ifeq (${TRG},zho)
-# 	if [ -e $(@:.${SRCEXT}.gz=.${TRGEXT}.labels) ]; then \
-# 	  echo -n 'zho zho_Hans zho_Hant cmn' >> $(@:.${SRCEXT}.gz=.${TRGEXT}.labels); \
-# 	  tr ' ' "\n" < $(@:.${SRCEXT}.gz=.${TRGEXT}.labels) | \
-# 	  sort -u | tr "\n" ' ' >$(@:.${SRCEXT}.gz=.${TRGEXT}.labels).tmp; \
-# 	  mv $(@:.${SRCEXT}.gz=.${TRGEXT}.labels).tmp $(@:.${SRCEXT}.gz=.${TRGEXT}.labels); \
-# 	fi
-# endif
+
+fixlabels.sh:
+#	@for l in nor-swe; do
+	for l in `find work-tatoeba/ -maxdepth 1 -mindepth 1 -type d -printf '%f '`; do \
+	  s=`echo $$l | cut -f1 -d'-'`; \
+	  t=`echo $$l | cut -f2 -d'-'`; \
+	  if [ "$$s" \< "$$t" ]; then \
+	    ${MAKE} TATOEBA_WORK=work-tatoeba-fixed SRCLANGS=$$s TRGLANGS=$$t tatoeba-labels; \
+	    o=`cat work-tatoeba/data/simple/Tatoeba-train.$$l.clean.$$s.labels | tr ' ' "\n" | sort | grep . | tr "\n" ' '`; \
+	    n=`cat work-tatoeba-fixed/data/simple/Tatoeba-train.$$l.clean.$$s.labels | tr ' ' "\n" | sort | grep . | tr "\n" ' '`; \
+	    O=`cat work-tatoeba/data/simple/Tatoeba-train.$$l.clean.$$t.labels | tr ' ' "\n" | sort | grep . | tr "\n" ' '`; \
+	    N=`cat work-tatoeba-fixed/data/simple/Tatoeba-train.$$l.clean.$$t.labels | tr ' ' "\n" | sort | grep . | tr "\n" ' '`; \
+	    if [ "$$o" != "$$n" ] || [ "$$O" != "$$N" ] ; then \
+	      echo "# labels in $$l are different ($$o / $$O - $$n / $$N)" >> $@; \
+	      if [ -d work-tatoeba/$$l ]; then \
+	        echo "# re-run $$l from scratch!" >> $@; \
+	        echo "${MAKE} TATOEBA_WORK=work-tatoeba-fixed SRCLANGS=$$s TRGLANGS=$$t tatoeba-job" >> $@; \
+	      fi; \
+	      if [ -d work-tatoeba/$$t-$$s ]; then \
+	        echo "# re-run $$t-$$s from scratch!" >> $@; \
+	        echo "${MAKE} TATOEBA_WORK=work-tatoeba-fixed SRCLANGS=$$t TRGLANGS=$$s tatoeba-job" >> $@; \
+	      fi \
+	    else \
+	      if [ -d work-tatoeba/$$l ]; then \
+	        echo "mv work-tatoeba/$$l work-tatoeba-fixed/$$l" >> $@; \
+	      fi; \
+	      if [ -d work-tatoeba/$$t-$$s ]; then \
+	        echo "mv work-tatoeba/$$t-$$s work-tatoeba-fixed/$$t-$$s" >> $@; \
+	      fi \
+	    fi; \
+	  fi \
+	done 
 
 
 
@@ -1036,6 +1079,21 @@ tatoeba-models-all:
 	rm -f $@.model $@.langpair $@.testset $@.chrF2 $@.bleu $@.bp $@.reflen
 	rm -f $@.modeldir $@.dataset $@.1 $@.2
 
+models-tatoeba/released-models.txt:
+	find models-tatoeba/ -name '*.eval.txt' | sort | xargs grep chrF2 > $@.1
+	find models-tatoeba/ -name '*.eval.txt' | sort | xargs grep BLEU > $@.2
+	cut -f3 -d '/' $@.1 | sed 's/\.eval.txt.*$$/.zip/;s#^#${TATOEBA_DATAURL}/#' > $@.url
+	cut -f2 -d '/' $@.1 > $@.iso639-3
+	cut -f2 -d '/' $@.1 | xargs iso639 -2 -k -p | tr ' ' "\n" > $@.iso639-1
+	cut -f2 -d '=' $@.1 | cut -f2 -d ' ' > $@.chrF2
+	cut -f2 -d '=' $@.2 | cut -f2 -d ' ' > $@.bleu
+	cut -f3 -d '=' $@.2 | cut -f2 -d ' ' > $@.bp
+	cut -f6 -d '=' $@.2 | cut -f2 -d ' ' | cut -f1 -d')' > $@.reflen
+	cut -f2 -d '/' $@.1 | sed 's/^\([^ \-]*\)$$/\1-\1/g' | tr '-' ' ' | \
+	xargs iso639 -k | sed 's/$$/ /' |\
+	sed -e 's/\" \"\([^\"]*\)\" /\t\1\n/g' | sed 's/^\"//g' > $@.langs
+	paste $@.url $@.iso639-3 $@.iso639-1 $@.chrF2 $@.bleu $@.bp $@.reflen $@.langs > $@
+	rm -f $@.url $@.iso639-3 $@.iso639-1 $@.chrF2 $@.bleu $@.bp $@.reflen $@.1 $@.2 $@.langs
 
 
 tatoeba-results-all-subset-%: tatoeba-%.md tatoeba-results-all-sorted-langpair
