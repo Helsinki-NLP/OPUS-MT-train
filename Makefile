@@ -194,17 +194,32 @@ all: ${WORKDIR}/config.mk
 #---------------------------------------------------------------------
 # store and fetch workdata
 # (requires module load allas && allas-conf)
+#  - store overrides
+#  - fetch does not override (delete first)
 #---------------------------------------------------------------------
+
+## directories and container names to be used
+WORK_SRCDIR    ?= ${WORKHOME}
+WORK_DESTDIR   ?= ${WORKHOME}
+WORK_CONTAINER ?= OPUS-MT_${notdir ${WORKHOME}}-${WHOAMI}
 
 ## store workdir on allas
 store:
-	cd ${WORKHOME} && a-put -b OPUS-MT_${notdir ${WORKHOME}} --override ${LANGPAIRSTR}
-#	rm -fr ${WORKHOME}/${LANGPAIRSTR}
+	cd ${WORK_SRCDIR} && a-put -b ${WORK_CONTAINER} --override ${LANGPAIRSTR}
 
 ## fetch workdir from allas
 fetch:
-	cd ${WORKHOME} && a-get OPUS-MT_${notdir ${WORKHOME}}/${LANGPAIRSTR}
+	mkdir -p ${WORK_DESTDIR}
+	cd ${WORK_DESTDIR} && a-get ${WORK_CONTAINER}/${LANGPAIRSTR}.tar.zst
 
+
+## store and fetch data dir (raw data files)
+store-data:
+	cd ${WORK_SRCDIR} && a-put -b ${WORK_CONTAINER} --override data
+
+fetch-data:
+	mkdir -p ${WORK_DESTDIR}
+	cd ${WORK_DESTDIR} && a-get ${WORK_CONTAINER}/data.tar.zst
 
 
 #---------------------------------------------------------------------
