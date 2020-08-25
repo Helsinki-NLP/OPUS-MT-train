@@ -1,0 +1,39 @@
+
+
+WIKIMATRIX_HOME = ${HOME}/research/OPUS/corpus/WikiMatrix/src/v1
+WIKIMATRIX_DATA = ${WIKIMATRIX_HOME}/WikiMatrix.${LANGPAIR}.tsv.gz
+
+WIKIMATRIX_SCORE = 1.04
+
+WIKIMATRIX_SRC = ${DATADIR}/${PRE}/WikiMatrix.${LANGPAIR}.${WIKIMATRIX_SCORE}.${LANGPAIR}.clean.${SRCEXT}.gz
+WIKIMATRIX_TRG = ${DATADIR}/${PRE}/WikiMatrix.${LANGPAIR}.${WIKIMATRIX_SCORE}.${LANGPAIR}.clean.${TRGEXT}.gz
+
+
+ifeq (${LANGPAIR},${SRC}-${TRG})
+  WIKIMATRIX_SRCFIELD = 2
+  WIKIMATRIX_TRGFIELD = 3
+else
+  WIKIMATRIX_SRCFIELD = 3
+  WIKIMATRIX_TRGFIELD = 2
+endif
+
+
+%-wiki: ${WIKIMATRIX_SRC} ${WIKIMATRIX_TRG}
+	${MAKE} DATASET=${DATASET}+wiki \
+		EXTRA_TRAINSET=WikiMatrix.${WIKIMATRIX_SCORE} \
+	${@:-wiki=}
+
+
+${DATADIR}/${PRE}/WikiMatrix.${WIKIMATRIX_SCORE}.${LANGPAIR}.${SRCEXT}.raw:
+	mkdir -p ${dir $@}
+	zcat ${WIKIMATRIX_DATA} | \
+	awk '{if($$1>${WIKIMATRIX_SCORE})print}' | \
+	cut -f${WIKIMATRIX_SRCFIELD} > $@
+
+${DATADIR}/${PRE}/WikiMatrix.${WIKIMATRIX_SCORE}.${LANGPAIR}.${TRGEXT}.raw:
+	mkdir -p ${dir $@}
+	zcat ${WIKIMATRIX_DATA} | \
+	awk '{if($$1>${WIKIMATRIX_SCORE})print}' | \
+	cut -f${WIKIMATRIX_TRGFIELD} > $@
+
+
