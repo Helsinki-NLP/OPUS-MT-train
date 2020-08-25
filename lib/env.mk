@@ -49,14 +49,14 @@ LOADGPU  = module load ${GPU_MODULES}
 
 ifeq (${shell hostname},dx6-ibs-p2)
   APPLHOME     = /opt/tools
-  WORKHOME     = ${shell realpath ${PWD}/work-langid}
+  WORKHOME     = ${shell realpath ${PWD}/work}
   OPUSHOME     = tiedeman@taito.csc.fi:/proj/nlpl/data/OPUS/
   MOSESHOME    = ${APPLHOME}/mosesdecoder
   MARIAN       = ${APPLHOME}/marian/build
   LOADMODS     = echo "nothing to load"
 else ifeq (${shell hostname},dx7-nkiel-4gpu)
   APPLHOME     = /opt/tools
-  WORKHOME     = ${shell realpath ${PWD}/work-langid}
+  WORKHOME     = ${shell realpath ${PWD}/work}
   OPUSHOME     = tiedeman@taito.csc.fi:/proj/nlpl/data/OPUS/
   MOSESHOME    = ${APPLHOME}/mosesdecoder
   MARIAN       = ${APPLHOME}/marian/build
@@ -65,7 +65,7 @@ else ifneq ($(wildcard /wrk/tiedeman/research),)
   DATAHOME     = /proj/OPUS/WMT19/data/${LANGPAIR}
   # APPLHOME   = ${USERAPPL}/tools
   APPLHOME     = /proj/memad/tools
-  WORKHOME     = /wrk/tiedeman/research/Opus-MT/work-langid
+  WORKHOME     = /wrk/tiedeman/research/Opus-MT/work
   OPUSHOME     = /proj/nlpl/data/OPUS
   MOSESHOME    = /proj/nlpl/software/moses/4.0-65c75ff/moses
   # MARIAN     = /proj/nlpl/software/marian/1.2.0
@@ -80,7 +80,7 @@ else
   CSCPROJECT   = project_2002688
   # CSCPROJECT   = project_2000945
   DATAHOME     = ${HOME}/work/opentrans/data/${LANGPAIR}
-  WORKHOME     = ${shell realpath ${PWD}/work-langid}
+  WORKHOME     = ${shell realpath ${PWD}/work}
   APPLHOME     = ${HOME}/projappl
   # OPUSHOME     = /scratch/project_2000661/nlpl/data/OPUS
   OPUSHOME     = /projappl/nlpl/data/OPUS

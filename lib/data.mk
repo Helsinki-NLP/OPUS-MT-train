@@ -235,12 +235,14 @@ ${TRAIN_ALG}: 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 ##
 ## TODO: should we read all data from scratch using opus_read?
 ## - also: langid filtering and link prob filtering?
+## 
+## unzip -x does not seem to work?!
 
 %.${SRCEXT}.raw:
 	mkdir -p ${dir $@}
 	c=${patsubst %.${LANGPAIR}.${SRCEXT}.raw,%,${notdir $@}}; \
 	if [ -e ${OPUSHOME}/$$c/latest/moses/${LANGPAIR}.txt.zip ]; then \
-	  unzip -d ${dir $@} -x README LICENSE \
+	  unzip -d ${dir $@} -n \
 	  ${OPUSHOME}/$$c/latest/moses/${LANGPAIR}.txt.zip; \
 	  mv ${dir $@}$$c*.${LANGPAIR}.${SRCEXT} $@; \
 	  mv ${dir $@}$$c*.${LANGPAIR}.${TRGEXT} \
@@ -274,7 +276,6 @@ endif
 ## add training data for each language combination
 ## and put it together in local space
 ${LOCAL_TRAIN_SRC}: ${LOCAL_TRAINDATA_DEPENDENCIES}
-# ifeq (${wildcard ${LOCAL_TRAIN_SRC}},)
 	mkdir -p ${dir $@}
 	echo ""                           > ${dir $@}README.md
 	echo "# ${notdir ${TRAIN_BASE}}" >> ${dir $@}README.md
@@ -296,12 +297,6 @@ ifeq (${USE_REST_DEVDATA},1)
 	  ${GZIP} -cd < ${DEV_TRG}.notused.gz >> ${LOCAL_TRAIN_TRG}; \
 	fi
 endif
-# else
-#	@echo "*****************************************"
-#	@echo "local training data $@ exists already!"
-#	@echo "delete if it needs to be re-done!!!"
-#	@echo "*****************************************"
-# endif
 
 
 ${LOCAL_TRAIN_TRG}: ${LOCAL_TRAIN_SRC}
@@ -322,16 +317,8 @@ endif
 
 
 ## add to the training data
-## NEW: take away dependence on the clean pre-processed data
-##      to avoid re-doing existing data and also avoid problems
-##      of extra data that do not exist for a particular language pair
-##      in multilingual data sets
 
-add-to-local-train-data: 
-ifneq (${CLEAN_TRAIN_SRC},)
-	${MAKE} ${CLEAN_TRAIN_SRC} ${CLEAN_TRAIN_TRG}
-endif
-ifneq (${wildcard ${CLEAN_TRAIN_SRC}},)
+add-to-local-train-data: ${CLEAN_TRAIN_SRC} ${CLEAN_TRAIN_TRG}
 ifdef CHECK_TRAINDATA_SIZE
 	@if [ `${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_SRC}} | wc -l` != `${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_TRG}} | wc -l` ]; then \
 	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
@@ -400,7 +387,6 @@ else
 	cat ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg >> ${LOCAL_TRAIN_TRG}
 endif
 	rm -f ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
-endif
 
 
 
@@ -500,7 +486,6 @@ ${DEV_TRG}: ${DEV_SRC}
 
 add-to-dev-data: ${CLEAN_DEV_SRC} ${CLEAN_DEV_TRG}
 	mkdir -p ${dir ${DEV_SRC}}
-ifneq (${wildcard ${CLEAN_DEV_SRC}},)
 	echo -n "* ${LANGPAIR}: ${DEVSET}, "      >> ${dir ${DEV_SRC}}README.md
 	${GZIP} -cd < ${CLEAN_DEV_SRC} | wc -l    >> ${dir ${DEV_SRC}}README.md
 ifeq (${USE_TARGET_LABELS},1)
@@ -512,7 +497,6 @@ else
 	${GZIP} -cd < ${CLEAN_DEV_SRC} >> ${DEV_SRC}
 endif
 	${GZIP} -cd < ${CLEAN_DEV_TRG} >> ${DEV_TRG}
-endif
 
 
 ####################
@@ -572,7 +556,6 @@ ${TEST_TRG}: ${TEST_SRC}
 	@echo "done!"
 
 add-to-test-data: ${CLEAN_TEST_SRC}
-ifneq (${wildcard ${CLEAN_TEST_SRC}},)
 	echo "* ${LANGPAIR}: ${TESTSET}" >> ${dir ${TEST_SRC}}README.md
 ifeq (${USE_TARGET_LABELS},1)
 	echo "more than one target language";
@@ -583,7 +566,6 @@ else
 	${GZIP} -cd < ${CLEAN_TEST_SRC} >> ${TEST_SRC}
 endif
 	${GZIP} -cd < ${CLEAN_TEST_TRG} >> ${TEST_TRG}
-endif
 
 
 
