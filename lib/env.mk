@@ -62,42 +62,25 @@ else ifeq (${shell hostname},dx7-nkiel-4gpu)
   MARIAN       = ${APPLHOME}/marian/build
   LOADMODS     = echo "nothing to load"
 else ifneq ($(wildcard /wrk/tiedeman/research),)
-  DATAHOME     = /proj/OPUS/WMT19/data/${LANGPAIR}
-  # APPLHOME   = ${USERAPPL}/tools
   APPLHOME     = /proj/memad/tools
   WORKHOME     = /wrk/tiedeman/research/Opus-MT/work
   OPUSHOME     = /proj/nlpl/data/OPUS
   MOSESHOME    = /proj/nlpl/software/moses/4.0-65c75ff/moses
-  # MARIAN     = /proj/nlpl/software/marian/1.2.0
-  # MARIAN     = /appl/ling/marian
   MARIAN       = ${HOME}/appl_taito/tools/marian/build-gpu
   MARIANCPU    = ${HOME}/appl_taito/tools/marian/build-cpu
   LOADMODS     = ${LOADGPU}
-else
-  # CSCPROJECT   = project_2001194
-  # CSCPROJECT   = project_2000309
-  # CSCPROJECT   = project_2002982
+else ifeq (${shell hostname --domain},bullx)
   CSCPROJECT   = project_2002688
-  # CSCPROJECT   = project_2000945
-  DATAHOME     = ${HOME}/work/opentrans/data/${LANGPAIR}
   WORKHOME     = ${shell realpath ${PWD}/work}
-  APPLHOME     = ${HOME}/projappl
-  # OPUSHOME     = /scratch/project_2000661/nlpl/data/OPUS
+  APPLHOME     = /projappl/project_2001194
   OPUSHOME     = /projappl/nlpl/data/OPUS
   MOSESHOME    = ${APPLHOME}/mosesdecoder
   EFLOMAL_HOME = ${APPLHOME}/eflomal/
-  # MARIAN       = ${APPLHOME}/marian/build
-  # MARIANCPU    = ${APPLHOME}/marian/build
-  # MARIAN       = ${APPLHOME}/marian-dev/build-spm
-  # MARIANCPU    = ${APPLHOME}/marian-dev/build-cpu
-  # MARIANSPM    = ${APPLHOME}/marian-dev/build-spm
   MARIAN       = ${APPLHOME}/marian-dev/build
   MARIANCPU    = ${APPLHOME}/marian-dev/build
   MARIANSPM    = ${APPLHOME}/marian-dev/build
-  # GPU_MODULES  = cuda intel-mkl
   GPU          = v100
   GPU_MODULES  = python-env 
-  # gcc/8.3.0 boost/1.68.0-mpi intel-mkl
   CPU_MODULES  = python-env
   LOADMODS     = echo "nothing to load"
   HPC_QUEUE    = small
