@@ -193,10 +193,13 @@ all: ${WORKDIR}/config.mk
 
 #---------------------------------------------------------------------
 # store and fetch workdata
-# (requires module load allas && allas-conf)
-#  - store overrides
-#  - fetch does not override (delete first)
+# requires module load allas && allas-conf
+# select project_2002688 (OPUS-MT)
+#  - "make store" overrides
+#  - "make fetch" does not override (delete dir first)
 #---------------------------------------------------------------------
+
+.PHONY: store store-data fetch fetch-data
 
 ## directories and container names to be used
 WORK_SRCDIR    ?= ${WORKHOME}
