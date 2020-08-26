@@ -69,7 +69,7 @@ else ifneq ($(wildcard /wrk/tiedeman/research),)
   MARIAN       = ${HOME}/appl_taito/tools/marian/build-gpu
   MARIANCPU    = ${HOME}/appl_taito/tools/marian/build-cpu
   LOADMODS     = ${LOADGPU}
-else ifeq (${shell hostname --domain},bullx)
+else ifeq (${shell hostname --domain 2>dev/null},bullx)
   CSCPROJECT   = project_2002688
   WORKHOME     = ${shell realpath ${PWD}/work}
   APPLHOME     = /projappl/project_2001194

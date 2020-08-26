@@ -11,20 +11,12 @@ The package includes 4 components:
 * [pivoting](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master//pivoting/Makefile) for data augmentation
 
 
-General principles:
-
-* use variables in make-calls to adjust parameters (like language pair to consider, data to use, ...)
-* proper dependencies to automatize the whole pipeline (and also to allow parallel execution using the -j flag)
-* support submitting SLURM jobs and starting large batches of jobs
-* heavy use of (phony) implicit targets with some kind of suffix notation to support setup changes
-
-
 More information about specific tasks:
 
 * [Creating data files](Data.md)
 * [Training models](Train.md)
 * [Testing models](Test.md)
-* [Running on a cluster](Slurm.md)
+* [Running batch jobs](BatchJobs.md)
 * [Generating back-translations](https://github.com/Helsinki-NLP/OPUS-MT-train/backtranslate/README.md)
 * [Fine-tuning models](https://github.com/Helsinki-NLP/OPUS-MT-train/finetune/README.md)
 * [Generate pivot-language-based translations](https://github.com/Helsinki-NLP/OPUS-MT-train/pivoting/README.md)

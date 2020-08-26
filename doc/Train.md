@@ -1,13 +1,60 @@
 # Training models
 
 
+## Overview
+
+Relevant makefiles:
+
+* [Makefile](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/Makefile)
+* [lib/config.mk](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/lib/config.mk)
+* [lib/train.mk](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/lib/train.mk)
+* [lib/generic.mk](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/lib/generic.mk)
+
+
+Main recipes:
+
+* `train`: train a model
+* `train-multigpu`: train with 4 GPUs
+* `train-RL`: right-to-left model
+* `train.submit`: submit train job
+* `train.submit-multigpu`: submit multi-GPU job
+
+Parameters / variables:
+
+* `SRCLANGS`: list of source language codes
+* `TRGLANGS`: list of target language codes
+* `MODELTYPE`: transformer or transformer-align (with guided alignment) (default: transformer-align)
+* `NR`: model number, also used for initialisation seed (default: 1)
+* `MARIAN_VALID_FREQ`: validation frequency (default: 10000)
+* `MARIAN_EARLY_STOPPING`: stop after number of validation steps without improvement (default: 10)
+* `MARIAN_WORKSPACE`: allocated space on GPU (default: depends on device, see `lib/env.mk`)
+* `WALLTIME`: walltime for HPC jobs in hours (default: 72)
+
+
+
+
+
+## Detailed information
+
 Training a model can be started by simply running:
 
 ```
 make SRCLANGS=xx TRGLANGS=yy train
 ```
 
-This should be done on a machine with GPU or submitted to a GPU node via SLURM.
+The model will be trained in the model-specific WORKDIR, which defaults to `work/${LANGPAIRSTR}/`. The name depends on the data and other parameters and the model basename is set to `${MODEL_SUBDIR}${DATASET}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}.${MODELTYPE}.model${NR}`. This includes:
+
+* MODEL_SUBDIR: optional sub directory (default: empty string)
+* DATASET: main data set used for training (default = opus)
+* TRAINSIZE: optional size of the training data (cropped from beginning), default = empty (i.e. use all data)
+* PRE_SRC and PRE_TRG: segmentation model applied (default = spm32k)
+* MODELTYPE: either transformer or transformer-align (using guided alignment), default = transformer-align
+* NR: model number (for ensembling, also used as seed for initialisation)
+
+Logfiles are stored in the same work directory with a similar as the model files (see extension `.log`).
+
+
+Training should be done on a machine with GPU or submitted to a GPU node via SLURM.
 The default configuration and parameters for training Marian-NMT models are specifed in `lib/train.mk` and `lib/config/mk`.
 
 ```
@@ -75,8 +122,10 @@ make SRCLANGS=xx TRGLANGS=yy train-multigpu
 ```
 
 
+
 ## Running on a cluster
 
+Submitting jobs via SLURM is supported but highly specific for the setting on puhti and our infrastructure at CSC.
 Add the suffix `.submit` and set appropriate variables for job requirements, for example, 
 starting a single-gpu job with walltime of 48 hours:
 
@@ -91,4 +140,4 @@ This can be combined with the multi-gpu suffix:
 make SRCLANGS=xx TRGLANGS=yy WALLTIME=48 train.submit-multigpu
 ```
 
-More details on job management in [Slurm.md](Slurm.md)
+More details on job management in [BatchJobs.md](BatchJobs.md)

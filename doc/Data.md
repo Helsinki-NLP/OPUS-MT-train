@@ -1,10 +1,61 @@
 # Creating data files
 
 
+## Overview
+
+Relevant makefiles:
+
+* [Makefile](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/Makefile)
+* [lib/config.mk](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/lib/config.mk)
+* [lib/data.mk](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/lib/data.mk)
+* [lib/preprocess.mk](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/lib/preprocess.mk)
+* [lib/sentencepiece.mk](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/lib/sentencepiece.mk)
+* [lib/bpe.mk](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/lib/bpe.mk)
+
+
+Main recipes:
+
+* `data`: create all data, subword models, optional word alignment, vocabulary
+* `devdata`: create validation data set
+* `testdata`: create test data set
+* `traindata`: create train data set
+* `reverse-data`: create data in reverse translation direction (bilingual models only)
+* `wordalign`: make word alignments
+* `spm-models`: train source and target language sentence-piece models
+* `bpe-models`: train source and target language BPE models
+
+
+Parameters / variables:
+
+* `SRCLANGS`: list of source language codes
+* `TRGLANGS`: list of target language codes
+* `DEVSET`: corpus name for validation data (default: Tatoeba/GlobalVoices/infopankki/JW300/bible-uedin)
+* `TESTSET`: corpus name for validation data (default: DEVSET)
+* `TRAINSET`: list of corpora for training data (default: all except DEVSET, TESTSET, EXCLUDE_CORPORA (WMT-News, ...)
+* `USE_REST_DEVDATA`: if set to 1 then unused DEVSET data is added to train (default: 1)
+* `DEVSIZE`: number of sentence pairs in validation data (default: 5000/2500)
+* `TESTSIZE`: number of sentence pairs in test data (default: 5000/2500)
+* `DEVSMALLSIZE`: reduced size of validation data for small data sets (default: 10000)
+* `TESTSMALLSIZE`: reduced size of test data for small data sets (default: 10000)
+* `DEVMINSIZE`: minimum number of sentence pairs in validation data (default: 150)
+* `BPESIZE`: subword segmentation model size (default: 32000)
+* `SRCBPESIZE`: source language subword segmentation model size (default: BPESIZE)
+* `TRGBPESIZE`: target language subword segmentation model size (default: BPESIZE)
+
+
+Implicit rules:
+
+* `%-bt`: include back-translations
+* `%-pivot`: include pivot-based translations
+
+
+
+
+## Detailed information
 
 * data sets are defined in `lib/config.mk`
-* data sets are created using targets from `lib/data.mk` and `lib/preprocess.mk`
-* subword models are trained and applied with targets from `lib/sentencepiece.mk` and `bpe.mk`
+* data sets are created using recipes from `lib/data.mk` and `lib/preprocess.mk`
+* subword models are trained and applied with recipes from `lib/sentencepiece.mk` and `bpe.mk`
 
 
 The main target for creating data sets (train, validation, test sets) for a model translating from languages `xx` to languags `yy` is
