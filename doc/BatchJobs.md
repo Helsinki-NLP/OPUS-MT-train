@@ -3,9 +3,9 @@
 The beauty of the whole package is to run batch jobs for training many models in various settings. Some batch jobs are specified with their own targets, some others are specified in dedicated makefiles. Submitting jobs to SLURM is also supported to support job creation on a cluster in a convenient way.
 
 
-# SLURM jobs
+## SLURM jobs
 
-There are two generic implicit rules to submit jobs to SLURM using `sbatch` in `lib/slurm.mk`:
+There are two generic implicit rules to submit jobs to SLURM using `sbatch` in [lib/slurm.mk](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/lib/slurm.mk):
 
 * `%.submit`: submit a job to a GPU node
 * `%.submitcpu`: submit a job to a CPU node
@@ -21,43 +21,43 @@ submits a job to the GPU queue for running everything needed to prepare, train a
 
 There are important variables that modify allocations requested by the job:
 
-* HPC_NODES: number of nodes to be allocated (default: 1)
-* HPC_QUEUE: SLURM CPU queue (default on puhti: small)
-* HPC_GPUQUEUE: SLURM GPU queue (default: gpu)
-* HPC_DISK: local disc space allocated in GB (default: 500)
-* HPC_TIME: allocated walltime in hh::mm (default: 72:00)
-* HPC_CORES: number of CPU cores (default: 1)
-* HPC_MEM: allocated RAM (default: 4g)
+* `HPC_NODES`: number of nodes to be allocated (default: 1)
+* `HPC_QUEUE`: SLURM CPU queue (default on puhti: small)
+* `HPC_GPUQUEUE`: SLURM GPU queue (default: gpu)
+* `HPC_DISK`: local disc space allocated in GB (default: 500)
+* `HPC_TIME`: allocated walltime in hh::mm (default: 72:00)
+* `HPC_CORES`: number of CPU cores (default: 1)
+* `HPC_MEM`: allocated RAM (default: 4g)
 
 There are 3 shortcuts/aliases for the lazy people:
 
-* MEM: can be used instead of HPC_MEM
-* THREADS: can be used instead of HPC_CORES
-* WALLTIME: can be used instead of HPC_TIME but only allows `hh` (like `72`)
+* `MEM`: can be used instead of `HPC_MEM`
+* `THREADS`: can be used instead of `HPC_CORES`
+* `WALLTIME`: can be used instead of `HPC_TIME` but only allows `hh` (like `72`)
 
 
 GPU-specific parameters include:
 
-* GPU: device name (default: v100 on puhti)
-* NR_GPUS: number of GPUs allocated (default: 1)
-* GPU_MODULES: software packages to be loaded as module before running the make command
+* `GPU`: device name (default: v100 on puhti)
+* `NR_GPUS`: number of GPUs allocated (default: 1)
+* `GPU_MODULES`: software packages to be loaded as module before running the make command
 
 
 CPU-specific parameters are:
 
-* CPU_MODULES: software packages to be loaded as module before running the make command
+* `CPU_MODULES`: software packages to be loaded as module before running the make command
 
 
 Extra parameters include:
 
-* EMAIL: e-mail notification when the job is done
-* HPC_EXTRA: can be set to add any additional parameters that need to be added to the slurm startup script
-* CSCPROJECT: project ID to be billed on puhti
+* `EMAIL`: e-mail notification when the job is done
+* `HPC_EXTRA`: can be set to add any additional parameters that need to be added to the slurm startup script
+* `CSCPROJECT`: project ID to be billed on puhti
 
 
 
 
-## Combined and generic targets
+## Recipes that combine tasks
 
 
 There is various targets that combine tasks, setup common pipelines or create very task-specific jobs. Some more generic targets are defined in the top-level Makefile and in `lib/generic.mk`. Some, possibly interesting ones are:
@@ -94,7 +94,7 @@ Combining this to make it complete:
 
 
 
-### Generic rules
+## Generic rules
 
 Some implicit rules can be used to trigger certain batch jobs. Typically, they can be used by adding a suffix to existing targets, for example:
 

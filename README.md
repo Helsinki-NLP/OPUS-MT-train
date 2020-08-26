@@ -24,6 +24,14 @@ Optional software:
 * [pigz](https://zlib.net/pigz/): multithreaded gzip
 
 
+## Documentation
+
+* [Details about tasks and recipes](https://github.com/Helsinki-NLP/Opus-MT-train/tree/master/doc/README.md)
+* [Information about back-translation](https://github.com/Helsinki-NLP/Opus-MT-train/tree/master/backtranslate/README.md)
+* [Information about Fine-tuning models](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/finetune/README.md)
+* [How to generate pivot-language-based translations](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/pivoting/README.md)
+* [How to train models for the Tatoeba MT Challenge](https://github.com/Helsinki-NLP/Opus-MT-train/tree/master/doc/TatoebaChallenge.md)
+
 
 ## Structure of the training scripts
 

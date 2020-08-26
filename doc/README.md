@@ -6,9 +6,9 @@ The build targets are all included in various makefiles and the main idea is to 
 The package includes 4 components:
 
 * [basic training](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/Makefile) of bilingual and multilingual models
-* [back-translation](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master//backtranslate/Makefile) for data augmentation
-* [fine-tuning](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master//finetune/Makefile) for domain adaptation
-* [pivoting](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master//pivoting/Makefile) for data augmentation
+* [back-translation](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/backtranslate/Makefile) for data augmentation
+* [fine-tuning](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/finetune/Makefile) for domain adaptation
+* [pivoting](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/pivoting/Makefile) for data augmentation
 
 
 More information about specific tasks:
@@ -17,9 +17,9 @@ More information about specific tasks:
 * [Training models](Train.md)
 * [Testing models](Test.md)
 * [Running batch jobs](BatchJobs.md)
-* [Generating back-translations](https://github.com/Helsinki-NLP/OPUS-MT-train/backtranslate/README.md)
-* [Fine-tuning models](https://github.com/Helsinki-NLP/OPUS-MT-train/finetune/README.md)
-* [Generate pivot-language-based translations](https://github.com/Helsinki-NLP/OPUS-MT-train/pivoting/README.md)
+* [Generating back-translations](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/backtranslate/README.md)
+* [Fine-tuning models](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/finetune/README.md)
+* [Generate pivot-language-based translations](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/pivoting/README.md)
 * [Models for the Tatoeba MT Challenge](TatoebaChallenge.md)
 
 Tutorials (to-do)

@@ -2,7 +2,7 @@
 # Models for the Tatoeba Translation Challenge
 
 
-This is information about scripts for training and testing models with data from the [Tatoeba Translation Challenge](https://github.com/Helsinki-NLP/Tatoeba-Challenge). The build targets are defined in `lib/models/tatoeba.mk`.
+This is information about scripts for training and testing models with data from the [Tatoeba Translation Challenge](https://github.com/Helsinki-NLP/Tatoeba-Challenge). The build targets are defined in [lib/models/tatoeba.mk](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/lib/models/tatoeba.mk).
 
 
 ## Train and evaluate a single translation pair
