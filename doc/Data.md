@@ -110,6 +110,7 @@ Currently, the makefile looks at the local copy of released OPUS data to find av
 
 Most settings can be adjusted by setting corresponding variables to new values. Common changes are:
 
+* don't run word-alignment: set `MODELTYPE=transformer`
 * change the vocabulary size: set `BPESIZE=<yourvalue>` for example BPESIZE=4000 (this is also used for sentence-piece models)
 * vocabulary sizes can also be set for source and target language independently (`SRCBPESIZE` and `TRGBPESIZE`)
 * use BPE instead of sentence-piece (not recommended): set `SUBWORDS=bpe`
@@ -118,6 +119,7 @@ Most settings can be adjusted by setting corresponding variables to new values. 
 * specify a specific list of corpora to train on: set `TRAINSET="<space-separated-corpus-names>"`
 * specify a specific test set: set `TESTSET=<corpusname>` (the same aplies for DEVSET)
 * use all OPUS corpora but exclude some additional corpora from the list: modify `EXCLUDE_CORPORA`
+* use a different name than the generated one based on language pairs: set `LANGPAIRSTR`
 
 
 
@@ -152,6 +154,15 @@ Extra data sets can be added by moving them to the directory of pre-processed bi
 
 Replace CORPUSNAME with the name of resource, SRCID and TRGID with the language codes of your data. You can add any number of extra training sets in this way by listing their names (CORPUSNAME) in the variable `EXTRA_TRAINSET` (space separated). I don't need to mention that you should avoid spaces in any file name ....!
 
+
+
+## Reverse translation direction
+
+It can be useful to re-use data sets for the reverse translation direction. This is only useful for bilingual models (multilingual ones add language labels). We also don't support forward translated data. In order to create symbolic links and reverse word alignment to support translation from language yy to language xx do:
+
+```
+make SRCLANGS=xx TRGLANGS=yy reverse-data
+```
 
 
 

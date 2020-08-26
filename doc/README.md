@@ -6,15 +6,15 @@ The build targets are all included in various makefiles and the main idea is to 
 The package includes 4 components:
 
 * [basic training](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/Makefile) of bilingual and multilingual models
-* [backtranslation](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master//backtranslate/Makefile)
-* [fine-tuning](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master//finetune/Makefile)
-* [pivoting](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master//pivoting/Makefile)
+* [back-translation](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master//backtranslate/Makefile) for data augmentation
+* [fine-tuning](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master//finetune/Makefile) for domain adaptation
+* [pivoting](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master//pivoting/Makefile) for data augmentation
 
 
 General principles:
 
 * use variables in make-calls to adjust parameters (like language pair to consider, data to use, ...)
-* proper dependencies to automaatize the whole pipeline (and also to allow parallel execution using the -j flag)
+* proper dependencies to automatize the whole pipeline (and also to allow parallel execution using the -j flag)
 * support submitting SLURM jobs and starting large batches of jobs
 * heavy use of (phony) implicit targets with some kind of suffix notation to support setup changes
 
@@ -24,6 +24,7 @@ More information about specific tasks:
 * [Creating data files](Data.md)
 * [Training models](Train.md)
 * [Testing models](Test.md)
+* [Running on a cluster](Slurm.md)
 * [Generating back-translations](https://github.com/Helsinki-NLP/OPUS-MT-train/backtranslate/README.md)
 * [Fine-tuning models](https://github.com/Helsinki-NLP/OPUS-MT-train/finetune/README.md)
 * [Generate pivot-language-based translations](https://github.com/Helsinki-NLP/OPUS-MT-train/pivoting/README.md)

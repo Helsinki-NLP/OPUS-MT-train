@@ -288,7 +288,7 @@ endif
 
 ## run a multigpu job (2 or 4 GPUs)
 
-%-multigpu %-0123:
+%-multigpu %-gpu0123:
 	${MAKE} NR_GPUS=4 MARIAN_GPUS='0 1 2 3' $(subst -gpu0123,,${@:-multigpu=})
 
 %-twogpu %-gpu01:
