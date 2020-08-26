@@ -84,6 +84,7 @@ else ifeq (${shell hostname --domain},bullx)
   CPU_MODULES  = python-env
   LOADMODS     = echo "nothing to load"
   HPC_QUEUE    = small
+  export PATH := ${APPLHOME}/bin:${PATH}
 endif
 
 
@@ -120,3 +121,21 @@ endif
 GZIP := ${shell which pigz 2>/dev/null}
 GZIP ?= gzip
 ZCAT = ${GZIP} -cd <
+
+
+
+
+## install pre-requisites
+## TODO:
+## * terashuf (https://github.com/alexandres/terashuf.git)
+## * OpusTools-perl (https://github.com/Helsinki-NLP/OpusTools-perl)
+## * marian-nmt
+
+
+PIP := ${shell which pip3 2>/dev/null}
+PIP ?= pip
+
+PHONY: install-prerequisites install-prereq install-requirements
+install-prerequisites install-prereq install-requirements:
+	${PIP} install --user -r requirements.txt
+

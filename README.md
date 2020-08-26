@@ -48,20 +48,20 @@ Note that this frequently changes! There is, for example:
 Run this if you want to train a model, for example for translating English to French:
 
 ```
-make SRCLANG=en TRGLANG=fr train
+make SRCLANGS=en TRGLANGS=fr train
 ```
 
 To evaluate the model with the automatically generated test data (from the Tatoeba corpus as a default) run:
 
 ```
-make SRCLANG=en TRGLANG=fr eval
+make SRCLANGS=en TRGLANGS=fr eval
 ```
 
 For multilingual (more than one language on either side) models run, for example:
 
 ```
-make SRCLANG="de en" TRGLANG="fr es pt" train
-make SRCLANG="de en" TRGLANG="fr es pt" eval
+make SRCLANGS="de en" TRGLANGS="fr es pt" train
+make SRCLANGS="de en" TRGLANGS="fr es pt" eval
 ```
 
 Note that data pre-processing should run on CPUs and training/testing on GPUs. To speed up things you can process data sets in parallel using the jobs flag of make, for example using 8 threads:

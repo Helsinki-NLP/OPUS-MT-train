@@ -5,10 +5,10 @@ The build targets are all included in various makefiles and the main idea is to 
 
 The package includes 4 components:
 
-* [basic training](https://github.com/Helsinki-NLP/OPUS-MT-train/Makefile) of bilingual and multilingual models
-* [backtranslation](https://github.com/Helsinki-NLP/OPUS-MT-train/backtranslate/Makefile)
-* [fine-tuning](https://github.com/Helsinki-NLP/OPUS-MT-train/finetune/Makefile)
-* [pivoting]((https://github.com/Helsinki-NLP/OPUS-MT-train/pivoting/Makefile)
+* [basic training](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/Makefile) of bilingual and multilingual models
+* [backtranslation](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master//backtranslate/Makefile)
+* [fine-tuning](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master//finetune/Makefile)
+* [pivoting](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master//pivoting/Makefile)
 
 
 General principles:
@@ -27,7 +27,7 @@ More information about specific tasks:
 * [Generating back-translations](https://github.com/Helsinki-NLP/OPUS-MT-train/backtranslate/README.md)
 * [Fine-tuning models](https://github.com/Helsinki-NLP/OPUS-MT-train/finetune/README.md)
 * [Generate pivot-language-based translations](https://github.com/Helsinki-NLP/OPUS-MT-train/pivoting/README.md)
-* [Models for the Tatoeba MT Challenge]{TatoebaChallenge.md}
+* [Models for the Tatoeba MT Challenge](TatoebaChallenge.md)
 
 Tutorials (to-do)
 
