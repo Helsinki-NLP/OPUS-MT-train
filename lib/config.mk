@@ -164,7 +164,7 @@ TESTSIZE    = 2500
 
 DEVSMALLSIZE  = 1000
 TESTSMALLSIZE = 1000
-DEVMINSIZE    = 250
+DEVMINSIZE    = 150
 
 
 ##----------------------------------------------------------------------------
