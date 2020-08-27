@@ -35,12 +35,16 @@ Parameters / variables:
 * `USE_REST_DEVDATA`: if set to 1 then unused DEVSET data is added to train (default: 1)
 * `DEVSIZE`: number of sentence pairs in validation data (default: 5000/2500)
 * `TESTSIZE`: number of sentence pairs in test data (default: 5000/2500)
+* `TRAINSIZE`: set value where to cut the training data (default: not set = use all)
 * `DEVSMALLSIZE`: reduced size of validation data for small data sets (default: 10000)
 * `TESTSMALLSIZE`: reduced size of test data for small data sets (default: 10000)
-* `DEVMINSIZE`: minimum number of sentence pairs in validation data (default: 150)
+* `DEVMINSIZE`: minimum number of sentence pairs in validation data (default: 250)
 * `BPESIZE`: subword segmentation model size (default: 32000)
 * `SRCBPESIZE`: source language subword segmentation model size (default: BPESIZE)
 * `TRGBPESIZE`: target language subword segmentation model size (default: BPESIZE)
+* `FIT_DATA_SIZE`: enable over/under sampling - size per language pair
+* `MAX_OVER_SAMPLING`: maximum number of repeating the same data in over-sampling (default = 50)
+* `SHUFFLE_DATA`: set to 1 to shuffle data per language pair
 
 
 Implicit rules:
@@ -126,7 +130,7 @@ work/br-en/train/opus.spm4k-spm4k.src-trg.alg.gz
 Validation data:
 
 * the DEVSET has fallback options depending on availability (tested in this order Tatoeba, GlobalVoices, infopankki, JW300, bible-uedin)
-* the DEVSET needs to contain at least 2 x DEVMINSIZE aligned sentence pairs (default 2x 150 = 300)
+* the DEVSET needs to contain at least DEVMINSIZE aligned sentence pairs (default 250)
 * the default size of a validation set is 5,000 sentence pairs for Tatoeba data and 2,500 sentence pairs for other corpora; The size can be adjusted by setting DEVSIZE
 * the DEVSET corpus is shuffled and the development data is taken from the top of the shuffled data set (see `lib/data.mk`)
 

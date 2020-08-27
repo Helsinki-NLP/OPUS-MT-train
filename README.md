@@ -17,11 +17,14 @@ Running the scripts does not work out of the box because many settings are adjus
 * [OpusTools](https://pypi.org/project/opustools): library and tools for accessing OPUS data
 * [OpusTools-perl](https://github.com/Helsinki-NLP/OpusTools-perl): additional tools for accessing OPUS data
 * [iso-639](https://pypi.org/project/iso-639/): a Python package for ISO 639 language codes
+* Perl modules [ISO::639::3](https://metacpan.org/pod/ISO::639::3) and [ISO::639::5](https://metacpan.org/pod/ISO::639::5)
+* [jq JSON processor](https://stedolan.github.io/jq/)
 
-Optional software:
+Optional (recommended) software:
 
 * [terashuf](https://github.com/alexandres/terashuf): efficiently shuffle massive data sets
 * [pigz](https://zlib.net/pigz/): multithreaded gzip
+* [efmomal](https://github.com/robertostling/eflomal) (needed for word alignment when transformer-align is used)
 
 
 ## Documentation
@@ -79,14 +82,4 @@ make -j 8 SRCLANG=en TRGLANG=fr data
 ```
 
 
-
-
-## Upload to Object Storage
-
-This is only for internal use:
-
-```
-swift upload OPUS-MT --changed --skip-identical name-of-file
-swift post OPUS-MT --read-acl ".r:*"
-```
 

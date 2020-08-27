@@ -8,9 +8,7 @@
 #  - over/under-sampling of training data if necessary (multilingual models)
 #  - shuffle dev/test data and divide into to disjoint sets
 #  - reverse data sets for the other translation direction (bilingual models only)
-#  - run word alignment if necessary (models with guded alignment = transformer-align)
-
-
+#  - run word alignment if necessary (models with guided alignment = transformer-align)
 
 
 
@@ -230,45 +228,51 @@ ${TRAIN_ALG}: 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 
 
 
-## copy OPUS data
-## (check that the OPUS file really exists! if not, create and empty file)
+## fetch OPUS data
+## - check first whether they exist on the local file system
+## - read with opus_read otherwise
 ##
-## TODO: should we read all data from scratch using opus_read?
-## - also: langid filtering and link prob filtering?
-## 
-## unzip -x does not seem to work?!
+## TODO: 
+##   - should we fetch moses files from the server if they exist? (faster!)
+##   - should we do langid filtering and link prob filtering here?
+##     (could set OPUSREAD_ARGS for that)
+##
 
 %.${SRCEXT}.raw:
 	mkdir -p ${dir $@}
-	c=${patsubst %.${LANGPAIR}.${SRCEXT}.raw,%,${notdir $@}}; \
-	if [ -e ${OPUSHOME}/$$c/latest/moses/${LANGPAIR}.txt.zip ]; then \
-	  unzip -d ${dir $@} -n \
-	  ${OPUSHOME}/$$c/latest/moses/${LANGPAIR}.txt.zip; \
-	  mv ${dir $@}$$c*.${LANGPAIR}.${SRCEXT} $@; \
-	  mv ${dir $@}$$c*.${LANGPAIR}.${TRGEXT} \
-	     ${@:.${SRCEXT}.raw=.${TRGEXT}.raw}; \
-	  rm -f ${@:.${SRCEXT}.raw=.xml} ${@:.${SRCEXT}.raw=.ids} ${dir $@}/README ${dir $@}/LICENSE; \
-	elif [ -e ${OPUSHOME}/$$c/latest/xml/${LANGPAIR}.xml.gz ]; then \
-	  echo "extract $$c (${LANGPAIR}) from OPUS"; \
-	  opus_read ${OPUSREAD_ARGS} -rd ${OPUSHOME} -d $$c -s ${SRC} -t ${TRG} -wm moses -p raw > $@.tmp; \
-	  cut -f1 $@.tmp > $@; \
-	  cut -f2 $@.tmp > ${@:.${SRCEXT}.raw=.${TRGEXT}.raw}; \
-	  rm -f $@.tmp; \
-	else \
-	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
-	  echo "!! skip $@"; \
-	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
-	fi
+	-( c=${patsubst %.${LANGPAIR}.${SRCEXT}.raw,%,${notdir $@}}; \
+	  if [ -e ${OPUSHOME}/$$c/latest/moses/${LANGPAIR}.txt.zip ]; then \
+	    unzip -d ${dir $@} -n \
+	    ${OPUSHOME}/$$c/latest/moses/${LANGPAIR}.txt.zip; \
+	    mv ${dir $@}$$c*.${LANGPAIR}.${SRCEXT} $@; \
+	    mv ${dir $@}$$c*.${LANGPAIR}.${TRGEXT} \
+	       ${@:.${SRCEXT}.raw=.${TRGEXT}.raw}; \
+	    rm -f ${@:.${SRCEXT}.raw=.xml} ${@:.${SRCEXT}.raw=.ids} ${dir $@}/README ${dir $@}/LICENSE; \
+	  elif [ -e ${OPUSHOME}/$$c/latest/xml/${LANGPAIR}.xml.gz ]; then \
+	    echo "extract $$c (${LANGPAIR}) from XML in local OPUS copy"; \
+	    opus_read ${OPUSREAD_ARGS} -rd ${OPUSHOME} \
+			-dl ${dir $@} -d $$c -s ${SRC} -t ${TRG} \
+			-wm moses -p raw -w $@ ${@:.${SRCEXT}.raw=.${TRGEXT}.raw}; \
+	  elif [ -e ${OPUSHOME}/$$c/latest/xml/${LANGPAIR}.xml.gz ]; then \
+	    echo "fetch $$c (${LANGPAIR}) from OPUS"; \
+	    opus_read ${OPUSREAD_ARGS} -q -dl ${dir $@} -d $$c -s ${SRC} -t ${TRG} \
+			-wm moses -p raw -w $@ ${@:.${SRCEXT}.raw=.${TRGEXT}.raw}; \
+	  else \
+	    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+	    echo "!! skip $@"; \
+	    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+	  fi )
 
 
 %.${TRGEXT}.raw: %.${SRCEXT}.raw
 	@echo "done!"
 
 
-## TODO: this causes to frequently redo the same data over and over again, does it?
-##
+## TODO: does this causes make to frequently redo the same data?
+## --> could be a problem with large models!
 .INTERMEDIATE: ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG}
 
+## define dependency on DEVDATA if they need to be added to the train data
 ifeq (${USE_REST_DEVDATA},1)
   LOCAL_TRAINDATA_DEPENDENCIES = ${DEV_SRC} ${DEV_TRG}
 endif
@@ -299,6 +303,7 @@ ifeq (${USE_REST_DEVDATA},1)
 endif
 
 
+## everything is done in the target above
 ${LOCAL_TRAIN_TRG}: ${LOCAL_TRAIN_SRC}
 	@echo "done!"
 
@@ -588,6 +593,7 @@ ${LOCAL_MONO_DATA}.raw:
 		add-to-local-mono-data; \
 	done
 
+## TODO: if it does not exist in local file system then use opus-tools to fetch!
 add-to-local-mono-data:
 	for c in ${MONOSET}; do \
 	  if [ -e ${OPUSHOME}/$$c/latest/mono/${LANGID}.txt.gz ]; then \
@@ -600,6 +606,7 @@ add-to-local-mono-data:
 
 ##----------------------------------------------
 ## get data from local space and compress ...
+##----------------------------------------------
 
 ${WORKDIR}/%.clean.${PRE_SRC}.gz: ${TMPDIR}/${LANGPAIRSTR}/%.clean.${PRE_SRC}
 	mkdir -p ${dir $@}

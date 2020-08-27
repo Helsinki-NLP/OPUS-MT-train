@@ -114,44 +114,9 @@ ifneq (${words ${TRGLANGS}},1)
   USE_TARGET_LABELS = 1
 endif
 
-
-## set additional argument options for opus_read (if it is used)
-## e.g. OPUSREAD_ARGS = -a certainty -tr 0.3
-OPUSREAD_ARGS = 
-
-## ELRA corpora
-ELRA_CORPORA = ${patsubst %/latest/xml/${LANGPAIR}.xml.gz,%,\
-		${patsubst ${OPUSHOME}/%,%,\
-		${shell ls ${OPUSHOME}/ELRA-*/latest/xml/${LANGPAIR}.xml.gz 2>/dev/null}}}
-
-## exclude certain data sets
-## TODO: include ELRA corpora
-EXCLUDE_CORPORA ?= WMT-News MPC1 ${ELRA_CORPORA}
-
-## all of OPUS (NEW: don't require MOSES format)
-OPUSCORPORA  = $(filter-out ${EXCLUDE_CORPORA} ,${patsubst %/latest/xml/${LANGPAIR}.xml.gz,%,\
-		${patsubst ${OPUSHOME}/%,%,\
-		${shell ls ${OPUSHOME}/*/latest/xml/${LANGPAIR}.xml.gz 2>/dev/null}}})
-
-## monolingual data
-OPUSMONOCORPORA = $(filter-out ${EXCLUDE_CORPORA} ,${patsubst %/latest/mono/${LANGID}.txt.gz,%,\
-		${patsubst ${OPUSHOME}/%,%,\
-		${shell ls ${OPUSHOME}/*/latest/mono/${LANGID}.txt.gz}}})
-
-
-## all languages in OPUS (requires the opus-langs.txt file)
-ifneq (${wildcard opus-langs.txt},)
-  OPUSLANGS = ${filter-out simple,${shell head -1 opus-langs.txt}}
-endif
-
-
-ALL_LANG_PAIRS = ${shell ls ${WORKHOME} | grep -- '-' | grep -v old}
-ALL_BILINGUAL_MODELS = ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" |  grep -v -- '\+'}
-ALL_MULTILINGUAL_MODELS = ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" | grep -- '\+'}
-
-
 ## size of dev data, test data and BPE merge operations
 ## NEW default size = 2500 (keep more for training for small languages)
+## NOTE: size will be increased to 5000 for Tatoeba
 
 DEVSIZE     = 2500
 TESTSIZE    = 2500
@@ -164,61 +129,83 @@ TESTSIZE    = 2500
 
 DEVSMALLSIZE  = 1000
 TESTSMALLSIZE = 1000
-DEVMINSIZE    = 150
+DEVMINSIZE    = 250
+
+
+## set additional argument options for opus_read (if it is used)
+## e.g. OPUSREAD_ARGS = -a certainty -tr 0.3
+OPUSREAD_ARGS = 
+
+
+## OLD: get corpora directly from the file system
+#
+# ELRA_CORPORA = ${patsubst %/latest/xml/${LANGPAIR}.xml.gz,%,\
+#		${patsubst ${OPUSHOME}/%,%,\
+#		${shell ls ${OPUSHOME}/ELRA-*/latest/xml/${LANGPAIR}.xml.gz 2>/dev/null}}}
+#
+# EXCLUDE_CORPORA ?= WMT-News MPC1 ${ELRA_CORPORA}
+#
+# OPUSCORPORA  = $(filter-out ${EXCLUDE_CORPORA},${patsubst %/latest/xml/${LANGPAIR}.xml.gz,%,\
+#		${patsubst ${OPUSHOME}/%,%,\
+#		${shell ls ${OPUSHOME}/*/latest/xml/${LANGPAIR}.xml.gz 2>/dev/null}}})
+#
+# OPUSMONOCORPORA = $(filter-out ${EXCLUDE_CORPORA} ,${patsubst %/latest/mono/${LANGID}.txt.gz,%,\
+#		${patsubst ${OPUSHOME}/%,%,\
+#		${shell ls ${OPUSHOME}/*/latest/mono/${LANGID}.txt.gz}}})
+
+
+
+## NEW: get data from the OPUS-API
+
+OPUSAPI = http://opus.nlpl.eu/opusapi/
+
+get-opus-mono      = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&corpora=True | jq '.corpora[]' | tr '"' ' '}
+get-opus-bitexts   = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&corpora=True | jq '.corpora[]' | tr '"' ' '}
+get-bigger-bitexts = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&preprocessing=xml\&version=latest | \
+	jq -r '.corpora[1:] | .[] | select(.source!="") | select(.target!="") | select(.alignment_pairs>${3}) | .corpus' }
+get-opus-langs     = ${shell wget -qq -O - ${OPUSAPI}?languages=True | jq '.languages[]' | tr '"' ' '}
+get-elra-bitexts   = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&corpora=True | \
+	jq '.corpora[]' | tr '"' ' ' | grep '^ *ELR[CA][-_]'}
+
+
+
+## exclude certain data sets
+# EXCLUDE_CORPORA ?= WMT-News MPC1 ${call get-elra-bitexts,${SRC},${TRG}}
+EXCLUDE_CORPORA ?= WMT-News MPC1
+
+# all matching corpora in OPUS except for some that we want to exclude
+OPUSCORPORA = $(filter-out ${EXCLUDE_CORPORA},${call get-opus-bitexts,${SRC},${TRG}})
+
+## monolingual data
+OPUSMONOCORPORA = $(filter-out ${EXCLUDE_CORPORA},${call get-opus-mono,${LANGID}})
+
+## all languages in OPUS
+## TODO: do we need this?
+OPUSLANGS := ${call get-opus-langs}
+
+## existing projects in WORKHOME
+ALL_LANG_PAIRS := ${shell ls ${WORKHOME} | grep -- '-' | grep -v old}
+ALL_BILINGUAL_MODELS := ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" |  grep -v -- '\+'}
+ALL_MULTILINGUAL_MODELS := ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" | grep -- '\+'}
+
 
 
 ##----------------------------------------------------------------------------
 ## train/dev/test data
 ##----------------------------------------------------------------------------
 
-## dev/test data: default = Tatoeba otherwise, GlobalVoices, JW300, GNOME or bibl-uedin
-## - check that data exist
-## - check that there are at least 2 x DEVMINSIZE examples
-## TODO: this does not work well for multilingual models!
-## TODO: find a better solution than looking into *.info files (use OPUS API?)
-## ---> query for corpora bigger than a certain size and look for a suitable test/dev corpus
 
-ifneq ($(wildcard ${OPUSHOME}/Tatoeba/latest/moses/${LANGPAIR}.txt.zip),)
-ifeq ($(shell if (( `head -1 ${OPUSHOME}/Tatoeba/latest/info/${LANGPAIR}.txt.info` \
-		    > $$((${DEVMINSIZE} + ${DEVMINSIZE})) )); then echo "ok"; fi),ok)
-  DEVSET = Tatoeba
-endif
-endif
+## select a suitable DEVSET
+##   - POTENTIAL_DEVSETS lists more or less reliable corpora (in order of priority)
+##   - BIGGER_BITEXTS lists all bitext with more than DEVSMALLSIZE sentence pairs
+##   - SMALLER_BITEXTS lists potentially smaller bitexts but at least DEVMINSIZE big
+##   - DEVSET is the first of the potential devset that exists with sufficient size
 
-## backoff to GlobalVoices
-ifndef DEVSET
-ifneq ($(wildcard ${OPUSHOME}/GlobalVoices/latest/moses/${LANGPAIR}.txt.zip),)
-ifeq ($(shell if (( `head -1 ${OPUSHOME}/GlobalVoices/latest/info/${LANGPAIR}.txt.info` \
-		    > $$((${DEVMINSIZE} + ${DEVMINSIZE})) )); then echo "ok"; fi),ok)
-  DEVSET = GlobalVoices
-endif
-endif
-endif
-
-## backoff to infopankki
-ifndef DEVSET
-ifneq ($(wildcard ${OPUSHOME}/infopankki/latest/moses/${LANGPAIR}.txt.zip),)
-ifeq ($(shell if (( `head -1 ${OPUSHOME}/infopankki/latest/info/${LANGPAIR}.txt.info` \
-		    > $$((${DEVMINSIZE} + ${DEVMINSIZE})) )); then echo "ok"; fi),ok)
-  DEVSET = infopankki
-endif
-endif
-endif
-
-## backoff to JW300
-ifndef DEVSET
-ifneq ($(wildcard ${OPUSHOME}/JW300/latest/xml/${LANGPAIR}.xml.gz),)
-ifeq ($(shell if (( `sed -n 2p ${OPUSHOME}/JW300/latest/info/${LANGPAIR}.info` \
-		    > $$((${DEVMINSIZE} + ${DEVMINSIZE})) )); then echo "ok"; fi),ok)
-  DEVSET = JW300
-endif
-endif
-endif
-
-## otherwise: bible-uedin
-ifndef DEVSET
-  DEVSET = bible-uedin
-endif
+POTENTIAL_DEVSETS = Tatoeba GlobalVoices infopankki JW300 bible-uedin
+BIGGER_BITEXTS   := ${call get-bigger-bitexts,${SRC},${TRG},${DEVSMALLSIZE}}
+SMALLER_BITEXTS  := ${call get-bigger-bitexts,${SRC},${TRG},${DEVMINSIZE}}
+DEVSET ?= ${firstword 	${foreach c,${POTENTIAL_DEVSETS},${filter ${c},${BIGGER_BITEXTS}}} \
+			${foreach c,${POTENTIAL_DEVSETS},${filter ${c},${SMALLER_BITEXTS}}}}
 
 
 ## increase dev/test sets for Tatoeba (very short sentences!)
@@ -271,22 +258,6 @@ endif
 
 ifndef BPEMODELNAME
   BPEMODELNAME = opus
-endif
-
-##-------------------------------------
-## OLD OLD OLD
-## name of the data set (and the model)
-##  - single corpus = use that name
-##  - multiple corpora = opus
-## add also vocab size to the name
-##-------------------------------------
-
-ifndef OLDDATASET
-ifeq (${words ${TRAINSET}},1)
-  OLDDATASET = ${TRAINSET}
-else
-  OLDDATASET = opus
-endif
 endif
 
 
@@ -353,7 +324,7 @@ MODEL_VOCABTYPE = yml
 MODEL_VOCAB     = ${WORKDIR}/${MODEL}.vocab.${MODEL_VOCABTYPE}
 MODEL_DECODER   = ${MODEL_FINAL}.decoder.yml
 
-## latest model with the same pre-processing nbut any data or modeltyp
+## latest model with the same pre-processing but any data or modeltype
 ifdef CONTINUE_EXISTING
   MODEL_LATEST       = $(firstword ${shell ls -t ${WORKDIR}/*.${PRE_SRC}-${PRE_TRG}.*.best-perplexity.npz 2>/dev/null})
   MODEL_LATEST_VOCAB = $(shell echo "${MODEL_LATEST}" | \
@@ -440,10 +411,34 @@ endif
 
 
 ## list of all languages in OPUS
+## TODO: do we still need this?
+## --> see OPUSLANGS which is directly taken from the API
 opus-langs.txt:
-	wget -O $@.tmp http://opus.nlpl.eu/opusapi/?languages=true
+	wget -O $@.tmp ${OPUSAPI}?languages=true
 	grep '",' $@.tmp | tr '",' '  ' | sort | tr "\n" ' ' | sed 's/  */ /g' > $@
 	rm -f $@.tmp
+
+## all language pairs in opus in one file
+## TODO: do we need this file?
+opus-langpairs.txt:
+	for l in ${OPUS_LANGS}; do \
+	  wget -O $@.tmp ${OPUSAPI}?source=$$l\&languages=true; \
+	  grep '",' $@.tmp | tr '",' '  ' | sort | tr "\n" ' ' | sed 's/  */ /g' > $@.tmp2; \
+	  for t in `cat $@.tmp2`; do \
+	    if [ $$t \< $$l ]; then \
+	      echo "$$t-$$l" >> $@.all; \
+	    else \
+	      echo "$$l-$$t" >> $@.all; \
+	    fi \
+	  done; \
+	  rm -f $@.tmp $@.tmp2; \
+	done
+	tr ' ' "\n" < $@.all |\
+	sed 's/ //g' | sort -u | tr "\n" ' ' > $@
+	rm -f $@.all
+
+
+
 
 
 ## make some data size-specific configuration parameters

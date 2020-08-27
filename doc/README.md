@@ -21,6 +21,8 @@ More information about specific tasks:
 * [Fine-tuning models](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/finetune/README.md)
 * [Generate pivot-language-based translations](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/pivoting/README.md)
 * [Models for the Tatoeba MT Challenge](TatoebaChallenge.md)
+* [Packaging, releases and storage](ReleaseAndStore.md)
+
 
 Tutorials (to-do)
 

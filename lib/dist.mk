@@ -74,7 +74,7 @@ best-dist best_dist:
 	s=''; \
 	echo "------------------------------------------------"; \
 	echo "search best model for ${LANGPAIRSTR}"; \
-	for d in ${ALT_MODEL_DIR}; do \
+	for d in work ${ALT_MODEL_DIR}; do \
 	  if [ -e "work-$$d/${LANGPAIRSTR}/test/${TESTSET}.trg" ]; then \
 	    e=`basename work-$$d/${LANGPAIRSTR}/test/${TESTSET}.trg | sed 's/\.trg$$//'`; \
 	  else \
