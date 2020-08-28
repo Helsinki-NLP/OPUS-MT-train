@@ -324,7 +324,7 @@ endif
 
 add-to-local-train-data: ${CLEAN_TRAIN_SRC} ${CLEAN_TRAIN_TRG}
 ifdef CHECK_TRAINDATA_SIZE
-	@if [ `${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_SRC}} | wc -l` != `${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_TRG}} | wc -l` ]; then \
+	@if [ `zcat ${wildcard ${CLEAN_TRAIN_SRC}} | wc -l` != `zcat ${wildcard ${CLEAN_TRAIN_TRG}} | wc -l` ]; then \
 	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
 	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
 	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
@@ -353,13 +353,13 @@ endif
 ######################################
 ifeq (${USE_TARGET_LABELS},1)
 	echo "set target language labels";
-	${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_SRC}} ${CUT_DATA_SETS} |\
+	zcat ${wildcard ${CLEAN_TRAIN_SRC}} ${CUT_DATA_SETS} |\
 	sed "s/^/>>${TRG}<< /" > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
 else
 	echo "only one target language"
-	${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_SRC}} ${CUT_DATA_SETS} > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
+	zcat ${wildcard ${CLEAN_TRAIN_SRC}} ${CUT_DATA_SETS} > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
 endif
-	${GZIP} -cd < ${wildcard ${CLEAN_TRAIN_TRG}} ${CUT_DATA_SETS} > ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
+	zcat ${wildcard ${CLEAN_TRAIN_TRG}} ${CUT_DATA_SETS} > ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
 ######################################
 #  SHUFFLE_DATA is set?
 #    --> shuffle data for each langpair
@@ -438,34 +438,34 @@ ${DEV_SRC}: %: %.shuffled.gz
 ## ---> make sure that we do not have any overlap between the two data sets
 ## ---> reserve at least DEVMINSIZE data for dev data and keep the rest for testing
 ifeq (${DEVSET},${TESTSET})
-	if (( `${GZIP} -cd < $@.shuffled.gz | wc -l` < $$((${DEVSIZE} + ${TESTSIZE})) )); then \
-	  if (( `${GZIP} -cd < $@.shuffled.gz | wc -l` < $$((${DEVSMALLSIZE} + ${DEVMINSIZE})) )); then \
-	    ${GZIP} -cd < $@.shuffled.gz | cut -f1 | head -${DEVMINSIZE} > ${DEV_SRC}; \
-	    ${GZIP} -cd < $@.shuffled.gz | cut -f2 | head -${DEVMINSIZE} > ${DEV_TRG}; \
+	if (( `${GZIP} -cd < $< | wc -l` < $$((${DEVSIZE} + ${TESTSIZE})) )); then \
+	  if (( `${GZIP} -cd < $< | wc -l` < $$((${DEVSMALLSIZE} + ${DEVMINSIZE})) )); then \
+	    ${GZIP} -cd < $< | cut -f1 | head -${DEVMINSIZE} > ${DEV_SRC}; \
+	    ${GZIP} -cd < $< | cut -f2 | head -${DEVMINSIZE} > ${DEV_TRG}; \
 	    mkdir -p ${dir ${TEST_SRC}}; \
-	    ${GZIP} -cd < $@.shuffled.gz | cut -f1 | tail -n +$$((${DEVMINSIZE} + 1)) > ${TEST_SRC}; \
-	    ${GZIP} -cd < $@.shuffled.gz | cut -f2 | tail -n +$$((${DEVMINSIZE} + 1)) > ${TEST_TRG}; \
+	    ${GZIP} -cd < $< | cut -f1 | tail -n +$$((${DEVMINSIZE} + 1)) > ${TEST_SRC}; \
+	    ${GZIP} -cd < $< | cut -f2 | tail -n +$$((${DEVMINSIZE} + 1)) > ${TEST_TRG}; \
 	  else \
-	    ${GZIP} -cd < $@.shuffled.gz | cut -f1 | head -${DEVSMALLSIZE} > ${DEV_SRC}; \
-	    ${GZIP} -cd < $@.shuffled.gz | cut -f2 | head -${DEVSMALLSIZE} > ${DEV_TRG}; \
+	    ${GZIP} -cd < $< | cut -f1 | head -${DEVSMALLSIZE} > ${DEV_SRC}; \
+	    ${GZIP} -cd < $< | cut -f2 | head -${DEVSMALLSIZE} > ${DEV_TRG}; \
 	    mkdir -p ${dir ${TEST_SRC}}; \
-	    ${GZIP} -cd < $@.shuffled.gz | cut -f1 | tail -n +$$((${DEVSMALLSIZE} + 1)) > ${TEST_SRC}; \
-	    ${GZIP} -cd < $@.shuffled.gz | cut -f2 | tail -n +$$((${DEVSMALLSIZE} + 1)) > ${TEST_TRG}; \
+	    ${GZIP} -cd < $< | cut -f1 | tail -n +$$((${DEVSMALLSIZE} + 1)) > ${TEST_SRC}; \
+	    ${GZIP} -cd < $< | cut -f2 | tail -n +$$((${DEVSMALLSIZE} + 1)) > ${TEST_TRG}; \
 	  fi; \
 	else \
-	  ${GZIP} -cd < $@.shuffled.gz | cut -f1 | head -${DEVSIZE} > ${DEV_SRC}; \
-	  ${GZIP} -cd < $@.shuffled.gz | cut -f2 | head -${DEVSIZE} > ${DEV_TRG}; \
+	  ${GZIP} -cd < $< | cut -f1 | head -${DEVSIZE} > ${DEV_SRC}; \
+	  ${GZIP} -cd < $< | cut -f2 | head -${DEVSIZE} > ${DEV_TRG}; \
 	  mkdir -p ${dir ${TEST_SRC}}; \
-	  ${GZIP} -cd < $@.shuffled.gz | cut -f1 | head -$$((${DEVSIZE} + ${TESTSIZE})) | tail -${TESTSIZE} > ${TEST_SRC}; \
-	  ${GZIP} -cd < $@.shuffled.gz | cut -f2 | head -$$((${DEVSIZE} + ${TESTSIZE})) | tail -${TESTSIZE} > ${TEST_TRG}; \
-	  ${GZIP} -cd < $@.shuffled.gz | cut -f1 | tail -n +$$((${DEVSIZE} + ${TESTSIZE})) | ${GZIP} -c > ${DEV_SRC}.notused.gz; \
-	  ${GZIP} -cd < $@.shuffled.gz | cut -f2 | tail -n +$$((${DEVSIZE} + ${TESTSIZE})) | ${GZIP} -c > ${DEV_TRG}.notused.gz; \
+	  ${GZIP} -cd < $< | cut -f1 | head -$$((${DEVSIZE} + ${TESTSIZE})) | tail -${TESTSIZE} > ${TEST_SRC}; \
+	  ${GZIP} -cd < $< | cut -f2 | head -$$((${DEVSIZE} + ${TESTSIZE})) | tail -${TESTSIZE} > ${TEST_TRG}; \
+	  ${GZIP} -cd < $< | cut -f1 | tail -n +$$((${DEVSIZE} + ${TESTSIZE})) | ${GZIP} -c > ${DEV_SRC}.notused.gz; \
+	  ${GZIP} -cd < $< | cut -f2 | tail -n +$$((${DEVSIZE} + ${TESTSIZE})) | ${GZIP} -c > ${DEV_TRG}.notused.gz; \
 	fi
 else
-	${GZIP} -cd < $@.shuffled.gz | cut -f1 | head -${DEVSIZE} > ${DEV_SRC}
-	${GZIP} -cd < $@.shuffled.gz | cut -f2 | head -${DEVSIZE} > ${DEV_TRG}
-	${GZIP} -cd < $@.shuffled.gz | cut -f1 | tail -n +$$((${DEVSIZE} + 1)) | ${GZIP} -c > ${DEV_SRC}.notused.gz
-	${GZIP} -cd < $@.shuffled.gz | cut -f2 | tail -n +$$((${DEVSIZE} + 1)) | ${GZIP} -c > ${DEV_TRG}.notused.gz
+	${GZIP} -cd < $< | cut -f1 | head -${DEVSIZE} > ${DEV_SRC}
+	${GZIP} -cd < $< | cut -f2 | head -${DEVSIZE} > ${DEV_TRG}
+	${GZIP} -cd < $< | cut -f1 | tail -n +$$((${DEVSIZE} + 1)) | ${GZIP} -c > ${DEV_SRC}.notused.gz
+	${GZIP} -cd < $< | cut -f2 | tail -n +$$((${DEVSIZE} + 1)) | ${GZIP} -c > ${DEV_TRG}.notused.gz
 endif
 	echo ""                                         >> ${dir ${DEV_SRC}}/README.md
 	echo -n "* devset = top "                       >> ${dir ${DEV_SRC}}/README.md
@@ -491,16 +491,16 @@ ${DEV_TRG}: ${DEV_SRC}
 add-to-dev-data: ${CLEAN_DEV_SRC} ${CLEAN_DEV_TRG}
 	mkdir -p ${dir ${DEV_SRC}}
 	echo -n "* ${LANGPAIR}: ${DEVSET}, "      >> ${dir ${DEV_SRC}}README.md
-	${GZIP} -cd < ${CLEAN_DEV_SRC} | wc -l    >> ${dir ${DEV_SRC}}README.md
+	zcat ${CLEAN_DEV_SRC} | wc -l             >> ${dir ${DEV_SRC}}README.md
 ifeq (${USE_TARGET_LABELS},1)
 	echo "more than one target language";
-	${GZIP} -cd < ${CLEAN_DEV_SRC} |\
+	zcat ${CLEAN_DEV_SRC} |\
 	sed "s/^/>>${TRG}<< /" >> ${DEV_SRC}
 else
 	echo "only one target language"
-	${GZIP} -cd < ${CLEAN_DEV_SRC} >> ${DEV_SRC}
+	zcat ${CLEAN_DEV_SRC} >> ${DEV_SRC}
 endif
-	${GZIP} -cd < ${CLEAN_DEV_TRG} >> ${DEV_TRG}
+	zcat ${CLEAN_DEV_TRG} >> ${DEV_TRG}
 
 
 ####################
@@ -563,13 +563,13 @@ add-to-test-data: ${CLEAN_TEST_SRC}
 	echo "* ${LANGPAIR}: ${TESTSET}" >> ${dir ${TEST_SRC}}README.md
 ifeq (${USE_TARGET_LABELS},1)
 	echo "more than one target language";
-	${GZIP} -cd < ${CLEAN_TEST_SRC} |\
+	zcat ${CLEAN_TEST_SRC} |\
 	sed "s/^/>>${TRG}<< /" >> ${TEST_SRC}
 else
 	echo "only one target language"
-	${GZIP} -cd < ${CLEAN_TEST_SRC} >> ${TEST_SRC}
+	zcat ${CLEAN_TEST_SRC} >> ${TEST_SRC}
 endif
-	${GZIP} -cd < ${CLEAN_TEST_TRG} >> ${TEST_TRG}
+	zcat ${CLEAN_TEST_TRG} >> ${TEST_TRG}
 
 
 
