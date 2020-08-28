@@ -161,6 +161,7 @@ wiki-iso639-doc:
 # WIKISOURCES = wiki wikibooks wikinews wikiquote wikisource wiktionary
 WIKISOURCES = wiki wikibooks wikinews wikiquote wikisource
 
+.PHONY: translate-all-wikis
 translate-all-wikis: ${LANGPAIR}/${MODELNAME}/decoder.yml
 	for w in ${WIKISOURCES}; do \
 	  ${MAKE} WIKISOURCE=$$w extract-text; \
@@ -171,6 +172,7 @@ translate-all-wikis: ${LANGPAIR}/${MODELNAME}/decoder.yml
 	  fi \
 	done
 
+.PHONY: translate-all-wikiparts
 translate-all-wikiparts: ${LANGPAIR}/${MODELNAME}/decoder.yml
 	for w in ${WIKISOURCES}; do \
 	  ${MAKE} WIKISOURCE=$$w extract-text; \

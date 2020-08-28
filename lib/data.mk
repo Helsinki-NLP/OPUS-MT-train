@@ -250,18 +250,17 @@ ${TRAIN_ALG}: 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 	    rm -f ${@:.${SRCEXT}.raw=.xml} ${@:.${SRCEXT}.raw=.ids} ${dir $@}/README ${dir $@}/LICENSE; \
 	  elif [ -e ${OPUSHOME}/$$c/latest/xml/${LANGPAIR}.xml.gz ]; then \
 	    echo "extract $$c (${LANGPAIR}) from XML in local OPUS copy"; \
-	    opus_read ${OPUSREAD_ARGS} -rd ${OPUSHOME} \
-			-dl ${dir $@} -d $$c -s ${SRC} -t ${TRG} \
-			-wm moses -p raw -w $@ ${@:.${SRCEXT}.raw=.${TRGEXT}.raw}; \
-	  elif [ -e ${OPUSHOME}/$$c/latest/xml/${LANGPAIR}.xml.gz ]; then \
-	    echo "fetch $$c (${LANGPAIR}) from OPUS"; \
-	    opus_read ${OPUSREAD_ARGS} -q -dl ${dir $@} -d $$c -s ${SRC} -t ${TRG} \
+	    opus_read ${OPUSREAD_ARGS} -ln -rd ${OPUSHOME} -d $$c -s ${SRC} -t ${TRG} \
 			-wm moses -p raw -w $@ ${@:.${SRCEXT}.raw=.${TRGEXT}.raw}; \
 	  else \
-	    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
-	    echo "!! skip $@"; \
-	    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+	    echo "fetch $$c (${LANGPAIR}) from OPUS"; \
+	    opus_read ${OPUSREAD_ARGS} -ln -q -dl ${TMPDIR} -d $$c -s ${SRC} -t ${TRG} \
+			-wm moses -p raw -w $@ ${@:.${SRCEXT}.raw=.${TRGEXT}.raw}; \
 	  fi )
+
+#	    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+#	    echo "!! skip $@"; \
+#	    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
 
 
 %.${TRGEXT}.raw: %.${SRCEXT}.raw

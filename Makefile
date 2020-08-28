@@ -197,6 +197,7 @@ all: ${WORKDIR}/config.mk
 # select project_2002688 (OPUS-MT)
 #  - "make store" overrides
 #  - "make fetch" does not override (delete dir first)
+#  - storing data will resolve symbolic links
 #---------------------------------------------------------------------
 
 .PHONY: store store-data fetch fetch-data
@@ -208,7 +209,7 @@ WORK_CONTAINER ?= OPUS-MT_${notdir ${WORKHOME}}-${WHOAMI}
 
 ## store workdir on allas
 store:
-	cd ${WORK_SRCDIR} && a-put -b ${WORK_CONTAINER} --override ${LANGPAIRSTR}
+	cd ${WORK_SRCDIR} && a-put -b ${WORK_CONTAINER} --follow-links --override ${LANGPAIRSTR}
 
 ## fetch workdir from allas
 fetch:
@@ -218,7 +219,7 @@ fetch:
 
 ## store and fetch data dir (raw data files)
 store-data:
-	cd ${WORK_SRCDIR} && a-put -b ${WORK_CONTAINER} --override data
+	cd ${WORK_SRCDIR} && a-put -b ${WORK_CONTAINER} --follow-links --override data
 
 fetch-data:
 	mkdir -p ${WORK_DESTDIR}

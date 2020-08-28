@@ -5,10 +5,10 @@ The build targets are all included in various makefiles and the main idea is to 
 
 The package includes 4 components:
 
-* [basic training](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/Makefile) of bilingual and multilingual models
-* [back-translation](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/backtranslate/Makefile) for data augmentation
-* [fine-tuning](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/finetune/Makefile) for domain adaptation
-* [pivoting](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/pivoting/Makefile) for data augmentation
+* basic training of bilingual and multilingual models ([Makefile](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/Makefile))
+* [Generating back-translations](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/backtranslate/README.md) for data augmentation ([Makefile](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/backtranslate/Makefile))
+* [Fine-tuning models](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/finetune/README.md) for domain adaptation ([Makefile](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/finetune/Makefile))
+* [Generate pivot-language-based translations](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/pivoting/README.md) for data augmentation ([pivoting](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/pivoting/Makefile))
 
 
 More information about specific tasks:
@@ -17,11 +17,8 @@ More information about specific tasks:
 * [Training models](Train.md)
 * [Testing models](Test.md)
 * [Running batch jobs](BatchJobs.md)
-* [Generating back-translations](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/backtranslate/README.md)
-* [Fine-tuning models](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/finetune/README.md)
-* [Generate pivot-language-based translations](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/pivoting/README.md)
+* [Packaging, releases and storage](ReleaseAndStore.md) 
 * [Models for the Tatoeba MT Challenge](TatoebaChallenge.md)
-* [Packaging, releases and storage](ReleaseAndStore.md)
 
 
 Tutorials (to-do)
