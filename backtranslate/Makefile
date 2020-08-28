@@ -632,7 +632,7 @@ ${WIKI_LATEST_TRG}: ${WIKI_TRG}
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
 	${MAKE} ${LANGPAIR}/${MODELNAME}/decoder.yml
-	${LOADMODS} && cd ${LANGPAIR}/${MODELNAME} && ${MARIAN}/marian-decoder \
+	${LOADMODS} && cd ${LANGPAIR}/${MODELNAME} && ${MARIAN_DECODER} \
 		-i ${PWD}/$< \
 		-c decoder.yml \
 		-d ${MARIAN_GPUS} \

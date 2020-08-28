@@ -276,7 +276,7 @@ ${TRANSLATED_LATEST_TRG}: ${ORIGINAL_DATATRG} ${TRANSLATED_LATEST_SRC}
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
 	${MAKE} ${OUTPUT_DIR}/${MODELNAME}/decoder.yml
-	${LOADMODS} && cd ${OUTPUT_DIR}/${MODELNAME} && ${MARIAN}/marian-decoder \
+	${LOADMODS} && cd ${OUTPUT_DIR}/${MODELNAME} && ${MARIAN_DECODER} \
 		-i ${PWD}/$< \
 		-c decoder.yml \
 		-d ${MARIAN_GPUS} \

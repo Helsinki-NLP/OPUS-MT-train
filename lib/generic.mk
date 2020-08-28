@@ -384,11 +384,5 @@ endif
 	${@:-bpe-old=}
 
 
-## for the inbuilt sentence-piece segmentation:
-#		PRE_SRC=txt PRE_TRG=txt
-#		MARIAN=${MARIAN}-spm
-#		MODEL_VOCABTYPE=spm
-
-
 
 

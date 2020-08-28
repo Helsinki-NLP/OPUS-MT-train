@@ -21,6 +21,23 @@ More information about specific tasks:
 * [Models for the Tatoeba MT Challenge](TatoebaChallenge.md)
 
 
+Documentation of specific models:
+
+* [Celtic language models](models/Celtic.md)
+* [Romance language models](models/Romance.md)
+* [Russian models](models/Russian.md)
+* [Sami language model](models/Sami.md)
+
+* [Languages in Finland](models/Finland.md)
+* [Multilingual models](models/Multilingual.md)
+* [Doc-level models](models/Doclevel.md)
+* [Simplification models](models/Simplify.md)
+
+* [Fiskmö project](models/fiskmo.md)
+* [MeMAD project](models/memad.md)
+* [Wikimedia collaboration model](models/Wikimedia.md)
+
+
 Tutorials (to-do)
 
 * [Low-resource translation](tutorials/low-resource.md)

@@ -60,17 +60,17 @@ else
 endif
 	${MAKE} ${LOCAL_TRAIN_SRC}.charfreq
 	if [ `cat ${LOCAL_TRAIN_SRC}.charfreq | wc -l` -gt 1000 ]; then \
-	  ${SPM_HOME}/spm_train ${SPMEXTRA} \
+	  ${SPM_TRAIN} ${SPMEXTRA} \
 		--model_prefix=$@ --vocab_size=$(SRCBPESIZE) --input=${LOCAL_TRAIN_SRC}.text \
 		--character_coverage=0.9995 --hard_vocab_limit=false; \
 	else \
-	  ${SPM_HOME}/spm_train ${SPMEXTRA} \
+	  ${SPM_TRAIN} ${SPMEXTRA} \
 		--model_prefix=$@ --vocab_size=$(SRCBPESIZE) --input=${LOCAL_TRAIN_SRC}.text \
 		--character_coverage=1.0 --hard_vocab_limit=false; \
 	fi
 	mv $@.model $@
 ifeq (${GENERATE_SPM_VOC},1)
-	${SPM_HOME}/spm_encode --model=$@ --generate_vocabulary < ${LOCAL_TRAIN_SRC}.text > $@.voc
+	${SPM_ENCODE} --model=$@ --generate_vocabulary < ${LOCAL_TRAIN_SRC}.text > $@.voc
 endif
 	rm -f ${LOCAL_TRAIN_SRC}.text
 endif
@@ -90,17 +90,17 @@ else
 	grep . ${LOCAL_TRAIN_TRG} | ${SHUFFLE} > ${LOCAL_TRAIN_TRG}.text
 	${MAKE} ${LOCAL_TRAIN_TRG}.charfreq
 	if [ `cat ${LOCAL_TRAIN_TRG}.charfreq | wc -l` -gt 1000 ]; then \
-	  ${SPM_HOME}/spm_train ${SPMEXTRA} \
+	  ${SPM_TRAIN} ${SPMEXTRA} \
 		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=${LOCAL_TRAIN_TRG}.text \
 		--character_coverage=0.9995 --hard_vocab_limit=false; \
 	else \
-	  ${SPM_HOME}/spm_train ${SPMEXTRA} \
+	  ${SPM_TRAIN} ${SPMEXTRA} \
 		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=${LOCAL_TRAIN_TRG}.text \
 		--character_coverage=1.0 --hard_vocab_limit=false; \
 	fi
 	mv $@.model $@
 ifeq (${GENERATE_SPM_VOC},1)
-	${SPM_HOME}/spm_encode --model=$@ --generate_vocabulary < ${LOCAL_TRAIN_TRG}.text > $@.voc
+	${SPM_ENCODE} --model=$@ --generate_vocabulary < ${LOCAL_TRAIN_TRG}.text > $@.voc
 endif
 	rm -f ${LOCAL_TRAIN_TRG}.text
 endif
@@ -137,8 +137,8 @@ endif
 ${SPMVOCAB}: ${LOCAL_MONO_DATA}.${PRE} ${SPMMODEL}
 ifeq ($(wildcard ${SPMVOCAB}),)
 	mkdir -p ${dir $@}
-	${SPM_HOME}/spm_encode --model ${SPMMODEL} < $< |\
-	${MARIAN}/marian-vocab --max-size ${VOCABSIZE} > $@
+	${SPM_ENCODE} --model ${SPMMODEL} < $< |\
+	${MARIAN_VOCAB} --max-size ${VOCABSIZE} > $@
 else
 	@echo "$@ already exists!"
 	@echo "WARNING! No new vocabulary is created even though the data has changed!"
@@ -169,16 +169,16 @@ ifeq ($(wildcard ${SPMMODEL}),)
 	grep . $< | ${SHUFFLE} > $<.text
 	${MAKE} ${LOCAL_MONO_DATA}.${PRE}.charfreq
 	if [ `cat ${LOCAL_MONO_DATA}.${PRE}.charfreq | wc -l` -gt 1000 ]; then \
-	  ${SPM_HOME}/spm_train ${SPMEXTRA} \
+	  ${SPM_TRAIN} ${SPMEXTRA} \
 		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=$<.text \
 		--character_coverage=0.9995 --hard_vocab_limit=false; \
 	else \
-	  ${SPM_HOME}/spm_train ${SPMEXTRA} \
+	  ${SPM_TRAIN} ${SPMEXTRA} \
 		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=$<.text \
 		--character_coverage=1.0 --hard_vocab_limit=false; \
 	fi
 	mv $@.model $@
-	${SPM_HOME}/spm_encode --model=$@ --generate_vocabulary < $<.text > $@.voc
+	${SPM_ENCODE} --model=$@ --generate_vocabulary < $<.text > $@.voc
 	rm -f $<.text
 else
 	@echo "$@ already exists!"
@@ -232,15 +232,15 @@ endif
 ifeq (${USE_TARGET_LABELS},1)
 	cut -f1 -d ' ' $< > $<.labels
 	cut -f2- -d ' ' $< > $<.txt
-	${SPM_HOME}/spm_encode --model $(word 2,$^) < $<.txt > $@.txt
+	${SPM_ENCODE} --model $(word 2,$^) < $<.txt > $@.txt
 	paste -d ' ' $<.labels $@.txt > $@
 	rm -f $<.labels $<.txt $@.txt
 else
-	${SPM_HOME}/spm_encode --model $(word 2,$^) < $< > $@
+	${SPM_ENCODE} --model $(word 2,$^) < $< > $@
 endif
 
 %.trg.spm${TRGBPESIZE:000=}k: %.trg ${SPMTRGMODEL}
-	${SPM_HOME}/spm_encode --model $(word 2,$^) < $< > $@
+	${SPM_ENCODE} --model $(word 2,$^) < $< > $@
 
 
 ## document-level models (with guided alignment)

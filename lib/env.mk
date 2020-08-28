@@ -52,6 +52,7 @@ ifeq (${shell hostname},dx6-ibs-p2)
   WORKHOME     = ${shell realpath ${PWD}/work}
   OPUSHOME     = tiedeman@taito.csc.fi:/proj/nlpl/data/OPUS/
   MOSESHOME    = ${APPLHOME}/mosesdecoder
+  MARIAN_HOME  = ${APPLHOME}/marian/build/
   MARIAN       = ${APPLHOME}/marian/build
   LOADMODS     = echo "nothing to load"
 else ifeq (${shell hostname},dx7-nkiel-4gpu)
@@ -59,6 +60,7 @@ else ifeq (${shell hostname},dx7-nkiel-4gpu)
   WORKHOME     = ${shell realpath ${PWD}/work}
   OPUSHOME     = tiedeman@taito.csc.fi:/proj/nlpl/data/OPUS/
   MOSESHOME    = ${APPLHOME}/mosesdecoder
+  MARIAN_HOME  = ${APPLHOME}/marian/build/
   MARIAN       = ${APPLHOME}/marian/build
   LOADMODS     = echo "nothing to load"
 else ifneq ($(wildcard /wrk/tiedeman/research),)
@@ -66,6 +68,7 @@ else ifneq ($(wildcard /wrk/tiedeman/research),)
   WORKHOME     = /wrk/tiedeman/research/Opus-MT/work
   OPUSHOME     = /proj/nlpl/data/OPUS
   MOSESHOME    = /proj/nlpl/software/moses/4.0-65c75ff/moses
+  MARIAN_HOME  = ${HOME}/appl_taito/tools/marian/build-gpu/
   MARIAN       = ${HOME}/appl_taito/tools/marian/build-gpu
   MARIANCPU    = ${HOME}/appl_taito/tools/marian/build-cpu
   LOADMODS     = ${LOADGPU}
@@ -76,9 +79,10 @@ else ifeq (${shell hostname --domain 2>/dev/null},bullx)
   OPUSHOME     = /projappl/nlpl/data/OPUS
   MOSESHOME    = ${APPLHOME}/mosesdecoder
   EFLOMAL_HOME = ${APPLHOME}/eflomal/
+  MARIAN_HOME  = ${APPLHOME}/marian-dev/build/
   MARIAN       = ${APPLHOME}/marian-dev/build
   MARIANCPU    = ${APPLHOME}/marian-dev/build
-  MARIANSPM    = ${APPLHOME}/marian-dev/build
+  SPM_HOME     = ${MARIAN_HOME}
   GPU          = v100
   GPU_MODULES  = python-env 
   CPU_MODULES  = python-env
@@ -94,6 +98,12 @@ ifdef LOCAL_SCRATCH
 endif
 
 
+## marian-nmt binaries
+
+MARIAN_TRAIN   = ${MARIAN_HOME}marian
+MARIAN_DECODER = ${MARIAN_HOME}marian-decoder
+MARIAN_VOCAB   = ${MARIAN_HOME}marian-vocab
+
 
 ## other tools and their locations
 
@@ -101,18 +111,15 @@ SCRIPTDIR    = ${PWD}/scripts
 WORDALIGN    = ${EFLOMAL_HOME}align.py
 ATOOLS       = ${FASTALIGN_HOME}atools
 
-MULTEVALHOME = ${APPLHOME}/multeval
 MOSESSCRIPTS = ${MOSESHOME}/scripts
 TOKENIZER    = ${MOSESSCRIPTS}/tokenizer
 SNMTPATH     = ${APPLHOME}/subword-nmt/subword_nmt
 
-
 ## SentencePiece
-SPM_HOME     = ${MARIANSPM}
+SPM_TRAIN    = ${SPM_HOME}spm_train
+SPM_ENCODE   = ${SPM_HOME}spm_encode
 
 
-
-# SORT = sort -T ${TMPDIR} -S 50% --parallel=${THREADS}
 SORT = sort -T ${TMPDIR} --parallel=${THREADS}
 SHUFFLE = ${shell which terashuf 2>/dev/null}
 ifeq (${SHUFFLE},)
@@ -121,6 +128,10 @@ endif
 GZIP := ${shell which pigz 2>/dev/null}
 GZIP ?= gzip
 ZCAT = ${GZIP} -cd <
+
+
+# TODO: delete those?
+MULTEVALHOME = ${APPLHOME}/multeval
 
 
 

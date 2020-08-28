@@ -137,6 +137,10 @@ DEVMINSIZE    = 250
 OPUSREAD_ARGS = 
 
 
+##----------------------------------------------------------------------------
+## resources in OPUS
+##----------------------------------------------------------------------------
+
 ## OLD: get corpora directly from the file system
 #
 # ELRA_CORPORA = ${patsubst %/latest/xml/${LANGPAIR}.xml.gz,%,\
@@ -154,7 +158,6 @@ OPUSREAD_ARGS =
 #		${shell ls ${OPUSHOME}/*/latest/mono/${LANGID}.txt.gz}}})
 
 
-
 ## NEW: get data from the OPUS-API
 
 OPUSAPI = http://opus.nlpl.eu/opusapi/
@@ -166,6 +169,20 @@ get-bigger-bitexts = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&
 get-opus-langs     = ${shell wget -qq -O - ${OPUSAPI}?languages=True | jq '.languages[]' | tr '"' ' '}
 get-elra-bitexts   = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&corpora=True | \
 	jq '.corpora[]' | tr '"' ' ' | grep '^ *ELR[CA][-_]'}
+
+
+## start of some functions to check whether there is a resource for downloading
+## open question: links to the latest release do not exist in the storage
+## --> would it be better to get that done via the OPUS API?
+
+url-status = ${shell curl -Is -K HEAD ${1} | head -1}
+url-exists = ${shell if [ "${call url-status,${1}}" == "HTTP/1.1 200 OK" ]; then echo 1; else echo 0; fi}
+# resource-exists = ${shell if [ ] }
+
+test-url:
+	@echo ${call url-status,https://object.pouta.csc.fi/OPUS-GNOME/v1/moses/br-en.txt.zip}
+	@echo ${call url-exists,https://object.pouta.csc.fi/OPUS-GNOME/v1/moses/br-en.txt.zip}
+
 
 
 
@@ -183,10 +200,6 @@ OPUSMONOCORPORA = $(filter-out ${EXCLUDE_CORPORA},${call get-opus-mono,${LANGID}
 ## TODO: do we need this?
 OPUSLANGS := ${call get-opus-langs}
 
-## existing projects in WORKHOME
-ALL_LANG_PAIRS := ${shell ls ${WORKHOME} | grep -- '-' | grep -v old}
-ALL_BILINGUAL_MODELS := ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" |  grep -v -- '\+'}
-ALL_MULTILINGUAL_MODELS := ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" | grep -- '\+'}
 
 
 
@@ -207,7 +220,6 @@ SMALLER_BITEXTS  := ${call get-bigger-bitexts,${SRC},${TRG},${DEVMINSIZE}}
 DEVSET ?= ${firstword 	${foreach c,${POTENTIAL_DEVSETS},${filter ${c},${BIGGER_BITEXTS}}} \
 			${foreach c,${POTENTIAL_DEVSETS},${filter ${c},${SMALLER_BITEXTS}}}}
 
-
 ## increase dev/test sets for Tatoeba (very short sentences!)
 ifeq (${DEVSET},Tatoeba)
   DEVSIZE = 5000
@@ -225,6 +237,13 @@ MONOSET  ?= $(filter-out ${EXCLUDE_CORPORA} ${DEVSET} ${TESTSET},${OPUSMONOCORPO
 
 ## 1 = use remaining data from dev/test data for training
 USE_REST_DEVDATA ?= 1
+
+
+
+## existing projects in WORKHOME
+ALL_LANG_PAIRS := ${shell ls ${WORKHOME} | grep -- '-' | grep -v old}
+ALL_BILINGUAL_MODELS := ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" |  grep -v -- '\+'}
+ALL_MULTILINGUAL_MODELS := ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" | grep -- '\+'}
 
 
 ##----------------------------------------------------------------------------
@@ -410,36 +429,6 @@ endif
 
 
 
-## list of all languages in OPUS
-## TODO: do we still need this?
-## --> see OPUSLANGS which is directly taken from the API
-opus-langs.txt:
-	wget -O $@.tmp ${OPUSAPI}?languages=true
-	grep '",' $@.tmp | tr '",' '  ' | sort | tr "\n" ' ' | sed 's/  */ /g' > $@
-	rm -f $@.tmp
-
-## all language pairs in opus in one file
-## TODO: do we need this file?
-opus-langpairs.txt:
-	for l in ${OPUS_LANGS}; do \
-	  wget -O $@.tmp ${OPUSAPI}?source=$$l\&languages=true; \
-	  grep '",' $@.tmp | tr '",' '  ' | sort | tr "\n" ' ' | sed 's/  */ /g' > $@.tmp2; \
-	  for t in `cat $@.tmp2`; do \
-	    if [ $$t \< $$l ]; then \
-	      echo "$$t-$$l" >> $@.all; \
-	    else \
-	      echo "$$l-$$t" >> $@.all; \
-	    fi \
-	  done; \
-	  rm -f $@.tmp $@.tmp2; \
-	done
-	tr ' ' "\n" < $@.all |\
-	sed 's/ //g' | sort -u | tr "\n" ' ' > $@
-	rm -f $@.all
-
-
-
-
 
 ## make some data size-specific configuration parameters
 ## TODO: is it OK to delete LOCAL_TRAIN data?
@@ -550,3 +539,40 @@ endif
 ifdef USE_TARGET_LABELS
 	echo "USE_TARGET_LABELS = ${USE_TARGET_LABELS}"  >> $@
 endif
+
+
+
+
+################################################################
+### DEPRECATED? ################################################
+################################################################
+
+## list of all languages in OPUS
+## TODO: do we still need this?
+## --> see OPUSLANGS which is directly taken from the API
+opus-langs.txt:
+	wget -O $@.tmp ${OPUSAPI}?languages=true
+	grep '",' $@.tmp | tr '",' '  ' | sort | tr "\n" ' ' | sed 's/  */ /g' > $@
+	rm -f $@.tmp
+
+## all language pairs in opus in one file
+## TODO: do we need this file?
+opus-langpairs.txt:
+	for l in ${OPUS_LANGS}; do \
+	  wget -O $@.tmp ${OPUSAPI}?source=$$l\&languages=true; \
+	  grep '",' $@.tmp | tr '",' '  ' | sort | tr "\n" ' ' | sed 's/  */ /g' > $@.tmp2; \
+	  for t in `cat $@.tmp2`; do \
+	    if [ $$t \< $$l ]; then \
+	      echo "$$t-$$l" >> $@.all; \
+	    else \
+	      echo "$$l-$$t" >> $@.all; \
+	    fi \
+	  done; \
+	  rm -f $@.tmp $@.tmp2; \
+	done
+	tr ' ' "\n" < $@.all |\
+	sed 's/ //g' | sort -u | tr "\n" ' ' > $@
+	rm -f $@.all
+
+
+

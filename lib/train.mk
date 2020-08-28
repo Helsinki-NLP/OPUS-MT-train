@@ -30,7 +30,7 @@ ifneq (${MODEL_LATEST_VOCAB},)
 	cp ${MODEL_LATEST_VOCAB} ${MODEL_VOCAB}
 else
 	mkdir -p ${dir $@}
-	${LOADMODS} && zcat $^ | ${MARIAN}/marian-vocab --max-size ${VOCABSIZE} > $@
+	${LOADMODS} && zcat $^ | ${MARIAN_VOCAB} --max-size ${VOCABSIZE} > $@
 endif
 else
 	@echo "$@ already exists!"
@@ -70,7 +70,7 @@ endif
 endif
 endif
 ##--------------------------------------------------------------------
-	${LOADMODS} && ${MARIAN}/marian ${MARIAN_EXTRA} \
+	${LOADMODS} && ${MARIAN_TRAIN} ${MARIAN_EXTRA} \
         --model $(@:.done=.npz) \
 	--type transformer \
         --train-sets ${word 1,$^} ${word 2,$^} ${MARIAN_TRAIN_WEIGHTS} \
@@ -134,7 +134,7 @@ endif
 endif
 endif
 ##--------------------------------------------------------------------
-	${LOADMODS} && ${MARIAN}/marian ${MARIAN_EXTRA} \
+	${LOADMODS} && ${MARIAN_TRAIN} ${MARIAN_EXTRA} \
         --model $(@:.done=.npz) \
 	--type transformer \
         --train-sets ${word 1,$^} ${word 2,$^} ${MARIAN_TRAIN_WEIGHTS} \
