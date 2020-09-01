@@ -32,7 +32,7 @@ Documentation of project-specific models:
 * [Celtic language models](models/Celtic.md)
 * [Romance language models](models/Romance.md)
 * [Russian models](models/Russian.md)
-* [Sami language model](models/Sami.md)
+* [Sami language models](models/Sami.md)
 * [Languages in Finland](models/Finland.md)
 * [Multilingual models](models/Multilingual.md)
 * [Doc-level models](models/Doclevel.md)

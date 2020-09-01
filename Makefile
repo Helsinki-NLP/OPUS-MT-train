@@ -205,25 +205,27 @@ all: ${WORKDIR}/config.mk
 ## directories and container names to be used
 WORK_SRCDIR    ?= ${WORKHOME}
 WORK_DESTDIR   ?= ${WORKHOME}
-WORK_CONTAINER ?= OPUS-MT_${notdir ${WORKHOME}}-${WHOAMI}
+WORK_CONTAINER ?= OPUS-MT-train_${notdir ${WORKHOME}}-${WHOAMI}
 
 ## store workdir on allas
 store:
-	cd ${WORK_SRCDIR} && a-put -b ${WORK_CONTAINER} --follow-links --override ${LANGPAIRSTR}
+	cd ${WORK_SRCDIR} && a-put -b ${WORK_CONTAINER} --nc --follow-links --override ${LANGPAIRSTR}
 
 ## fetch workdir from allas
 fetch:
 	mkdir -p ${WORK_DESTDIR}
-	cd ${WORK_DESTDIR} && a-get ${WORK_CONTAINER}/${LANGPAIRSTR}.tar.zst
+	cd ${WORK_DESTDIR} && a-get ${WORK_CONTAINER}/${LANGPAIRSTR}.tar
+#	cd ${WORK_DESTDIR} && a-get ${WORK_CONTAINER}/${LANGPAIRSTR}.tar.zst
 
 
 ## store and fetch data dir (raw data files)
 store-data:
-	cd ${WORK_SRCDIR} && a-put -b ${WORK_CONTAINER} --follow-links --override data
+	cd ${WORK_SRCDIR} && a-put -b ${WORK_CONTAINER} --nc --follow-links --override data
 
 fetch-data:
 	mkdir -p ${WORK_DESTDIR}
-	cd ${WORK_DESTDIR} && a-get ${WORK_CONTAINER}/data.tar.zst
+	cd ${WORK_DESTDIR} && a-get ${WORK_CONTAINER}/data.tar
+#	cd ${WORK_DESTDIR} && a-get ${WORK_CONTAINER}/data.tar.zst
 
 
 #---------------------------------------------------------------------
