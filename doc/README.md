@@ -10,6 +10,7 @@ The package includes 4 components:
 * [Fine-tuning models](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/finetune/README.md) for domain adaptation ([Makefile](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/finetune/Makefile))
 * [Generate pivot-language-based translations](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/pivoting/README.md) for data augmentation ([pivoting](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/pivoting/Makefile))
 
+Information about [installation and setup is available here.](https://github.com/Helsinki-NLP/Opus-MT-train/tree/master/doc/Setup.md).
 
 More information about specific tasks:
 

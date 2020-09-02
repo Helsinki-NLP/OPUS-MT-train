@@ -10,7 +10,7 @@ The subdirectory [models](https://github.com/Helsinki-NLP/Opus-MT-train/tree/mas
 
 ## Prerequisites
 
-Running the scripts does not work out of the box because many settings are adjusted for the local installations on our IT infrastructure at [CSC](https://docs.csc.fi/). Here is an incomplete list of prerequisites needed for running a process. It is on our TODO list to make the training procedures and setting more transparent and self-contained but this will take time ...
+Running the scripts does not work out of the box because many settings are adjusted for the local installations on our IT infrastructure at [CSC](https://docs.csc.fi/). Here is an incomplete list of prerequisites needed for running a process. It is on our TODO list to make the training procedures and settings more transparent and self-contained. Preliminary information about [installation and setup is available here](https://github.com/Helsinki-NLP/Opus-MT-train/tree/master/doc/Setup.md).
 
 * [marian-nmt](https://github.com/marian-nmt/): The essential NMT toolkit we use in OPUS-MT; make sure you compile a version with GPU and SentencePiece support!
 * [Moses scripts](https://github.com/moses-smt/mosesdecoder): various pre- and post-processing scripts from the Moses SMT toolkit (also bundled here: [marian-nmt](https://github.com/marian-nmt/moses-scripts))
@@ -29,6 +29,7 @@ Optional (recommended) software:
 
 ## Documentation
 
+* [Installation and setup](https://github.com/Helsinki-NLP/Opus-MT-train/tree/master/doc/Setup.md)
 * [Details about tasks and recipes](https://github.com/Helsinki-NLP/Opus-MT-train/tree/master/doc/README.md)
 * [Information about back-translation](https://github.com/Helsinki-NLP/Opus-MT-train/tree/master/backtranslate/README.md)
 * [Information about Fine-tuning models](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/finetune/README.md)
