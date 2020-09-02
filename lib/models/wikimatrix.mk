@@ -26,13 +26,13 @@ endif
 
 ${DATADIR}/${PRE}/WikiMatrix.${WIKIMATRIX_SCORE}.${LANGPAIR}.${SRCEXT}.raw:
 	mkdir -p ${dir $@}
-	zcat ${WIKIMATRIX_DATA} | \
+	${ZCAT} ${WIKIMATRIX_DATA} | \
 	awk '{if($$1>${WIKIMATRIX_SCORE})print}' | \
 	cut -f${WIKIMATRIX_SRCFIELD} > $@
 
 ${DATADIR}/${PRE}/WikiMatrix.${WIKIMATRIX_SCORE}.${LANGPAIR}.${TRGEXT}.raw:
 	mkdir -p ${dir $@}
-	zcat ${WIKIMATRIX_DATA} | \
+	${ZCAT} ${WIKIMATRIX_DATA} | \
 	awk '{if($$1>${WIKIMATRIX_SCORE})print}' | \
 	cut -f${WIKIMATRIX_TRGFIELD} > $@
 

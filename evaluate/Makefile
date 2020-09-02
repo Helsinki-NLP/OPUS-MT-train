@@ -78,7 +78,7 @@ endif
 
 prepare-data: ${TEST_PRE}
 ${TEST_PRE}: ${TESTSET} ${WORKDIR}/model/decoder.yml
-	zcat $< | ${PREPROCESS} > $@
+	${ZCAT} $< | ${PREPROCESS} > $@
 
 
 translate: ${TEST_TRANS}
@@ -98,13 +98,13 @@ ${TEST_TRANS}: ${TEST_PRE} ${WORKDIR}/model/decoder.yml
 eval: ${TEST_EVAL}
 
 ${TEST_EVAL}: ${TEST_TRANS}
-	zcat ${patsubst %.${SRC}.gz,%.${TRG}.gz,${TESTSET}} > $@.ref
+	${ZCAT} ${patsubst %.${SRC}.gz,%.${TRG}.gz,${TESTSET}} > $@.ref
 	cat $< | sacrebleu $@.ref > $@
 	cat $< | sacrebleu --metrics=chrf --width=3 $@.ref >> $@
 	rm -f $@.ref
 
 ${TEST_EVALNORM}: ${TEST_TRANS}
-	zcat ${patsubst %.${SRC}.gz,%.${TRG}.gz,${TESTSET}} |\
+	${ZCAT} ${patsubst %.${SRC}.gz,%.${TRG}.gz,${TESTSET}} |\
 	${TOKENIZER}/replace-unicode-punctuation.perl |\
 	${TOKENIZER}/remove-non-printing-char.perl |\
 	${TOKENIZER}/normalize-punctuation.perl -l ${TRG} |\

@@ -223,20 +223,20 @@ goethe2-defi:
 
 ## without reference normalisation
 goethe-other:
-	zcat de-fi/goethe/test/goethe-institute-test1.fi.gz > $@.ref
+	${GZCAT} de-fi/goethe/test/goethe-institute-test1.fi.gz > $@.ref
 	for s in systran yandex google; do \
 	  cat ${HOME}/research/GoetheInstitute/data/test_de_oaversetted_van_$$s.txt |\
 	   gzip -c > de-fi/goethe/test/goethe-institute-test1.de.$$s.de.gz; \
-	  zcat de-fi/goethe/test/goethe-institute-test1.de.$$s.de.gz | sacrebleu $@.ref \
+	  ${GZCAT} de-fi/goethe/test/goethe-institute-test1.de.$$s.de.gz | sacrebleu $@.ref \
 	  > de-fi/goethe/test/goethe-institute-test1.de.$$s.de.eval; \
-	  zcat de-fi/goethe/test/goethe-institute-test1.de.$$s.de.gz | sacrebleu --metrics=chrf --width=3 $@.ref \
+	  ${GZCAT} de-fi/goethe/test/goethe-institute-test1.de.$$s.de.gz | sacrebleu --metrics=chrf --width=3 $@.ref \
 	  >> de-fi/goethe/test/goethe-institute-test1.de.$$s.de.eval; \
 	done
 	rm -f $@.ref
 
 ## with reference normalisation (should not do this)
 goethe-other-norm:
-	zcat de-fi/goethe/test/goethe-institute-test1.fi.gz |\
+	${GZCAT} de-fi/goethe/test/goethe-institute-test1.fi.gz |\
 	${TOKENIZER}/replace-unicode-punctuation.perl |\
 	${TOKENIZER}/remove-non-printing-char.perl |\
 	${TOKENIZER}/normalize-punctuation.perl -l ${TRG} |\
@@ -247,9 +247,9 @@ goethe-other-norm:
 	  ${TOKENIZER}/remove-non-printing-char.perl |\
 	  ${TOKENIZER}/normalize-punctuation.perl -l ${TRG} |\
 	  sed 's/  */ /g;s/^ *//g;s/ *$$//g' | gzip -c > de-fi/goethe/test/goethe-institute-test1.de.$$s.de.gz; \
-	  zcat de-fi/goethe/test/goethe-institute-test1.de.$$s.de.gz | sacrebleu $@.ref \
+	  ${GZCAT} de-fi/goethe/test/goethe-institute-test1.de.$$s.de.gz | sacrebleu $@.ref \
 	  > de-fi/goethe/test/goethe-institute-test1.de.$$s.de.eval-norm; \
-	  zcat de-fi/goethe/test/goethe-institute-test1.de.$$s.de.gz | sacrebleu --metrics=chrf --width=3 $@.ref \
+	  ${GZCAT} de-fi/goethe/test/goethe-institute-test1.de.$$s.de.gz | sacrebleu --metrics=chrf --width=3 $@.ref \
 	  >> de-fi/goethe/test/goethe-institute-test1.de.$$s.de.eval-norm; \
 	done
 	rm -f $@.ref
@@ -317,11 +317,11 @@ waen:	wa-en/opus/train/opus.wa.gz \
 
 wa-en/opus/train/opus.wa.gz: ../work/wa-en/train/opus.src.clean.spm32k.gz
 	mkdir -p ${dir $@}
-	zcat $< | sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' | gzip -c > $@
+	${GZCAT} $< | sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' | gzip -c > $@
 
 wa-en/opus/train/opus.en.gz: ../work/wa-en/train/opus.trg.clean.spm32k.gz
 	mkdir -p ${dir $@}
-	zcat $< | sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' | gzip -c > $@
+	${GZCAT} $< | sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' | gzip -c > $@
 
 wa-en/opus/dev/Tatoeba.wa.gz: ../work/wa-en/val/Tatoeba.src
 	mkdir -p ${dir $@}
@@ -353,11 +353,11 @@ enwa:	en-wa/opus/train/opus.wa.gz \
 
 en-wa/opus/train/opus.en.gz: ../work/en-wa/train/opus.src.clean.spm32k.gz
 	mkdir -p ${dir $@}
-	zcat $< | sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' | gzip -c > $@
+	${GZCAT} $< | sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' | gzip -c > $@
 
 en-wa/opus/train/opus.wa.gz: ../work/en-wa/train/opus.trg.clean.spm32k.gz
 	mkdir -p ${dir $@}
-	zcat $< | sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' | gzip -c > $@
+	${GZCAT} $< | sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' | gzip -c > $@
 
 en-wa/opus/dev/Tatoeba.en.gz: ../work/en-wa/val/Tatoeba.src
 	mkdir -p ${dir $@}
@@ -468,8 +468,8 @@ ifneq (${words ${NEWS_ALLSETS_SRC}},2)
 	cp ${NEWS_TESTSET_TRG} ${LANGPAIRSTR}/news/test/
 	cp ${NEWS_DEVSET_SRC} ${LANGPAIRSTR}/news/dev/
 	cp ${NEWS_DEVSET_TRG} ${LANGPAIRSTR}/news/dev/
-	zcat ${NEWS_TRAINSET_SRC} | gzip -c > ${LANGPAIRSTR}/news/train/news.${SRC}.gz
-	zcat ${NEWS_TRAINSET_TRG} | gzip -c > ${LANGPAIRSTR}/news/train/news.${TRG}.gz
+	${ZCAT} ${NEWS_TRAINSET_SRC} | gzip -c > ${LANGPAIRSTR}/news/train/news.${SRC}.gz
+	${ZCAT} ${NEWS_TRAINSET_TRG} | gzip -c > ${LANGPAIRSTR}/news/train/news.${TRG}.gz
 endif
 endif
 endif
@@ -498,13 +498,13 @@ TRGPRE_PARA = ${TRG} ${LANGPAIRSTR}/${BASEMODELNAME}/target.spm
 
 .INTERMEDIATE: ${TRAIN_SRC}.pre.gz ${DEV_SRC}.pre.gz ${TEST_SRC}.pre.gz
 ${TRAIN_SRC}.pre.gz ${DEV_SRC}.pre.gz ${TEST_SRC}.pre.gz: %.pre.gz: %.gz ${LANGPAIRSTR}/${BASEMODELNAME}/decoder.yml
-	zcat $< |\
+	${GZCAT} $< |\
 	${LANGPAIRSTR}/${BASEMODELNAME}/preprocess.sh ${SRCPRE_PARA} |\
 	gzip -c > $@
 
 .INTERMEDIATE: ${TRAIN_TRG}.pre.gz ${DEV_TRG}.pre.gz
 ${TRAIN_TRG}.pre.gz ${DEV_TRG}.pre.gz: %.pre.gz: %.gz ${LANGPAIRSTR}/${BASEMODELNAME}/decoder.yml
-	zcat $< |\
+	${GZCAT} $< |\
 	${LANGPAIRSTR}/${BASEMODELNAME}/preprocess.sh ${TRGPRE_PARA} |\
 	gzip -c > $@
 
@@ -599,20 +599,20 @@ eval-baseline: ${TEST_SRC}.${BASEMODELNAME}.baseline.${TRG}.eval
 
 ## without reference normalisation
 ${TEST_SRC}.${BASEMODELNAME}.${TRG}.eval ${TEST_SRC}.${BASEMODELNAME}.baseline.${TRG}.eval: %.eval: %.gz ${TEST_TRG}.gz
-	zcat ${TEST_TRG}.gz > $@.ref
-	zcat $< | sacrebleu $@.ref > $@
-	zcat $< | sacrebleu --metrics=chrf --width=3 $@.ref >> $@
+	${ZCAT} ${TEST_TRG}.gz > $@.ref
+	${ZCAT} $< | sacrebleu $@.ref > $@
+	${ZCAT} $< | sacrebleu --metrics=chrf --width=3 $@.ref >> $@
 	rm -f $@.ref
 
 ## with reference normalisation (should not do this)
 ${TEST_SRC}.${BASEMODELNAME}.${TRG}.eval-norm ${TEST_SRC}.${BASEMODELNAME}.baseline.${TRG}.eval-norm: %.eval-norm: %.gz ${TEST_TRG}.gz
-	zcat ${TEST_TRG}.gz |\
+	${ZCAT} ${TEST_TRG}.gz |\
 	${TOKENIZER}/replace-unicode-punctuation.perl |\
 	${TOKENIZER}/remove-non-printing-char.perl |\
 	${TOKENIZER}/normalize-punctuation.perl -l ${TRG} |\
 	sed 's/  */ /g;s/^ *//g;s/ *$$//g' > $@.ref
-	zcat $< | sacrebleu $@.ref > $@
-	zcat $< | sacrebleu --metrics=chrf --width=3 $@.ref >> $@
+	${ZCAT} $< | sacrebleu $@.ref > $@
+	${ZCAT} $< | sacrebleu --metrics=chrf --width=3 $@.ref >> $@
 	rm -f $@.ref
 
 
@@ -623,9 +623,9 @@ compare: ${TEST_SRC}.${BASEMODELNAME}.${TRG}.compare
 compare-baseline: ${TEST_SRC}.${BASEMODELNAME}.baseline.${TRG}.compare
 
 ${TEST_SRC}.${BASEMODELNAME}.${TRG}.compare ${TEST_SRC}.${BASEMODELNAME}.baseline.${TRG}.compare: %.compare: %.eval
-	zcat ${TEST_SRC}.gz > $@.1
-	zcat ${TEST_TRG}.gz > $@.2
-	zcat ${<:.eval=.gz} > $@.3
+	${ZCAT} ${TEST_SRC}.gz > $@.1
+	${ZCAT} ${TEST_TRG}.gz > $@.2
+	${ZCAT} ${<:.eval=.gz} > $@.3
 	paste -d "\n" $@.1 $@.2 $@.3 |\
 	sed 	-e "s/&apos;/'/g" \
 		-e 's/&quot;/"/g' \

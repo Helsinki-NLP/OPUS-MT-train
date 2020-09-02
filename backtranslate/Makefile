@@ -574,7 +574,7 @@ ${OUTPUT_DIR}/%.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.spm.gz: ${WIKI_DIR}/%.${
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
 	${MAKE} ${LANGPAIR}/${MODELNAME}/decoder.yml
-	zcat $< |\
+	${GZCAT} $< |\
 	grep -v '[<>{}]' |\
 	${LANGPAIR}/${MODELNAME}/preprocess.sh ${PREPROCESS_ARGS} |\
 	perl -e 'while (<>){next if (split(/\s+/)>${MAX_LENGTH});print;}' |\
@@ -590,7 +590,7 @@ endif
 ${WIKI_SRC}: ${WIKI_PRE}
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
-	zcat $< |\
+	${GZCAT} $< |\
 	sed 's/ //g;s/▁/ /g' | \
 	sed 's/^ *//;s/ *$$//' |\
 	sed 's/^>>[a-z]*<< //' |\
@@ -606,7 +606,7 @@ ALL_LATEST = ${wildcard */latest/*.gz}
 fix-prefix:
 	for d in ${ALL_LATEST}; do \
 	  echo "fix $$d"; \
-	  zcat $$d | sed 's/^>>[a-z]*<< //' > $$d.fixed; \
+	  ${ZCAT} $$d | sed 's/^>>[a-z]*<< //' > $$d.fixed; \
 	  cat $$d.fixed | gzip -c > $$d; \
 	  rm -f $$d.fixed; \
 	done
@@ -688,7 +688,7 @@ SENTSPLITTER ?= sed 's/^ *$$/\# newpar/' | \
 ${WIKI_TXT}: ${WIKI_JSON}
 	mkdir -p ${dir $@}
 	${LOAD_MODULES} \
-	zcat $< | jq -r '.text' | \
+	${GZCAT} $< | jq -r '.text' | \
 	grep -v 'null' |\
 	grep -v '[<>{}]' |\
 	${SENTSPLITTER} |\
@@ -708,7 +708,7 @@ ${WIKI_TXT}: ${WIKI_JSON}
 ${WIKI_DOC}: ${WIKI_JSON}
 	mkdir -p ${dir $@}
 	${LOAD_MODULES} \
-	zcat $< | jq -r '.text' | \
+	${GZCAT} $< | jq -r '.text' | \
 	sed 's/^ *null *$$//' |\
 	grep -v '[<>{}]' |\
 	${SENTSPLITTER} |\
@@ -729,9 +729,9 @@ check-length:
 	  for S in `ls $$d/*.$$s.gz`; do \
 	    T=`echo $$S | sed 's/.$$s.gz/.$$t.gz/'`; \
 	    echo "$$S -- $$T"; \
-	    zcat $$S | wc -l; \
-	    zcat $$T | wc -l; \
-	    if [ `zcat $$S | wc -l` != `zcat $$T | wc -l` ]; then \
+	    ${GZCAT} $$S | wc -l; \
+	    ${GZCAT} $$T | wc -l; \
+	    if [ `${GZCAT} $$S | wc -l` != `${GZCAT} $$T | wc -l` ]; then \
 	      echo "$$S != $$T"; \
 	    fi \
 	  done \
@@ -754,7 +754,7 @@ check-length:
 #
 # ${WIKI_TXT}: ${WIKI_JSON}
 # 	${LOAD_MODULES} \
-# 	zcat $< | jq -r '.text' | \
+# 	${ZCAT} $< | jq -r '.text' | \
 # 	grep -v 'null' |\
 # 	${SENTSPLITTER} |\
 # 	$(TOKENIZER)/replace-unicode-punctuation.perl |\

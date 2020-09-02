@@ -331,7 +331,8 @@ TEST_TRG  ?= ${WORKDIR}/test/${TESTSET_NAME}.trg
 
 MODEL_SUBDIR =
 MODEL        = ${MODEL_SUBDIR}${DATASET}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
-MODELTYPE    = transformer-align
+# MODELTYPE  = transformer-align
+MODELTYPE    = transformer
 NR           = 1
 
 MODEL_BASENAME  = ${MODEL}.${MODELTYPE}.model${NR}
@@ -393,15 +394,12 @@ endif
 
 ## check whether we have GPUs available
 ## if not: use CPU mode for decoding
-NVIDIA_SMI := ${shell which nvidia-smi 2>/dev/null}
 ifneq ($(wildcard ${NVIDIA_SMI}),)
 ifeq (${shell nvidia-smi | grep failed | wc -l},1)
-  MARIAN = ${MARIANCPU}
   MARIAN_DECODER_FLAGS = ${MARIAN_DECODER_CPU}
   MARIAN_EXTRA = --cpu-threads ${HPC_CORES}
 endif
 else
-  MARIAN = ${MARIANCPU}
   MARIAN_DECODER_FLAGS = ${MARIAN_DECODER_CPU}
   MARIAN_EXTRA = --cpu-threads ${HPC_CORES}
 endif
@@ -447,7 +445,7 @@ ${WORKDIR}/config.mk:
 	if [ -e ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz ]; then \
 	  ${MAKE} ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.charfreq \
 		  ${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.charfreq; \
-	  s=`zcat ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz | head -10000001 | wc -l`; \
+	  s=`${ZCAT} ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz | head -10000001 | wc -l`; \
 	  S=`cat ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.charfreq | wc -l`; \
 	  T=`cat ${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.charfreq | wc -l`; \
 	else \

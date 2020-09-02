@@ -324,7 +324,7 @@ endif
 
 add-to-local-train-data: ${CLEAN_TRAIN_SRC} ${CLEAN_TRAIN_TRG}
 ifdef CHECK_TRAINDATA_SIZE
-	@if [ `zcat ${wildcard ${CLEAN_TRAIN_SRC}} | wc -l` != `zcat ${wildcard ${CLEAN_TRAIN_TRG}} | wc -l` ]; then \
+	@if [ `${ZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} | wc -l` != `${ZCAT} ${wildcard ${CLEAN_TRAIN_TRG}} | wc -l` ]; then \
 	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
 	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
 	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
@@ -353,13 +353,13 @@ endif
 ######################################
 ifeq (${USE_TARGET_LABELS},1)
 	echo "set target language labels";
-	zcat ${wildcard ${CLEAN_TRAIN_SRC}} ${CUT_DATA_SETS} |\
+	${ZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} ${CUT_DATA_SETS} |\
 	sed "s/^/>>${TRG}<< /" > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
 else
 	echo "only one target language"
-	zcat ${wildcard ${CLEAN_TRAIN_SRC}} ${CUT_DATA_SETS} > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
+	${ZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} ${CUT_DATA_SETS} > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
 endif
-	zcat ${wildcard ${CLEAN_TRAIN_TRG}} ${CUT_DATA_SETS} > ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
+	${ZCAT} ${wildcard ${CLEAN_TRAIN_TRG}} ${CUT_DATA_SETS} > ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
 ######################################
 #  SHUFFLE_DATA is set?
 #    --> shuffle data for each langpair
@@ -491,16 +491,16 @@ ${DEV_TRG}: ${DEV_SRC}
 add-to-dev-data: ${CLEAN_DEV_SRC} ${CLEAN_DEV_TRG}
 	mkdir -p ${dir ${DEV_SRC}}
 	echo -n "* ${LANGPAIR}: ${DEVSET}, "      >> ${dir ${DEV_SRC}}README.md
-	zcat ${CLEAN_DEV_SRC} | wc -l             >> ${dir ${DEV_SRC}}README.md
+	${ZCAT} ${CLEAN_DEV_SRC} | wc -l          >> ${dir ${DEV_SRC}}README.md
 ifeq (${USE_TARGET_LABELS},1)
 	echo "more than one target language";
-	zcat ${CLEAN_DEV_SRC} |\
+	${ZCAT} ${CLEAN_DEV_SRC} |\
 	sed "s/^/>>${TRG}<< /" >> ${DEV_SRC}
 else
 	echo "only one target language"
-	zcat ${CLEAN_DEV_SRC} >> ${DEV_SRC}
+	${ZCAT} ${CLEAN_DEV_SRC} >> ${DEV_SRC}
 endif
-	zcat ${CLEAN_DEV_TRG} >> ${DEV_TRG}
+	${ZCAT} ${CLEAN_DEV_TRG} >> ${DEV_TRG}
 
 
 ####################
@@ -563,13 +563,13 @@ add-to-test-data: ${CLEAN_TEST_SRC}
 	echo "* ${LANGPAIR}: ${TESTSET}" >> ${dir ${TEST_SRC}}README.md
 ifeq (${USE_TARGET_LABELS},1)
 	echo "more than one target language";
-	zcat ${CLEAN_TEST_SRC} |\
+	${ZCAT} ${CLEAN_TEST_SRC} |\
 	sed "s/^/>>${TRG}<< /" >> ${TEST_SRC}
 else
 	echo "only one target language"
-	zcat ${CLEAN_TEST_SRC} >> ${TEST_SRC}
+	${ZCAT} ${CLEAN_TEST_SRC} >> ${TEST_SRC}
 endif
-	zcat ${CLEAN_TEST_TRG} >> ${TEST_TRG}
+	${ZCAT} ${CLEAN_TEST_TRG} >> ${TEST_TRG}
 
 
 

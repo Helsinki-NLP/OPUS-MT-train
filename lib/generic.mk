@@ -75,7 +75,7 @@ all2pivot:
 train-dynamic:
 	if [ ! -e "${WORKHOME}/${LANGPAIRSTR}/train.submit" ]; then \
 	  ${MAKE} data; \
-	  s=`zcat ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz | head -10000001 | wc -l`; \
+	  s=`${ZCAT} ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz | head -10000001 | wc -l`; \
 	  if [ $$s -gt 10000000 ]; then \
 	    echo "${LANGPAIRSTR} bigger than 10 million"; \
 	    ${MAKE} HPC_CORES=1 HPC_MEM=8g train.submit-multigpu; \
@@ -300,8 +300,7 @@ endif
 
 ## run on CPUs (translate-cpu, eval-cpu, translate-ensemble-cpu, ...)
 %-cpu:
-	${MAKE} MARIAN=${MARIANCPU} \
-		LOADMODS='${LOADCPU}' \
+	${MAKE} LOADMODS='${LOADCPU}' \
 		MARIAN_DECODER_FLAGS="${MARIAN_DECODER_CPU}" \
 	${@:-cpu=}
 

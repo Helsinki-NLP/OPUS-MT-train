@@ -1,0 +1,24 @@
+[submodule "tools/pigz"]
+	path = tools/pigz
+	url = https://github.com/madler/pigz.git
+[submodule "tools/terashuf"]
+	path = tools/terashuf
+	url = https://github.com/alexandres/terashuf.git
+[submodule "tools/marian-dev"]
+	path = tools/marian-dev
+	url = https://github.com/marian-nmt/marian-dev.git
+[submodule "tools/OpusTools-perl"]
+	path = tools/OpusTools-perl
+	url = https://github.com/Helsinki-NLP/OpusTools-perl.git
+[submodule "tools/LanguageCodes"]
+	path = tools/LanguageCodes
+	url = https://github.com/Helsinki-NLP/LanguageCodes.git
+[submodule "tools/fast_align"]
+	path = tools/fast_align
+	url = https://github.com/clab/fast_align.git
+[submodule "tools/eflomal"]
+	path = tools/eflomal
+	url = https://github.com/robertostling/eflomal
+[submodule "tools/moses-scripts"]
+	path = tools/moses-scripts
+	url = https://github.com/marian-nmt/moses-scripts.git

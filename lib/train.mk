@@ -30,7 +30,7 @@ ifneq (${MODEL_LATEST_VOCAB},)
 	cp ${MODEL_LATEST_VOCAB} ${MODEL_VOCAB}
 else
 	mkdir -p ${dir $@}
-	${LOADMODS} && zcat $^ | ${MARIAN_VOCAB} --max-size ${VOCABSIZE} > $@
+	${LOADMODS} && ${ZCAT} $^ | ${MARIAN_VOCAB} --max-size ${VOCABSIZE} > $@
 endif
 else
 	@echo "$@ already exists!"

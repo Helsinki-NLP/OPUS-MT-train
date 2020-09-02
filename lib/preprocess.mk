@@ -25,8 +25,8 @@
 	cut -f1 $@.bitext | ${GZIP} -c > $@
 	cut -f2 $@.bitext | ${GZIP} -c > $(@:.clean.${SRCEXT}.gz=.clean.${TRGEXT}.gz)
 	rm -f $@.bitext $@.1 $@.2
-	if [ ! `zcat "$@" | head | wc -l` -gt 0 ]; then rm -f $@; fi
-	if [ ! `zcat "$(@:.clean.${SRCEXT}.gz=.clean.${TRGEXT}.gz)" | head | wc -l` -gt 0 ]; then \
+	if [ ! `${ZCAT} "$@" | head | wc -l` -gt 0 ]; then rm -f $@; fi
+	if [ ! `${ZCAT} "$(@:.clean.${SRCEXT}.gz=.clean.${TRGEXT}.gz)" | head | wc -l` -gt 0 ]; then \
 	  rm -f $(@:.clean.${SRCEXT}.gz=.clean.${TRGEXT}.gz); \
 	fi
 
@@ -46,21 +46,21 @@
 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
 	$(TOKENIZER)/remove-non-printing-char.perl |\
 	$(TOKENIZER)/normalize-punctuation.perl |\
-	sed 's/  */ /g;s/^ *//g;s/ *$$//g' > $@
+	sed 's/^ *//;s/  */ /g;s/ *$$//g' > $@
 
 %.zh_cn.tok: %.zh_cn.raw
 	$(LOAD_MOSES) cat $< |\
 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
 	$(TOKENIZER)/remove-non-printing-char.perl |\
 	$(TOKENIZER)/normalize-punctuation.perl |\
-	sed 's/  */ /g;s/^ *//g;s/ *$$//g' > $@
+	sed 's/^ *//;s/  */ /g;s/ *$$//g' > $@
 
 %.zh.tok: %.zh.raw
 	$(LOAD_MOSES) cat $< |\
 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
 	$(TOKENIZER)/remove-non-printing-char.perl |\
 	$(TOKENIZER)/normalize-punctuation.perl |\
-	sed 's/  */ /g;s/^ *//g;s/ *$$//g' > $@
+	sed 's/^ *//;s/  */ /g;s/ *$$//g' > $@
 
 ## generic target for tokenization
 %.tok: %.raw
@@ -71,7 +71,7 @@
 		-l ${lastword ${subst 1,,${subst 2,,${subst ., ,$(<:.raw=)}}}} |\
 	$(TOKENIZER)/tokenizer.perl -a -threads $(THREADS) \
 		-l ${lastword ${subst 1,,${subst 2,,${subst ., ,$(<:.raw=)}}}} |\
-	sed 's/  */ /g;s/^ *//g;s/ *$$//g' > $@
+	sed 's/^ *//;s/  */ /g;s/ *$$//g' > $@
 
 
 
@@ -84,28 +84,28 @@
 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
 	$(TOKENIZER)/remove-non-printing-char.perl |\
 	$(TOKENIZER)/normalize-punctuation.perl |\
-	sed 's/  */ /g;s/^ *//g;s/ *$$//g' | ${GZIP} -c > $@
+	sed 's/^ *//;s/  */ /g;s/ *$$//g' | ${GZIP} -c > $@
 
 %.norm: %.raw
 	$(LOAD_MOSES) cat $< |\
 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
 	$(TOKENIZER)/remove-non-printing-char.perl |\
 	$(TOKENIZER)/normalize-punctuation.perl |\
-	sed 's/  */ /g;s/^ *//g;s/ *$$//g' > $@
+	sed 's/^ *//;s/  */ /g;s/ *$$//g' > $@
 
 %.${SRCEXT}.norm: %.${SRCEXT}.raw
 	$(LOAD_MOSES) cat $< ${SRC_CLEANUP_SCRIPTS} |\
 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
 	$(TOKENIZER)/remove-non-printing-char.perl |\
 	$(TOKENIZER)/normalize-punctuation.perl |\
-	sed 's/  */ /g;s/^ *//g;s/ *$$//g' > $@
+	sed 's/^ *//;s/  */ /g;s/ *$$//g' > $@
 
 %.${TRGEXT}.norm: %.${TRGEXT}.raw
 	$(LOAD_MOSES) cat $< ${TRG_CLEANUP_SCRIPTS} |\
 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
 	$(TOKENIZER)/remove-non-printing-char.perl |\
 	$(TOKENIZER)/normalize-punctuation.perl |\
-	sed 's/  */ /g;s/^ *//g;s/ *$$//g' > $@
+	sed 's/^ *//;s/  */ /g;s/ *$$//g' > $@
 
 
 ## minimal pre-processing
@@ -114,28 +114,28 @@
 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
 	$(TOKENIZER)/remove-non-printing-char.perl |\
 	$(TOKENIZER)/deescape-special-chars.perl |\
-	sed 's/  */ /g;s/^ *//g;s/ *$$//g' | ${GZIP} -c > $@
+	sed 's/^ *//;s/  */ /g;s/ *$$//g' | ${GZIP} -c > $@
 
 %.simple: %.raw
 	$(LOAD_MOSES) cat $< |\
 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
 	$(TOKENIZER)/remove-non-printing-char.perl |\
 	$(TOKENIZER)/deescape-special-chars.perl |\
-	sed 's/  */ /g;s/^ *//g;s/ *$$//g' > $@
+	sed 's/^ *//;s/  */ /g;s/ *$$//g' > $@
 
 %.${SRCEXT}.simple: %.${SRCEXT}.raw
 	$(LOAD_MOSES) cat $< ${SRC_CLEANUP_SCRIPTS} |\
 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
 	$(TOKENIZER)/remove-non-printing-char.perl |\
 	$(TOKENIZER)/deescape-special-chars.perl |\
-	sed 's/  */ /g;s/^ *//g;s/ *$$//g' > $@
+	sed 's/^ *//;s/  */ /g;s/ *$$//g' > $@
 
 %.${TRGEXT}.simple: %.${TRGEXT}.raw
 	$(LOAD_MOSES) cat $< ${TRG_CLEANUP_SCRIPTS} |\
 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
 	$(TOKENIZER)/remove-non-printing-char.perl |\
 	$(TOKENIZER)/deescape-special-chars.perl |\
-	sed 's/  */ /g;s/^ *//g;s/ *$$//g' > $@
+	sed 's/^ *//;s/  */ /g;s/ *$$//g' > $@
 
 
 
@@ -145,7 +145,7 @@
 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
 	$(TOKENIZER)/remove-non-printing-char.perl |\
 	$(TOKENIZER)/deescape-special-chars.perl |\
-	sed 's/  */ /g;s/^ *//g;s/ *$$//g' |\
+	sed 's/^ *//;s/  */ /g;s/ *$$//g' |\
 	sed 's/ /▁/g' > $@
 
 
@@ -172,21 +172,21 @@
 # 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
 # 	$(TOKENIZER)/remove-non-printing-char.perl |\
 # 	$(TOKENIZER)/normalize-punctuation.perl |\
-# 	sed 's/  */ /g;s/^ *//g;s/ *$$//g' | ${GZIP} -c > $@
+# 	sed 's/^ *//;s/  */ /g;s/ *$$//g' | ${GZIP} -c > $@
 
 # %.simple.gz: %.gz
 # 	$(LOAD_MOSES) ${GZIP} -cd < $< |\
 # 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
 # 	$(TOKENIZER)/remove-non-printing-char.perl |\
 # 	$(TOKENIZER)/deescape-special-chars.perl |\
-# 	sed 's/  */ /g;s/^ *//g;s/ *$$//g' | ${GZIP} -c > $@
+# 	sed 's/^ *//;s/  */ /g;s/ *$$//g' | ${GZIP} -c > $@
 
 # %.nospace.gz: %.gz
 # 	$(LOAD_MOSES) ${GZIP} -cd < $< |\
 # 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
 # 	$(TOKENIZER)/remove-non-printing-char.perl |\
 # 	$(TOKENIZER)/deescape-special-chars.perl |\
-# 	sed 's/  */ /g;s/^ *//g;s/ *$$//g' |\
+# 	sed 's/^ *//;s/  */ /g;s/ *$$//g' |\
 # 	sed 's/ /▁/g' |\
 # 	${GZIP} -c > $@
 

@@ -229,7 +229,7 @@ ${TRANSLATED_PRE}: ${ORIGINAL_DATASRC}
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
 	${MAKE} ${DECODER}
-	zcat $< |\
+	${GZCAT} $< |\
 	head -${MAX_PIVOT_SENTENCES} |\
 	${OUTPUT_DIR}/${MODELNAME}/preprocess.sh ${PREPROCESS_ARGS} |\
 	gzip -c > $@
@@ -241,7 +241,7 @@ ${OUTPUT_DIR}/%.${MODELNAME}.${LANGPAIR}.${PIVOT}.spm.gz: ${ORIGINAL_DATADIR}/${
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
 	${MAKE} ${DECODER}
-	zcat $< |\
+	${GZCAT} $< |\
 	${OUTPUT_DIR}/${MODELNAME}/preprocess.sh ${PREPROCESS_ARGS} |\
 	gzip -c > $@
 endif
@@ -299,9 +299,9 @@ check-length:
 	  for S in `ls $$d/*.$$s.gz`; do \
 	    T=`echo $$S | sed 's/.$$s.gz/.$$t.gz/'`; \
 	    echo "$$S -- $$T"; \
-	    zcat $$S | wc -l; \
-	    zcat $$T | wc -l; \
-	    if [ `zcat $$S | wc -l` != `zcat $$T | wc -l` ]; then \
+	    ${GZCAT} $$S | wc -l; \
+	    ${GZCAT} $$T | wc -l; \
+	    if [ `${GZCAT} $$S | wc -l` != `${GZCAT} $$T | wc -l` ]; then \
 	      echo "$$S != $$T"; \
 	    fi \
 	  done \
