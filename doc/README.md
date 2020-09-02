@@ -17,7 +17,7 @@ More information about specific tasks:
 * [Training models](Train.md)
 * [Testing models](Test.md)
 * [Running batch jobs](BatchJobs.md)
-* [Packaging, releases and storage](ReleaseAndStore.md) 
+* [Packaging, releases and storage](ReleaseAndStore.md)
 * [Models for the Tatoeba MT Challenge](TatoebaChallenge.md)
 
 

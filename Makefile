@@ -161,6 +161,7 @@ include lib/test.mk
 include lib/misc.mk
 include lib/dist.mk
 include lib/slurm.mk
+include lib/allas.mk
 
 include lib/generic.mk
 include lib/langsets.mk
@@ -191,41 +192,6 @@ all: ${WORKDIR}/config.mk
 	${MAKE} compare
 
 
-#---------------------------------------------------------------------
-# store and fetch workdata
-# requires module load allas && allas-conf
-# select project_2002688 (OPUS-MT)
-#  - "make store" overrides
-#  - "make fetch" does not override (delete dir first)
-#  - storing data will resolve symbolic links
-#---------------------------------------------------------------------
-
-.PHONY: store store-data fetch fetch-data
-
-## directories and container names to be used
-WORK_SRCDIR    ?= ${WORKHOME}
-WORK_DESTDIR   ?= ${WORKHOME}
-WORK_CONTAINER ?= OPUS-MT-train_${notdir ${WORKHOME}}-${WHOAMI}
-
-## store workdir on allas
-store:
-	cd ${WORK_SRCDIR} && a-put -b ${WORK_CONTAINER} --nc --follow-links --override ${LANGPAIRSTR}
-
-## fetch workdir from allas
-fetch:
-	mkdir -p ${WORK_DESTDIR}
-	cd ${WORK_DESTDIR} && a-get ${WORK_CONTAINER}/${LANGPAIRSTR}.tar
-#	cd ${WORK_DESTDIR} && a-get ${WORK_CONTAINER}/${LANGPAIRSTR}.tar.zst
-
-
-## store and fetch data dir (raw data files)
-store-data:
-	cd ${WORK_SRCDIR} && a-put -b ${WORK_CONTAINER} --nc --follow-links --override data
-
-fetch-data:
-	mkdir -p ${WORK_DESTDIR}
-	cd ${WORK_DESTDIR} && a-get ${WORK_CONTAINER}/data.tar
-#	cd ${WORK_DESTDIR} && a-get ${WORK_CONTAINER}/data.tar.zst
 
 
 #---------------------------------------------------------------------

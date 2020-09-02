@@ -196,9 +196,10 @@ tools/terashuf/terashuf:
 	${MAKE} -C ${dir $@}
 
 
-## For Mac users: install protobuf
-##
-##   sudo port install protobuf3-cpp
+## For Mac users:
+## - install protobuf: sudo port install protobuf3-cpp
+## - install MKL (especially for cpu use):
+##   file:///opt/intel/documentation_2020/en/mkl/ps2020/get_started.htm
 
 tools/marian-dev/build/marian:
 	mkdir -p ${dir $@}

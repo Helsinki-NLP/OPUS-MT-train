@@ -10,6 +10,7 @@ Relevant makefiles:
 * [lib/env.mk](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/lib/env.mk)
 * [lib/config.mk](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/lib/config.mk)
 * [lib/dist.mk](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/lib/dist.mk)
+* [lib/allas.mk](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/lib/dist.mk)
 
 
 Main recipes:
@@ -23,6 +24,7 @@ Main recipes:
 * `store-data`: store data in `WORKHOME/data` (raw bitexts) on CSC ObjectStore (for internal use)
 * `fetch`: fetch work files stored on CSC ObjectStore for specified language pair; does not overwrite (for internal use)
 * `fetch-data`: fetch `WORKHOME/data` from CSC ObjectStore; does not overwrite (for internal use)
+* `fetch-tiedeman`: same as fetch but retrieve data from user `tiedeman` (for internal use)
 
 
 Parameters / variables:
@@ -36,3 +38,57 @@ Parameters / variables:
 * `WORK_SRCDIR`: top-level work home directory to fetch models from (for `store`), default: `WORKHOME`
 * `WORK_DESTDIR`: top-level work home directory to store models from (for `fetcg`), default: `WORKHOME`
 
+
+
+
+## Work data on Allas
+
+Work directories can be uploaded to allas to safe scratch space and can be fetched later on to continue working on specific models. The makefiles implement some recipes to `store` and `fetch` data files:
+
+
+* initialise connection to allas
+
+```
+module load allas
+allas-conf
+```
+
+Select project_2002688 (OPUS-MT).
+
+
+
+* store the work dorectory for a specific model:
+
+```
+make SRCLANGS=xx TRGLANGS=yy store
+```
+
+This will pack and upload the work directory `work/xx-yy`. Note that this overwrites an existing package that might be in the same place! The container will be called `OPUS-MT-train_work_<username>` (`<username>` is set by calling `whoami`).
+
+
+* fetch a work directory from allas:
+
+```
+make SRCLANGS=xx TRGLANGS=yy fetch
+```
+
+This retrieves the package from allas (from container `OPUS-MT-train_work_<username>`) and unpacks it in `WORK_DESTDIR`. Note that this recipe does NOT overwrite existing files and will fail if the work directory of the corresponding model already exists. Either delete the existing one first or specify a different destination by setting `WORK_DESTDIR`.
+
+
+* store and fetch the raw data files (bitexts) from `work/data`
+
+```
+make store-data
+make fetch-data
+```
+
+`store-data` overwrites again existing packages on allas but `fetch-data` does not overwrite and breaks if `work/data` already exists.
+
+
+* fetch work files from user `tiedeman`
+
+```
+make SRCLANGS=xx TRGLANGS=yy fetch-tiedeman
+```
+
+This is for fetching the work files for the specified model from the container of user `tiedeman`.
