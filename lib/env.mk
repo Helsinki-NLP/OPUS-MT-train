@@ -113,7 +113,10 @@ SPM_HOME       ?= ${dir ${MARIAN}}
 FASTALIGN      ?= ${shell which fast_align || echo ${PWD}/tools/fast_align/build/fast_align}
 FASTALIGN_HOME ?= ${dir ${FASTALIGN}}
 ATOOLS         ?= ${FASTALIGN_HOME}atools
+EFLOMAL        ?= ${shell which efmoral || echo ${PWD}/tools/eflomal/eflomal}
+EFLOMAL_HOME   ?= ${dir ${EFLOMAL}}
 WORDALIGN      ?= ${EFLOMAL_HOME}align.py
+EFMORAL        ?= ${EFLOMAL_HOME}efmoral
 MOSESSCRIPTS   ?= ${PWD}/tools/moses-scripts/scripts
 
 
@@ -157,7 +160,7 @@ MULTEVALHOME = ${APPLHOME}/multeval
 ## * marian-nmt
 
 
-PREREQ_TOOLS := ${ISO639} ${ATOOLS} ${PIGZ} ${TERASHUF} ${MARIAN}
+PREREQ_TOOLS := ${ISO639} ${ATOOLS} ${PIGZ} ${TERASHUF} ${MARIAN} ${EFMORAL}
 
 PIP  := ${shell which pip3 2>/dev/null || echo pip}
 CPAN := ${shell which cpanm 2>/dev/null || echo cpan}
@@ -205,3 +208,22 @@ tools/marian-dev/build/marian:
 	mkdir -p ${dir $@}
 	cd ${dir $@} && cmake -DUSE_SENTENCEPIECE=on ${MARIAN_BUILD_OPTIONS} ..
 	${MAKE} -C ${dir $@} -j
+
+
+## for Mac users: use gcc to compile eflomal
+##
+## sudo port install gcc10
+## gcc-mp-10 -Ofast -march=native -Wall --std=gnu99 -Wno-unused-function -g -fopenmp -c eflomal.c
+## gcc-mp-10 -lm -lgomp -fopenmp  eflomal.o   -o eflomal
+##
+## sudo port install llvm-devel py-cython py-numpy
+## sudo port select --set python python38
+## sudo port select --set python3 python38
+## sudo port select --set cython cython38
+## cd tools/efmoral
+## sudo env python3 setup.py install
+
+tools/eflomal/eflomal:
+	${MAKE} -C ${dir $@} all
+	python3 setup.py install
+#	python3 setup.py install --install-dir ${HOME}/.local

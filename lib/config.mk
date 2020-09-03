@@ -167,21 +167,20 @@ get-opus-bitexts   = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&
 get-bigger-bitexts = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&preprocessing=xml\&version=latest | \
 	jq -r '.corpora[1:] | .[] | select(.source!="") | select(.target!="") | select(.alignment_pairs>${3}) | .corpus' }
 get-opus-langs     = ${shell wget -qq -O - ${OPUSAPI}?languages=True | jq '.languages[]' | tr '"' ' '}
+get-opus-version   = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&corpus=${3}\&preprocessing=xml\&version=latest | jq '.corpora[] | .version' | sed 's/"//g' | head -1}
 get-elra-bitexts   = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&corpora=True | \
 	jq '.corpora[]' | tr '"' ' ' | grep '^ *ELR[CA][-_]'}
+
 
 
 ## start of some functions to check whether there is a resource for downloading
 ## open question: links to the latest release do not exist in the storage
 ## --> would it be better to get that done via the OPUS API?
 
+OPUS_STORE = https://object.pouta.csc.fi/OPUS-
 url-status = ${shell curl -Is -K HEAD ${1} | head -1}
 url-exists = ${shell if [ "${call url-status,${1}}" == "HTTP/1.1 200 OK" ]; then echo 1; else echo 0; fi}
-# resource-exists = ${shell if [ ] }
-
-test-url:
-	@echo ${call url-status,https://object.pouta.csc.fi/OPUS-GNOME/v1/moses/br-en.txt.zip}
-	@echo ${call url-exists,https://object.pouta.csc.fi/OPUS-GNOME/v1/moses/br-en.txt.zip}
+resource-url = ${shell echo "${OPUS_STORE}${3}/${call get-opus-version,${1},${2},${3}}/moses/${1}-${2}.txt.zip"}
 
 
 
