@@ -768,13 +768,15 @@ ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels:
 ## (skip most lang-IDs because they mostly come from erroneous writing scripts --> errors in the data)
 ## the list is based on Tatoeba-Challenge/data/langids-train-only.txt
 
+# TRAIN_ONLY_LANGIDS   = ${shell cat tatoeba/langids-train-only.txt ${FIXLANGIDS} | grep -v '^...$$' | tr "\n" ' '}
 TRAIN_ONLY_LANGIDS   = ${shell cat tatoeba/langids-train-only.txt | tr "\n" ' '}
 KEEP_LANGIDS         = bos_Cyrl cmn cnr cnr_Latn csb diq dnj dty fas fqs ful fur gcf got gug hbs hbs_Cyrl hmn \
 			jak_Latn kam kmr kmr_Latn kom kur_Cyrl kuv_Arab kuv_Latn lld mol mrj msa_Latn mya_Cakm nep ngu \
 			nor nor_Latn oss_Latn pan plt pnb_Guru pob prs qug quw quy quz qvi rmn rmy ruk san swa swc \
 			syr syr_Syrc tgk_Latn thy tlh tmh toi tuk_Cyrl urd_Deva xal_Latn yid_Latn zho zlm
-SKIP_LANGIDS         = ${filter-out ${KEEP_LANGIDS},${TRAIN_ONLY_LANGIDS}}
-SKIP_LANGIDS_PATTERN = \(${subst ${SPACE},\|,${SKIP_LANGIDS}}\)
+SKIP_LANGIDS         = ${filter-out ${KEEP_LANGIDS},${TRAIN_ONLY_LANGIDS}} \
+			ang ara_Latn aze_Latn bul_Latn ell_Latn heb_Latn rus_Latn
+SKIP_LANGIDS_PATTERN = ^\(${subst ${SPACE},\|,${SKIP_LANGIDS}}\)$$
 
 ## modify language IDs in training data to adjust them to test sets
 ## --> fix codes for chinese and take away script information (not reliable!)
@@ -789,6 +791,7 @@ FIXLANGIDS = 	| sed 's/zho\(.*\)_HK/yue\1/g;s/zho\(.*\)_CN/cmn\1/g;s/zho\(.*\)_T
 		| sed 's/ara_Latn/ara/;s/arq_Latn/arq/;s/apc_Latn/apc/' \
 		| sed 's/kor_[A-Za-z]*/kor/g' \
 		| sed 's/nor_Latn/nor/g' \
+		| sed 's/bul_Latn/bul/g' \
 		| sed 's/syr_Syrc/syr/g' \
 		| sed 's/yid_Latn/yid/g' \
 		| perl -pe 'if (/(cjy|cmn|gan|lzh|nan|wuu|yue|zho)_([A-Za-z]{4})/){if ($$2 ne "Hans" && $$2 ne "Hant"){s/(cjy|cmn|gan|lzh|nan|wuu|yue|zho)_([A-Za-z]{4})/$$1/} }'
@@ -954,6 +957,7 @@ fixlabels.sh:
 	  s=`echo $$l | cut -f1 -d'-'`; \
 	  t=`echo $$l | cut -f2 -d'-'`; \
 	  if [ "$$s" \< "$$t" ]; then \
+	  if [ -d ${HOME}/research/Tatoeba-Challenge/data/$$l ]; then \
 	    ${MAKE} TATOEBA_WORK=work-tatoeba-fixed SRCLANGS=$$s TRGLANGS=$$t tatoeba-labels; \
 	    o=`cat work-tatoeba/data/simple/Tatoeba-train.$$l.clean.$$s.labels | tr ' ' "\n" | sort | grep . | tr "\n" ' '`; \
 	    n=`cat work-tatoeba-fixed/data/simple/Tatoeba-train.$$l.clean.$$s.labels | tr ' ' "\n" | sort | grep . | tr "\n" ' '`; \
@@ -976,6 +980,7 @@ fixlabels.sh:
 	      if [ -d work-tatoeba/$$t-$$s ]; then \
 	        echo "mv work-tatoeba/$$t-$$s work-tatoeba-fixed/$$t-$$s" >> $@; \
 	      fi \
+	    fi; \
 	    fi; \
 	  fi \
 	done 
