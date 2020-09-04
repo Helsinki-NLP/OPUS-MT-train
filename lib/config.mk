@@ -162,14 +162,14 @@ OPUSREAD_ARGS =
 
 OPUSAPI = http://opus.nlpl.eu/opusapi/
 
-get-opus-mono      = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&corpora=True | jq '.corpora[]' | tr '"' ' '}
-get-opus-bitexts   = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&corpora=True | jq '.corpora[]' | tr '"' ' '}
+get-opus-mono      = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&corpora=True | ${JQ} '.corpora[]' | tr '"' ' '}
+get-opus-bitexts   = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&corpora=True | ${JQ} '.corpora[]' | tr '"' ' '}
 get-bigger-bitexts = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&preprocessing=xml\&version=latest | \
-	jq -r '.corpora[1:] | .[] | select(.source!="") | select(.target!="") | select(.alignment_pairs>${3}) | .corpus' }
-get-opus-langs     = ${shell wget -qq -O - ${OPUSAPI}?languages=True | jq '.languages[]' | tr '"' ' '}
-get-opus-version   = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&corpus=${3}\&preprocessing=xml\&version=latest | jq '.corpora[] | .version' | sed 's/"//g' | head -1}
+	${JQ} -r '.corpora[1:] | .[] | select(.source!="") | select(.target!="") | select(.alignment_pairs>${3}) | .corpus' }
+get-opus-langs     = ${shell wget -qq -O - ${OPUSAPI}?languages=True | ${JQ} '.languages[]' | tr '"' ' '}
+get-opus-version   = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&corpus=${3}\&preprocessing=xml\&version=latest | ${JQ} '.corpora[] | .version' | sed 's/"//g' | head -1}
 get-elra-bitexts   = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&corpora=True | \
-	jq '.corpora[]' | tr '"' ' ' | grep '^ *ELR[CA][-_]'}
+	${JQ} '.corpora[]' | tr '"' ' ' | grep '^ *ELR[CA][-_]'}
 
 
 

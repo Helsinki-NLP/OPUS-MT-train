@@ -688,7 +688,7 @@ SENTSPLITTER ?= sed 's/^ *$$/\# newpar/' | \
 ${WIKI_TXT}: ${WIKI_JSON}
 	mkdir -p ${dir $@}
 	${LOAD_MODULES} \
-	${GZCAT} $< | jq -r '.text' | \
+	${GZCAT} $< | ${JQ} -r '.text' | \
 	grep -v 'null' |\
 	grep -v '[<>{}]' |\
 	${SENTSPLITTER} |\
@@ -708,7 +708,7 @@ ${WIKI_TXT}: ${WIKI_JSON}
 ${WIKI_DOC}: ${WIKI_JSON}
 	mkdir -p ${dir $@}
 	${LOAD_MODULES} \
-	${GZCAT} $< | jq -r '.text' | \
+	${GZCAT} $< | ${JQ} -r '.text' | \
 	sed 's/^ *null *$$//' |\
 	grep -v '[<>{}]' |\
 	${SENTSPLITTER} |\
@@ -754,7 +754,7 @@ check-length:
 #
 # ${WIKI_TXT}: ${WIKI_JSON}
 # 	${LOAD_MODULES} \
-# 	${ZCAT} $< | jq -r '.text' | \
+# 	${ZCAT} $< | ${JQ} -r '.text' | \
 # 	grep -v 'null' |\
 # 	${SENTSPLITTER} |\
 # 	$(TOKENIZER)/replace-unicode-punctuation.perl |\
