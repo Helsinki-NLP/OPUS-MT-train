@@ -183,8 +183,6 @@ url-exists = ${shell if [ "${call url-status,${1}}" == "HTTP/1.1 200 OK" ]; then
 resource-url = ${shell echo "${OPUS_STORE}${3}/${call get-opus-version,${1},${2},${3}}/moses/${1}-${2}.txt.zip"}
 
 
-
-
 ## exclude certain data sets
 # EXCLUDE_CORPORA ?= WMT-News MPC1 ${call get-elra-bitexts,${SRC},${TRG}}
 EXCLUDE_CORPORA ?= WMT-News MPC1

@@ -144,14 +144,22 @@ ifeq (${words ${TRGLANGS}},1)
 	-if [ -e ${MODEL_VOCAB} ]; then \
 	  ln -s ${MODEL_VOCAB} ${REV_WORKDIR}/${notdir ${MODEL_VOCAB}}; \
 	fi
+##
+## this is a bit dangerous with some trick to 
+## swap parameters between SRC and TRG
+##
 	-if [ -e ${WORKDIR}/config.mk ]; then \
 	   if [ ! -e ${REV_WORKDIR}/config.mk ]; then \
-	     cp ${WORKDIR}/config.mk ${REV_WORKDIR}/config.mk; \
+	     cat ${WORKDIR}/config.mk |\
+	     sed -e 's/SRC/TTT/g;s/TRG/SRC/g;s/TTT/TRG/' |\
+	     grep -v LANGPAIRSTR > ${REV_WORKDIR}/config.mk; \
 	   fi \
 	fi
 endif
 endif
 endif
+
+
 
 
 

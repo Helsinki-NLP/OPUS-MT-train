@@ -2,3 +2,4 @@ pycld2
 iso-639
 opustools
 subword-nmt
+sacrebleu

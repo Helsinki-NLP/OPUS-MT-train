@@ -5,6 +5,7 @@
 # - system-specific settings
 #
 
+SHELL := /bin/bash
 
 ## modules to be loaded in sbatch scripts
 
@@ -52,6 +53,7 @@ WORKHOME = ${PWD}/work
 
 
 ifeq (${shell hostname},dx6-ibs-p2)
+  GPU          = pascal
   APPLHOME     = /opt/tools
   WORKHOME     = ${shell realpath ${PWD}/work}
 #  OPUSHOME     = tiedeman@taito.csc.fi:/proj/nlpl/data/OPUS/
@@ -61,18 +63,13 @@ ifeq (${shell hostname},dx6-ibs-p2)
 #  MARIAN       = ${APPLHOME}/marian/build
 #  SUBWORD_HOME = ${APPLHOME}/subword-nmt/subword_nmt
 else ifeq (${shell hostname},dx7-nkiel-4gpu)
+  GPU          = pascal
   APPLHOME     = /opt/tools
   WORKHOME     = ${shell realpath ${PWD}/work}
-  MARIAN_BUILD_OPTIONS += -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-9.2 \
-			-DPROTOBUF_LIBRARY=${PWD}/tools/protobuf/lib/libprotobuf.so \
-	   		-DPROTOBUF_INCLUDE_DIR=${PWD}/tools/protobuf/include/google/protobuf \
-			-DPROTOBUF_PROTOC_EXECUTABLE=${PWD}/tools/protobuf/bin/protoc
+  MARIAN_BUILD_OPTIONS += -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-9.2
 #			-DPROTOBUF_LIBRARY=/usr/lib/x86_64-linux-gnu/libprotobuf.so.9 \
 #	   		-DPROTOBUF_INCLUDE_DIR=/usr/include/google/protobuf \
 #			-DPROTOBUF_PROTOC_EXECUTABLE=${PWD}/tools/protobuf/src/protoc
-#			-DPROTOBUF_LIBRARY=${PWD}/tools/protobuf/src/libprotobuf.la \
-#			-DPROTOBUF_INCLUDE_DIR=${PWD}/tools/protobuf/src/google/ \
-#	   		-DPROTOBUF_PROTOC_EXECUTABLE=/usr/bin/protoc
 #  OPUSHOME     = tiedeman@taito.csc.fi:/proj/nlpl/data/OPUS/
 #  MOSESHOME    = ${APPLHOME}/mosesdecoder
 #  MOSESSCRIPTS = ${MOSESHOME}/scripts
@@ -117,23 +114,24 @@ TMPDIR ?= /tmp
 ## tools and their locations
 
 SCRIPTDIR      ?= ${PWD}/scripts
+TOOLSDIR       ?= ${PWD}/tools
 
-ISO639         ?= ${shell which iso639     || echo 'perl ${PWD}/tools/LanguageCodes/ISO-639-3/bin/iso639'}
-PIGZ           ?= ${shell which pigz       || echo ${PWD}/tools/pigz/pigz}
-TERASHUF       ?= ${shell which terashuf   || echo ${PWD}/tools/terashuf/terashuf}
-JQ             ?= ${shell which jq         || echo ${PWD}/tools/jq/jq}
-PROTOC         ?= ${shell which protoc     || echo ${PWD}/tools/protobuf/bin/protoc}
-MARIAN         ?= ${shell which marian     || echo ${PWD}/tools/marian-dev/build/marian}
+ISO639         ?= ${shell which iso639     || echo 'perl ${TOOLSDIR}/LanguageCodes/ISO-639-3/bin/iso639'}
+PIGZ           ?= ${shell which pigz       || echo ${TOOLSDIR}/pigz/pigz}
+TERASHUF       ?= ${shell which terashuf   || echo ${TOOLSDIR}/terashuf/terashuf}
+JQ             ?= ${shell which jq         || echo ${TOOLSDIR}/jq/jq}
+PROTOC         ?= ${shell which protoc     || echo ${TOOLSDIR}/protobuf/bin/protoc}
+MARIAN         ?= ${shell which marian     || echo ${TOOLSDIR}/marian-dev/build/marian}
 MARIAN_HOME    ?= $(dir ${MARIAN})
 SPM_HOME       ?= ${dir ${MARIAN}}
-FASTALIGN      ?= ${shell which fast_align || echo ${PWD}/tools/fast_align/build/fast_align}
+FASTALIGN      ?= ${shell which fast_align || echo ${TOOLSDIR}/fast_align/build/fast_align}
 FASTALIGN_HOME ?= ${dir ${FASTALIGN}}
 ATOOLS         ?= ${FASTALIGN_HOME}atools
-EFLOMAL        ?= ${shell which eflomal    || echo ${PWD}/tools/eflomal/eflomal}
+EFLOMAL        ?= ${shell which eflomal    || echo ${TOOLSDIR}/eflomal/eflomal}
 EFLOMAL_HOME   ?= ${dir ${EFLOMAL}}
 WORDALIGN      ?= ${EFLOMAL_HOME}align.py
 EFLOMAL        ?= ${EFLOMAL_HOME}eflomal
-MOSESSCRIPTS   ?= ${PWD}/tools/moses-scripts/scripts
+MOSESSCRIPTS   ?= ${TOOLSDIR}/moses-scripts/scripts
 
 
 ## marian-nmt binaries
@@ -149,7 +147,7 @@ TOKENIZER    = ${MOSESSCRIPTS}/tokenizer
 
 
 ## BPE
-SUBWORD_BPE  ?= ${shell which subword-nmt || echo ${PWD}/tools/subword-nmt/subword_nmt/subword_nmt.py}
+SUBWORD_BPE  ?= ${shell which subword-nmt || echo ${TOOLSDIR}/subword-nmt/subword_nmt/subword_nmt.py}
 SUBWORD_HOME ?= ${dir ${SUBWORD_BPE}}
 ifeq (${shell which subword-nmt},)
   BPE_LEARN ?= pyhton3 ${SUBWORD_HOME}/learn_bpe.py
@@ -209,24 +207,24 @@ install-prerequisites install-prereq install-requirements:
 	${MAKE} ${PREREQ_TOOLS}
 
 
-${PWD}/tools/LanguageCodes/ISO-639-3/bin/iso639:
+${TOOLSDIR}/LanguageCodes/ISO-639-3/bin/iso639:
 	${MAKE} tools/LanguageCodes/ISO-639-5/lib/ISO/639/5.pm
 
-${PWD}/tools/LanguageCodes/ISO-639-5/lib/ISO/639/5.pm:
+${TOOLSDIR}/LanguageCodes/ISO-639-5/lib/ISO/639/5.pm:
 	${MAKE} -C tools/LanguageCodes all
 
-${PWD}/tools/fast_align/build/atools:
+${TOOLSDIR}/fast_align/build/atools:
 	mkdir -p ${dir $@}
 	cd ${dir $@} && cmake ..
 	${MAKE} -C ${dir $@}
 
-${PWD}/tools/pigz/pigz:
+${TOOLSDIR}/pigz/pigz:
 	${MAKE} -C ${dir $@}
 
-${PWD}/tools/terashuf/terashuf:
+${TOOLSDIR}/terashuf/terashuf:
 	${MAKE} -C ${dir $@}
 
-${PWD}/tools/jq/jq:
+${TOOLSDIR}/jq/jq:
 	cd ${dir $@} && git submodule update --init
 	cd ${dir $@} && autoreconf -fi
 	cd ${dir $@} && ./configure --with-oniguruma=builtin
@@ -237,16 +235,16 @@ ${PWD}/tools/jq/jq:
 ## - install MKL (especially for cpu use):
 ##   file:///opt/intel/documentation_2020/en/mkl/ps2020/get_started.htm
 
-${PWD}/tools/marian-dev/build/marian: ${PROTOC}
+${TOOLSDIR}/marian-dev/build/marian: ${PROTOC}
 	mkdir -p ${dir $@}
 	cd ${dir $@} && cmake -DUSE_SENTENCEPIECE=on ${MARIAN_BUILD_OPTIONS} ..
 	${MAKE} -C ${dir $@} -j
 
-${PWD}/tools/protobuf/bin/protoc:
+${TOOLSDIR}/protobuf/bin/protoc:
 	cd tools && git clone https://github.com/protocolbuffers/protobuf.git
 	cd tools/protobuf && git submodule update --init --recursive
 	cd tools/protobuf && ./autogen.sh
-	cd tools/protobuf && ./configure --prefix=${PWD}/tools/protobuf
+	cd tools/protobuf && ./configure --prefix=${TOOLSDIR}/protobuf
 	${MAKE} -C tools/protobuf
 
 ## for Mac users: use gcc to compile eflomal
@@ -262,7 +260,7 @@ ${PWD}/tools/protobuf/bin/protoc:
 ## cd tools/efmoral
 ## sudo env python3 setup.py install
 
-${PWD}/tools/eflomal/eflomal:
+${TOOLSDIR}/eflomal/eflomal:
 	${MAKE} -C ${dir $@} all
 	cd ${dir $@} && python3 setup.py install
 #	python3 setup.py install --install-dir ${HOME}/.local

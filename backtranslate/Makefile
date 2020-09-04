@@ -4,6 +4,9 @@
 # only works with sentencepiece models!
 #
 
+PWD      := ${shell pwd}
+TOOLSDIR := ${PWD}/../tools
+
 include ../lib/env.mk
 include ../lib/config.mk
 include ../lib/slurm.mk
@@ -41,7 +44,7 @@ MODELZIP  = ${lastword ${shell ls ${MODELHOME}/*-20*.zip | LANG=en_US.UTF-8 sort
 MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
 
 ifeq (${MODELNAME},)
-  MODELHOME = ../work-langid/models/${LANGPAIR}
+  MODELHOME = ../${notdir ${WORKHOME}}/models/${LANGPAIR}
   # MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/*-20*.zip}}}
   MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/opus-20*.zip}}}
   MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
@@ -61,12 +64,15 @@ ifdef LOCAL_SCRATCH
 endif
 
 
-LOAD_MODULES = 	module use -a /projappl/nlpl/software/modules/etc/ && \
-		module load nlpl-udpipe nlpl-opus &&
+ifeq (${shell hostname --domain 2>/dev/null},bullx)
+  LOAD_MODULES = module use -a /projappl/nlpl/software/modules/etc/ && \
+		 module load nlpl-udpipe nlpl-opus &&
+endif
 
-WIKILANGS = 	${sort $(patsubst >%${WIKISOURCE}-,%,${shell grep -o '>..${WIKISOURCE}-' index.html})} \
+ifneq (${wildcard index.html},)
+  WIKILANGS = 	${sort $(patsubst >%${WIKISOURCE}-,%,${shell grep -o '>..${WIKISOURCE}-' index.html})} \
 		${sort $(patsubst >%${WIKISOURCE}-,%,${shell grep -o '>...${WIKISOURCE}-' index.html})}
-
+endif
 
 
 
@@ -93,7 +99,9 @@ PARTS = ${sort ${patsubst ${WIKI_DIR}/${WIKISOURCE}.${LANGID}.%.gz,%,${wildcard 
 .PRECIOUS: ${WIKI_TRG}
 
 ## find wiki downloads
-WIKI_JSON = $(shell grep -o '${LANGID}${WIKISOURCE}-[0-9]*-cirrussearch-content.json.gz' index.html | head -1)
+ifneq (${wildcard index.html},)
+  WIKI_JSON = $(shell grep -o '${LANGID}${WIKISOURCE}-[0-9]*-cirrussearch-content.json.gz' index.html | head -1)
+endif
 
 ## we don't need to keep the json file
 .INTERMEDIATE: ${WIKI_JSON} ${WIKI_PRE}
@@ -104,21 +112,34 @@ ifndef UDPIPE_MODELS
   UDPIPE_MODELS=/projappl/nlpl/software/modules/udpipe/1.2.1-devel/models
 endif
 
-LANGNAME = ${shell ${LOAD_MODULES} opus-iso639 -e ${LANGID} | \
+LANGNAME = ${shell ${LOAD_MODULES} ${ISO639} -n ${LANGID} | sed 's/"//g' | \
 		cut -f1 -d';' | tr ' ' '-' | tr '[:upper:]' '[:lower:]'}
 
 ifeq (${LANGNAME},)
   LANGNAME = xx
 endif
 
-UDPIPE_MODEL = ${notdir $(shell ${LOAD_MODULES} find ${UDPIPE_MODELS}/ -name "${LANGNAME}*.udpipe" | head -1)}
-
+ifneq (${wildcard ${UDPIPE_MODELS}},)
+  UDPIPE_MODEL = ${notdir $(shell ${LOAD_MODULES} find ${UDPIPE_MODELS}/ -name "${LANGNAME}*.udpipe" | head -1)}
+endif
 
 
 all: index.html
 	${MAKE} ${WIKI_LATEST_TRG}
 	${MAKE} ${WIKI_LATEST_SRC}
 
+
+fetch-wiki fetch:
+	mkdir -p wiki
+	wget -O wiki/${SRC}.tar https://object.pouta.csc.fi/OPUS-MT-bt-wiki/${SRC}.tar
+	tar -C wiki -xf wiki/${SRC}.tar
+	rm -f wiki/${SRC}.tar
+
+fetch-wikidoc:
+	mkdir -p wikidoc
+	wget -O wikidoc/${SRC}.tar https://object.pouta.csc.fi/OPUS-MT-bt-wikidoc/${SRC}.tar
+	tar -C wikidoc -xf wikidoc/${SRC}.tar
+	rm -f wikidoc/${SRC}.tar
 
 ## tatoeba = tatoeba-monolingual data and tatoeba-models
 ## TODO: should we loop over all labels?
