@@ -184,10 +184,11 @@ ALL_TRANSLATED_LATEST_SRC = $(patsubst %,${OUTPUT_DIR}/latest/%.${LANGPAIR}.${SR
 ALL_TRANSLATED_LATEST_TRG = $(patsubst %,${OUTPUT_DIR}/latest/%.${LANGPAIR}.${TRG}.gz,${DATASET_NAMES})
 
 
+# don't delete even if uncomplete
+.PRECIOUS: ${ALL_TRANSLATED_SRC} ${ALL_TRANSLATED_TRG}
 
 # .INTERMEDIATE: ${TRANSLATED_PRE}
 .PHONY: all prepare translate
-
 
 all: ${DECODER} ${ALL_TRANSLATED_LATEST_SRC} ${ALL_TRANSLATED_LATEST_TRG}
 
@@ -238,6 +239,7 @@ print-excludes:
 
 ## fetch the latest model
 ## ---> TODO: should we fetch from ObjectStorage instead?
+## ---> could have as fallback to fetch frpm ObjectStore?
 
 ${OUTPUT_DIR}/${PIVOT_MODEL_NAME}/decoder.yml:
 ifneq (${PIVOT_MODEL_ZIP},)
