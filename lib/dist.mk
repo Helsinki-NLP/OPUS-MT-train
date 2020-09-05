@@ -3,11 +3,24 @@
 # make distribution packages
 # and upload them to cPouta ObjectStorage
 #
-
-MODELSHOME          = ${WORKHOME}/models
-DIST_PACKAGE        = ${MODELSHOME}/${LANGPAIRSTR}/${DATASET}.zip
+OBJECTSTORAGE       = https://object.pouta.csc.fi
 MODEL_CONTAINER     = OPUS-MT-models
 DEV_MODEL_CONTAINER = OPUS-MT-dev
+MODELINDEX          = ${OBJECTSTORAGE}/${MODEL_CONTAINER}/index.txt
+MODELSHOME          = ${WORKHOME}/models
+RELEASEDIR          = ${PWD}/models
+DIST_PACKAGE        = ${MODELSHOME}/${LANGPAIRSTR}/${DATASET}.zip
+
+
+
+get-model-release = ${shell wget -qq -O - ${MODELINDEX} | grep '^${1}/.*-.*\.zip' | LANG=en_US.UTF-8 sort -r}
+get-model-distro  = ${shell echo ${wildcard ${1}/${2}/*.zip} | tr ' ' "\n" | LANG=en_US.UTF-8 sort -r}
+
+
+
+find-model:
+	@echo ${call get-model-dist,${LANGPAIRSTR}}
+
 
 ## minimum BLEU score for models to be accepted as distribution package
 MIN_BLEU_SCORE = 20
@@ -290,6 +303,17 @@ upload-models:
 	swift list ${DEV_MODEL_CONTAINER} > index.txt
 	swift upload ${DEV_MODEL_CONTAINER} index.txt
 	rm -f index.txt
+
+.PHONY:
+fetch-model:
+	mkdir -p ${RELEASEDIR}/${LANGPAIRSTR}
+	cd ${RELEASEDIR}/${LANGPAIRSTR} && \
+	wget ${OBJECTSTORAGE}/${MODEL_CONTAINER}/${firstword ${call get-model-release,${LANGPAIRSTR}}}
+
+#	wget -O ${RELEASEDIR}/${LANGPAIRSTR}/${LANGPAIRSTR}.zip \
+#	${OBJECTSTORAGE}/${MODEL_CONTAINER}/${firstword ${call get-model-dist,${LANGPAIRSTR}}}
+#	cd ${RELEASEDIR}/${LANGPAIRSTR} && unzip -n ${LANGPAIRSTR}.zip
+#	rm -f ${RELEASEDIR}/${LANGPAIRSTR}/${LANGPAIRSTR}.zip
 
 .PHONY: upload-scores
 upload-scores: scores

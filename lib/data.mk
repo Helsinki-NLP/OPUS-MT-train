@@ -100,6 +100,7 @@ DATA_TRG := ${sort ${CLEAN_TRAIN_TRG} ${CLEAN_DEV_TRG} ${CLEAN_TEST_TRG}}
 REV_LANGSTR = ${subst ${SPACE},+,$(TRGLANGS)}-${subst ${SPACE},+,$(SRCLANGS)}
 REV_WORKDIR = ${WORKHOME}/${REV_LANGSTR}
 
+.PHONY: reverse-data
 reverse-data:
 ifeq (${PRE_SRC},${PRE_TRG})
 ifeq (${words ${SRCLANGS}},1)
@@ -162,14 +163,15 @@ endif
 
 
 
-
-clean-data:
+.PHONY: claen-data rawdata
+clean-data rawdata:
 	for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
 	    ${MAKE} SRC=$$s TRG=$$t clean-data-source; \
 	  done \
 	done
 
+.PHONY: claen-data-source
 clean-data-source: ${DATA_SRC} ${DATA_TRG}
 
 
@@ -177,6 +179,7 @@ clean-data-source: ${DATA_SRC} ${DATA_TRG}
 ## monolingual data sets (for sentence piece models)
 .INTERMEDIATE: ${LOCAL_MONO_DATA}.${PRE} ${LOCAL_MONO_DATA}.raw
 
+.PHONY: mono-data
 mono-data: ${LOCAL_MONO_DATA}.${PRE}
 
 
