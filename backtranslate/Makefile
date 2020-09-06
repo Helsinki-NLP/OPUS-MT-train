@@ -46,7 +46,8 @@ MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
 ifeq (${MODELNAME},)
   MODELHOME = ../${notdir ${WORKHOME}}/models/${LANGPAIR}
   # MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/*-20*.zip}}}
-  MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/opus-20*.zip}}}
+  # MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/opus-20*.zip}}}
+  MODELZIP  = ${lastword ${shell ls ${MODELHOME}/*-20*.zip | LANG=en_US.UTF-8 sort}}
   MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
 endif
 

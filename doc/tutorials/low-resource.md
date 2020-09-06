@@ -102,19 +102,38 @@ The quality of the translations in the opposite direction are still poor but let
 The next step is to fetch some monolingual data to be back-translated. OPUS-MT is prepared to use Wiki data from various Wikimedia wikis (Wikipedia, Wikiquote, Wikisource, Wikibooks, Wikinews). You can fetch the prepared data sets by running:
 
 ```
-make -C backtranslation SRC=br fetch-wiki
+make -C backtranslate SRC=br fetch-wiki
 ```
 
-Finally, we can translate the Breton Wikipedia to English using the br-en model we have trained above. We set the maximum to 10,000 in this example to reduce the time we need for translating. The default is 1 million sentences to be translated. Run this on a GPU machine and it should take about 20 minutes:
+Finally, we can translate the Breton Wikipedia to English using the br-en model we have trained above. We set the maximum to 50,000 in this example to reduce the time we need for translating. The default is 1 million sentences to be translated. Run this on a GPU machine and it should take about 1-2 hours:
 
 ```
-make -C backtranslation SRC=br TRG=en MAX_SENTENCES=10000 translate
+make -C backtranslate SRC=br TRG=en MAX_SENTENCES=50000 translate
 ```
 
-The translations are most probably really bad as the back-translation model is very poor (around 4 BLEU).
-The translations will be stored in the current directory in a sub-folder `br-en` together with the model that has been used to translate. A copy of the latest translations is kept in `br-en/latest`. Those will be overwritten in case you re-translate the same data.
+The translations are most probably really bad as the back-translation model is very poor (ca. 4 BLEU).
+The translations will be stored in the `backtranslate` directory in a sub-folder `br-en` together with the model that has been used to translate. A copy of the latest translations is kept in `backtranslate/br-en/latest`. Those will be overwritten in case you re-translate the same data.
 
-Translating 50,000 sentences from Breton to English took about 50 minutes in our experiment.
+* the model used for back-translation:
+
+```
+backtranslate/br-en/opus-2020-09-04/source.spm
+backtranslate/br-en/opus-2020-09-04/target.spm
+backtranslate/br-en/opus-2020-09-04/preprocess.sh
+backtranslate/br-en/opus-2020-09-04/postprocess.sh
+backtranslate/br-en/opus-2020-09-04/opus.spm4k-spm4k.vocab.yml
+backtranslate/br-en/opus-2020-09-04/opus.spm4k-spm4k.transformer.model1.npz.best-perplexity.npz
+```
+
+* the back-translated data from Wikipedia
+
+```
+backtranslate/br-en/wiki.aa_opus-2020-09-04.br-en.br.gz
+backtranslate/br-en/wiki.aa_opus-2020-09-04.br-en.en.gz
+backtranslate/br-en/latest/wiki.aa.br-en.br.gz
+backtranslate/br-en/latest/wiki.aa.br-en.en.gz
+```
+
 
 
 ## Generate pivot-based translations
@@ -140,7 +159,31 @@ make -C pivoting SRC=en TRG=br PIVOT=fr print-modelname
 make -C pivoting SRC=en TRG=br PIVOT=fr all
 ```
 
+Pivot-based translations are stored in `pivoting/en-br` together with the model that has been used for pivot translation between French and English, in this case for OpenSubtitles and OfisPublik data in Breton-French (`br-fr`):
 
+* translation model:
+
+```
+pivoting/en-br/opus-2020-02-26/source.spm
+pivoting/en-br/opus-2020-02-26/target.spm
+pivoting/en-br/opus-2020-02-26/preprocess.sh
+pivoting/en-br/opus-2020-02-26/postprocess.sh
+pivoting/en-br/opus-2020-02-26/opus.spm32k-spm32k.vocab.yml
+pivoting/en-br/opus-2020-02-26/opus.spm32k-spm32k.transformer-align.model1.npz.best-perplexity.npz
+```
+
+* pivot-based translations:
+
+```
+pivoting/en-br/OfisPublik.br-fr.opus-2020-02-26.br-en.fr.spm.gz
+pivoting/en-br/OfisPublik.br-fr.opus-2020-02-26.br-en.en.gz
+pivoting/en-br/OpenSubtitles.br-fr.opus-2020-02-26.br-en.fr.spm.gz
+pivoting/en-br/OpenSubtitles.br-fr.opus-2020-02-26.br-en.en.gz
+pivoting/en-br/latest/OfisPublik.br-fr.br-en.br.gz
+pivoting/en-br/latest/OfisPublik.br-fr.br-en.en.gz
+pivoting/en-br/latest/OpenSubtitles.br-fr.br-en.en.gz
+pivoting/en-br/latest/OpenSubtitles.br-fr.br-en.br.gz
+```
 
 
 
@@ -162,14 +205,51 @@ make SRCLANGS=en TRGLANGS=br eval-bt
 make SRCLANGS=en TRGLANGS=br compare-bt
 ```
 
-The results is not good as the back-translations are of poor quality. Note also that the test set is much too small to have reliable scores:
+The results is still not much better as the back-translations are of poor quality. Note also that the test set is much too small to have reliable scores:
 
 | testset               | BLEU  | chr-F  |
 |-----------------------|-------|--------|
 | opus                  | 3.9   | 0.1763 |
-| opus+bt               | 3.5   | 0.1949 |
+| opus+bt               | 4.3   | 0.1827 |
 
-In summary, the translations are still useless, chrF2 goes up and BLEU goes down but on that data set and with those performance level this does not say anything.
+
+In summary, the translations are still useless, BLEU and chrF2 go slightly up but on that data set and with those performance level this does not say anything.
+
+We can do the same with adding pivot-based translation produced above from Breton-French data.The principle is the same that we can simply add a suffix (`-pivot`) to the build targets to change the setup:
+
+```
+make SRCLANGS=en TRGLANGS=br data-pivot
+make SRCLANGS=en TRGLANGS=br train-pivot
+make SRCLANGS=en TRGLANGS=br eval-pivot
+make SRCLANGS=en TRGLANGS=br compare-pivot
+```
+
+This will add all bitexts that can be found in `pivoting/en-br/latest` (and `pivoting/br-en/latest` if it exists) to the training data and re-uses the sentence-piece models and vocabulary from the base model. The pivot-based translations are substantially better than the back-translations with the poor reverse translation model.
+
+| testset               | BLEU  | chr-F  |
+|-----------------------|-------|--------|
+| opus                  | 3.9   | 0.1763 |
+| opus+bt               | 4.3   | 0.1827 |
+| opus+pivot            | 4.8   | 0.2304 |
+
+
+Finally, we can also combine back-translations and pivot-based translations and train models that include all of the extra data sets. This is simply done by combining the suffix codes:
+
+```
+make SRCLANGS=en TRGLANGS=br train-pivot-bt
+make SRCLANGS=en TRGLANGS=br eval-pivot-bt
+make SRCLANGS=en TRGLANGS=br compare-pivot-bt
+```
+
+Note that the order is important here to determine, which one of the models will be used as a base model to continue training on. In the example above, the model that includes back-translations (`opus+bt`) will be used as a starting point for training the new model with combined data sets. Calling `train-bt-pivot` will start with the pivot-augmented model (`opus+pivot`).
+
+
+| testset               | BLEU  | chr-F  |
+|-----------------------|-------|--------|
+| opus                  | 3.9   | 0.1763 |
+| opus+bt               | 4.3   | 0.1827 |
+| opus+pivot            | 4.8   | 0.2304 |
+| opus+bt+pivot         | 5.6   | 0.2187 |
 
 
 
