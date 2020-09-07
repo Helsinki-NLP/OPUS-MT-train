@@ -74,7 +74,12 @@ ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz:
 	cut -f1 -d '@' < cy-en.dic | sed 's/ $$*//' | gzip -c > ${DATADIR}/${PRE}/dic.cy-en.clean.en.gz
 	cut -f2 -d '@' < cy-en.dic | sed 's/^ *//' | gzip -c > ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz
 
-${DATADIR}/${PRE}/%.cy-en.clean.cy.gz:
+
+CYMRU_BITEXTS = ${DATADIR}/${PRE}/CofnodYCynulliad.cy-en.clean.cy.gz \
+		${DATADIR}/${PRE}/Deddfwriaeth.cy-en.clean.cy.gz \
+		${DATADIR}/${PRE}/Meddalwedd.cy-en.clean.cy.gz
+
+${CYMRU_BITEXTS}: ${DATADIR}/${PRE}/%.cy-en.clean.cy.gz:
 	wget http://techiaith.cymru/corpws/Moses/$(patsubst %.cy-en.clean.cy.gz,%.tar.gz,${notdir $@})
 	tar -xzf $(patsubst %.cy-en.clean.cy.gz,%.tar.gz,${notdir $@})
 	$(TOKENIZER)/detokenizer.perl -l cy < $(patsubst %.cy-en.clean.cy.gz,%.cy,${notdir $@}) |\

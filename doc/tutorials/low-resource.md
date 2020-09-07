@@ -252,7 +252,64 @@ Note that the order is important here to determine, which one of the models will
 | opus+bt+pivot         | 5.6   | 0.2187 |
 
 
+One can also rotate back-translation and re-training. For example, training a model with back-translated and pivot-based data in one direction can be used to produce improved models to back-translate monolingual data for the other direction again. For example, creating an augmented model with back-translation and pivoting for Breton to English creates models that perform like this:
+
+| testset               | BLEU  | chr-F  |
+|-----------------------|-------|--------|
+| opus                  | 4.0 	| 0.2027 |
+| opus+bt 	        | 4.8 	| 0.2034 |
+| opus+pivot 	        | 11.9 	| 0.2955 |
+| opus+bt+pivot 	| 9.5 	| 0.2632 |
+
+
+The performance increase by adding pivot-based data is substantial showing how important this technique can be.
+Using one of those extended models to translate Breton wiki data again can be done with the same command as before:
+
+```
+make -C backtranslate SRC=br TRG=en MAX_SENTENCES=50000 translate
+```
+
+This will use the latest model that can be found in the models directory for `br-en`, which is the `opus+bt+pivot` in our case (which is actually not the best according to BLEU, but make doesn't know that). After finishing up the translations they will replace the translations in `backtranslate/br-en/latest` and a new round of model training for English-to-Breton can be involked by calling:
+
+```
+make SRCLANGS=en TRGLANGS=br train-bt-pivot-bt
+```
+
+This will copy the `opus+bt+pivot` model as the starting point for training a new model with the updated back-translated data. The results in this case are a bit surprising:
+
+| testset               | BLEU  | chr-F  | validation perplexity |
+|-----------------------|-------|--------|----------------------:|
+| opus                  | 3.9   | 0.1763 | 31.0720               |
+| opus+bt               | 4.3   | 0.1827 | 19.5584               |
+| opus+pivot            | 4.8   | 0.2304 | 17.2812               |
+| opus+bt+pivot         | 5.6   | 0.2187 | 15.8747               |
+| opus+bt+pivot+bt      | 3.7   | 0.2317 | 14.6780               |
+
+
+BLEU goes down quite a bit but chr-F2 are actually the best score so far. Altogether the results is not very useful demonstrating that low-resource MT is difficult and that testing with 100 sentence pairs is not reliable. The perplexity scores on validation data show some progress but even validation data is small (ca 250 sentence pairs).
+
+For the other direction, the additional back-translation loop does not seem to work either even though the validation perplexity suggests that the model indeed improves. Here are the results for Breton-English:
+
+| testset               | BLEU  | chr-F  | validation perplexity |
+|-----------------------|-------|--------|----------------------:|
+| opus                  | 4.0 	| 0.2027 | 19.1908               |
+| opus+bt 	        | 4.8 	| 0.2034 | 14.0965               |
+| opus+pivot 	        | 11.9 	| 0.2955 | 9.74726               |
+| opus+bt+pivot 	| 9.5 	| 0.2632 | 9.71290               |
+| opus+bt+pivot+bt      | 8.1   | 0.2624 | 8.85632               |
+
 
 ## Multilingual models
+
+Another common approach to improve low-resource translation is to rely on transfer learning and multilingual models.
+
+```
+make SRCLANGS="en fr" TRGLANGS="ga cy br gd kw gv" FIT_DATA_SIZE=500000 local-config
+make SRCLANGS="en fr" TRGLANGS="ga cy br gd kw gv" FIT_DATA_SIZE=500000 data
+make SRCLANGS="en fr" TRGLANGS="ga cy br gd kw gv" train-gpu01
+make SRCLANGS="en fr" TRGLANGS="ga cy br gd kw gv" eval
+```
+
+
 
 ## Packaging
