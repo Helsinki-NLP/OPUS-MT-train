@@ -1,7 +1,8 @@
 # OPUS-MT-train tutorial
 
-This tutorial goes through some common tasks with the example of training models to translate from English Breton to English. We assume that you have a working setup of all tools required. Check the [installation documentation](../Setup.md) for further information.
+This tutorial goes through some common tasks with the example of training models to translate from English to Breton. We assume that you have a working setup of all tools required. Check the [installation documentation](../Setup.md) for further information.
 
+For the impacient reader: jump to the summary of commands at the end of this page.
 
 ## Basic configuration and data sets
 
@@ -9,7 +10,7 @@ This tutorial goes through some common tasks with the example of training models
 * create a local configuration file with language-specific settings
 
 ```
-make SRCLANGS=en TRGLANGS=br local-config
+make SRCLANGS=en TRGLANGS=br config
 ```
 
 
@@ -302,14 +303,80 @@ For the other direction, the additional back-translation loop does not seem to w
 ## Multilingual models
 
 Another common approach to improve low-resource translation is to rely on transfer learning and multilingual models.
+The basic steps are the same, only some variables need to be adjusted. Most importantly, you need to set several source and target languages to be covered by the model. All combinations of thos languages will be considered. Furthermore, it might be useful to activate over and under-sampling of data to have more equal proportions of data for each language pair. This is done by setting a value to `FIT_DATA_SIZE` (number of training examples, i.e. aligned sentence pairs). Here would be the example for training a mode between English and French to a number of celtic languages (including Breton):
 
 ```
-make SRCLANGS="en fr" TRGLANGS="ga cy br gd kw gv" FIT_DATA_SIZE=500000 local-config
+make SRCLANGS="en fr" TRGLANGS="ga cy br gd kw gv" FIT_DATA_SIZE=500000 config
 make SRCLANGS="en fr" TRGLANGS="ga cy br gd kw gv" FIT_DATA_SIZE=500000 data
 make SRCLANGS="en fr" TRGLANGS="ga cy br gd kw gv" train-gpu01
 make SRCLANGS="en fr" TRGLANGS="ga cy br gd kw gv" eval
 ```
 
+The training step in this example would use 2 GPUs instead of one to speed things up and to allow larger batches. The training will still take considerable amounts of time to converge (a few days). Be aware of that delay!
+
+After about a day of training, I got the following performance for the multilingual test set that was created:
+
+| testset               | BLEU  | chr-F  |
+|-----------------------|-------|--------|
+| opus                  | 15.3  | 0.3289 |
+
+Note that those scores are not comparable to the scores above as they come from a completely different test set with a mix of various language pairs. The model itself can also not be applied to the Breton-English test set above because it comes from a different randomised selection and there may be overlaps between test and development data and even training data if there are remaining sentences from the test set corpus that are used as additional training data. Don't mix those models if you use the standard setup where data sets are selected randomly and unused examples from the test set corpus are used for training!
+
+Multilingual models can also be used for back-translation and pivoting and can also be augmented with back-translated and pivot-based translations. But the whole thing becomes a bit more complex as many language pairs are involved. For example, using the pivot-based translation from French-Breton to English-Breton from above in a multilingual model could be done by running:
+
+```
+make SRCLANGS="en fr" TRGLANGS="ga cy br gd kw gv" FIT_DATA_SIZE=500000 config-pivot
+make SRCLANGS="en fr" TRGLANGS="ga cy br gd kw gv" FIT_DATA_SIZE=500000 data-pivot
+make SRCLANGS="en fr" TRGLANGS="ga cy br gd kw gv" train-pivot-gpu01
+make SRCLANGS="en fr" TRGLANGS="ga cy br gd kw gv" eval-pivot
+```
+
+Note that we still keep French as a source language, which also makes the original French-Breton data available. The translation to artificial English-Breton training data is still useful as we applied a French-English model for that translation that has been trained on large data sets and should provide rather high quality translations. This cannot easily be compensated by the multilingual data setup.
 
 
-## Packaging
+More details about multilingual model training can be found in the [tutorial on multilingual OPUS-MT models]{multilingual.md}.
+
+
+
+## Summary
+
+Here is a summary of the steps that we discussed above:
+
+```
+## create the data sets and a config file
+make SRCLANGS=en TRGLANGS=br config
+make SRCLANGS=en TRGLANGS=br data
+make SRCLANGS=en TRGLANGS=br reverse-data
+
+## train and evaluate the base model
+make SRCLANGS=en TRGLANGS=br train
+make SRCLANGS=en TRGLANGS=br eval
+
+## train and evaluate the reverse model
+make SRCLANGS=br TRGLANGS=en train
+make SRCLANGS=br TRGLANGS=en eval
+
+## create back-translations using the reverse model
+make SRCLANGS=br TRGLANGS=en dist
+make -C backtranslate SRC=br fetch-wiki
+make -C backtranslate SRC=br TRG=en MAX_SENTENCES=50000 translate
+
+## create pivot-based translations for fr-br data
+make SRCLANGS=fr TRGLANGS=en fetch-model
+make -C pivoting SRC=en TRG=br PIVOT=fr all
+
+## train a new model including back-translated data
+make SRCLANGS=en TRGLANGS=br data-bt
+make SRCLANGS=en TRGLANGS=br train-bt
+make SRCLANGS=en TRGLANGS=br eval-bt
+
+## add pivot-based translations
+make SRCLANGS=en TRGLANGS=br data-pivot-bt
+make SRCLANGS=en TRGLANGS=br train-pivot-bt
+make SRCLANGS=en TRGLANGS=br eval-pivot-bt
+
+## train a multilingual model for English+French to Celtic languages:
+make SRCLANGS="en fr" TRGLANGS="ga cy br gd kw gv" FIT_DATA_SIZE=500000 data-pivot
+make SRCLANGS="en fr" TRGLANGS="ga cy br gd kw gv" train-pivot
+make SRCLANGS="en fr" TRGLANGS="ga cy br gd kw gv" eval-pivot
+```

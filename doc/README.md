@@ -67,7 +67,7 @@ Configurations and definitions about the system environment are stored in
 The model specific configuration can store properties that otherwise need to be given on the command-line when calling make targets. You can generate the configuration file using
 
 ```
-make [OPTIONS] local-config
+make [OPTIONS] config
 ```
 
 

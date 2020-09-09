@@ -7,6 +7,7 @@
 git clone https://github.com/Helsinki-NLP/OPUS-MT-train.git
 ```
 
+* make sure that you have `pip` (for Python libraries) and `cpan` (for Perl modules) available on your system. For `cpan you may need to setup [local::lib](https://metacpan.org/pod/local::lib) to install locally in your user environment.
 * install pre-requisites (manually) or via submodules:
 
 ```
@@ -39,3 +40,5 @@ sudo port select --set cython cython38
 cd tools/efmoral
 sudo env python3 setup.py install
 ```
+
+## Troubleshooting

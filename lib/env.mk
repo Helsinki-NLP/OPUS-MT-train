@@ -7,6 +7,19 @@
 
 SHELL := /bin/bash
 
+
+## setup local Perl environment
+## better install local::lib and put this into your .bashrc:
+##
+## eval "$(perl -I$HOME/perl5/lib/perl5 -Mlocal::lib)"
+
+export PATH                := ${HOME}/perl5/bin:${PATH}
+export PERL5LIB            := ${HOME}/perl5/lib/perl5:${PERL5LIB}}
+export PERL_LOCAL_LIB_ROOT := ${HOME}/perl5:${PERL_LOCAL_LIB_ROOT}}
+export PERL_MB_OPT         := --install_base "${HOME}/perl5"
+export PERL_MM_OPT         := INSTALL_BASE=${HOME}/perl5
+
+
 ## modules to be loaded in sbatch scripts
 
 CPU_MODULES = gcc/6.2.0 mkl
@@ -45,8 +58,8 @@ GPUJOB_HPC_MEM ?= 4g
 # GPU    = k80
 GPU      = p100
 DEVICE   = cuda
-LOADCPU  = module load ${CPU_MODULES}
-LOADGPU  = module load ${GPU_MODULES}
+LOADCPU  = echo "nothing to load"
+LOADGPU  = echo "nothing to load"
 LOADMODS = echo "nothing to load"
 
 WORKHOME = ${PWD}/work
@@ -84,6 +97,8 @@ else ifneq ($(wildcard /wrk/tiedeman/research),)
   MOSESSCRIPTS = ${MOSESHOME}/scripts
   MARIAN_HOME  = ${HOME}/appl_taito/tools/marian/build-gpu/
   MARIAN       = ${HOME}/appl_taito/tools/marian/build-gpu
+  LOADCPU      = module load ${CPU_MODULES}
+  LOADGPU      = module load ${GPU_MODULES}
   LOADMODS     = ${LOADGPU}
 else ifeq (${shell hostname --domain 2>/dev/null},bullx)
   CSCPROJECT   = project_2002688
@@ -100,6 +115,8 @@ else ifeq (${shell hostname --domain 2>/dev/null},bullx)
   GPU_MODULES  = python-env 
   CPU_MODULES  = python-env
   HPC_QUEUE    = small
+  LOADCPU      = module load ${CPU_MODULES}
+  LOADGPU      = module load ${GPU_MODULES}
   export PATH := ${APPLHOME}/bin:${PATH}
 endif
 
@@ -132,14 +149,13 @@ EFLOMAL_HOME   ?= ${dir ${EFLOMAL}}
 WORDALIGN      ?= ${EFLOMAL_HOME}align.py
 EFLOMAL        ?= ${EFLOMAL_HOME}eflomal
 MOSESSCRIPTS   ?= ${TOOLSDIR}/moses-scripts/scripts
-
+TMX2MOSES      ?= ${shell which tmx2moses  || echo ${TOOLSDIR}/OpusTools-perl/scripts/convert/tmx2moses}
 
 ## marian-nmt binaries
 
 MARIAN_TRAIN   = ${MARIAN_HOME}marian
 MARIAN_DECODER = ${MARIAN_HOME}marian-decoder
 MARIAN_VOCAB   = ${MARIAN_HOME}marian-vocab
-
 
 
 TOKENIZER    = ${MOSESSCRIPTS}/tokenizer
@@ -167,7 +183,7 @@ SHUFFLE := ${shell which ${TERASHUF} || echo "${SORT} --random-sort"}
 GZIP    := ${shell which ${PIGZ}     || echo gzip}
 GZCAT   := ${GZIP} -cd
 ZCAT    := gzip -cd
-
+UNIQ    := ${SORT} -u
 
 
 
@@ -187,6 +203,7 @@ MULTEVALHOME = ${APPLHOME}/multeval
 
 
 PREREQ_TOOLS := $(lastword ${ISO639}) ${ATOOLS} ${PIGZ} ${TERASHUF} ${JQ} ${MARIAN} ${EFLOMAL}
+PREREQ_PERL  := ISO::639::3 ISO::639::5 OPUS::Tools XML::Parser
 
 PIP  := ${shell which pip3 2>/dev/null || echo pip}
 CPAN := ${shell which cpanm 2>/dev/null || echo cpan}
@@ -204,8 +221,13 @@ endif
 PHONY: install-prerequisites install-prereq install-requirements
 install-prerequisites install-prereq install-requirements:
 	${PIP} install --user -r requirements.txt
+	${MAKE} install-perl-modules:
 	${MAKE} ${PREREQ_TOOLS}
 
+install-perl-modules:
+	for p in ${PREREQ_PERL}; do \
+	  perl -e "use $$p;" || ${CPAN} -i $$p; \
+	done
 
 ${TOOLSDIR}/LanguageCodes/ISO-639-3/bin/iso639:
 	${MAKE} tools/LanguageCodes/ISO-639-5/lib/ISO/639/5.pm

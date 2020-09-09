@@ -450,9 +450,13 @@ ${DEV_SRC}.shuffled.gz:
 	    fi \
 	  done \
 	done
-	paste ${DEV_SRC} ${DEV_TRG} | ${SHUFFLE} | ${GZIP} -c > $@
+	paste ${DEV_SRC} ${DEV_TRG} | ${UNIQ} | ${SHUFFLE} | ${GZIP} -c > $@
 	echo -n "* total size of shuffled dev data: "        >> ${dir ${DEV_SRC}}README.md
 	${GZIP} -cd < $@ | wc -l                             >> ${dir ${DEV_SRC}}README.md
+
+## OLD: don't uniq the dev-data ...
+##
+#	paste ${DEV_SRC} ${DEV_TRG} | ${SHUFFLE} | ${GZIP} -c > $@
 
 
 

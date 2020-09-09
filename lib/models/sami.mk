@@ -6,9 +6,8 @@
 # sami-data: fetch-sami-tmx convert-sami-tmx move-sami-data convert-sami-gloss
 sami-data: 
 	${MAKE} -j 1 fetch-sami-tmx convert-sami-tmx merge-sami-data convert-sami-gloss
-	${MAKE} data-sami
 
-sami-train: train-dynamic-sami
+sami-train: train-sami
 sami-eval: eval-sami
 sami-dist: dist-sami
 
@@ -93,7 +92,7 @@ fetch-sami-tmx: ${GIELLATEKNO_SAMI_TM}
 convert-sami-tmx:
 	for t in ${GIELLATEKNO_SAMI_TM}; do \
 	  mkdir -p ${DATADIR}/sami; \
-	  tmx2moses -r -o ${DATADIR}/sami/`echo -n $$t | xargs basename | sed 's/.tmx//'` $$t; \
+	  ${TMX2MOSES} -r -o ${DATADIR}/sami/`echo -n $$t | xargs basename | sed 's/.tmx//'` $$t; \
 	done
 
 ## OLD: individual file names
@@ -140,6 +139,9 @@ ${GIELLATEKNO_SAMI_TM}:
 
 ## name of the sami data sets
 # SAMI_EXTRA = ${patsubst %.tmx,%,${notdir ${GIELLATEKNO_SAMI_TM}}} glossary
+
+
+#		FIT_DATA_SIZE=200000 \
 
 %-sami:
 	${MAKE} DATASET=${DATASET}+giella \

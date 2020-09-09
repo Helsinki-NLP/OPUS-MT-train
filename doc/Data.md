@@ -80,7 +80,7 @@ This command will in the standard setup
 * create a vocabulary file for Marian-NMT
 
 
-## Fetching and basic pre-processing
+### Fetching and basic pre-processing
 
 OPUS-MT finds available data in the OPUS collection (this requires a local copy of the data right now!) and merges all of them to create taining data. Test and validation data will be taken from one of the OPUS corpora and that data will be excluded from the training data. The settings of data sets can be found in `lib/config/mk`
 
