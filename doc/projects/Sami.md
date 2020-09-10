@@ -8,7 +8,7 @@ Recipes for training multilingual language models involving Sami languages.
 Relevant makefiles:
 
 * [Makefile](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/Makefile)
-* [lib/models/sami.mk](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/lib/models/sami.mk)
+* [lib/projects/sami.mk](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/lib/projects/sami.mk)
 * [backtranslate/Makefile](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/backtranslate/Makefile)
 
 
@@ -54,7 +54,7 @@ Parameters / variables:
 
 * `GIELLATEKNO_HOME`: URL for Giellatekno resources (default: https://victorio.uit.no/biggies/trunk)
 * `GIELLATEKNO_TM_HOME`: directory of translation memories (default: ${GIELLATEKNO_HOME}/mt/omegat)
-* `GIELLATEKNO_SAMI_TM`: list of translation memories to be downloaded (see [lib/models/sami.mk](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/lib/models/sami.mk))
+* `GIELLATEKNO_SAMI_TM`: list of translation memories to be downloaded (see [lib/projects/sami.mk](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/lib/projects/sami.mk))
 
 
 Implicit rules:

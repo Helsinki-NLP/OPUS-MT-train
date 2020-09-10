@@ -143,7 +143,7 @@ ${GIELLATEKNO_SAMI_TM}:
 
 #		FIT_DATA_SIZE=200000 \
 
-%-sami:
+%-finno-ugric:
 	${MAKE} DATASET=${DATASET}+giella \
 		HELDOUTSIZE=0 \
 		BPESIZE=4000 \
@@ -155,6 +155,20 @@ ${GIELLATEKNO_SAMI_TM}:
 		TRGLANGS="se sma smj smn sms vep et fi kv krl nb no nn ru sv en" \
 		SKIP_LANGPAIRS="en-en|en-et|en-fi|en-nb|en-no|en-nn|en-ru|en-sv|et-et|et-fi|et-nb|et-no|et-nn|et-ru|et-sv|fi-fi|fi-nb|fi-no|fi-nn|fi-ru|fi-sv|nb-nb|nb-no|nb-nn|nb-ru|nb-sv|no-no|no-nn|no-ru|no-sv|nn-nn|nn-ru|nn-sv|ru-ru|ru-sv|sv-sv" \
 	${@:-sami=}
+
+%-sami:
+	${MAKE} DATASET=${DATASET}+giella \
+		HELDOUTSIZE=0 \
+		BPESIZE=4000 \
+		DEVSET=giella \
+		TESTSET=giella \
+		DEVMINSIZE=100 \
+		EXTRA_TRAINSET="glossary" \
+		SRCLANGS="se sma smj smn sms fi nb no nn ru sv en" \
+		TRGLANGS="se sma smj smn sms fi nb no nn ru sv en" \
+		SKIP_LANGPAIRS="en-en|en-fi|en-nb|en-no|en-nn|en-ru|en-sv|fi-fi|fi-nb|fi-no|fi-nn|fi-ru|fi-sv|nb-nb|nb-no|nb-nn|nb-ru|nb-sv|no-no|no-nn|no-ru|no-sv|nn-nn|nn-ru|nn-sv|ru-ru|ru-sv|sv-sv" \
+	${@:-sami=}
+
 
 
 %-sami-xx:

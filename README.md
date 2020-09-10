@@ -49,12 +49,12 @@ Essential files for making new models:
 * `lib/dist.mk`: make packages for distributing models (CSC ObjectStorage based)
 * `lib/slurm.mk`: submit jobs with SLURM
 
-There are also make targets for specific models and tasks. Look into `lib/models/` to see what has been defined already. 
-Note that this frequently changes! There is, for example:
+There are also make targets for specific projects and tasks. Look into `lib/projects/` to see what has been defined already. 
+Note that this frequently changes! Check the file `lib/projects.mk` to see what kind of project files are enabled. There are currently, for example:
 
-* `lib/models/multilingual.mk`: various multilingual models
-* `lib/models/celtic.mk`: data and models for Celtic languages
-* `lib/models/doclevel.mk`: experimental document-level models
+* `lib/projects/multilingual.mk`: various multilingual models
+* `lib/projects/celtic.mk`: data and models for Celtic languages
+* `lib/projects/doclevel.mk`: experimental document-level models
 
 
 Run this if you want to train a model, for example for translating English to French:

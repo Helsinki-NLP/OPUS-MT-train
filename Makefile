@@ -165,23 +165,7 @@ include lib/allas.mk
 
 include lib/generic.mk
 include lib/langsets.mk
-# include lib/tasks.mk
-include lib/models/celtic.mk
-include lib/models/finland.mk
-include lib/models/fiskmo.mk
-include lib/models/memad.mk
-include lib/models/multilingual.mk
-include lib/models/opus.mk
-include lib/models/romance.mk
-include lib/models/russian.mk
-include lib/models/sami.mk
-include lib/models/wikimedia.mk
-include lib/models/wikimatrix.mk
-
-include lib/models/doclevel.mk
-include lib/models/simplify.mk
-
-include lib/models/tatoeba.mk
+include lib/projects.mk
 
 
 .PHONY: all
