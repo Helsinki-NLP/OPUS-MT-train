@@ -159,12 +159,12 @@ else
 endif
 
 ifneq (${words ${TRGLANGS}},1)
-  PREPROCESS_SCRIPT = preprocess-${PREPROCESS_TYPE}-multi-target.sh
+  PREPROCESS_SCRIPT = scripts/preprocess-${PREPROCESS_TYPE}-multi-target.sh
 else
-  PREPROCESS_SCRIPT = preprocess-${PREPROCESS_TYPE}.sh
+  PREPROCESS_SCRIPT = scripts/preprocess-${PREPROCESS_TYPE}.sh
 endif
 
-POSTPROCESS_SCRIPT = postprocess-${PREPROCESS_TYPE}.sh
+POSTPROCESS_SCRIPT = scripts/postprocess-${PREPROCESS_TYPE}.sh
 
 
 

@@ -29,8 +29,10 @@ ifeq ($(wildcard ${MODEL_VOCAB}),)
 ifneq (${MODEL_LATEST_VOCAB},)
 	cp ${MODEL_LATEST_VOCAB} ${MODEL_VOCAB}
 else
+ifneq (${MODEL_VOCABTYPE},spm)
 	mkdir -p ${dir $@}
 	${LOADMODS} && ${ZCAT} $^ | ${MARIAN_VOCAB} --max-size ${VOCABSIZE} > $@
+endif
 endif
 else
 	@echo "$@ already exists!"
@@ -105,6 +107,7 @@ endif
 	--tempdir ${TMPDIR} \
         --exponential-smoothing
 	touch $@
+
 
 
 

@@ -337,9 +337,10 @@ MODEL_VALIDLOG  = ${MODEL}.${MODELTYPE}.valid${NR}.log
 MODEL_TRAINLOG  = ${MODEL}.${MODELTYPE}.train${NR}.log
 MODEL_START     = ${WORKDIR}/${MODEL_BASENAME}.npz
 MODEL_FINAL     = ${WORKDIR}/${MODEL_BASENAME}.npz.best-perplexity.npz
+MODEL_DECODER   = ${MODEL_FINAL}.decoder.yml
 MODEL_VOCABTYPE = yml
 MODEL_VOCAB     = ${WORKDIR}/${MODEL}.vocab.${MODEL_VOCABTYPE}
-MODEL_DECODER   = ${MODEL_FINAL}.decoder.yml
+
 
 ## latest model with the same pre-processing but any data or modeltype
 ifdef CONTINUE_EXISTING
