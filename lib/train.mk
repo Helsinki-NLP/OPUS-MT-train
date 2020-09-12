@@ -54,7 +54,7 @@ endif
 ## (will be created by marian if it does not exist)
 
 ## train transformer model
-${WORKDIR}/${MODEL}.transformer.model${NR}.done: \
+${WORKDIR}/${MODEL}.transformer.model${NR}.done ${WORKDIR}/${MODEL}.transformer-spm.model${NR}.done: \
 		${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 		${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz \
 		${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG}
@@ -72,12 +72,13 @@ endif
 endif
 endif
 ##--------------------------------------------------------------------
+	${MAKE} ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB}
 	${LOADMODS} && ${MARIAN_TRAIN} ${MARIAN_EXTRA} \
         --model $(@:.done=.npz) \
 	--type transformer \
         --train-sets ${word 1,$^} ${word 2,$^} ${MARIAN_TRAIN_WEIGHTS} \
         --max-length 500 \
-        --vocabs ${MODEL_VOCAB} ${MODEL_VOCAB} \
+        --vocabs ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB} \
         --mini-batch-fit \
 	-w ${MARIAN_WORKSPACE} \
 	--maxi-batch ${MARIAN_MAXI_BATCH} \
@@ -179,66 +180,67 @@ endif
 
 
 
-${TRAIN_SRC}.clean${TRAINSIZE}.gz: ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz
-	${ZCAT} $< | sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' | \
-	sed 's/\@\@ //g;s/ \@\@//g;s/ \@\-\@ /-/g' | ${GZIP} -c > $@
+# ${TRAIN_SRC}.clean${TRAINSIZE}.gz: ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz
+# 	${ZCAT} $< | sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' | \
+# 	sed 's/\@\@ //g;s/ \@\@//g;s/ \@\-\@ /-/g' | ${GZIP} -c > $@
 
-${TRAIN_TRG}.clean${TRAINSIZE}.gz: ${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz
-	${ZCAT} $< | sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' | \
-	sed 's/\@\@ //g;s/ \@\@//g;s/ \@\-\@ /-/g' | ${GZIP} -c > $@
+# ${TRAIN_TRG}.clean${TRAINSIZE}.gz: ${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz
+# 	${ZCAT} $< | sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' | \
+# 	sed 's/\@\@ //g;s/ \@\@//g;s/ \@\-\@ /-/g' | ${GZIP} -c > $@
 
 
-## train transformer model
-${WORKDIR}/${MODEL}.transformer-spm.model${NR}.done: \
-		${TRAIN_SRC}.clean${TRAINSIZE}.gz \
-		${TRAIN_TRG}.clean${TRAINSIZE}.gz \
-		${DEV_SRC} ${DEV_TRG}
-	mkdir -p ${dir $@}
-##--------------------------------------------------------------------
-## in case we want to continue training from the latest existing model
-## (check lib/config.mk to see how the latest model is found)
-##--------------------------------------------------------------------
-ifeq (${wildcard ${MODEL_START}},)
-ifneq (${MODEL_LATEST},)
-ifneq (${MODEL_LATEST_VOCAB},)
-	cp ${MODEL_LATEST_VOCAB} ${MODEL_VOCAB}
-	cp ${MODEL_LATEST} ${MODEL_START}
-endif
-endif
-endif
-##--------------------------------------------------------------------
-	${LOADMODS} && ${MARIAN_TRAIN} ${MARIAN_EXTRA} \
-        --model $(@:.done=.npz) \
-	--type transformer \
-        --train-sets ${word 1,$^} ${word 2,$^} ${MARIAN_TRAIN_WEIGHTS} \
-        --max-length 500 \
-        --vocabs ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB} \
-        --mini-batch-fit \
-	-w ${MARIAN_WORKSPACE} \
-	--maxi-batch ${MARIAN_MAXI_BATCH} \
-        --early-stopping ${MARIAN_EARLY_STOPPING} \
-        --valid-freq ${MARIAN_VALID_FREQ} \
-	--save-freq ${MARIAN_SAVE_FREQ} \
-	--disp-freq ${MARIAN_DISP_FREQ} \
-        --valid-sets ${word 3,$^} ${word 4,$^} \
-        --valid-metrics perplexity \
-        --valid-mini-batch ${MARIAN_VALID_MINI_BATCH} \
-        --beam-size 12 --normalize 1 --allow-unk \
-        --log $(@:.model${NR}.done=.train${NR}.log) \
-	--valid-log $(@:.model${NR}.done=.valid${NR}.log) \
-        --enc-depth 6 --dec-depth 6 \
-        --transformer-heads 8 \
-        --transformer-postprocess-emb d \
-        --transformer-postprocess dan \
-        --transformer-dropout ${MARIAN_DROPOUT} \
-	--label-smoothing 0.1 \
-        --learn-rate 0.0003 --lr-warmup 16000 --lr-decay-inv-sqrt 16000 --lr-report \
-        --optimizer-params 0.9 0.98 1e-09 --clip-norm 5 \
-        --tied-embeddings-all \
-	--overwrite --keep-best \
-	--devices ${MARIAN_GPUS} \
-        --sync-sgd --seed ${SEED} \
-	--sqlite \
-	--tempdir ${TMPDIR} \
-        --exponential-smoothing
-	touch $@
+# ## train transformer model
+# ${WORKDIR}/${MODEL}.transformer-spm.model${NR}.done: \
+# 		${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
+# 		${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz \
+# 		${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG}
+# 	mkdir -p ${dir $@}
+# ##--------------------------------------------------------------------
+# ## in case we want to continue training from the latest existing model
+# ## (check lib/config.mk to see how the latest model is found)
+# ##--------------------------------------------------------------------
+# ifeq (${wildcard ${MODEL_START}},)
+# ifneq (${MODEL_LATEST},)
+# ifneq (${MODEL_LATEST_VOCAB},)
+# 	cp ${MODEL_LATEST_VOCAB} ${MODEL_VOCAB}
+# 	cp ${MODEL_LATEST} ${MODEL_START}
+# endif
+# endif
+# endif
+# ##--------------------------------------------------------------------
+# 	${MAKE} ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB}
+# 	${LOADMODS} && ${MARIAN_TRAIN} ${MARIAN_EXTRA} \
+#         --model $(@:.done=.npz) \
+# 	--type transformer \
+#         --train-sets ${word 1,$^} ${word 2,$^} ${MARIAN_TRAIN_WEIGHTS} \
+#         --max-length 500 \
+#         --vocabs ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB} \
+#         --mini-batch-fit \
+# 	-w ${MARIAN_WORKSPACE} \
+# 	--maxi-batch ${MARIAN_MAXI_BATCH} \
+#         --early-stopping ${MARIAN_EARLY_STOPPING} \
+#         --valid-freq ${MARIAN_VALID_FREQ} \
+# 	--save-freq ${MARIAN_SAVE_FREQ} \
+# 	--disp-freq ${MARIAN_DISP_FREQ} \
+#         --valid-sets ${word 3,$^} ${word 4,$^} \
+#         --valid-metrics perplexity \
+#         --valid-mini-batch ${MARIAN_VALID_MINI_BATCH} \
+#         --beam-size 12 --normalize 1 --allow-unk \
+#         --log $(@:.model${NR}.done=.train${NR}.log) \
+# 	--valid-log $(@:.model${NR}.done=.valid${NR}.log) \
+#         --enc-depth 6 --dec-depth 6 \
+#         --transformer-heads 8 \
+#         --transformer-postprocess-emb d \
+#         --transformer-postprocess dan \
+#         --transformer-dropout ${MARIAN_DROPOUT} \
+# 	--label-smoothing 0.1 \
+#         --learn-rate 0.0003 --lr-warmup 16000 --lr-decay-inv-sqrt 16000 --lr-report \
+#         --optimizer-params 0.9 0.98 1e-09 --clip-norm 5 \
+#         --tied-embeddings-all \
+# 	--overwrite --keep-best \
+# 	--devices ${MARIAN_GPUS} \
+#         --sync-sgd --seed ${SEED} \
+# 	--sqlite \
+# 	--tempdir ${TMPDIR} \
+#         --exponential-smoothing
+# 	touch $@

@@ -353,6 +353,8 @@ ifeq (${MODELTYPE},transformer-spm)
   MODEL_VOCAB     = ${WORKDIR}/${MODEL}.vocab.${MODEL_VOCABTYPE}
   MODEL_SRCVOCAB  = ${SPMSRCMODEL}
   MODEL_TRGVOCAB  = ${SPMTRGMODEL}
+  PRE_SRC         = plain
+  PRE_TRG         = plain
 #  MODEL_SRCVOCAB  = ${MODEL_VOCAB}
 #  MODEL_TRGVOCAB  = ${MODEL_VOCAB}
 else

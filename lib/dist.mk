@@ -147,17 +147,22 @@ SKIP_DIST_EVAL = 0
 ## determine pre-processing type
 
 ifneq ("$(wildcard ${BPESRCMODEL})","")
-  PREPROCESS_TYPE = bpe
+  PREPROCESS_TYPE     = bpe
+  SUBWORD_TYPE        = bpe
   PREPROCESS_SRCMODEL = ${BPESRCMODEL}
   PREPROCESS_TRGMODEL = ${BPETRGMODEL}
   PREPROCESS_DESCRIPTION = normalization + tokenization + BPE (${PRE_SRC},${PRE_TRG})
 else ifeq (${MODELTYPE},transformer-spm)
-  PREPROCESS_TYPE = txt
+  PREPROCESS_TYPE     = txt
+  SUBWORD_TYPE        = spm
+  RELEASE_SRCVOCAB    = source.spm
+  RELEASE_TRGVOCAB    = target.spm
   PREPROCESS_SRCMODEL = ${SPMSRCMODEL}
   PREPROCESS_TRGMODEL = ${SPMTRGMODEL}
   PREPROCESS_DESCRIPTION = normalization + in-build SentencePiece (${PRE_SRC},${PRE_TRG})
 else
-  PREPROCESS_TYPE = spm
+  PREPROCESS_TYPE     = spm
+  SUBWORD_TYPE        = spm
   PREPROCESS_SRCMODEL = ${SPMSRCMODEL}
   PREPROCESS_TRGMODEL = ${SPMTRGMODEL}
   PREPROCESS_DESCRIPTION = normalization + SentencePiece (${PRE_SRC},${PRE_TRG})
@@ -169,7 +174,9 @@ else
   PREPROCESS_SCRIPT = scripts/preprocess-${PREPROCESS_TYPE}.sh
 endif
 
-POSTPROCESS_SCRIPT = scripts/postprocess-${PREPROCESS_TYPE}.sh
+POSTPROCESS_SCRIPT  = scripts/postprocess-${PREPROCESS_TYPE}.sh
+RELEASE_SRCVOCAB   ?= ${notdir ${MODEL_SRCVOCAB}}
+RELEASE_TRGVOCAB   ?= ${notdir ${MODEL_TRGVOCAB}}
 
 
 
@@ -190,8 +197,8 @@ endif
 	@echo "* target language(s): ${TRGLANGS}" >> ${WORKDIR}/README.md
 	@echo "* model: ${MODELTYPE}" >> ${WORKDIR}/README.md
 	@echo "* pre-processing: ${PREPROCESS_DESCRIPTION}" >> ${WORKDIR}/README.md
-	@cp ${PREPROCESS_SRCMODEL} ${WORKDIR}/source.${PREPROCESS_TYPE}
-	@cp ${PREPROCESS_TRGMODEL} ${WORKDIR}/target.${PREPROCESS_TYPE}
+	@cp ${PREPROCESS_SRCMODEL} ${WORKDIR}/source.${SUBWORD_TYPE}
+	@cp ${PREPROCESS_TRGMODEL} ${WORKDIR}/target.${SUBWORD_TYPE}
 	@cp ${PREPROCESS_SCRIPT} ${WORKDIR}/preprocess.sh
 	@cp ${POSTPROCESS_SCRIPT} ${WORKDIR}/postprocess.sh
 	@if [ ${words ${TRGLANGS}} -gt 1 ]; then \
@@ -233,16 +240,19 @@ endif
 	@echo '' >> ${dir $@}README.md
 	@cp models/LICENSE ${WORKDIR}/
 	@chmod +x ${WORKDIR}/preprocess.sh
-	@sed -e 's# - .*/\([^/]*\)$$# - \1#' \
-	    -e 's/beam-size: [0-9]*$$/beam-size: 6/' \
-	    -e 's/mini-batch: [0-9]*$$/mini-batch: 1/' \
-	    -e 's/maxi-batch: [0-9]*$$/maxi-batch: 1/' \
-	    -e 's/relative-paths: false/relative-paths: true/' \
+	@sed -e 's#${MODEL_SRCVOCAB}#${RELEASE_SRCVOCAB}#' \
+	     -e 's#${MODEL_TRGVOCAB}#${RELEASE_TRGVOCAB}#' \
+	     -e 's# - .*/\([^/]*\)$$# - \1#' \
+	     -e 's/beam-size: [0-9]*$$/beam-size: 6/' \
+	     -e 's/mini-batch: [0-9]*$$/mini-batch: 1/' \
+	     -e 's/maxi-batch: [0-9]*$$/maxi-batch: 1/' \
+	     -e 's/relative-paths: false/relative-paths: true/' \
 	< ${MODEL_DECODER} > ${WORKDIR}/decoder.yml
 	@cd ${WORKDIR} && zip ${notdir $@} \
 		README.md LICENSE \
 		${notdir ${MODEL_FINAL}} \
-		${notdir ${MODEL_VOCAB}} \
+		${notdir ${RELEASE_SRCVOCAB}} \
+		${notdir ${RELEASE_TRGVOCAB}} \
 		${notdir ${MODEL_VALIDLOG}} \
 		${notdir ${MODEL_TRAINLOG}} \
 		source.* target.* decoder.yml preprocess.sh postprocess.sh

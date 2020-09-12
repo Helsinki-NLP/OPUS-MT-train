@@ -192,6 +192,16 @@
 
 
 
+## no further pre-processing
+
+%.src.plain: %.src
+	mv $< $@
+	ln -s $@ $<
+
+%.trg.plain: %.trg
+	mv $< $@
+	ln -s $@ $<
+
 
 
 ## increase max number of tokens to 250
