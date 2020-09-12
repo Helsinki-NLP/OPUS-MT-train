@@ -22,18 +22,8 @@
 
 spm-models: ${SPMSRCMODEL} ${SPMTRGMODEL}
 
-# SPMSRCMODEL = ${TRAIN_SRC}.spm${SRCBPESIZE:000=}k-model
-# SPMTRGMODEL = ${TRAIN_TRG}.spm${TRGBPESIZE:000=}k-model
-
-## NEW: always use the same name for the SPM models
-## --> avoid overwriting validation/test data with new segmentation models
-##     if a new data set is used
-SPMSRCMODEL = ${WORKDIR}/train/${BPEMODELNAME}.src.spm${SRCBPESIZE:000=}k-model
-SPMTRGMODEL = ${WORKDIR}/train/${BPEMODELNAME}.trg.spm${TRGBPESIZE:000=}k-model
 # SPMEXTRA = --split_by_whitespace=false
 SPMEXTRA = 
-
-.PRECIOUS: ${SPMSRCMODEL} ${SPMTRGMODEL}
 
 ## set to 1 if you want to generate SPM vocab file
 GENERATE_SPM_VOC = 0

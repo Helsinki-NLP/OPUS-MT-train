@@ -76,7 +76,6 @@ This command will in the standard setup
 * train sentence-piece models (separate for source and target language)
 * segment data sets using those sentence-piece models
 * applies some additional bitext cleaning (using Moses scripts)
-* word-align all training data (used for guided alignment)
 * create a vocabulary file for Marian-NMT
 
 
@@ -165,7 +164,8 @@ Currently, the makefile looks at the local copy of released OPUS data to find av
 
 Most settings can be adjusted by setting corresponding variables to new values. Common changes are:
 
-* don't run word-alignment: set `MODELTYPE=transformer`
+* run word-alignment and train with guided alignment: set `MODELTYPE=transformer-align`
+* use sentence piece model internally to define vocabularies: set `MODELTYPE=transformer-spm`
 * change the vocabulary size: set `BPESIZE=<yourvalue>` for example BPESIZE=4000 (this is also used for sentence-piece models)
 * vocabulary sizes can also be set for source and target language independently (`SRCBPESIZE` and `TRGBPESIZE`)
 * use BPE instead of sentence-piece (not recommended): set `SUBWORDS=bpe`

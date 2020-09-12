@@ -252,6 +252,23 @@ BPESIZE    ?= 32000
 SRCBPESIZE ?= ${BPESIZE}
 TRGBPESIZE ?= ${BPESIZE}
 
+BPEMODELNAME ?= opus
+
+.PRECIOUS: ${BPESRCMODEL} ${BPETRGMODEL}
+# BPESRCMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.src.bpe${SRCBPESIZE:000=}k-model
+# BPETRGMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.trg.bpe${TRGBPESIZE:000=}k-model
+BPESRCMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.src.${SRCBPESIZE:000=}k-model.bpe
+BPETRGMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.trg.${TRGBPESIZE:000=}k-model.bpe
+
+
+.PRECIOUS: ${SPMSRCMODEL} ${SPMTRGMODEL}
+# SPMSRCMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.src.spm${SRCBPESIZE:000=}k-model
+# SPMTRGMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.trg.spm${TRGBPESIZE:000=}k-model
+SPMSRCMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.src.${SRCBPESIZE:000=}k-model.spm
+SPMTRGMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.trg.${TRGBPESIZE:000=}k-model.spm
+
+
+
 VOCABSIZE  ?= $$((${SRCBPESIZE} + ${TRGBPESIZE} + 1000))
 
 ## for document-level models
@@ -268,15 +285,7 @@ PRE_TRG   = ${SUBWORDS}${TRGBPESIZE:000=}k
 ## default name of the data set (and the model)
 ##-------------------------------------
 
-ifndef DATASET
-  DATASET = opus
-endif
-
-ifndef BPEMODELNAME
-  BPEMODELNAME = opus
-endif
-
-
+DATASET ?= opus
 
 ## DATADIR = directory where the train/dev/test data are
 ## WORKDIR = directory used for training
@@ -338,8 +347,24 @@ MODEL_TRAINLOG  = ${MODEL}.${MODELTYPE}.train${NR}.log
 MODEL_START     = ${WORKDIR}/${MODEL_BASENAME}.npz
 MODEL_FINAL     = ${WORKDIR}/${MODEL_BASENAME}.npz.best-perplexity.npz
 MODEL_DECODER   = ${MODEL_FINAL}.decoder.yml
-MODEL_VOCABTYPE = yml
-MODEL_VOCAB     = ${WORKDIR}/${MODEL}.vocab.${MODEL_VOCABTYPE}
+
+ifeq (${MODELTYPE},transformer-spm)
+  MODEL_VOCABTYPE = spm
+  MODEL_VOCAB     = ${WORKDIR}/${MODEL}.vocab.${MODEL_VOCABTYPE}
+  MODEL_SRCVOCAB  = ${SPMSRCMODEL}
+  MODEL_TRGVOCAB  = ${SPMTRGMODEL}
+#  MODEL_SRCVOCAB  = ${MODEL_VOCAB}
+#  MODEL_TRGVOCAB  = ${MODEL_VOCAB}
+else
+  MODEL_VOCABTYPE = yml
+  MODEL_VOCAB     = ${WORKDIR}/${MODEL}.vocab.${MODEL_VOCABTYPE}
+  MODEL_SRCVOCAB  = ${MODEL_VOCAB}
+  MODEL_TRGVOCAB  = ${MODEL_VOCAB}
+endif
+
+
+
+
 
 
 ## latest model with the same pre-processing but any data or modeltype

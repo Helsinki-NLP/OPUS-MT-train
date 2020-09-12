@@ -15,18 +15,6 @@ bpe-models: ${BPESRCMODEL} ${BPETRGMODEL}
 ## ---> need to delete the old ones if we want to create new BPE models
 
 
-# BPESRCMODEL = ${TRAIN_SRC}.bpe${SRCBPESIZE:000=}k-model
-# BPETRGMODEL = ${TRAIN_TRG}.bpe${TRGBPESIZE:000=}k-model
-
-## NEW: always use the same name for the BPE models
-## --> avoid overwriting validation/test data with new segmentation models
-##     if a new data set is used
-BPESRCMODEL = ${WORKDIR}/train/${BPEMODELNAME}.src.bpe${SRCBPESIZE:000=}k-model
-BPETRGMODEL = ${WORKDIR}/train/${BPEMODELNAME}.trg.bpe${TRGBPESIZE:000=}k-model
-
-
-.PRECIOUS: ${BPESRCMODEL} ${BPETRGMODEL}
-
 ## we keep the dependency on LOCAL_TRAIN_SRC
 ## to make multi-threaded make calls behave properly
 ## --> otherwise there can be multiple threads writing to the same file!

@@ -1,19 +1,10 @@
 #!/bin/bash
 #
-# USAGE preprocess.sh source-langid target-langid spmodel [noflags] < input > output
+# USAGE preprocess.sh source-langid target-langid [noflags] < input > output
 #
 #
-# replace SPMENCODE with your own setup! 
 
-if [ `hostname -d` == "bullx" ]; then
-  APPLHOME=/projappl/project_2001569
-  SPMENCODE=${APPLHOME}/marian-dev/build-spm/spm_encode
-else
-  SPMENCODE=`which spm_encode || echo "${PWD}/tools/marian-dev/build/spm_encode"`
-fi
-
-
-if [ "$4" == "noflags" ]; then
+if [ "$3" == "noflags" ]; then
     sed -e 's/，/,/g' \
 	-e 's/。 */. /g' \
 	-e 's/、/,/g' \
@@ -51,8 +42,7 @@ if [ "$4" == "noflags" ]; then
 	-e 's/】/\]/g' \
 	-e 's/％/\%/g' |    
 	perl -C -pe 's/\p{C}/ /g;' |
-	sed 's/  */ /g;s/^ *//g;s/ *$//g' |
-	${SPMENCODE} --model $3
+	sed 's/  */ /g;s/^ *//g;s/ *$//g'
 else
     sed -e 's/，/,/g' \
 	-e 's/。 */. /g' \
@@ -92,7 +82,6 @@ else
 	-e 's/％/\%/g' |    
 	perl -C -pe 's/\p{C}/ /g;' |
 	sed 's/  */ /g;s/^ *//g;s/ *$//g' |
-	${SPMENCODE} --model $3 |
 	sed "s/^/>>$2<< /"
 fi
 
