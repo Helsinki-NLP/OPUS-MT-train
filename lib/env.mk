@@ -224,6 +224,7 @@ install-prerequisites install-prereq install-requirements:
 	${MAKE} install-perl-modules:
 	${MAKE} ${PREREQ_TOOLS}
 
+.PHONY: install-perl-modules
 install-perl-modules:
 	for p in ${PREREQ_PERL}; do \
 	  perl -e "use $$p;" || ${CPAN} -i $$p; \

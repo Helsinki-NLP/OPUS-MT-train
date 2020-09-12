@@ -1,6 +1,5 @@
 # Installation and setup
 
-
 * download the code
 
 ```
@@ -12,8 +11,29 @@ git clone https://github.com/Helsinki-NLP/OPUS-MT-train.git
 
 ```
 git submodule update --init --recursive --remote
-make install-prerequisites
+make install
 ```
+
+
+## Prerequisites
+
+The installation procedure should hopefully setup the necessary software for running the OPUS-MT recipes. Be aware that running the scripts does not work out of the box because many settings are adjusted for the local installations on our IT infrastructure at [CSC](https://docs.csc.fi/). Here is an incomplete list of prerequisites needed for running a process:
+
+* [marian-nmt](https://github.com/marian-nmt/): The essential NMT toolkit we use in OPUS-MT; make sure you compile a version with GPU and SentencePiece support!
+* [Moses scripts](https://github.com/moses-smt/mosesdecoder): various pre- and post-processing scripts from the Moses SMT toolkit (also bundled here: [marian-nmt](https://github.com/marian-nmt/moses-scripts))
+* [OpusTools](https://pypi.org/project/opustools): library and tools for accessing OPUS data
+* [OpusTools-perl](https://github.com/Helsinki-NLP/OpusTools-perl): additional tools for accessing OPUS data
+* [iso-639](https://pypi.org/project/iso-639/): a Python package for ISO 639 language codes
+* Perl modules [ISO::639::3](https://metacpan.org/pod/ISO::639::3) and [ISO::639::5](https://metacpan.org/pod/ISO::639::5)
+* [jq JSON processor](https://stedolan.github.io/jq/)
+
+Optional (recommended) software:
+
+* [terashuf](https://github.com/alexandres/terashuf): efficiently shuffle massive data sets
+* [pigz](https://zlib.net/pigz/): multithreaded gzip
+* [eflomal](https://github.com/robertostling/eflomal) (needed for word alignment when transformer-align is used)
+* [fast_align](https://github.com/clab/fast_align)
+
 
 
 ## Mac OSX

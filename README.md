@@ -8,23 +8,25 @@ This package includes scripts for training NMT models using MarianNMT and OPUS d
 The subdirectory [models](https://github.com/Helsinki-NLP/Opus-MT-train/tree/master/models) contains information about pre-trained models that can be downloaded from this project. They are distribted with a [CC-BY 4.0 license](https://creativecommons.org/licenses/by/4.0/) license.
 
 
-## Prerequisites
+## Quickstart
 
-Running the scripts does not work out of the box because many settings are adjusted for the local installations on our IT infrastructure at [CSC](https://docs.csc.fi/). Here is an incomplete list of prerequisites needed for running a process. It is on our TODO list to make the training procedures and settings more transparent and self-contained. Preliminary information about [installation and setup is available here](https://github.com/Helsinki-NLP/Opus-MT-train/tree/master/doc/Setup.md).
+Setting up:
 
-* [marian-nmt](https://github.com/marian-nmt/): The essential NMT toolkit we use in OPUS-MT; make sure you compile a version with GPU and SentencePiece support!
-* [Moses scripts](https://github.com/moses-smt/mosesdecoder): various pre- and post-processing scripts from the Moses SMT toolkit (also bundled here: [marian-nmt](https://github.com/marian-nmt/moses-scripts))
-* [OpusTools](https://pypi.org/project/opustools): library and tools for accessing OPUS data
-* [OpusTools-perl](https://github.com/Helsinki-NLP/OpusTools-perl): additional tools for accessing OPUS data
-* [iso-639](https://pypi.org/project/iso-639/): a Python package for ISO 639 language codes
-* Perl modules [ISO::639::3](https://metacpan.org/pod/ISO::639::3) and [ISO::639::5](https://metacpan.org/pod/ISO::639::5)
-* [jq JSON processor](https://stedolan.github.io/jq/)
+```
+git clone https://github.com/Helsinki-NLP/OPUS-MT-train.git
+git submodule update --init --recursive --remote
+make install
+```
 
-Optional (recommended) software:
+Training a multilingual NMT model (Finnish and Estonian to Danish, Swedish and English):
 
-* [terashuf](https://github.com/alexandres/terashuf): efficiently shuffle massive data sets
-* [pigz](https://zlib.net/pigz/): multithreaded gzip
-* [efmomal](https://github.com/robertostling/eflomal) (needed for word alignment when transformer-align is used)
+```
+make SRCLANGS="fi et" TRGLANGS="da sv en" train
+make SRCLANGS="fi et" TRGLANGS="da sv en" eval
+make SRCLANGS="fi et" TRGLANGS="da sv en" release
+```
+
+More information is available in the documentation linked below.
 
 
 ## Documentation
@@ -37,50 +39,29 @@ Optional (recommended) software:
 * [How to train models for the Tatoeba MT Challenge](https://github.com/Helsinki-NLP/Opus-MT-train/tree/master/doc/TatoebaChallenge.md)
 
 
-## Structure of the training scripts
+## References
 
-Essential files for making new models:
-
-* `Makefile`: top-level makefile
-* `lib/env.mk`: system-specific environment (now based on CSC machines)
-* `lib/config.mk`: essential model configuration
-* `lib/data.mk`: data pre-processing tasks
-* `lib/generic.mk`: generic implicit rules that can extend other tasks
-* `lib/dist.mk`: make packages for distributing models (CSC ObjectStorage based)
-* `lib/slurm.mk`: submit jobs with SLURM
-
-There are also make targets for specific projects and tasks. Look into `lib/projects/` to see what has been defined already. 
-Note that this frequently changes! Check the file `lib/projects.mk` to see what kind of project files are enabled. There are currently, for example:
-
-* `lib/projects/multilingual.mk`: various multilingual models
-* `lib/projects/celtic.mk`: data and models for Celtic languages
-* `lib/projects/doclevel.mk`: experimental document-level models
-
-
-Run this if you want to train a model, for example for translating English to French:
+Please, cite the following paper if you use OPUS-MT software and models:
 
 ```
-make SRCLANGS=en TRGLANGS=fr train
-```
-
-To evaluate the model with the automatically generated test data (from the Tatoeba corpus as a default) run:
-
-```
-make SRCLANGS=en TRGLANGS=fr eval
-```
-
-For multilingual (more than one language on either side) models run, for example:
-
-```
-make SRCLANGS="de en" TRGLANGS="fr es pt" train
-make SRCLANGS="de en" TRGLANGS="fr es pt" eval
-```
-
-Note that data pre-processing should run on CPUs and training/testing on GPUs. To speed up things you can process data sets in parallel using the jobs flag of make, for example using 8 threads:
-
-```
-make -j 8 SRCLANG=en TRGLANG=fr data
-```
+@InProceedings{TiedemannThottingal:EAMT2020,
+  author = {J{\"o}rg Tiedemann and Santhosh Thottingal},
+  title = {{OPUS-MT} — {B}uilding open translation services for the {W}orld},
+  booktitle = {Proceedings of the 22nd Annual Conferenec of the European Association for Machine Translation (EAMT)},
+  year = {2020},
+  address = {Lisbon, Portugal}
+ }
+ ```
 
 
+## Acknowledgements
 
+None of this would be possible without all the great open source software including
+
+* GNU/Linux tools
+* [Marian-NMT](https://github.com/marian-nmt/)
+* [eflomal](https://github.com/robertostling/eflomal)
+
+... and many other tools like terashuf, pigz, jq, Moses SMT, fast_align, sacrebleu ...
+
+We would also like to acknowledge the support by the [University of Helsinki](https://blogs.helsinki.fi/language-technology/), the [IT Center of Science CSC](https://www.csc.fi/en/home), the funding through projects in the EU Horizon 2020 framework ([FoTran](http://www.helsinki.fi/fotran), [MeMAD](https://memad.eu/), [ELG](https://www.european-language-grid.eu/)) and the contributors to the open collection of parallel corpora [OPUS](http://opus.nlpl.eu/).

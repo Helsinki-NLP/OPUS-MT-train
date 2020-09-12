@@ -175,7 +175,8 @@ all: ${WORKDIR}/config.mk
 	${MAKE} eval
 	${MAKE} compare
 
-
+.PHONY: install
+install: install-prerequisites
 
 
 #---------------------------------------------------------------------
