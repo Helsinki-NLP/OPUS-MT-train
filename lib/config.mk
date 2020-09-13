@@ -219,7 +219,7 @@ DEVSET ?= ${firstword 	${foreach c,${POTENTIAL_DEVSETS},${filter ${c},${BIGGER_B
 
 ## increase dev/test sets for Tatoeba (very short sentences!)
 ifeq (${DEVSET},Tatoeba)
-  DEVSIZE = 5000
+  DEVSIZE  = 5000
   TESTSIZE = 5000
 endif
 
@@ -254,19 +254,18 @@ TRGBPESIZE ?= ${BPESIZE}
 
 BPEMODELNAME ?= opus
 
-.PRECIOUS: ${BPESRCMODEL} ${BPETRGMODEL}
 # BPESRCMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.src.bpe${SRCBPESIZE:000=}k-model
 # BPETRGMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.trg.bpe${TRGBPESIZE:000=}k-model
 BPESRCMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.src.${SRCBPESIZE:000=}k-model.bpe
 BPETRGMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.trg.${TRGBPESIZE:000=}k-model.bpe
 
-
-.PRECIOUS: ${SPMSRCMODEL} ${SPMTRGMODEL}
 # SPMSRCMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.src.spm${SRCBPESIZE:000=}k-model
 # SPMTRGMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.trg.spm${TRGBPESIZE:000=}k-model
 SPMSRCMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.src.${SRCBPESIZE:000=}k-model.spm
 SPMTRGMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.trg.${TRGBPESIZE:000=}k-model.spm
 
+.PRECIOUS: ${BPESRCMODEL} ${BPETRGMODEL}
+.PRECIOUS: ${SPMSRCMODEL} ${SPMTRGMODEL}
 
 
 VOCABSIZE  ?= $$((${SRCBPESIZE} + ${TRGBPESIZE} + 1000))
@@ -341,30 +340,32 @@ MODEL        = ${MODEL_SUBDIR}${DATASET}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
 MODELTYPE    = transformer
 NR           = 1
 
-MODEL_BASENAME  = ${MODEL}.${MODELTYPE}.model${NR}
-MODEL_VALIDLOG  = ${MODEL}.${MODELTYPE}.valid${NR}.log
-MODEL_TRAINLOG  = ${MODEL}.${MODELTYPE}.train${NR}.log
-MODEL_START     = ${WORKDIR}/${MODEL_BASENAME}.npz
-MODEL_FINAL     = ${WORKDIR}/${MODEL_BASENAME}.npz.best-perplexity.npz
-MODEL_DECODER   = ${MODEL_FINAL}.decoder.yml
+MODEL_BASENAME   = ${MODEL}.${MODELTYPE}.model${NR}
+MODEL_VALIDLOG   = ${MODEL}.${MODELTYPE}.valid${NR}.log
+MODEL_TRAINLOG   = ${MODEL}.${MODELTYPE}.train${NR}.log
+MODEL_START      = ${WORKDIR}/${MODEL_BASENAME}.npz
+MODEL_FINAL      = ${WORKDIR}/${MODEL_BASENAME}.npz.best-perplexity.npz
+MODEL_DECODER    = ${MODEL_FINAL}.decoder.yml
 
-ifeq (${MODELTYPE},transformer-spm)
-  MODEL_VOCABTYPE = spm
-  MODEL_VOCAB     = ${WORKDIR}/${MODEL}.vocab.${MODEL_VOCABTYPE}
-  MODEL_SRCVOCAB  = ${SPMSRCMODEL}
-  MODEL_TRGVOCAB  = ${SPMTRGMODEL}
-  PRE_SRC         = plain
-  PRE_TRG         = plain
-#  MODEL_SRCVOCAB  = ${MODEL_VOCAB}
-#  MODEL_TRGVOCAB  = ${MODEL_VOCAB}
+## for sentence-piece models: get plain text vocabularies
+## for others: extract vocabulary from training data with MarianNMT
+## backwards compatibility: if there is already a vocab-file then use it
+
+ifeq (${SUBWORDS},spm)
+ifneq ($(wildcard ${WORKDIR}/${MODEL}.vocab.yml),)
+  MODEL_VOCAB     = ${WORKDIR}/${MODEL}.vocab.yml
+  MODEL_SRCVOCAB  = ${MODEL_VOCAB}
+  MODEL_TRGVOCAB  = ${MODEL_VOCAB}
 else
-  MODEL_VOCABTYPE = yml
-  MODEL_VOCAB     = ${WORKDIR}/${MODEL}.vocab.${MODEL_VOCABTYPE}
+  MODEL_VOCAB     = ${WORKDIR}/${MODEL}.vocab
+  MODEL_SRCVOCAB  = ${WORKDIR}/${MODEL}.src.vocab
+  MODEL_TRGVOCAB  = ${WORKDIR}/${MODEL}.trg.vocab
+endif
+else
+  MODEL_VOCAB     = ${WORKDIR}/${MODEL}.vocab.yml
   MODEL_SRCVOCAB  = ${MODEL_VOCAB}
   MODEL_TRGVOCAB  = ${MODEL_VOCAB}
 endif
-
-
 
 
 
@@ -373,7 +374,7 @@ endif
 ifdef CONTINUE_EXISTING
   MODEL_LATEST       = $(firstword ${shell ls -t ${WORKDIR}/*.${PRE_SRC}-${PRE_TRG}.*.best-perplexity.npz 2>/dev/null})
   MODEL_LATEST_VOCAB = $(shell echo "${MODEL_LATEST}" | \
-			sed 's|\.${PRE_SRC}-${PRE_TRG}\..*$$|.${PRE_SRC}-${PRE_TRG}.vocab.${MODEL_VOCABTYPE}|')
+			sed 's|\.${PRE_SRC}-${PRE_TRG}\..*$$|.${PRE_SRC}-${PRE_TRG}.vocab.yml|')
 endif
 
 
@@ -398,11 +399,14 @@ MARIAN_MAXI_BATCH       = 500
 MARIAN_DROPOUT          = 0.1
 MARIAN_MAX_LENGTH	= 500
 
-MARIAN_DECODER_GPU    = -b 12 -n1 -d ${MARIAN_GPUS} --mini-batch 8 --maxi-batch 32 --maxi-batch-sort src \
+MARIAN_DECODER_GPU    = -b 12 -n1 -d ${MARIAN_GPUS} \
+			--mini-batch 8 --maxi-batch 32 --maxi-batch-sort src \
 			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop
-MARIAN_DECODER_CPU    = -b 12 -n1 --cpu-threads ${HPC_CORES} --mini-batch 8 --maxi-batch 32 --maxi-batch-sort src \
+MARIAN_DECODER_CPU    = -b 12 -n1 --cpu-threads ${HPC_CORES} \
+			--mini-batch 8 --maxi-batch 32 --maxi-batch-sort src \
 			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop
 MARIAN_DECODER_FLAGS = ${MARIAN_DECODER_GPU}
+
 
 ## TODO: currently marianNMT crashes with workspace > 26000
 ifeq (${GPU},p100)

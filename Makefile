@@ -323,7 +323,7 @@ train-and-eval-job:
 data:	${TRAIN_SRC}.clean.${PRE_SRC}.gz ${TRAIN_TRG}.clean.${PRE_TRG}.gz \
 	${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG}
 	${MAKE} ${TEST_SRC}.${PRE_SRC} ${TEST_TRG}
-	${MAKE} ${MODEL_VOCAB}
+	${MAKE} ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB}
 ifeq (${MODELTYPE},transformer-align)
 	${MAKE} ${TRAIN_ALG}
 endif
@@ -344,7 +344,7 @@ wordalign:	${TRAIN_ALG}
 
 
 ## other model types
-vocab: ${MODEL_VOCAB}
+vocab: ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB}
 train: ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
 translate: ${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}
 eval: ${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}.eval

@@ -221,7 +221,7 @@ endif
 PHONY: install-prerequisites install-prereq install-requirements
 install-prerequisites install-prereq install-requirements:
 	${PIP} install --user -r requirements.txt
-	${MAKE} install-perl-modules:
+	${MAKE} install-perl-modules
 	${MAKE} ${PREREQ_TOOLS}
 
 .PHONY: install-perl-modules
@@ -285,5 +285,5 @@ ${TOOLSDIR}/protobuf/bin/protoc:
 
 ${TOOLSDIR}/eflomal/eflomal:
 	${MAKE} -C ${dir $@} all
-	cd ${dir $@} && python3 setup.py install
+	cd ${dir $@} && python3 setup.py install --user
 #	python3 setup.py install --install-dir ${HOME}/.local

@@ -3,3 +3,4 @@ iso-639
 opustools
 subword-nmt
 sacrebleu
+Cython
