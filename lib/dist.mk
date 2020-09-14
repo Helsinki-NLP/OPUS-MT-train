@@ -167,9 +167,6 @@ else
 endif
 
 POSTPROCESS_SCRIPT  = scripts/postprocess-${PREPROCESS_TYPE}.sh
-RELEASE_SRCVOCAB   ?= ${notdir ${MODEL_SRCVOCAB}}
-RELEASE_TRGVOCAB   ?= ${notdir ${MODEL_TRGVOCAB}}
-
 
 
 ## make the distribution package including test evaluation files and README
@@ -232,9 +229,7 @@ endif
 	@echo '' >> ${dir $@}README.md
 	@cp models/LICENSE ${WORKDIR}/
 	@chmod +x ${WORKDIR}/preprocess.sh
-	@sed -e 's#${MODEL_SRCVOCAB}#${RELEASE_SRCVOCAB}#' \
-	     -e 's#${MODEL_TRGVOCAB}#${RELEASE_TRGVOCAB}#' \
-	     -e 's# - .*/\([^/]*\)$$# - \1#' \
+	@sed -e 's# - .*/\([^/]*\)$$# - \1#' \
 	     -e 's/beam-size: [0-9]*$$/beam-size: 6/' \
 	     -e 's/mini-batch: [0-9]*$$/mini-batch: 1/' \
 	     -e 's/maxi-batch: [0-9]*$$/maxi-batch: 1/' \
@@ -243,8 +238,8 @@ endif
 	@cd ${WORKDIR} && zip ${notdir $@} \
 		README.md LICENSE \
 		${notdir ${MODEL_FINAL}} \
-		${notdir ${RELEASE_SRCVOCAB}} \
-		${notdir ${RELEASE_TRGVOCAB}} \
+		${notdir ${MODEL_SRCVOCAB}} \
+		${notdir ${MODEL_TRGVOCAB}} \
 		${notdir ${MODEL_VALIDLOG}} \
 		${notdir ${MODEL_TRAINLOG}} \
 		source.* target.* decoder.yml preprocess.sh postprocess.sh
