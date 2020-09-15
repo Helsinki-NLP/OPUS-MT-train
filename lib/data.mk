@@ -163,7 +163,7 @@ endif
 
 
 
-.PHONY: claen-data rawdata
+.PHONY: clean-data rawdata
 clean-data rawdata:
 	for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
@@ -171,7 +171,7 @@ clean-data rawdata:
 	  done \
 	done
 
-.PHONY: claen-data-source
+.PHONY: clean-data-source
 clean-data-source: ${DATA_SRC} ${DATA_TRG}
 
 
