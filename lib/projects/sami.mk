@@ -37,6 +37,7 @@ GIELLATEKNO_SAMI_TM = 	fin-smn/tm/finsmn.tmx \
 ## glossaries
 
 convert-sami-gloss:
+	mkdir -p ${DATADIR}/${PRE}
 	wget ${GIELLATEKNO_TM_HOME}/fin-smn/glossary/finsmn.utf8
 	cut -f1 finsmn.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.fi-smn.clean.fi.gz
 	cut -f2 finsmn.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.fi-smn.clean.smn.gz
@@ -104,6 +105,7 @@ move-sami-data:
 
 ## NEW: merge all giellatekno TMs into one corpus
 merge-sami-data:
+	mkdir -p ${DATADIR}/${PRE}
 	for s in fi nb se sma smj smn; do \
 	  for t in fi nb se sma smj smn; do \
 	    if [ `ls ${DATADIR}/sami/*.$$s-$$t.$$s 2>/dev/null | wc -l` -gt 0 ]; then \

@@ -133,23 +133,23 @@ TMPDIR ?= /tmp
 SCRIPTDIR      ?= ${PWD}/scripts
 TOOLSDIR       ?= ${PWD}/tools
 
-ISO639         ?= ${shell which iso639     || echo 'perl ${TOOLSDIR}/LanguageCodes/ISO-639-3/bin/iso639'}
-PIGZ           ?= ${shell which pigz       || echo ${TOOLSDIR}/pigz/pigz}
-TERASHUF       ?= ${shell which terashuf   || echo ${TOOLSDIR}/terashuf/terashuf}
-JQ             ?= ${shell which jq         || echo ${TOOLSDIR}/jq/jq}
-PROTOC         ?= ${shell which protoc     || echo ${TOOLSDIR}/protobuf/bin/protoc}
-MARIAN         ?= ${shell which marian     || echo ${TOOLSDIR}/marian-dev/build/marian}
+ISO639         ?= ${shell which iso639    2>/dev/null || echo 'perl ${TOOLSDIR}/LanguageCodes/ISO-639-3/bin/iso639'}
+PIGZ           ?= ${shell which pigz      2>/dev/null || echo ${TOOLSDIR}/pigz/pigz}
+TERASHUF       ?= ${shell which terashuf  2>/dev/null || echo ${TOOLSDIR}/terashuf/terashuf}
+JQ             ?= ${shell which jq        2>/dev/null || echo ${TOOLSDIR}/jq/jq}
+PROTOC         ?= ${shell which protoc    2>/dev/null || echo ${TOOLSDIR}/protobuf/bin/protoc}
+MARIAN         ?= ${shell which marian    2>/dev/null || echo ${TOOLSDIR}/marian-dev/build/marian}
 MARIAN_HOME    ?= $(dir ${MARIAN})
 SPM_HOME       ?= ${dir ${MARIAN}}
-FASTALIGN      ?= ${shell which fast_align || echo ${TOOLSDIR}/fast_align/build/fast_align}
+FASTALIGN      ?= ${shell which fast_align 2>/dev/null || echo ${TOOLSDIR}/fast_align/build/fast_align}
 FASTALIGN_HOME ?= ${dir ${FASTALIGN}}
 ATOOLS         ?= ${FASTALIGN_HOME}atools
-EFLOMAL        ?= ${shell which eflomal    || echo ${TOOLSDIR}/eflomal/eflomal}
+EFLOMAL        ?= ${shell which eflomal   2>/dev/null || echo ${TOOLSDIR}/eflomal/eflomal}
 EFLOMAL_HOME   ?= ${dir ${EFLOMAL}}
 WORDALIGN      ?= ${EFLOMAL_HOME}align.py
 EFLOMAL        ?= ${EFLOMAL_HOME}eflomal
 MOSESSCRIPTS   ?= ${TOOLSDIR}/moses-scripts/scripts
-TMX2MOSES      ?= ${shell which tmx2moses  || echo ${TOOLSDIR}/OpusTools-perl/scripts/convert/tmx2moses}
+TMX2MOSES      ?= ${shell which tmx2moses 2>/dev/null || echo ${TOOLSDIR}/OpusTools-perl/scripts/convert/tmx2moses}
 
 ## marian-nmt binaries
 
@@ -163,7 +163,7 @@ TOKENIZER    = ${MOSESSCRIPTS}/tokenizer
 
 
 ## BPE
-SUBWORD_BPE  ?= ${shell which subword-nmt || echo ${TOOLSDIR}/subword-nmt/subword_nmt/subword_nmt.py}
+SUBWORD_BPE  ?= ${shell which subword-nmt 2>/dev/null || echo ${TOOLSDIR}/subword-nmt/subword_nmt/subword_nmt.py}
 SUBWORD_HOME ?= ${dir ${SUBWORD_BPE}}
 ifeq (${shell which subword-nmt},)
   BPE_LEARN ?= pyhton3 ${SUBWORD_HOME}/learn_bpe.py
@@ -179,8 +179,8 @@ SPM_ENCODE   = ${SPM_HOME}spm_encode
 
 
 SORT    := sort -T ${TMPDIR} --parallel=${THREADS}
-SHUFFLE := ${shell which ${TERASHUF} || echo "${SORT} --random-sort"}
-GZIP    := ${shell which ${PIGZ}     || echo gzip}
+SHUFFLE := ${shell which ${TERASHUF} 2>/dev/null || echo "${SORT} --random-sort"}
+GZIP    := ${shell which ${PIGZ}     2>/dev/null || echo gzip}
 GZCAT   := ${GZIP} -cd
 ZCAT    := gzip -cd
 UNIQ    := ${SORT} -u
@@ -205,7 +205,7 @@ MULTEVALHOME = ${APPLHOME}/multeval
 PREREQ_TOOLS := $(lastword ${ISO639}) ${ATOOLS} ${PIGZ} ${TERASHUF} ${JQ} ${MARIAN} ${EFLOMAL}
 PREREQ_PERL  := ISO::639::3 ISO::639::5 OPUS::Tools XML::Parser
 
-PIP  := ${shell which pip3 2>/dev/null || echo pip}
+PIP  := ${shell which pip3  2>/dev/null || echo pip}
 CPAN := ${shell which cpanm 2>/dev/null || echo cpan}
 
 NVIDIA_SMI := ${shell which nvidia-smi 2>/dev/null}
