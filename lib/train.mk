@@ -38,7 +38,7 @@ endif
 
 
 ## get vocabulary from sentence piece model
-ifeq (${SUBWORDS},spm)
+ifeq ($(USE_SPM_VOCAB),1)
 ${MODEL_SRCVOCAB}: ${SPMSRCMODEL}
 	cut -f1 < $<.vocab > $@
 

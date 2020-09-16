@@ -348,15 +348,15 @@ MODEL_DECODER    = ${MODEL_FINAL}.decoder.yml
 ## backwards compatibility: if there is already a vocab-file then use it
 
 ifeq (${SUBWORDS},spm)
-ifneq ($(wildcard ${WORKDIR}/${MODEL}.vocab.yml),)
-  MODEL_VOCAB     = ${WORKDIR}/${MODEL}.vocab.yml
-  MODEL_SRCVOCAB  = ${MODEL_VOCAB}
-  MODEL_TRGVOCAB  = ${MODEL_VOCAB}
-else
+ifeq ($(wildcard ${WORKDIR}/${MODEL}.vocab.yml),)
+  USE_SPM_VOCAB ?= 1
+endif
+endif
+
+ifeq ($(USE_SPM_VOCAB),1)
   MODEL_VOCAB     = ${WORKDIR}/${MODEL}.vocab
   MODEL_SRCVOCAB  = ${WORKDIR}/${MODEL}.src.vocab
   MODEL_TRGVOCAB  = ${WORKDIR}/${MODEL}.trg.vocab
-endif
 else
   MODEL_VOCAB     = ${WORKDIR}/${MODEL}.vocab.yml
   MODEL_SRCVOCAB  = ${MODEL_VOCAB}

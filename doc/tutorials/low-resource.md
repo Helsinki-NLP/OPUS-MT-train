@@ -20,7 +20,7 @@ make SRCLANGS=en TRGLANGS=br config
 make SRCLANGS=en TRGLANGS=br data
 ```
 
-This will also download the necessary files if they don't exist on the local file system. It will train sentence piece models for each language separately and apply the model to all data sets. Finally, it also creates the vocabulary file from the segmented training data.
+This will also download the necessary files if they don't exist on the local file system. It will train sentence piece models for each language separately and apply the model to all data sets. Finally, it also creates the vocabulary files from the sentence-piece models.
 
 
 ## Train the model
@@ -122,7 +122,8 @@ backtranslate/br-en/opus-2020-09-04/source.spm
 backtranslate/br-en/opus-2020-09-04/target.spm
 backtranslate/br-en/opus-2020-09-04/preprocess.sh
 backtranslate/br-en/opus-2020-09-04/postprocess.sh
-backtranslate/br-en/opus-2020-09-04/opus.spm4k-spm4k.vocab.yml
+backtranslate/br-en/opus-2020-09-04/opus.spm4k-spm4k.src.vocab
+backtranslate/br-en/opus-2020-09-04/opus.spm4k-spm4k.trg.vocab
 backtranslate/br-en/opus-2020-09-04/opus.spm4k-spm4k.transformer.model1.npz.best-perplexity.npz
 ```
 

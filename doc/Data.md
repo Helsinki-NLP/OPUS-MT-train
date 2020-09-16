@@ -91,8 +91,9 @@ The variables can be set to override defaults. See below to understand how the d
 Data sets, vocabulary, alignments and segmentation models will be stored in the work directory of the model (`work/LANGPAIRSTR/`). Here is an example for the language pair br-en:
 
 ```
-# MarianNMT vocabulary file:
-work/br-en/opus.spm4k-spm4k.vocab.yml
+# MarianNMT vocabulary files:
+work/br-en/opus.spm4k-spm4k.src.vocab
+work/br-en/opus.spm4k-spm4k.trg.vocab
 
 # test data:
 work/br-en/test/README.md
@@ -165,7 +166,7 @@ Currently, the makefile looks at the local copy of released OPUS data to find av
 Most settings can be adjusted by setting corresponding variables to new values. Common changes are:
 
 * run word-alignment and train with guided alignment: set `MODELTYPE=transformer-align`
-* use sentence piece model internally to define vocabularies: set `MODELTYPE=transformer-spm`
+* generate the vocabulary file from training data instead of using the sentence piece model: `USE_SPM_VOCAB=0`
 * change the vocabulary size: set `BPESIZE=<yourvalue>` for example BPESIZE=4000 (this is also used for sentence-piece models)
 * vocabulary sizes can also be set for source and target language independently (`SRCBPESIZE` and `TRGBPESIZE`)
 * use BPE instead of sentence-piece (not recommended): set `SUBWORDS=bpe`
