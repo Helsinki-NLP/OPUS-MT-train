@@ -19,7 +19,6 @@ More information about specific tasks:
 * [Testing models](Test.md)
 * [Running batch jobs](BatchJobs.md)
 * [Packaging, releases and storage](ReleaseAndStore.md)
-* [Models for the Tatoeba MT Challenge](TatoebaChallenge.md)
 
 
 Tutorials (to-do)
@@ -30,17 +29,18 @@ Tutorials (to-do)
 
 Documentation of project-specific models:
 
-* [Celtic language models](models/Celtic.md)
-* [Romance language models](models/Romance.md)
-* [Russian models](models/Russian.md)
-* [Sami language models](models/Sami.md)
-* [Languages in Finland](models/Finland.md)
-* [Multilingual models](models/Multilingual.md)
-* [Doc-level models](models/Doclevel.md)
-* [Simplification models](models/Simplify.md)
-* [Fiskmö project](models/fiskmo.md)
-* [MeMAD project](models/memad.md)
-* [Wikimedia collaboration model](models/Wikimedia.md)
+* [Models for the Tatoeba MT Challenge](TatoebaChallenge.md)
+* [Celtic language models](projects/Celtic.md)
+* [Romance language models](projects/Romance.md)
+* [Russian models](projects/Russian.md)
+* [Sami language models](projects/Sami.md)
+* [Languages in Finland](projects/Finland.md)
+* [Multilingual models](projects/Multilingual.md)
+* [Doc-level models](projects/Doclevel.md)
+* [Simplification models](projects/Simplify.md)
+* [Fiskmö project](projects/fiskmo.md)
+* [MeMAD project](projects/memad.md)
+* [Wikimedia collaboration model](projects/Wikimedia.md)
 
 
 
@@ -67,7 +67,7 @@ Configurations and definitions about the system environment are stored in
 The model specific configuration can store properties that otherwise need to be given on the command-line when calling make targets. You can generate the configuration file using
 
 ```
-make [OPTIONS] local-config
+make [OPTIONS] config
 ```
 
 
@@ -87,25 +87,26 @@ Targets for job management, packaging and other project related tasks:
 * `lib/misc.mk`: miscellaneuous tasks
 
 
-Targets for specific models and projects in `lib/models/`, currently:
+Targets for specific models and projects in `lib/projects/`, currently:
 
 
-* `lib/models/celtic.mk`: data and models Celtic languages
-* `lib/models/finland.mk`: main languages spoken in Finland
-* `lib/models/fiskmo.mk`: models related to the fiskmö project
-* `lib/models/memad.mk`: models related to the MeMAD project
-* `lib/models/multilingual.mk`: various multilingual models
-* `lib/models/opus.mk`: models covering OPUS languages
-* `lib/models/romance.mk`: Romance languages
-* `lib/models/russian.mk`: data and models for Russian
-* `lib/models/sami.mk`: data and models for Sami languages
-* `lib/models/wikimedia.mk`: models related to WikiMedia collaboration
-* `lib/models/wikimatrix.mk`: models that include WikiMatrix data
+* `lib/projects.mk`: high-level makefile that includes enabled projects
+* `lib/projects/celtic.mk`: data and models Celtic languages
+* `lib/projects/finland.mk`: main languages spoken in Finland
+* `lib/projects/fiskmo.mk`: models related to the fiskmö project
+* `lib/projects/memad.mk`: models related to the MeMAD project
+* `lib/projects/multilingual.mk`: various multilingual models
+* `lib/projects/opus.mk`: models covering OPUS languages
+* `lib/projects/romance.mk`: Romance languages
+* `lib/projects/russian.mk`: data and models for Russian
+* `lib/projects/sami.mk`: data and models for Sami languages
+* `lib/projects/wikimedia.mk`: models related to WikiMedia collaboration
+* `lib/projects/wikimatrix.mk`: models that include WikiMatrix data
 
 
 Targets related to the Tatoeba MT Challenge:
 
-* `lib/models/tatoeba.mk`
+* `lib/projects/tatoeba.mk`
 
 
 Scripts for various tasks in `scripts/`:

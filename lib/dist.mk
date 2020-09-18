@@ -3,11 +3,24 @@
 # make distribution packages
 # and upload them to cPouta ObjectStorage
 #
-
-MODELSHOME          = ${WORKHOME}/models
-DIST_PACKAGE        = ${MODELSHOME}/${LANGPAIRSTR}/${DATASET}.zip
+OBJECTSTORAGE       = https://object.pouta.csc.fi
 MODEL_CONTAINER     = OPUS-MT-models
 DEV_MODEL_CONTAINER = OPUS-MT-dev
+MODELINDEX          = ${OBJECTSTORAGE}/${MODEL_CONTAINER}/index.txt
+MODELSHOME          = ${WORKHOME}/models
+RELEASEDIR          = ${PWD}/models
+DIST_PACKAGE        = ${MODELSHOME}/${LANGPAIRSTR}/${DATASET}.zip
+
+
+
+get-model-release = ${shell wget -qq -O - ${MODELINDEX} | grep '^${1}/.*-.*\.zip' | LANG=en_US.UTF-8 sort -r}
+get-model-distro  = ${shell echo ${wildcard ${1}/${2}/*.zip} | tr ' ' "\n" | LANG=en_US.UTF-8 sort -r}
+
+
+
+find-model:
+	@echo ${call get-model-dist,${LANGPAIRSTR}}
+
 
 ## minimum BLEU score for models to be accepted as distribution package
 MIN_BLEU_SCORE = 20
@@ -134,25 +147,26 @@ SKIP_DIST_EVAL = 0
 ## determine pre-processing type
 
 ifneq ("$(wildcard ${BPESRCMODEL})","")
-  PREPROCESS_TYPE = bpe
+  PREPROCESS_TYPE     = bpe
+  SUBWORD_TYPE        = bpe
   PREPROCESS_SRCMODEL = ${BPESRCMODEL}
   PREPROCESS_TRGMODEL = ${BPETRGMODEL}
   PREPROCESS_DESCRIPTION = normalization + tokenization + BPE (${PRE_SRC},${PRE_TRG})
 else
-  PREPROCESS_TYPE = spm
+  PREPROCESS_TYPE     = spm
+  SUBWORD_TYPE        = spm
   PREPROCESS_SRCMODEL = ${SPMSRCMODEL}
   PREPROCESS_TRGMODEL = ${SPMTRGMODEL}
   PREPROCESS_DESCRIPTION = normalization + SentencePiece (${PRE_SRC},${PRE_TRG})
 endif
 
 ifneq (${words ${TRGLANGS}},1)
-  PREPROCESS_SCRIPT = preprocess-${PREPROCESS_TYPE}-multi-target.sh
+  PREPROCESS_SCRIPT = scripts/preprocess-${PREPROCESS_TYPE}-multi-target.sh
 else
-  PREPROCESS_SCRIPT = preprocess-${PREPROCESS_TYPE}.sh
+  PREPROCESS_SCRIPT = scripts/preprocess-${PREPROCESS_TYPE}.sh
 endif
 
-POSTPROCESS_SCRIPT = postprocess-${PREPROCESS_TYPE}.sh
-
+POSTPROCESS_SCRIPT  = scripts/postprocess-${PREPROCESS_TYPE}.sh
 
 
 ## make the distribution package including test evaluation files and README
@@ -172,8 +186,8 @@ endif
 	@echo "* target language(s): ${TRGLANGS}" >> ${WORKDIR}/README.md
 	@echo "* model: ${MODELTYPE}" >> ${WORKDIR}/README.md
 	@echo "* pre-processing: ${PREPROCESS_DESCRIPTION}" >> ${WORKDIR}/README.md
-	@cp ${PREPROCESS_SRCMODEL} ${WORKDIR}/source.${PREPROCESS_TYPE}
-	@cp ${PREPROCESS_TRGMODEL} ${WORKDIR}/target.${PREPROCESS_TYPE}
+	@cp ${PREPROCESS_SRCMODEL} ${WORKDIR}/source.${SUBWORD_TYPE}
+	@cp ${PREPROCESS_TRGMODEL} ${WORKDIR}/target.${SUBWORD_TYPE}
 	@cp ${PREPROCESS_SCRIPT} ${WORKDIR}/preprocess.sh
 	@cp ${POSTPROCESS_SCRIPT} ${WORKDIR}/postprocess.sh
 	@if [ ${words ${TRGLANGS}} -gt 1 ]; then \
@@ -216,15 +230,16 @@ endif
 	@cp models/LICENSE ${WORKDIR}/
 	@chmod +x ${WORKDIR}/preprocess.sh
 	@sed -e 's# - .*/\([^/]*\)$$# - \1#' \
-	    -e 's/beam-size: [0-9]*$$/beam-size: 6/' \
-	    -e 's/mini-batch: [0-9]*$$/mini-batch: 1/' \
-	    -e 's/maxi-batch: [0-9]*$$/maxi-batch: 1/' \
-	    -e 's/relative-paths: false/relative-paths: true/' \
+	     -e 's/beam-size: [0-9]*$$/beam-size: 6/' \
+	     -e 's/mini-batch: [0-9]*$$/mini-batch: 1/' \
+	     -e 's/maxi-batch: [0-9]*$$/maxi-batch: 1/' \
+	     -e 's/relative-paths: false/relative-paths: true/' \
 	< ${MODEL_DECODER} > ${WORKDIR}/decoder.yml
 	@cd ${WORKDIR} && zip ${notdir $@} \
 		README.md LICENSE \
 		${notdir ${MODEL_FINAL}} \
-		${notdir ${MODEL_VOCAB}} \
+		${notdir ${MODEL_SRCVOCAB}} \
+		${notdir ${MODEL_TRGVOCAB}} \
 		${notdir ${MODEL_VALIDLOG}} \
 		${notdir ${MODEL_TRAINLOG}} \
 		source.* target.* decoder.yml preprocess.sh postprocess.sh
@@ -290,6 +305,17 @@ upload-models:
 	swift list ${DEV_MODEL_CONTAINER} > index.txt
 	swift upload ${DEV_MODEL_CONTAINER} index.txt
 	rm -f index.txt
+
+.PHONY:
+fetch-model:
+	mkdir -p ${RELEASEDIR}/${LANGPAIRSTR}
+	cd ${RELEASEDIR}/${LANGPAIRSTR} && \
+	wget ${OBJECTSTORAGE}/${MODEL_CONTAINER}/${firstword ${call get-model-release,${LANGPAIRSTR}}}
+
+#	wget -O ${RELEASEDIR}/${LANGPAIRSTR}/${LANGPAIRSTR}.zip \
+#	${OBJECTSTORAGE}/${MODEL_CONTAINER}/${firstword ${call get-model-dist,${LANGPAIRSTR}}}
+#	cd ${RELEASEDIR}/${LANGPAIRSTR} && unzip -n ${LANGPAIRSTR}.zip
+#	rm -f ${RELEASEDIR}/${LANGPAIRSTR}/${LANGPAIRSTR}.zip
 
 .PHONY: upload-scores
 upload-scores: scores
@@ -429,7 +455,7 @@ LASTTRG = ${lastword ${TRGLANGS}}
 MODEL_OLD           = ${MODEL_SUBDIR}${DATASET}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}.${LASTSRC}${LASTTRG}
 MODEL_OLD_BASENAME  = ${MODEL_OLD}.${MODELTYPE}.model${NR}
 MODEL_OLD_FINAL     = ${WORKDIR}/${MODEL_OLD_BASENAME}.npz.best-perplexity.npz
-MODEL_OLD_VOCAB     = ${WORKDIR}/${MODEL_OLD}.vocab.${MODEL_VOCABTYPE}
+MODEL_OLD_VOCAB     = ${WORKDIR}/${MODEL_OLD}.vocab.yml
 MODEL_OLD_DECODER   = ${MODEL_OLD_FINAL}.decoder.yml
 MODEL_TRANSLATE     = ${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}
 MODEL_OLD_TRANSLATE = ${WORKDIR}/${TESTSET_NAME}.${MODEL_OLD}${NR}.${MODELTYPE}.${SRC}.${TRG}

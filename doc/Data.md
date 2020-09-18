@@ -76,11 +76,10 @@ This command will in the standard setup
 * train sentence-piece models (separate for source and target language)
 * segment data sets using those sentence-piece models
 * applies some additional bitext cleaning (using Moses scripts)
-* word-align all training data (used for guided alignment)
 * create a vocabulary file for Marian-NMT
 
 
-## Fetching and basic pre-processing
+### Fetching and basic pre-processing
 
 OPUS-MT finds available data in the OPUS collection (this requires a local copy of the data right now!) and merges all of them to create taining data. Test and validation data will be taken from one of the OPUS corpora and that data will be excluded from the training data. The settings of data sets can be found in `lib/config/mk`
 
@@ -92,8 +91,9 @@ The variables can be set to override defaults. See below to understand how the d
 Data sets, vocabulary, alignments and segmentation models will be stored in the work directory of the model (`work/LANGPAIRSTR/`). Here is an example for the language pair br-en:
 
 ```
-# MarianNMT vocabulary file:
-work/br-en/opus.spm4k-spm4k.vocab.yml
+# MarianNMT vocabulary files:
+work/br-en/opus.spm4k-spm4k.src.vocab
+work/br-en/opus.spm4k-spm4k.trg.vocab
 
 # test data:
 work/br-en/test/README.md
@@ -165,7 +165,8 @@ Currently, the makefile looks at the local copy of released OPUS data to find av
 
 Most settings can be adjusted by setting corresponding variables to new values. Common changes are:
 
-* don't run word-alignment: set `MODELTYPE=transformer`
+* run word-alignment and train with guided alignment: set `MODELTYPE=transformer-align`
+* generate the vocabulary file from training data instead of using the sentence piece model: `USE_SPM_VOCAB=0`
 * change the vocabulary size: set `BPESIZE=<yourvalue>` for example BPESIZE=4000 (this is also used for sentence-piece models)
 * vocabulary sizes can also be set for source and target language independently (`SRCBPESIZE` and `TRGBPESIZE`)
 * use BPE instead of sentence-piece (not recommended): set `SUBWORDS=bpe`

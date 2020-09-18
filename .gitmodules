@@ -22,3 +22,9 @@
 [submodule "tools/moses-scripts"]
 	path = tools/moses-scripts
 	url = https://github.com/marian-nmt/moses-scripts.git
+[submodule "tools/subword-nmt"]
+	path = tools/subword-nmt
+	url = https://github.com/rsennrich/subword-nmt.git
+[submodule "tools/jq"]
+	path = tools/jq
+	url = https://github.com/stedolan/jq.git

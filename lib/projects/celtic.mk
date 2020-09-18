@@ -20,26 +20,30 @@ CELTIC_BPESIZE = 4000
 
 
 ## only OPUS data
+## (should we add BPESIZE=${CELTIC_BPESIZE} ??)
 
 %-celtic-english-opus:
-	${MAKE} HELDOUTSIZE=0 BPESIZE=${CELTIC_BPESIZE} SRCLANGS="ga cy br gd kw gv" TRGLANGS=en ${@:-celtic-english-opus=}
+	${MAKE} SRCLANGS="ga cy br gd kw gv" TRGLANGS=en ${@:-celtic-english-opus=}
 
 %-english-celtic-opus:
-	${MAKE} HELDOUTSIZE=0 BPESIZE=${CELTIC_BPESIZE} TRGLANGS="ga cy br gd kw gv" SRCLANGS=en TRG=ga SRC=en ${@:-english-celtic-opus=}
+	${MAKE} TRGLANGS="ga cy br gd kw gv" SRCLANGS=en TRG=ga SRC=en ${@:-english-celtic-opus=}
 
 
 # more data for cy-en
+## (should we add BPESIZE=${CELTIC_BPESIZE} ??)
 
 %-celtic-english: ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz
-	${MAKE} DATASET=opus+techiaith HELDOUTSIZE=0 BPESIZE=${CELTIC_BPESIZE} \
+	${MAKE} DATASET=opus+techiaith \
 		EXTRA_TRAINSET="CofnodYCynulliad Deddfwriaeth Meddalwedd rhestr_geiriau dic" \
 		SRCLANGS="ga cy br gd kw gv" TRGLANGS=en \
+		FIT_DATA_SIZE=500000 \
 	${@:-celtic-english=}
 
 %-english-celtic: ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz
-	${MAKE} DATASET=opus+techiaith HELDOUTSIZE=0 BPESIZE=${CELTIC_BPESIZE} \
+	${MAKE} DATASET=opus+techiaith \
 		EXTRA_TRAINSET="CofnodYCynulliad Deddfwriaeth Meddalwedd rhestr_geiriau dic" \
 		TRGLANGS="ga cy br gd kw gv" SRCLANGS=en TRG=ga SRC=en \
+		FIT_DATA_SIZE=500000 \
 	${@:-english-celtic=}
 
 
@@ -74,7 +78,12 @@ ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz:
 	cut -f1 -d '@' < cy-en.dic | sed 's/ $$*//' | gzip -c > ${DATADIR}/${PRE}/dic.cy-en.clean.en.gz
 	cut -f2 -d '@' < cy-en.dic | sed 's/^ *//' | gzip -c > ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz
 
-${DATADIR}/${PRE}/%.cy-en.clean.cy.gz:
+
+CYMRU_BITEXTS = ${DATADIR}/${PRE}/CofnodYCynulliad.cy-en.clean.cy.gz \
+		${DATADIR}/${PRE}/Deddfwriaeth.cy-en.clean.cy.gz \
+		${DATADIR}/${PRE}/Meddalwedd.cy-en.clean.cy.gz
+
+${CYMRU_BITEXTS}: ${DATADIR}/${PRE}/%.cy-en.clean.cy.gz:
 	wget http://techiaith.cymru/corpws/Moses/$(patsubst %.cy-en.clean.cy.gz,%.tar.gz,${notdir $@})
 	tar -xzf $(patsubst %.cy-en.clean.cy.gz,%.tar.gz,${notdir $@})
 	$(TOKENIZER)/detokenizer.perl -l cy < $(patsubst %.cy-en.clean.cy.gz,%.cy,${notdir $@}) |\

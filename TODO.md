@@ -2,10 +2,9 @@
 # Things to do
 
 
-## Bugs
+## Issues
 
-* something is wrong with multi-threaded data preparation
-* balancing data for multilingual models does not work well with one lang-pair that is tiny
+* get rid of BPE to simplify the scripts
 
 
 ## General settings
@@ -26,7 +25,7 @@
 ## Fine-tuning and domain adaptation
 
 * status: basically working
-* do we want to publishfine-tuned data or rather the fina-tuning procedures? (using a docker container?)
+* do we want to publish fine-tuned data or rather the fina-tuning procedures? (using a docker container?)
 
 
 ## Show-case some selected language pairs
@@ -35,12 +34,3 @@
 * focus languages: Tagalog (tl, tgl), Central Bikol (bcl), Malayalam (ml, mal), Bengali (bn, ben), and Mongolian (mn, mon)
 
 
-## Tatoeba MT models
-
-
-
-Labels are only taken from test data but this can be a problem if there are relevant data sets that will be missed out
-
-* example: nor (there is only nno nob in the test data but most of the data for Norwegian is only tagged as nor_Latn); 
-* another example: hbs (hbs labels do not exist in test data)
-* possible solution: take all labels from train data; problem: some noisy labels may influence the model a lot and it would be better to leave them out (wrong script data etc); another issue: over-sampling data sets that only exist in train data may damage the model

@@ -162,28 +162,25 @@ OPUSREAD_ARGS =
 
 OPUSAPI = http://opus.nlpl.eu/opusapi/
 
-get-opus-mono      = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&corpora=True | jq '.corpora[]' | tr '"' ' '}
-get-opus-bitexts   = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&corpora=True | jq '.corpora[]' | tr '"' ' '}
+get-opus-mono      = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&corpora=True | ${JQ} '.corpora[]' | tr '"' ' '}
+get-opus-bitexts   = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&corpora=True | ${JQ} '.corpora[]' | tr '"' ' '}
 get-bigger-bitexts = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&preprocessing=xml\&version=latest | \
-	jq -r '.corpora[1:] | .[] | select(.source!="") | select(.target!="") | select(.alignment_pairs>${3}) | .corpus' }
-get-opus-langs     = ${shell wget -qq -O - ${OPUSAPI}?languages=True | jq '.languages[]' | tr '"' ' '}
+	${JQ} -r '.corpora[1:] | .[] | select(.source!="") | select(.target!="") | select(.alignment_pairs>${3}) | .corpus' }
+get-opus-langs     = ${shell wget -qq -O - ${OPUSAPI}?languages=True | ${JQ} '.languages[]' | tr '"' ' '}
+get-opus-version   = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&corpus=${3}\&preprocessing=xml\&version=latest | ${JQ} '.corpora[] | .version' | sed 's/"//g' | head -1}
 get-elra-bitexts   = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&corpora=True | \
-	jq '.corpora[]' | tr '"' ' ' | grep '^ *ELR[CA][-_]'}
+	${JQ} '.corpora[]' | tr '"' ' ' | grep '^ *ELR[CA][-_]'}
+
 
 
 ## start of some functions to check whether there is a resource for downloading
 ## open question: links to the latest release do not exist in the storage
 ## --> would it be better to get that done via the OPUS API?
 
+OPUS_STORE = https://object.pouta.csc.fi/OPUS-
 url-status = ${shell curl -Is -K HEAD ${1} | head -1}
 url-exists = ${shell if [ "${call url-status,${1}}" == "HTTP/1.1 200 OK" ]; then echo 1; else echo 0; fi}
-# resource-exists = ${shell if [ ] }
-
-test-url:
-	@echo ${call url-status,https://object.pouta.csc.fi/OPUS-GNOME/v1/moses/br-en.txt.zip}
-	@echo ${call url-exists,https://object.pouta.csc.fi/OPUS-GNOME/v1/moses/br-en.txt.zip}
-
-
+resource-url = ${shell echo "${OPUS_STORE}${3}/${call get-opus-version,${1},${2},${3}}/moses/${1}-${2}.txt.zip"}
 
 
 ## exclude certain data sets
@@ -222,7 +219,7 @@ DEVSET ?= ${firstword 	${foreach c,${POTENTIAL_DEVSETS},${filter ${c},${BIGGER_B
 
 ## increase dev/test sets for Tatoeba (very short sentences!)
 ifeq (${DEVSET},Tatoeba)
-  DEVSIZE = 5000
+  DEVSIZE  = 5000
   TESTSIZE = 5000
 endif
 
@@ -255,6 +252,18 @@ BPESIZE    ?= 32000
 SRCBPESIZE ?= ${BPESIZE}
 TRGBPESIZE ?= ${BPESIZE}
 
+BPEMODELNAME ?= opus
+
+BPESRCMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.src.bpe${SRCBPESIZE:000=}k-model
+BPETRGMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.trg.bpe${TRGBPESIZE:000=}k-model
+
+SPMSRCMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.src.spm${SRCBPESIZE:000=}k-model
+SPMTRGMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.trg.spm${TRGBPESIZE:000=}k-model
+
+.PRECIOUS: ${BPESRCMODEL} ${BPETRGMODEL}
+.PRECIOUS: ${SPMSRCMODEL} ${SPMTRGMODEL}
+
+
 VOCABSIZE  ?= $$((${SRCBPESIZE} + ${TRGBPESIZE} + 1000))
 
 ## for document-level models
@@ -271,15 +280,7 @@ PRE_TRG   = ${SUBWORDS}${TRGBPESIZE:000=}k
 ## default name of the data set (and the model)
 ##-------------------------------------
 
-ifndef DATASET
-  DATASET = opus
-endif
-
-ifndef BPEMODELNAME
-  BPEMODELNAME = opus
-endif
-
-
+DATASET ?= opus
 
 ## DATADIR = directory where the train/dev/test data are
 ## WORKDIR = directory used for training
@@ -335,20 +336,41 @@ MODEL        = ${MODEL_SUBDIR}${DATASET}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
 MODELTYPE    = transformer
 NR           = 1
 
-MODEL_BASENAME  = ${MODEL}.${MODELTYPE}.model${NR}
-MODEL_VALIDLOG  = ${MODEL}.${MODELTYPE}.valid${NR}.log
-MODEL_TRAINLOG  = ${MODEL}.${MODELTYPE}.train${NR}.log
-MODEL_START     = ${WORKDIR}/${MODEL_BASENAME}.npz
-MODEL_FINAL     = ${WORKDIR}/${MODEL_BASENAME}.npz.best-perplexity.npz
-MODEL_VOCABTYPE = yml
-MODEL_VOCAB     = ${WORKDIR}/${MODEL}.vocab.${MODEL_VOCABTYPE}
-MODEL_DECODER   = ${MODEL_FINAL}.decoder.yml
+MODEL_BASENAME   = ${MODEL}.${MODELTYPE}.model${NR}
+MODEL_VALIDLOG   = ${MODEL}.${MODELTYPE}.valid${NR}.log
+MODEL_TRAINLOG   = ${MODEL}.${MODELTYPE}.train${NR}.log
+MODEL_START      = ${WORKDIR}/${MODEL_BASENAME}.npz
+MODEL_FINAL      = ${WORKDIR}/${MODEL_BASENAME}.npz.best-perplexity.npz
+MODEL_DECODER    = ${MODEL_FINAL}.decoder.yml
+
+## for sentence-piece models: get plain text vocabularies
+## for others: extract vocabulary from training data with MarianNMT
+## backwards compatibility: if there is already a vocab-file then use it
+
+ifeq (${SUBWORDS},spm)
+ifeq ($(wildcard ${WORKDIR}/${MODEL}.vocab.yml),)
+  USE_SPM_VOCAB ?= 1
+endif
+endif
+
+ifeq ($(USE_SPM_VOCAB),1)
+  MODEL_VOCAB     = ${WORKDIR}/${MODEL}.vocab
+  MODEL_SRCVOCAB  = ${WORKDIR}/${MODEL}.src.vocab
+  MODEL_TRGVOCAB  = ${WORKDIR}/${MODEL}.trg.vocab
+else
+  MODEL_VOCAB     = ${WORKDIR}/${MODEL}.vocab.yml
+  MODEL_SRCVOCAB  = ${MODEL_VOCAB}
+  MODEL_TRGVOCAB  = ${MODEL_VOCAB}
+endif
+
+
+
 
 ## latest model with the same pre-processing but any data or modeltype
 ifdef CONTINUE_EXISTING
   MODEL_LATEST       = $(firstword ${shell ls -t ${WORKDIR}/*.${PRE_SRC}-${PRE_TRG}.*.best-perplexity.npz 2>/dev/null})
   MODEL_LATEST_VOCAB = $(shell echo "${MODEL_LATEST}" | \
-			sed 's|\.${PRE_SRC}-${PRE_TRG}\..*$$|.${PRE_SRC}-${PRE_TRG}.vocab.${MODEL_VOCABTYPE}|')
+			sed 's|\.${PRE_SRC}-${PRE_TRG}\..*$$|.${PRE_SRC}-${PRE_TRG}.vocab.yml|')
 endif
 
 
@@ -373,11 +395,14 @@ MARIAN_MAXI_BATCH       = 500
 MARIAN_DROPOUT          = 0.1
 MARIAN_MAX_LENGTH	= 500
 
-MARIAN_DECODER_GPU    = -b 12 -n1 -d ${MARIAN_GPUS} --mini-batch 8 --maxi-batch 32 --maxi-batch-sort src \
+MARIAN_DECODER_GPU    = -b 12 -n1 -d ${MARIAN_GPUS} \
+			--mini-batch 8 --maxi-batch 32 --maxi-batch-sort src \
 			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop
-MARIAN_DECODER_CPU    = -b 12 -n1 --cpu-threads ${HPC_CORES} --mini-batch 8 --maxi-batch 32 --maxi-batch-sort src \
+MARIAN_DECODER_CPU    = -b 12 -n1 --cpu-threads ${HPC_CORES} \
+			--mini-batch 8 --maxi-batch 32 --maxi-batch-sort src \
 			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop
 MARIAN_DECODER_FLAGS = ${MARIAN_DECODER_GPU}
+
 
 ## TODO: currently marianNMT crashes with workspace > 26000
 ifeq (${GPU},p100)
@@ -431,8 +456,8 @@ endif
 ## make some data size-specific configuration parameters
 ## TODO: is it OK to delete LOCAL_TRAIN data?
 
-.PHONY: local-config
-local-config: ${WORKDIR}/config.mk
+.PHONY: config local-config
+config local-config: ${WORKDIR}/config.mk
 
 SMALLEST_TRAINSIZE = 10000
 SMALL_TRAINSIZE    = 100000

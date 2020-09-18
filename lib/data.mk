@@ -100,6 +100,7 @@ DATA_TRG := ${sort ${CLEAN_TRAIN_TRG} ${CLEAN_DEV_TRG} ${CLEAN_TEST_TRG}}
 REV_LANGSTR = ${subst ${SPACE},+,$(TRGLANGS)}-${subst ${SPACE},+,$(SRCLANGS)}
 REV_WORKDIR = ${WORKHOME}/${REV_LANGSTR}
 
+.PHONY: reverse-data
 reverse-data:
 ifeq (${PRE_SRC},${PRE_TRG})
 ifeq (${words ${SRCLANGS}},1)
@@ -144,9 +145,15 @@ ifeq (${words ${TRGLANGS}},1)
 	-if [ -e ${MODEL_VOCAB} ]; then \
 	  ln -s ${MODEL_VOCAB} ${REV_WORKDIR}/${notdir ${MODEL_VOCAB}}; \
 	fi
+##
+## this is a bit dangerous with some trick to 
+## swap parameters between SRC and TRG
+##
 	-if [ -e ${WORKDIR}/config.mk ]; then \
 	   if [ ! -e ${REV_WORKDIR}/config.mk ]; then \
-	     cp ${WORKDIR}/config.mk ${REV_WORKDIR}/config.mk; \
+	     cat ${WORKDIR}/config.mk |\
+	     sed -e 's/SRC/TTT/g;s/TRG/SRC/g;s/TTT/TRG/' |\
+	     grep -v LANGPAIRSTR > ${REV_WORKDIR}/config.mk; \
 	   fi \
 	fi
 endif
@@ -155,13 +162,16 @@ endif
 
 
 
-clean-data:
+
+.PHONY: clean-data rawdata
+clean-data rawdata:
 	for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
 	    ${MAKE} SRC=$$s TRG=$$t clean-data-source; \
 	  done \
 	done
 
+.PHONY: clean-data-source
 clean-data-source: ${DATA_SRC} ${DATA_TRG}
 
 
@@ -169,6 +179,7 @@ clean-data-source: ${DATA_SRC} ${DATA_TRG}
 ## monolingual data sets (for sentence piece models)
 .INTERMEDIATE: ${LOCAL_MONO_DATA}.${PRE} ${LOCAL_MONO_DATA}.raw
 
+.PHONY: mono-data
 mono-data: ${LOCAL_MONO_DATA}.${PRE}
 
 
@@ -228,12 +239,14 @@ ${TRAIN_ALG}: 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 
 
 
-## fetch OPUS data
-## - check first whether they exist on the local file system
-## - read with opus_read otherwise
+## fetch OPUS data, try in this order
+##
+## (1) check first whether they exist on the local file system
+## (2) check that Moses files can be downloaded
+## (3) read with opus_read from local file system
+## (4) fetch and read with opus_read 
 ##
 ## TODO: 
-##   - should we fetch moses files from the server if they exist? (faster!)
 ##   - should we do langid filtering and link prob filtering here?
 ##     (could set OPUSREAD_ARGS for that)
 ##
@@ -242,18 +255,31 @@ ${TRAIN_ALG}: 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 	mkdir -p ${dir $@}
 	-( c=${patsubst %.${LANGPAIR}.${SRCEXT}.raw,%,${notdir $@}}; \
 	  if [ -e ${OPUSHOME}/$$c/latest/moses/${LANGPAIR}.txt.zip ]; then \
-	    unzip -d ${dir $@} -n \
-	    ${OPUSHOME}/$$c/latest/moses/${LANGPAIR}.txt.zip; \
+	    unzip -d ${dir $@} -n ${OPUSHOME}/$$c/latest/moses/${LANGPAIR}.txt.zip; \
 	    mv ${dir $@}$$c*.${LANGPAIR}.${SRCEXT} $@; \
-	    mv ${dir $@}$$c*.${LANGPAIR}.${TRGEXT} \
-	       ${@:.${SRCEXT}.raw=.${TRGEXT}.raw}; \
+	    mv ${dir $@}$$c*.${LANGPAIR}.${TRGEXT} ${@:.${SRCEXT}.raw=.${TRGEXT}.raw}; \
 	    rm -f ${@:.${SRCEXT}.raw=.xml} ${@:.${SRCEXT}.raw=.ids} ${dir $@}/README ${dir $@}/LICENSE; \
+	  elif [ "${call url-exists,${call resource-url,${SRCEXT},${TRGEXT},${patsubst %.${LANGPAIR}.${SRCEXT}.raw,%,${notdir $@}}}}" == "1" ]; then \
+	    l="${call resource-url,${SRCEXT},${TRGEXT},${patsubst %.${LANGPAIR}.${SRCEXT}.raw,%,${notdir $@}}}"; \
+	    echo "============================================"; \
+	    echo "fetch moses data from $$l"; \
+	    echo "============================================"; \
+	    wget -qq -O $@-$$c-${LANGPAIR}.zip $$l; \
+	    unzip -d ${dir $@} -n $@-$$c-${LANGPAIR}.zip; \
+	    mv ${dir $@}$$c*.${LANGPAIR}.${SRCEXT} $@; \
+	    mv ${dir $@}$$c*.${LANGPAIR}.${TRGEXT} ${@:.${SRCEXT}.raw=.${TRGEXT}.raw}; \
+	    rm -f ${@:.${SRCEXT}.raw=.xml} ${@:.${SRCEXT}.raw=.ids} ${dir $@}/README ${dir $@}/LICENSE; \
+	    rm -f $@-$$c-${LANGPAIR}.zip; \
 	  elif [ -e ${OPUSHOME}/$$c/latest/xml/${LANGPAIR}.xml.gz ]; then \
+	    echo "============================================"; \
 	    echo "extract $$c (${LANGPAIR}) from XML in local OPUS copy"; \
+	    echo "============================================"; \
 	    opus_read ${OPUSREAD_ARGS} -ln -rd ${OPUSHOME} -d $$c -s ${SRC} -t ${TRG} \
 			-wm moses -p raw -w $@ ${@:.${SRCEXT}.raw=.${TRGEXT}.raw}; \
 	  else \
+	    echo "============================================"; \
 	    echo "fetch $$c (${LANGPAIR}) from OPUS"; \
+	    echo "============================================"; \
 	    opus_read ${OPUSREAD_ARGS} -ln -q -dl ${TMPDIR} -d $$c -s ${SRC} -t ${TRG} \
 			-wm moses -p raw -w $@ ${@:.${SRCEXT}.raw=.${TRGEXT}.raw}; \
 	  fi )
@@ -424,9 +450,13 @@ ${DEV_SRC}.shuffled.gz:
 	    fi \
 	  done \
 	done
-	paste ${DEV_SRC} ${DEV_TRG} | ${SHUFFLE} | ${GZIP} -c > $@
+	paste ${DEV_SRC} ${DEV_TRG} | ${UNIQ} | ${SHUFFLE} | ${GZIP} -c > $@
 	echo -n "* total size of shuffled dev data: "        >> ${dir ${DEV_SRC}}README.md
 	${GZIP} -cd < $@ | wc -l                             >> ${dir ${DEV_SRC}}README.md
+
+## OLD: don't uniq the dev-data ...
+##
+#	paste ${DEV_SRC} ${DEV_TRG} | ${SHUFFLE} | ${GZIP} -c > $@
 
 
 

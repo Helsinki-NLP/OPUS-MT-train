@@ -15,18 +15,6 @@ bpe-models: ${BPESRCMODEL} ${BPETRGMODEL}
 ## ---> need to delete the old ones if we want to create new BPE models
 
 
-# BPESRCMODEL = ${TRAIN_SRC}.bpe${SRCBPESIZE:000=}k-model
-# BPETRGMODEL = ${TRAIN_TRG}.bpe${TRGBPESIZE:000=}k-model
-
-## NEW: always use the same name for the BPE models
-## --> avoid overwriting validation/test data with new segmentation models
-##     if a new data set is used
-BPESRCMODEL = ${WORKDIR}/train/${BPEMODELNAME}.src.bpe${SRCBPESIZE:000=}k-model
-BPETRGMODEL = ${WORKDIR}/train/${BPEMODELNAME}.trg.bpe${TRGBPESIZE:000=}k-model
-
-
-.PRECIOUS: ${BPESRCMODEL} ${BPETRGMODEL}
-
 ## we keep the dependency on LOCAL_TRAIN_SRC
 ## to make multi-threaded make calls behave properly
 ## --> otherwise there can be multiple threads writing to the same file!
@@ -43,10 +31,10 @@ else
 	mkdir -p ${dir $@}
 ifeq (${USE_TARGET_LABELS},1)
 	cut -f2- -d ' ' ${LOCAL_TRAIN_SRC} > ${LOCAL_TRAIN_SRC}.text
-	python3 ${SNMTPATH}/learn_bpe.py -s $(SRCBPESIZE) < ${LOCAL_TRAIN_SRC}.text > $@
+	${BPE_LEARN} -s $(SRCBPESIZE) < ${LOCAL_TRAIN_SRC}.text > $@
 	rm -f ${LOCAL_TRAIN_SRC}.text
 else
-	python3 ${SNMTPATH}/learn_bpe.py -s $(SRCBPESIZE) < ${LOCAL_TRAIN_SRC} > $@
+	${BPE_LEARN} -s $(SRCBPESIZE) < ${LOCAL_TRAIN_SRC} > $@
 endif
 endif
 
@@ -61,7 +49,7 @@ ifneq (${wildcard ${BPETRGMODEL}},)
 	touch -r $@ $<
 else
 	mkdir -p ${dir $@}
-	python3 ${SNMTPATH}/learn_bpe.py -s $(TRGBPESIZE) < ${LOCAL_TRAIN_TRG} > $@
+	${BPE_LEARN} -s $(TRGBPESIZE) < ${LOCAL_TRAIN_TRG} > $@
 endif
 
 
@@ -70,15 +58,15 @@ endif
 ifeq (${USE_TARGET_LABELS},1)
 	cut -f1 -d ' ' $< > $<.labels
 	cut -f2- -d ' ' $< > $<.txt
-	python3 ${SNMTPATH}/apply_bpe.py -c $(word 2,$^) < $<.txt > $@.txt
+	${BPE_APPLY} -c $(word 2,$^) < $<.txt > $@.txt
 	paste -d ' ' $<.labels $@.txt > $@
 	rm -f $<.labels $<.txt $@.txt
 else
-	python3 ${SNMTPATH}/apply_bpe.py -c $(word 2,$^) < $< > $@
+	${BPE_APPLY} -c $(word 2,$^) < $< > $@
 endif
 
 %.trg.bpe${TRGBPESIZE:000=}k: %.trg ${BPETRGMODEL}
-	python3 ${SNMTPATH}/apply_bpe.py -c $(word 2,$^) < $< > $@
+	${BPE_APPLY} -c $(word 2,$^) < $< > $@
 
 
 ## this places @@ markers in front of punctuations

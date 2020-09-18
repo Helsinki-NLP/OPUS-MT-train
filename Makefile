@@ -165,23 +165,7 @@ include lib/allas.mk
 
 include lib/generic.mk
 include lib/langsets.mk
-# include lib/tasks.mk
-include lib/models/celtic.mk
-include lib/models/finland.mk
-include lib/models/fiskmo.mk
-include lib/models/memad.mk
-include lib/models/multilingual.mk
-include lib/models/opus.mk
-include lib/models/romance.mk
-include lib/models/russian.mk
-include lib/models/sami.mk
-include lib/models/wikimedia.mk
-include lib/models/wikimatrix.mk
-
-include lib/models/doclevel.mk
-include lib/models/simplify.mk
-
-include lib/models/tatoeba.mk
+include lib/projects.mk
 
 
 .PHONY: all
@@ -191,7 +175,8 @@ all: ${WORKDIR}/config.mk
 	${MAKE} eval
 	${MAKE} compare
 
-
+.PHONY: install
+install: install-prerequisites
 
 
 #---------------------------------------------------------------------
@@ -338,7 +323,7 @@ train-and-eval-job:
 data:	${TRAIN_SRC}.clean.${PRE_SRC}.gz ${TRAIN_TRG}.clean.${PRE_TRG}.gz \
 	${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG}
 	${MAKE} ${TEST_SRC}.${PRE_SRC} ${TEST_TRG}
-	${MAKE} ${MODEL_VOCAB}
+	${MAKE} ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB}
 ifeq (${MODELTYPE},transformer-align)
 	${MAKE} ${TRAIN_ALG}
 endif
@@ -359,7 +344,7 @@ wordalign:	${TRAIN_ALG}
 
 
 ## other model types
-vocab: ${MODEL_VOCAB}
+vocab: ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB}
 train: ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
 translate: ${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}
 eval: ${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}.eval
@@ -368,8 +353,6 @@ compare: ${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}.com
 ## ensemble of models (assumes to find them in subdirs of the WORKDIR)
 translate-ensemble: ${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.ensemble.${SRC}.${TRG}
 eval-ensemble: ${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.ensemble.${SRC}.${TRG}.eval
-
-
 
 
 ## combined tasks:

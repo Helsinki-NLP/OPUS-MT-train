@@ -6,9 +6,8 @@
 # sami-data: fetch-sami-tmx convert-sami-tmx move-sami-data convert-sami-gloss
 sami-data: 
 	${MAKE} -j 1 fetch-sami-tmx convert-sami-tmx merge-sami-data convert-sami-gloss
-	${MAKE} data-sami
 
-sami-train: train-dynamic-sami
+sami-train: train-sami
 sami-eval: eval-sami
 sami-dist: dist-sami
 
@@ -38,6 +37,7 @@ GIELLATEKNO_SAMI_TM = 	fin-smn/tm/finsmn.tmx \
 ## glossaries
 
 convert-sami-gloss:
+	mkdir -p ${DATADIR}/${PRE}
 	wget ${GIELLATEKNO_TM_HOME}/fin-smn/glossary/finsmn.utf8
 	cut -f1 finsmn.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.fi-smn.clean.fi.gz
 	cut -f2 finsmn.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.fi-smn.clean.smn.gz
@@ -93,7 +93,7 @@ fetch-sami-tmx: ${GIELLATEKNO_SAMI_TM}
 convert-sami-tmx:
 	for t in ${GIELLATEKNO_SAMI_TM}; do \
 	  mkdir -p ${DATADIR}/sami; \
-	  tmx2moses -r -o ${DATADIR}/sami/`echo -n $$t | xargs basename | sed 's/.tmx//'` $$t; \
+	  ${TMX2MOSES} -r -o ${DATADIR}/sami/`echo -n $$t | xargs basename | sed 's/.tmx//'` $$t; \
 	done
 
 ## OLD: individual file names
@@ -105,6 +105,7 @@ move-sami-data:
 
 ## NEW: merge all giellatekno TMs into one corpus
 merge-sami-data:
+	mkdir -p ${DATADIR}/${PRE}
 	for s in fi nb se sma smj smn; do \
 	  for t in fi nb se sma smj smn; do \
 	    if [ `ls ${DATADIR}/sami/*.$$s-$$t.$$s 2>/dev/null | wc -l` -gt 0 ]; then \
@@ -141,7 +142,10 @@ ${GIELLATEKNO_SAMI_TM}:
 ## name of the sami data sets
 # SAMI_EXTRA = ${patsubst %.tmx,%,${notdir ${GIELLATEKNO_SAMI_TM}}} glossary
 
-%-sami:
+
+#		FIT_DATA_SIZE=200000 \
+
+%-finno-ugric:
 	${MAKE} DATASET=${DATASET}+giella \
 		HELDOUTSIZE=0 \
 		BPESIZE=4000 \
@@ -153,6 +157,20 @@ ${GIELLATEKNO_SAMI_TM}:
 		TRGLANGS="se sma smj smn sms vep et fi kv krl nb no nn ru sv en" \
 		SKIP_LANGPAIRS="en-en|en-et|en-fi|en-nb|en-no|en-nn|en-ru|en-sv|et-et|et-fi|et-nb|et-no|et-nn|et-ru|et-sv|fi-fi|fi-nb|fi-no|fi-nn|fi-ru|fi-sv|nb-nb|nb-no|nb-nn|nb-ru|nb-sv|no-no|no-nn|no-ru|no-sv|nn-nn|nn-ru|nn-sv|ru-ru|ru-sv|sv-sv" \
 	${@:-sami=}
+
+%-sami:
+	${MAKE} DATASET=${DATASET}+giella \
+		HELDOUTSIZE=0 \
+		BPESIZE=4000 \
+		DEVSET=giella \
+		TESTSET=giella \
+		DEVMINSIZE=100 \
+		EXTRA_TRAINSET="glossary" \
+		SRCLANGS="se sma smj smn sms fi nb no nn ru sv en" \
+		TRGLANGS="se sma smj smn sms fi nb no nn ru sv en" \
+		SKIP_LANGPAIRS="en-en|en-fi|en-nb|en-no|en-nn|en-ru|en-sv|fi-fi|fi-nb|fi-no|fi-nn|fi-ru|fi-sv|nb-nb|nb-no|nb-nn|nb-ru|nb-sv|no-no|no-nn|no-ru|no-sv|nn-nn|nn-ru|nn-sv|ru-ru|ru-sv|sv-sv" \
+	${@:-sami=}
+
 
 
 %-sami-xx:
