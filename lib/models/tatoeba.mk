@@ -288,7 +288,9 @@ tatoeba-eng2group:
 	${MAKE} MIN_TRGLANGS=2 MODELTYPE=transformer FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} ${ENG2GROUP_TRAIN}
 
 tatoeba-langgroup: 
-	${MAKE} MIN_SRCLANGS=2 MAX_SRCLANGS=25 MODELTYPE=transformer FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} ${LANGGROUP_TRAIN}
+	${MAKE} MIN_SRCLANGS=2 MAX_SRCLANGS=30 PIVOT=eng \
+		MODELTYPE=transformer \
+		FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} ${LANGGROUP_TRAIN}
 
 
 ## sample 2 million sentence pairs
@@ -399,8 +401,8 @@ MAX_TRGLANGS ?= 7000
 tatoeba-%-train:
 	-( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))); \
 	   t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))); \
-	   S="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))) | xargs iso639 -m -n}))"; \
-	   T="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))) | xargs iso639 -m -n}))"; \
+	   S="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))) | xargs iso639 -m -n}))"; \
+	   T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))) | xargs iso639 -m -n}))"; \
 	   if [ ! `find ${TATOEBA_WORK}/$$s-$$t -name '${DATASET}.*.done' | wc -l` -gt 0 ]; then \
 	     if [ `echo $$S | tr ' ' "\n" | wc -l` -ge ${MIN_SRCLANGS} ]; then \
 	       if [ `echo $$T | tr ' ' "\n" | wc -l` -ge ${MIN_TRGLANGS} ]; then \
@@ -416,8 +418,8 @@ tatoeba-%-train:
 tatoeba-%-data:
 	-( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-data,%,$@))); \
 	   t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-data,%,$@))); \
-	   S="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-data,%,$@))) | xargs iso639 -m -n}))"; \
-	   T="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-data,%,$@))) | xargs iso639 -m -n}))"; \
+	   S="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-data,%,$@))) | xargs iso639 -m -n}))"; \
+	   T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-data,%,$@))) | xargs iso639 -m -n}))"; \
 	     if [ `echo $$S | tr ' ' "\n" | wc -l` -ge ${MIN_SRCLANGS} ]; then \
 	       if [ `echo $$T | tr ' ' "\n" | wc -l` -ge ${MIN_TRGLANGS} ]; then \
 	         if [ `echo $$S | tr ' ' "\n" | wc -l` -le ${MAX_SRCLANGS} ]; then \
@@ -433,16 +435,16 @@ tatoeba-%-data:
 tatoeba-%-eval:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-eval,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-eval,%,$@))); \
-	  S="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-eval,%,$@))) | xargs iso639 -m -n}))"; \
-	  T="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-eval,%,$@))) | xargs iso639 -m -n}))"; \
+	  S="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-eval,%,$@))) | xargs iso639 -m -n}))"; \
+	  T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-eval,%,$@))) | xargs iso639 -m -n}))"; \
 	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} compare )
 
 
 tatoeba-%-evalall:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))); \
-	  S="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))) | xargs iso639 -m -n}))"; \
-	  T="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))) | xargs iso639 -m -n}))"; \
+	  S="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))) | xargs iso639 -m -n}))"; \
+	  T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))) | xargs iso639 -m -n}))"; \
 	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" eval-tatoeba; \
 	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" eval-testsets-tatoeba; \
 	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" tatoeba-multilingual-eval )
@@ -451,8 +453,8 @@ tatoeba-%-evalall:
 tatoeba-%-dist:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))); \
-	  S="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))) | xargs iso639 -m -n}))"; \
-	  T="$(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))) | xargs iso639 -m -n}))"; \
+	  S="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))) | xargs iso639 -m -n}))"; \
+	  T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))) | xargs iso639 -m -n}))"; \
 	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} best-dist )
 
 
@@ -670,7 +672,6 @@ tatoeba-multilingual-testsets:
 		LANGPAIRSTR=${LANGPAIRSTR} \
 		SRCLANGS="${shell cat ${word 1,$^} | sed 's/ *$$//;s/^ *//'}" \
 		TRGLANGS="${shell cat ${word 2,$^} | sed 's/ *$$//;s/^ *//'}" \
-		MODELTYPE=transformer \
 		SRC=${SRC} TRG=${TRG} \
 		EMAIL= \
 	    ${@:-tatoeba=}; \
@@ -791,6 +792,7 @@ FIXLANGIDS = 	| sed 's/zho\(.*\)_HK/yue\1/g;s/zho\(.*\)_CN/cmn\1/g;s/zho\(.*\)_T
 		| sed 's/ara_Latn/ara/;s/arq_Latn/arq/;s/apc_Latn/apc/' \
 		| sed 's/kor_[A-Za-z]*/kor/g' \
 		| sed 's/nor_Latn/nor/g' \
+		| sed 's/nor/nob/g' \
 		| sed 's/bul_Latn/bul/g' \
 		| sed 's/syr_Syrc/syr/g' \
 		| sed 's/yid_Latn/yid/g' \
@@ -951,39 +953,6 @@ ${TATOEBA_MONO}/%.labels:
 
 
 
-fixlabels.sh:
-#	@for l in nor-swe; do
-	for l in `find work-tatoeba/ -maxdepth 1 -mindepth 1 -type d -printf '%f '`; do \
-	  s=`echo $$l | cut -f1 -d'-'`; \
-	  t=`echo $$l | cut -f2 -d'-'`; \
-	  if [ "$$s" \< "$$t" ]; then \
-	  if [ -d ${HOME}/research/Tatoeba-Challenge/data/$$l ]; then \
-	    ${MAKE} TATOEBA_WORK=work-tatoeba-fixed SRCLANGS=$$s TRGLANGS=$$t tatoeba-labels; \
-	    o=`cat work-tatoeba/data/simple/Tatoeba-train.$$l.clean.$$s.labels | tr ' ' "\n" | sort | grep . | tr "\n" ' '`; \
-	    n=`cat work-tatoeba-fixed/data/simple/Tatoeba-train.$$l.clean.$$s.labels | tr ' ' "\n" | sort | grep . | tr "\n" ' '`; \
-	    O=`cat work-tatoeba/data/simple/Tatoeba-train.$$l.clean.$$t.labels | tr ' ' "\n" | sort | grep . | tr "\n" ' '`; \
-	    N=`cat work-tatoeba-fixed/data/simple/Tatoeba-train.$$l.clean.$$t.labels | tr ' ' "\n" | sort | grep . | tr "\n" ' '`; \
-	    if [ "$$o" != "$$n" ] || [ "$$O" != "$$N" ] ; then \
-	      echo "# labels in $$l are different ($$o / $$O - $$n / $$N)" >> $@; \
-	      if [ -d work-tatoeba/$$l ]; then \
-	        echo "# re-run $$l from scratch!" >> $@; \
-	        echo "${MAKE} TATOEBA_WORK=work-tatoeba-fixed SRCLANGS=$$s TRGLANGS=$$t tatoeba-job" >> $@; \
-	      fi; \
-	      if [ -d work-tatoeba/$$t-$$s ]; then \
-	        echo "# re-run $$t-$$s from scratch!" >> $@; \
-	        echo "${MAKE} TATOEBA_WORK=work-tatoeba-fixed SRCLANGS=$$t TRGLANGS=$$s tatoeba-job" >> $@; \
-	      fi \
-	    else \
-	      if [ -d work-tatoeba/$$l ]; then \
-	        echo "mv work-tatoeba/$$l work-tatoeba-fixed/$$l" >> $@; \
-	      fi; \
-	      if [ -d work-tatoeba/$$t-$$s ]; then \
-	        echo "mv work-tatoeba/$$t-$$s work-tatoeba-fixed/$$t-$$s" >> $@; \
-	      fi \
-	    fi; \
-	    fi; \
-	  fi \
-	done 
 
 
 
@@ -1353,3 +1322,88 @@ remove-old-group:
 	  if [ -e work-tatoeba/$$g-eng ]; then mv work-tatoeba/$$g-eng work-tatoeba/$$g-eng-old3; fi; \
 	  if [ -e work-tatoeba/eng-$$g ]; then mv work-tatoeba/eng-$$g work-tatoeba/eng-$$g-old3; fi; \
 	done
+
+
+
+
+## resume training for all bilingual models that are not yet converged
+.PHONY: tatoeba-resume-all tatoeba-continue-all
+tatoeba-resume-all tatoeba-continue-all:
+	for l in `find work-tatoeba/ -maxdepth 1 -mindepth 1 -type d -printf '%f '`; do \
+	  s=`echo $$l | cut -f1 -d'-'`; \
+	  t=`echo $$l | cut -f2 -d'-'`; \
+	  if [ -d ${HOME}/research/Tatoeba-Challenge/data/$$s-$$t ] || \
+	     [ -d ${HOME}/research/Tatoeba-Challenge/data/$$t-$$s ]; then \
+	      if [ -d work-tatoeba/$$l ]; then \
+		if [ ! `find work-tatoeba/$$l/ -name '*.done' | wc -l` -gt 0 ]; then \
+		  if [ `find work-tatoeba/$$l/ -name '*.npz' | wc -l` -gt 0 ]; then \
+		    echo "resume work-tatoeba/$$l"; \
+		    make SRCLANGS=$$s TRGLANGS=$$t all-job-tatoeba; \
+		  else \
+		    echo "resume work-tatoeba/$$l"; \
+		    make SRCLANGS=$$s TRGLANGS=$$t tatoeba-job; \
+		  fi \
+		else \
+		  echo "done work-tatoeba/$$l"; \
+		fi \
+	      fi \
+	  fi \
+	done
+
+
+## make release package for all bilingual models that are converged
+.PHONY: tatoeba-dist-all
+tatoeba-dist-all:
+	for l in `find work-tatoeba/ -maxdepth 1 -mindepth 1 -type d -printf '%f '`; do \
+	  s=`echo $$l | cut -f1 -d'-'`; \
+	  t=`echo $$l | cut -f2 -d'-'`; \
+	  if [ -d ${HOME}/research/Tatoeba-Challenge/data/$$s-$$t ] || \
+	     [ -d ${HOME}/research/Tatoeba-Challenge/data/$$t-$$s ]; then \
+	      if [ -d work-tatoeba/$$l ]; then \
+		if [ `find work-tatoeba/$$l/ -name '*transformer-align.model1.done' | wc -l` -gt 0 ]; then \
+		  echo "make release for work-tatoeba/$$l"; \
+		  make SRCLANGS=$$s TRGLANGS=$$t MODELTYPE=transformer-align dist-tatoeba; \
+		fi; \
+		if [ `find work-tatoeba/$$l/ -name '*transformer.model1.done' | wc -l` -gt 0 ]; then \
+		  echo "make release for work-tatoeba/$$l"; \
+		  make SRCLANGS=$$s TRGLANGS=$$t MODELTYPE=transformer dist-tatoeba; \
+		fi; \
+	      fi \
+	  fi \
+	done
+
+
+
+fixlabels.sh:
+	for l in `find work-tatoeba-old/ -maxdepth 1 -mindepth 1 -type d -printf '%f '`; do \
+	  s=`echo $$l | cut -f1 -d'-'`; \
+	  t=`echo $$l | cut -f2 -d'-'`; \
+	  if [ -d ${HOME}/research/Tatoeba-Challenge/data/$$s-$$t ] || \
+	     [ -d ${HOME}/research/Tatoeba-Challenge/data/$$t-$$s ]; then \
+	    if [ -d work-tatoeba/$$l ]; then \
+	      echo "# work-tatoeba/$$l exists --- skip it!" >> $@; \
+	      echo "mv work-tatoeba-old/$$l work-tatoeba-double/$$l" >> $@; \
+	    else \
+	      ${MAKE} SRCLANGS=$$s TRGLANGS=$$t tatoeba-labels; \
+	      o=`grep '*' work-tatoeba-old/$$l/train/README.md | cut -f1 -d: | grep '-' | sed 's/\* //g' | cut -f1 -d- | sort -u | tr "\n" ' '`; \
+	      O=`grep '*' work-tatoeba-old/$$l/train/README.md | cut -f1 -d: | grep '-' | sed 's/\* //g' | cut -f2 -d- | sort -u | tr "\n" ' '`; \
+	      n=`cat work-tatoeba/data/simple/Tatoeba-train.$$l.clean.$$s.labels | tr ' ' "\n" | sort | grep . | tr "\n" ' '`; \
+	      N=`cat work-tatoeba/data/simple/Tatoeba-train.$$l.clean.$$t.labels | tr ' ' "\n" | sort | grep . | tr "\n" ' '`; \
+	      if [ "$$o" != "$$n" ] || [ "$$O" != "$$N" ] ; then \
+	        echo "# labels in $$l are different ($$o / $$O - $$n / $$N)" >> $@; \
+	        if [ -d work-tatoeba-old/$$l ]; then \
+		  if [ "$$n" != " " ] && [ "$$n" != "" ]; then \
+		    if [ "$$N" != " " ] && [ "$$N" != "" ]; then \
+	              echo "# re-run $$l from scratch!" >> $@; \
+	              echo "${MAKE} SRCLANGS=$$s TRGLANGS=$$t tatoeba-job" >> $@; \
+		    fi \
+		  fi \
+	        fi; \
+	      else \
+	        if [ -d work-tatoeba-old/$$l ]; then \
+	          echo "mv work-tatoeba-old/$$l work-tatoeba/$$l" >> $@; \
+	        fi; \
+	      fi; \
+	    fi \
+	  fi \
+	done 

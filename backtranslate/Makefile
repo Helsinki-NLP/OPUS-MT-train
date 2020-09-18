@@ -120,6 +120,18 @@ all: index.html
 	${MAKE} ${WIKI_LATEST_SRC}
 
 
+
+## store wikidata on allas to make them accessible for everyone
+## requires configuration for allas project OPUS-MT
+
+store-wikidocs:
+	cd wikidoc && a-put -b OPUS-MT-bt-wikidoc --nc --follow-links --override *
+	swift post OPUS-MT-bt-wikidoc --read-acl ".r:*"
+
+store-wiki:
+	cd wiki && a-put -b OPUS-MT-bt-wiki --nc --follow-links --override *
+	swift post OPUS-MT-bt-wiki --read-acl ".r:*"
+
 ## tatoeba = tatoeba-monolingual data and tatoeba-models
 ## TODO: should we loop over all labels?
 
