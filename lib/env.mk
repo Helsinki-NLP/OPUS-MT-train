@@ -231,7 +231,7 @@ install-prerequisites install-prereq install-requirements:
 .PHONY: install-perl-modules
 install-perl-modules:
 	for p in ${PREREQ_PERL}; do \
-	  perl -e "use $$p;" || ${CPAN} -i $$p; \
+	  perl -e "use $$p;" 2> /dev/null || ${CPAN} -i $$p; \
 	done
 
 ${TOOLSDIR}/LanguageCodes/ISO-639-3/bin/iso639:
