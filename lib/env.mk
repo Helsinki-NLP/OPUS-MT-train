@@ -166,7 +166,7 @@ TOKENIZER    = ${MOSESSCRIPTS}/tokenizer
 SUBWORD_BPE  ?= ${shell which subword-nmt 2>/dev/null || echo ${TOOLSDIR}/subword-nmt/subword_nmt/subword_nmt.py}
 SUBWORD_HOME ?= ${dir ${SUBWORD_BPE}}
 ifeq (${shell which subword-nmt},)
-  BPE_LEARN ?= pyhton3 ${SUBWORD_HOME}/learn_bpe.py
+  BPE_LEARN ?= python3 ${SUBWORD_HOME}/learn_bpe.py
   BPE_APPLY ?= python3 ${SUBWORD_HOME}/apply_bpe.py
 else
   BPE_LEARN ?= ${SUBWORD_BPE} learn-bpe
