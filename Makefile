@@ -145,6 +145,11 @@
 # check and adjust lib/env.mk and lib/config.mk
 
 include lib/env.mk
+
+.PHONY: install
+install: install-prerequisites
+# If we need prerequisites, that has to happen before including eg. config.mk
+
 include lib/config.mk
 
 # load model-specific configuration parameters
@@ -175,8 +180,6 @@ all: ${WORKDIR}/config.mk
 	${MAKE} eval
 	${MAKE} compare
 
-.PHONY: install
-install: install-prerequisites
 
 
 #---------------------------------------------------------------------
