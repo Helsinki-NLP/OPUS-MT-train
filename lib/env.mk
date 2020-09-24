@@ -24,6 +24,7 @@ export PERL_MM_OPT         := INSTALL_BASE=${HOME}/perl5
 
 CPU_MODULES = gcc/6.2.0 mkl
 GPU_MODULES = cuda-env/8 mkl
+INSTALL_MODULES = cmake perl/5.30.0
 # GPU_MODULES = python-env/3.5.3-ml cuda-env/8 mkl
 
 
@@ -220,6 +221,9 @@ endif
 
 PHONY: install-prerequisites install-prereq install-requirements
 install-prerequisites install-prereq install-requirements:
+	if [ `hostname --domain` = "bullx" ]; then \
+	  module load ${INSTALL_MODULES}; \
+	fi
 	${PIP} install --user -r requirements.txt
 	${MAKE} install-perl-modules
 	${MAKE} ${PREREQ_TOOLS}
