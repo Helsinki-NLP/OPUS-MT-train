@@ -362,8 +362,8 @@ ifdef CHECK_TRAINDATA_SIZE
 	  echo ${CLEAN_TRAIN_TRG}; \
 	fi
 endif
-	echo -n "* ${SRC}-${TRG}: "                           >> ${dir ${LOCAL_TRAIN_SRC}}README.md
-	for d in ${wildcard ${CLEAN_TRAIN_SRC}}; do \
+	@echo -n "* ${SRC}-${TRG}: "                          >> ${dir ${LOCAL_TRAIN_SRC}}README.md
+	@for d in ${wildcard ${CLEAN_TRAIN_SRC}}; do \
 	  l=`${GZIP} -cd < $$d ${CUT_DATA_SETS} | wc -l`; \
 	  if [ $$l -gt 0 ]; then \
 	    echo "$$d" | xargs basename | \
@@ -378,45 +378,47 @@ endif
 # do we need to add target language labels?
 ######################################
 ifeq (${USE_TARGET_LABELS},1)
-	echo "set target language labels";
-	${ZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} ${CUT_DATA_SETS} |\
+	@echo "set target language labels";
+	@${ZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} ${CUT_DATA_SETS} |\
 	sed "s/^/>>${TRG}<< /" > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
 else
-	echo "only one target language"
-	${ZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} ${CUT_DATA_SETS} > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
+	@echo "only one target language"
+	@${ZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} ${CUT_DATA_SETS} > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
 endif
-	${ZCAT} ${wildcard ${CLEAN_TRAIN_TRG}} ${CUT_DATA_SETS} > ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
+	@${ZCAT} ${wildcard ${CLEAN_TRAIN_TRG}} ${CUT_DATA_SETS} > ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
 ######################################
 #  SHUFFLE_DATA is set?
 #    --> shuffle data for each langpair
 #    --> do this when FIT_DATA_SIZE is set!
 ######################################
 ifdef SHUFFLE_DATA
-	paste ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg |\
+	@echo "shuffle training data"
+	@paste ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg |\
 	${SHUFFLE} > ${LOCAL_TRAIN_SRC}.shuffled
-	cut -f1 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
-	cut -f2 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
-	rm -f ${LOCAL_TRAIN_SRC}.shuffled
+	@cut -f1 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
+	@cut -f2 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
+	@rm -f ${LOCAL_TRAIN_SRC}.shuffled
 endif
 ######################################
 #  FIT_DATA_SIZE is set?
 #    --> fit data to speciic size
 #    --> under/over sampling!
 ######################################
-	echo -n "* ${SRC}-${TRG}: total size = " >> ${dir ${LOCAL_TRAIN_SRC}}README.md
+	@echo -n "* ${SRC}-${TRG}: total size = " >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 ifdef FIT_DATA_SIZE
-	scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
+	@echo "sample data to fit size = ${FIT_DATA_SIZE}"
+	@scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
 		${LOCAL_TRAIN_SRC}.${LANGPAIR}.src | wc -l >> ${dir ${LOCAL_TRAIN_SRC}}README.md
-	scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
+	@scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
 		${LOCAL_TRAIN_SRC}.${LANGPAIR}.src >> ${LOCAL_TRAIN_SRC}
-	scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
+	@scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
 		${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg >> ${LOCAL_TRAIN_TRG}
 else
-	cat ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src | wc -l >> ${dir ${LOCAL_TRAIN_SRC}}README.md
-	cat ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src >> ${LOCAL_TRAIN_SRC}
-	cat ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg >> ${LOCAL_TRAIN_TRG}
+	@cat ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src | wc -l >> ${dir ${LOCAL_TRAIN_SRC}}README.md
+	@cat ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src >> ${LOCAL_TRAIN_SRC}
+	@cat ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg >> ${LOCAL_TRAIN_TRG}
 endif
-	rm -f ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
+	@rm -f ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
 
 
 
@@ -468,14 +470,16 @@ ${DEV_SRC}: %: %.shuffled.gz
 ## ---> make sure that we do not have any overlap between the two data sets
 ## ---> reserve at least DEVMINSIZE data for dev data and keep the rest for testing
 ifeq (${DEVSET},${TESTSET})
-	if (( `${GZIP} -cd < $< | wc -l` < $$((${DEVSIZE} + ${TESTSIZE})) )); then \
+	@if (( `${GZIP} -cd < $< | wc -l` < $$((${DEVSIZE} + ${TESTSIZE})) )); then \
 	  if (( `${GZIP} -cd < $< | wc -l` < $$((${DEVSMALLSIZE} + ${DEVMINSIZE})) )); then \
+	    echo "extract ${DEVMINSIZE} examples from ${DEVSET} for dev and test"; \
 	    ${GZIP} -cd < $< | cut -f1 | head -${DEVMINSIZE} > ${DEV_SRC}; \
 	    ${GZIP} -cd < $< | cut -f2 | head -${DEVMINSIZE} > ${DEV_TRG}; \
 	    mkdir -p ${dir ${TEST_SRC}}; \
 	    ${GZIP} -cd < $< | cut -f1 | tail -n +$$((${DEVMINSIZE} + 1)) > ${TEST_SRC}; \
 	    ${GZIP} -cd < $< | cut -f2 | tail -n +$$((${DEVMINSIZE} + 1)) > ${TEST_TRG}; \
 	  else \
+	    echo "extract ${DEVSMALLSIZE} examples from ${DEVSET} for dev and test"; \
 	    ${GZIP} -cd < $< | cut -f1 | head -${DEVSMALLSIZE} > ${DEV_SRC}; \
 	    ${GZIP} -cd < $< | cut -f2 | head -${DEVSMALLSIZE} > ${DEV_TRG}; \
 	    mkdir -p ${dir ${TEST_SRC}}; \
@@ -483,34 +487,37 @@ ifeq (${DEVSET},${TESTSET})
 	    ${GZIP} -cd < $< | cut -f2 | tail -n +$$((${DEVSMALLSIZE} + 1)) > ${TEST_TRG}; \
 	  fi; \
 	else \
+	  echo "extract ${DEVSIZE} examples from ${DEVSET} for dev"; \
+	  echo "extract ${TESTSIZE} examples from ${DEVSET} for test"; \
 	  ${GZIP} -cd < $< | cut -f1 | head -${DEVSIZE} > ${DEV_SRC}; \
 	  ${GZIP} -cd < $< | cut -f2 | head -${DEVSIZE} > ${DEV_TRG}; \
 	  mkdir -p ${dir ${TEST_SRC}}; \
 	  ${GZIP} -cd < $< | cut -f1 | head -$$((${DEVSIZE} + ${TESTSIZE})) | tail -${TESTSIZE} > ${TEST_SRC}; \
 	  ${GZIP} -cd < $< | cut -f2 | head -$$((${DEVSIZE} + ${TESTSIZE})) | tail -${TESTSIZE} > ${TEST_TRG}; \
-	  ${GZIP} -cd < $< | cut -f1 | tail -n +$$((${DEVSIZE} + ${TESTSIZE})) | ${GZIP} -c > ${DEV_SRC}.notused.gz; \
-	  ${GZIP} -cd < $< | cut -f2 | tail -n +$$((${DEVSIZE} + ${TESTSIZE})) | ${GZIP} -c > ${DEV_TRG}.notused.gz; \
+	  ${GZIP} -cd < $< | cut -f1 | tail -n +$$((${DEVSIZE} + ${TESTSIZE} + 1)) | ${GZIP} -c > ${DEV_SRC}.notused.gz; \
+	  ${GZIP} -cd < $< | cut -f2 | tail -n +$$((${DEVSIZE} + ${TESTSIZE} + 1)) | ${GZIP} -c > ${DEV_TRG}.notused.gz; \
 	fi
 else
-	${GZIP} -cd < $< | cut -f1 | head -${DEVSIZE} > ${DEV_SRC}
-	${GZIP} -cd < $< | cut -f2 | head -${DEVSIZE} > ${DEV_TRG}
-	${GZIP} -cd < $< | cut -f1 | tail -n +$$((${DEVSIZE} + 1)) | ${GZIP} -c > ${DEV_SRC}.notused.gz
-	${GZIP} -cd < $< | cut -f2 | tail -n +$$((${DEVSIZE} + 1)) | ${GZIP} -c > ${DEV_TRG}.notused.gz
+	@echo "extract ${DEVSIZE} examples from ${DEVSET} for dev"
+	@${GZIP} -cd < $< | cut -f1 | head -${DEVSIZE} > ${DEV_SRC}
+	@${GZIP} -cd < $< | cut -f2 | head -${DEVSIZE} > ${DEV_TRG}
+	@${GZIP} -cd < $< | cut -f1 | tail -n +$$((${DEVSIZE} + 1)) | ${GZIP} -c > ${DEV_SRC}.notused.gz
+	@${GZIP} -cd < $< | cut -f2 | tail -n +$$((${DEVSIZE} + 1)) | ${GZIP} -c > ${DEV_TRG}.notused.gz
 endif
-	echo ""                                         >> ${dir ${DEV_SRC}}/README.md
-	echo -n "* devset = top "                       >> ${dir ${DEV_SRC}}/README.md
-	wc -l < ${DEV_SRC} | tr "\n" ' '                >> ${dir ${DEV_SRC}}/README.md
-	echo " lines of ${notdir $@}.shuffled!"         >> ${dir ${DEV_SRC}}/README.md
+	@echo ""                                         >> ${dir ${DEV_SRC}}/README.md
+	@echo -n "* devset = top "                       >> ${dir ${DEV_SRC}}/README.md
+	@wc -l < ${DEV_SRC} | tr "\n" ' '                >> ${dir ${DEV_SRC}}/README.md
+	@echo " lines of ${notdir $@}.shuffled!"         >> ${dir ${DEV_SRC}}/README.md
 ifeq (${DEVSET},${TESTSET})
-	echo -n "* testset = next "                     >> ${dir ${DEV_SRC}}/README.md
-	wc -l < ${TEST_SRC} | tr "\n" ' '               >> ${dir ${DEV_SRC}}/README.md
-	echo " lines of ${notdir $@}.shuffled!"         >> ${dir ${DEV_SRC}}/README.md
-	echo "* remaining lines are added to traindata" >> ${dir ${DEV_SRC}}/README.md
-	echo "# Test data"                               > ${dir ${TEST_SRC}}/README.md
-	echo ""                                         >> ${dir ${TEST_SRC}}/README.md
-	echo -n "testset = next "                       >> ${dir ${TEST_SRC}}/README.md
-	wc -l < ${TEST_SRC} | tr "\n" ' '               >> ${dir ${TEST_SRC}}/README.md
-	echo " lines of ../val/${notdir $@}.shuffled!"  >> ${dir ${TEST_SRC}}/README.md
+	@echo -n "* testset = next "                     >> ${dir ${DEV_SRC}}/README.md
+	@wc -l < ${TEST_SRC} | tr "\n" ' '               >> ${dir ${DEV_SRC}}/README.md
+	@echo " lines of ${notdir $@}.shuffled!"         >> ${dir ${DEV_SRC}}/README.md
+	@echo "* remaining lines are added to traindata" >> ${dir ${DEV_SRC}}/README.md
+	@echo "# Test data"                               > ${dir ${TEST_SRC}}/README.md
+	@echo ""                                         >> ${dir ${TEST_SRC}}/README.md
+	@echo -n "testset = next "                       >> ${dir ${TEST_SRC}}/README.md
+	@wc -l < ${TEST_SRC} | tr "\n" ' '               >> ${dir ${TEST_SRC}}/README.md
+	@echo " lines of ../val/${notdir $@}.shuffled!"  >> ${dir ${TEST_SRC}}/README.md
 endif
 
 
@@ -519,18 +526,19 @@ ${DEV_TRG}: ${DEV_SRC}
 
 
 add-to-dev-data: ${CLEAN_DEV_SRC} ${CLEAN_DEV_TRG}
-	mkdir -p ${dir ${DEV_SRC}}
-	echo -n "* ${LANGPAIR}: ${DEVSET}, "      >> ${dir ${DEV_SRC}}README.md
-	${ZCAT} ${CLEAN_DEV_SRC} | wc -l          >> ${dir ${DEV_SRC}}README.md
+	@echo "add to devset: ${CLEAN_DEV_SRC}"
+	@mkdir -p ${dir ${DEV_SRC}}
+	@echo -n "* ${LANGPAIR}: ${DEVSET}, "      >> ${dir ${DEV_SRC}}README.md
+	@${ZCAT} ${CLEAN_DEV_SRC} | wc -l          >> ${dir ${DEV_SRC}}README.md
 ifeq (${USE_TARGET_LABELS},1)
-	echo "more than one target language";
-	${ZCAT} ${CLEAN_DEV_SRC} |\
+	@echo "more than one target language";
+	@${ZCAT} ${CLEAN_DEV_SRC} |\
 	sed "s/^/>>${TRG}<< /" >> ${DEV_SRC}
 else
-	echo "only one target language"
-	${ZCAT} ${CLEAN_DEV_SRC} >> ${DEV_SRC}
+	@echo "only one target language"
+	@${ZCAT} ${CLEAN_DEV_SRC} >> ${DEV_SRC}
 endif
-	${ZCAT} ${CLEAN_DEV_TRG} >> ${DEV_TRG}
+	@${ZCAT} ${CLEAN_DEV_TRG} >> ${DEV_TRG}
 
 
 ####################
@@ -590,16 +598,17 @@ ${TEST_TRG}: ${TEST_SRC}
 	@echo "done!"
 
 add-to-test-data: ${CLEAN_TEST_SRC}
-	echo "* ${LANGPAIR}: ${TESTSET}" >> ${dir ${TEST_SRC}}README.md
+	@echo "add to testset: ${CLEAN_TEST_SRC}"
+	@echo "* ${LANGPAIR}: ${TESTSET}" >> ${dir ${TEST_SRC}}README.md
 ifeq (${USE_TARGET_LABELS},1)
-	echo "more than one target language";
-	${ZCAT} ${CLEAN_TEST_SRC} |\
+	@echo "more than one target language";
+	@${ZCAT} ${CLEAN_TEST_SRC} |\
 	sed "s/^/>>${TRG}<< /" >> ${TEST_SRC}
 else
-	echo "only one target language"
-	${ZCAT} ${CLEAN_TEST_SRC} >> ${TEST_SRC}
+	@echo "only one target language"
+	@${ZCAT} ${CLEAN_TEST_SRC} >> ${TEST_SRC}
 endif
-	${ZCAT} ${CLEAN_TEST_TRG} >> ${TEST_TRG}
+	@${ZCAT} ${CLEAN_TEST_TRG} >> ${TEST_TRG}
 
 
 
@@ -613,6 +622,10 @@ ${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz: ${TRAIN_TRG}.clean.${PRE_TRG}.gz
 endif
 
 
+
+## monolingual data: for language-specific sentence piece models
+## that are independent of bitexts
+## TODO: do we use this?
 
 ${LOCAL_MONO_DATA}.raw:
 	mkdir -p ${dir $@}

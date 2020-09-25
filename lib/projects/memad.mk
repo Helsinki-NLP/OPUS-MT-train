@@ -7,6 +7,16 @@ MEMAD_LANGS = de en fi fr nl sv
 # models for the MeMAD project
 #-------------------------------------------------------------------
 
+# FIT_DATA_SIZE=2000000 
+
+memad-multi-subs:
+	${MAKE} SRCLANGS="${MEMAD_LANGS}" TRGLANGS="${MEMAD_LANGS}" \
+		SKIP_LANGPAIRS="de-de|en-en|fi-fi|fr-fr|nl-nl|sv-sv" \
+		DEVSET=OpenSubtitles TRAINSET= MODELTYPE=transformer data
+	${MAKE} SRCLANGS="${MEMAD_LANGS}" TRGLANGS="${MEMAD_LANGS}" \
+		SKIP_LANGPAIRS="de-de|en-en|fi-fi|fr-fr|nl-nl|sv-sv" \
+		DEVSET=OpenSubtitles TRAINSET= MODELTYPE=transformer \
+		WALLTIME=72 HPC_MEM=8g HPC_CORES=1 train.submit-multigpu
 
 memad-multi-train:
 	${MAKE} SRCLANGS="${MEMAD_LANGS}" TRGLANGS="${MEMAD_LANGS}" MODELTYPE=transformer data

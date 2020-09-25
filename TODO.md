@@ -34,3 +34,7 @@
 * focus languages: Tagalog (tl, tgl), Central Bikol (bcl), Malayalam (ml, mal), Bengali (bn, ben), and Mongolian (mn, mon)
 
 
+
+# Other requests
+
+* Hebrew-->English and Hebrew-->Russian (Shaul Dar)

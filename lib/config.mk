@@ -347,11 +347,14 @@ MODEL_DECODER    = ${MODEL_FINAL}.decoder.yml
 ## for others: extract vocabulary from training data with MarianNMT
 ## backwards compatibility: if there is already a vocab-file then use it
 
-ifeq (${SUBWORDS},spm)
-ifeq ($(wildcard ${WORKDIR}/${MODEL}.vocab.yml),)
-  USE_SPM_VOCAB ?= 1
-endif
-endif
+# ifeq (${SUBWORDS},spm)
+# ifeq ($(wildcard ${WORKDIR}/${MODEL}.vocab.yml),)
+#   USE_SPM_VOCAB ?= 1
+# endif
+# endif
+
+## use vocab from sentence piece instead of 
+## marian_vocab from training data
 
 ifeq ($(USE_SPM_VOCAB),1)
   MODEL_VOCAB     = ${WORKDIR}/${MODEL}.vocab
