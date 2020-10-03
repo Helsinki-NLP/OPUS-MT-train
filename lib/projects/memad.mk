@@ -18,6 +18,28 @@ memad-multi-subs:
 		DEVSET=OpenSubtitles TRAINSET= MODELTYPE=transformer \
 		WALLTIME=72 HPC_MEM=8g HPC_CORES=1 train.submit-multigpu
 
+memad-multi-subs-dist:
+	${MAKE} SRCLANGS="${MEMAD_LANGS}" TRGLANGS="${MEMAD_LANGS}" \
+		SKIP_LANGPAIRS="de-de|en-en|fi-fi|fr-fr|nl-nl|sv-sv" \
+		DEVSET=OpenSubtitles TRAINSET= MODELTYPE=transformer \
+		WALLTIME=72 HPC_MEM=8g HPC_CORES=1 eval
+	${MAKE} SRCLANGS="${MEMAD_LANGS}" TRGLANGS="${MEMAD_LANGS}" \
+		SKIP_LANGPAIRS="de-de|en-en|fi-fi|fr-fr|nl-nl|sv-sv" \
+		DEVSET=OpenSubtitles TRAINSET= MODELTYPE=transformer \
+		WALLTIME=72 HPC_MEM=8g HPC_CORES=1 eval-testsets
+	${MAKE} SRCLANGS="${MEMAD_LANGS}" TRGLANGS="${MEMAD_LANGS}" \
+		SKIP_LANGPAIRS="de-de|en-en|fi-fi|fr-fr|nl-nl|sv-sv" \
+		DEVSET=OpenSubtitles TRAINSET= MODELTYPE=transformer \
+		WALLTIME=72 HPC_MEM=8g HPC_CORES=1 release
+
+memad-multi-subs-release:
+	${MAKE} SRCLANGS="${MEMAD_LANGS}" TRGLANGS="${MEMAD_LANGS}" \
+		SKIP_LANGPAIRS="de-de|en-en|fi-fi|fr-fr|nl-nl|sv-sv" \
+		DEVSET=OpenSubtitles TRAINSET= MODELTYPE=transformer \
+		WALLTIME=72 HPC_MEM=8g HPC_CORES=1 release
+
+
+
 memad-multi-train:
 	${MAKE} SRCLANGS="${MEMAD_LANGS}" TRGLANGS="${MEMAD_LANGS}" MODELTYPE=transformer data
 	${MAKE} SRCLANGS="${MEMAD_LANGS}" TRGLANGS="${MEMAD_LANGS}" MODELTYPE=transformer \
@@ -27,6 +49,30 @@ memad-multi-train:
 	${MAKE} SRCLANGS="${MEMAD_LANGS}" TRGLANGS="${MEMAD_LANGS}" MODELTYPE=transformer data
 	${MAKE} SRCLANGS="${MEMAD_LANGS}" TRGLANGS="${MEMAD_LANGS}" MODELTYPE=transformer \
 		${@:-memad-multi=}
+
+
+memad-multiparallel: memad-multiparallel-basic \
+		memad-multiparallel-all \
+		memad-multiparallel-intra \
+		memad-multiparallel-intra-all
+
+memad-multiparallel-basic:
+	mkdir $@
+	cd $@ && opus2multi /projappl/nlpl/data/OPUS/OpenSubtitles/latest/xml en de fi fr nl sv
+
+memad-multiparallel-all:
+	mkdir $@
+	cd $@ && opus2multi /projappl/nlpl/data/OPUS/OpenSubtitles/latest/all en de fi fr nl sv
+
+memad-multiparallel-intra:
+	mkdir $@
+	cd $@ && opus2multi -i /projappl/nlpl/data/OPUS/OpenSubtitles/latest/xml/en-en.xml.gz\
+		/projappl/nlpl/data/OPUS/OpenSubtitles/latest/xml en de fi fr nl sv
+
+memad-multiparallel-intra-all:
+	mkdir $@
+	cd $@ && opus2multi -i /projappl/nlpl/data/OPUS/OpenSubtitles/latest/xml/en-en.xml.gz\
+		/projappl/nlpl/data/OPUS/OpenSubtitles/latest/all en de fi fr nl sv
 
 
 

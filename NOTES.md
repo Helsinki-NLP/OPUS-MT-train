@@ -1,4 +1,17 @@
 
+
+# more efficient parallelisation
+
+from Bergamot:
+https://github.com/browsermt/students/blob/master/train-student/alignment/generate-alignment-and-shortlist.sh
+
+```
+# Subword segmentation with SentencePiece.
+test -s $DIR/corpus.spm.$SRC || cat $CORPUS_SRC | pigz -dc | parallel --no-notice --pipe -k -j16 --block 50M "$MARIAN/spm_encode --model $VOCAB" > $DIR/corpus.spm.$SRC
+test -s $DIR/corpus.spm.$TRG || cat $CORPUS_TRG | pigz -dc | parallel --no-notice --pipe -k -j16 --block 50M "$MARIAN/spm_encode --model $VOCAB" > $DIR/corpus.spm.$TRG
+```
+
+
 # related projects
 
 * https://browser.mt (bergamot project)

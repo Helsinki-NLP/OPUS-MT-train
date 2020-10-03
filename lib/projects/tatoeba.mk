@@ -352,9 +352,9 @@ tatoeba-eng2group-dist:
 tatoeba-langgroup-dist:
 	for g in ${OPUS_LANG_GROUPS}; do \
 	  if [ `find ${TATOEBA_WORK}/$$g-$$g -name '*.npz' | wc -l` -gt 0 ]; then \
-	    ${MAKE} MODELTYPE=transformer tatoeba-$${g}2$${g}-eval; \
-	    ${MAKE} MODELTYPE=transformer tatoeba-$${g}2$${g}-evalall; \
-	    ${MAKE} MODELTYPE=transformer tatoeba-$${g}2$${g}-dist; \
+	    ${MAKE} MODELTYPE=transformer PIVOT=eng tatoeba-$${g}2$${g}-eval; \
+	    ${MAKE} MODELTYPE=transformer PIVOT=eng tatoeba-$${g}2$${g}-evalall; \
+	    ${MAKE} MODELTYPE=transformer PIVOT=eng tatoeba-$${g}2$${g}-dist; \
 	  fi \
 	done
 

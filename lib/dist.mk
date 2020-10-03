@@ -38,7 +38,7 @@ local-dist:
 global-dist release:
 	if  [ `grep BLEU $(TEST_EVALUATION) | cut -f3 -d ' ' | cut -f1 -d '.'` -ge ${MIN_BLEU_SCORE} ]; then \
 	  ${MAKE} MODELSHOME=${PWD}/models \
-		  MODELS_URL=https://object.pouta.csc.fi/${MODEL_CONTAINER}
+		  MODELS_URL=https://object.pouta.csc.fi/${MODEL_CONTAINER} \
 	  dist; \
 	fi
 
@@ -235,7 +235,7 @@ endif
 	     -e 's/maxi-batch: [0-9]*$$/maxi-batch: 1/' \
 	     -e 's/relative-paths: false/relative-paths: true/' \
 	< ${MODEL_DECODER} > ${WORKDIR}/decoder.yml
-	@cd ${WORKDIR} && zip ${notdir $@} \
+	cd ${WORKDIR} && zip ${notdir $@} \
 		README.md LICENSE \
 		${notdir ${MODEL_FINAL}} \
 		${notdir ${MODEL_SRCVOCAB}} \
