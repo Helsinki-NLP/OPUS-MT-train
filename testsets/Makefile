@@ -7,6 +7,32 @@ TXT = $(patsubst %.sgm,%,${wildcard *.sgm})
 
 all: ${TXT}
 
+
+
+## TICO-19 translation benchmark
+## from https://tico-19.github.io/index.html
+
+TICO19_TEST = ${patsubst tico19-testset/test/test.%.tsv,%/tico19-test.en.gz,${wildcard tico19-testset/test/*.tsv}}
+
+tico19-testset:
+	wget https://tico-19.github.io/data/tico19-testset.zip
+	unzip tico19-testset.zip
+	rm -f tico19-testset.zip
+	rm -fr __MACOSX
+	${MAKE} tico19-testdata
+
+.PHONY: tico19-testdata
+tico19-testdata: ${TICO19_TEST}
+
+${TICO19_TEST}: %/tico19-test.en.gz: tico19-testset/test/test.%.tsv
+	mkdir -p ${dir $@}
+	cut -f3 $< | tail -n +2 | sed 's/^ *//;s/ *$$//' | gzip -c > $@
+	cut -f4 $< | tail -n +2 | sed 's/^ *//;s/ *$$//' | gzip -c > ${@:en.gz=${patsubst en-%/,%,$(dir $@)}}.gz
+
+
+
+
+
 list-files:
 	@echo "${2LETTER_FILES}" | tr ' ' "\n"
 

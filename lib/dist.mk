@@ -283,9 +283,9 @@ endif
 
 .PHONY: upload
 upload:
-	find ${MODELSHOME}/ -type l | tar -cf models-links.tar -T -
-	find ${MODELSHOME}/ -type l -delete
-	cd ${MODELSHOME} && swift upload ${MODEL_CONTAINER} --changed --skip-identical *
+	find ${RELEASEDIR}/ -type l | tar -cf models-links.tar -T -
+	find ${RELEASEDIR}/ -type l -delete
+	cd ${RELEASEDIR} && swift upload ${MODEL_CONTAINER} --changed --skip-identical *
 	tar -xf models-links.tar
 	rm -f models-links.tar
 	swift post ${MODEL_CONTAINER} --read-acl ".r:*"
@@ -296,8 +296,8 @@ upload:
 
 .PHONY: upload-models
 upload-models:
-	find ${WORKHOME}/models -type l | tar -cf dev-models-links.tar -T -
-	find ${WORKHOME}/models -type l -delete
+	find ${MODELSHOME} -type l | tar -cf dev-models-links.tar -T -
+	find ${MODELSHOME} -type l -delete
 	cd ${WORKHOME} && swift upload ${DEV_MODEL_CONTAINER} --changed --skip-identical models
 	tar -xf dev-models-links.tar
 	rm -f dev-models-links.tar
@@ -352,12 +352,12 @@ ${WORKHOME}/eval/scores.txt: ${EVALSCORES} ${EVALTRANSL}
 	rm -f $@.1 $@.2 $@.3 $@.4
 
 
-${EVALSCORES}: # ${WORKHOME}/eval/%.eval.txt: ${WORKHOME}/models/%.eval
+${EVALSCORES}: # ${WORKHOME}/eval/%.eval.txt: ${MODELSHOME}/%.eval
 	mkdir -p ${dir $@}
 	cp ${patsubst ${WORKHOME}/eval/%.eval.txt,${WORKHOME}/%.eval,$@} $@
 #	cp $< $@
 
-${EVALTRANSL}: # ${WORKHOME}/eval/%.test.txt: ${WORKHOME}/models/%.compare
+${EVALTRANSL}: # ${WORKHOME}/eval/%.test.txt: ${MODELSHOME}/%.compare
 	mkdir -p ${dir $@}
 	cp ${patsubst ${WORKHOME}/eval/%.test.txt,${WORKHOME}/%.compare,$@} $@
 #	cp $< $@
@@ -429,7 +429,7 @@ old-models-dist:
 	  ${MAKE} SRCLANGS="`echo $$l | cut -f1 -d'-' | sed 's/\\+/ /g'`" \
 		  TRGLANGS="`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`" \
 	          WORKHOME=${WORKHOME}/old-models \
-	          MODELSHOME=${WORKHOME}/models dist; \
+	          MODELSHOME=${MODELSHOME} dist; \
 	done
 	@echo "trained double ${words ${TRAINED_DOUBLE_MODELS}}"
 	for l in ${TRAINED_DOUBLE_MODELS}; do \
@@ -439,7 +439,7 @@ old-models-dist:
 	    ${MAKE} SRCLANGS="`echo $$l | cut -f1 -d'-' | sed 's/\\+/ /g'`" \
 		    TRGLANGS="`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`" \
 	            WORKHOME=${WORKHOME}/old-models \
-	            MODELSHOME=${WORKHOME}/models dist; \
+	            MODELSHOME=${MODELSHOME} dist; \
 	  else \
 	    echo "$$l: new better than old"; \
 	  fi \

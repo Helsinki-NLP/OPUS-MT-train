@@ -172,3 +172,16 @@ Various lists and tables can be generated from the evaluated model files. Remove
 rm -f tatoeba-results* results/*.md
 make tatoeba-results-md
 ```
+
+
+## Convert models to huggingface
+
+
+Look at this [README](https://github.com/huggingface/transformers/tree/master/scripts/tatoeba) in the transformers library.
+
+```
+python src/transformers/convert_marian_tatoeba_to_pytorch.py --models heb-eng eng-heb --save_dir converted
+cd converted
+transformers-cli login
+for FILE in *; do transformers-cli upload --organization Helsinki-NLP $FILE; done
+```
