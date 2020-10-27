@@ -24,6 +24,7 @@ export PERL_MM_OPT         := INSTALL_BASE=${HOME}/perl5
 
 CPU_MODULES = gcc/6.2.0 mkl
 GPU_MODULES = cuda-env/8 mkl
+INSTALL_MODULES = cmake perl/5.30.0
 # GPU_MODULES = python-env/3.5.3-ml cuda-env/8 mkl
 
 
@@ -167,7 +168,7 @@ TOKENIZER    = ${MOSESSCRIPTS}/tokenizer
 SUBWORD_BPE  ?= ${shell which subword-nmt 2>/dev/null || echo ${TOOLSDIR}/subword-nmt/subword_nmt/subword_nmt.py}
 SUBWORD_HOME ?= ${dir ${SUBWORD_BPE}}
 ifeq (${shell which subword-nmt},)
-  BPE_LEARN ?= pyhton3 ${SUBWORD_HOME}/learn_bpe.py
+  BPE_LEARN ?= python3 ${SUBWORD_HOME}/learn_bpe.py
   BPE_APPLY ?= python3 ${SUBWORD_HOME}/apply_bpe.py
 else
   BPE_LEARN ?= ${SUBWORD_BPE} learn-bpe
@@ -221,6 +222,9 @@ endif
 
 PHONY: install-prerequisites install-prereq install-requirements
 install-prerequisites install-prereq install-requirements:
+	if [ `hostname --domain` = "bullx" ]; then \
+	  module load ${INSTALL_MODULES}; \
+	fi
 	${PIP} install --user -r requirements.txt
 	${MAKE} install-perl-modules
 	${MAKE} ${PREREQ_TOOLS}
@@ -228,7 +232,7 @@ install-prerequisites install-prereq install-requirements:
 .PHONY: install-perl-modules
 install-perl-modules:
 	for p in ${PREREQ_PERL}; do \
-	  perl -e "use $$p;" || ${CPAN} -i $$p; \
+	  perl -e "use $$p;" 2> /dev/null || ${CPAN} -i $$p; \
 	done
 
 ${TOOLSDIR}/LanguageCodes/ISO-639-3/bin/iso639:
