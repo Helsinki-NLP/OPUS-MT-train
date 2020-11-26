@@ -1,3 +1,8 @@
+# NEWS AND ANNOUNCEMENTS
+
+Unfortunately, the data server is still down and the IT service is working on the issue. The pre-trained models are, therefore, not available at the moment. Sorry! Hopefully, everything will be up and running again later this week. Apologies for the inconvenience!
+
+
 # Train Opus-MT models
 
 This package includes scripts for training NMT models using MarianNMT and OPUS data for [OPUS-MT](https://github.com/Helsinki-NLP/Opus-MT). More details are given in the [Makefile](Makefile) but documentation needs to be improved. Also, the targets require a specific environment and right now only work well on the CSC HPC cluster in Finland.
