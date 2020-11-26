@@ -306,11 +306,11 @@ endif
 
 
 ## document level models
+## devtest data should not be shuffled
 %-doc:
-	${MAKE} WORKHOME=${shell realpath ${PWD}/work-spm} \
-		PRE=norm SUBWORDS=spm \
-		PRE_SRC=spm${SRCBPESIZE:000=}k.doc${CONTEXT_SIZE} \
+	${MAKE} PRE_SRC=spm${SRCBPESIZE:000=}k.doc${CONTEXT_SIZE} \
 		PRE_TRG=spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE} \
+		SHUFFLE_DEVDATA=0 \
 	${@:-doc=}
 
 

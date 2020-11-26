@@ -88,11 +88,21 @@
 
 ## general parameters for Tatoeba models
 
-TATOEBA_DATAURL := https://object.pouta.csc.fi/Tatoeba-Challenge
-TATOEBA_RAWGIT  := https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
-TATOEBA_WORK    ?= ${PWD}/work-tatoeba
-TATOEBA_DATA    ?= ${TATOEBA_WORK}/data/${PRE}
-TATOEBA_MONO    ?= ${TATOEBA_WORK}/data/mono
+
+## NEW: release
+TATOEBA_VERSION        ?= v2020-07-28
+
+TATOEBA_DATAURL   := https://object.pouta.csc.fi/Tatoeba-Challenge
+# TATOEBA_TEST_URL  := ${TATOEBA_DATAURL}-${TATOEBA_VERSION}
+# TATOEBA_TRAIN_URL := ${TATOEBA_DATAURL}-${TATOEBA_VERSION}
+# TATOEBA_MONO_URL  := ${TATOEBA_DATAURL}-${TATOEBA_VERSION}
+TATOEBA_TEST_URL  := ${TATOEBA_DATAURL}
+TATOEBA_TRAIN_URL := ${TATOEBA_DATAURL}
+TATOEBA_MONO_URL  := ${TATOEBA_DATAURL}
+TATOEBA_RAWGIT    := https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
+TATOEBA_WORK      ?= ${PWD}/work-tatoeba
+TATOEBA_DATA      ?= ${TATOEBA_WORK}/data/${PRE}
+TATOEBA_MONO      ?= ${TATOEBA_WORK}/data/mono
 
 
 TATOEBA_MODEL_CONTAINER := Tatoeba-MT-models
@@ -109,6 +119,7 @@ TATOEBA_PARAMS := TRAINSET=Tatoeba-train \
 		DEVMINSIZE=200 \
 		WORKHOME=${TATOEBA_WORK} \
 		MODELSHOME=${PWD}/models-tatoeba \
+		RELEASEDIR=${PWD}/models-tatoeba \
                 MODELS_URL=https://object.pouta.csc.fi/${TATOEBA_MODEL_CONTAINER} \
 		MODEL_CONTAINER=${TATOEBA_MODEL_CONTAINER} \
 		ALT_MODEL_DIR=tatoeba \
@@ -807,8 +818,13 @@ print-skiplangids:
 
 ${TATOEBA_MONO}/%.labels:
 	mkdir -p $@.d
-	wget -q -O $@.d/mono.tar ${TATOEBA_DATAURL}/$(patsubst %.labels,%,$(notdir $@)).tar
-	tar -C $@.d -xf $@.d/mono.tar
+# the old URL without versioning:
+	-wget -q -O $@.d/mono.tar ${TATOEBA_DATAURL}/$(patsubst %.labels,%,$(notdir $@)).tar
+	-tar -C $@.d -xf $@.d/mono.tar
+	rm -f $@.d/mono.tar
+# the new URLs with versioning:
+	-wget -q -O $@.d/mono.tar ${TATOEBA_MONO_URL}/$(patsubst %.labels,%,$(notdir $@)).tar
+	-tar -C $@.d -xf $@.d/mono.tar
 	rm -f $@.d/mono.tar
 	find $@.d -name '*.id.gz' | xargs ${ZCAT} | sort -u | tr "\n" ' ' | sed 's/ $$//' > $@
 	for c in `find $@.d -name '*.id.gz' | sed 's/\.id\.gz//'`; do \
@@ -837,8 +853,9 @@ ${TATOEBA_MONO}/%.labels:
 ## TODO: should we do some filtering like bitext-match, OPUS-filter ...
 %/Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.gz:
 	mkdir -p $@.d
-	-wget -q -O $@.d/train.tar ${TATOEBA_DATAURL}/${LANGPAIR}.tar
+	-wget -q -O $@.d/train.tar ${TATOEBA_TRAIN_URL}/${LANGPAIR}.tar
 	-tar -C $@.d -xf $@.d/train.tar
+	rm -f $@.d/train.tar
 	if [ -e $@.d/data/${LANGPAIR}/test.src ]; then \
 	  mv $@.d/data/${LANGPAIR}/test.src ${dir $@}Tatoeba-test.${LANGPAIR}.clean.${SRCEXT}; \
 	  mv $@.d/data/${LANGPAIR}/test.trg ${dir $@}Tatoeba-test.${LANGPAIR}.clean.${TRGEXT}; \

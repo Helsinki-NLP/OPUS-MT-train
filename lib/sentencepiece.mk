@@ -257,7 +257,7 @@ endif
 %.src.spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE}:
 	${MAKE} PRE_SRC=spm${SRCBPESIZE:000=}k PRE_TRG=spm${TRGBPESIZE:000=}k devdata
 	${MAKE} PRE_SRC=spm${SRCBPESIZE:000=}k PRE_TRG=spm${TRGBPESIZE:000=}k testdata
-	./large-context.pl -l ${CONTEXT_SIZE} \
+	${SCRIPTDIR}/large-context.pl -l ${CONTEXT_SIZE} \
 		${patsubst %.src.spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE},%.src.spm${SRCBPESIZE:000=}k,$@} \
 		${patsubst %.src.spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE},%.trg.spm${TRGBPESIZE:000=}k,$@} \
 	| ${GZIP} > $@.tmp.gz

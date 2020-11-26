@@ -63,6 +63,10 @@ SKIP_LANGPAIRS ?= "nothing"
 ##  
 # SHUFFLE_DATA = 1
 
+## devtest data is shuffled by default
+SHUFFLE_DEVDATA = 1
+
+
 ## set FIT_DATA_SIZE to a specific value to fit the training data
 ## to a certain number of lines for each language pair in the collection
 ## --> especially useful for multilingual models for balancing the 

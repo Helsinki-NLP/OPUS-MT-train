@@ -454,7 +454,11 @@ ${DEV_SRC}.shuffled.gz:
 	    fi \
 	  done \
 	done
+ifeq (${SHUFFLE_DEVDATA},0)
+	paste ${DEV_SRC} ${DEV_TRG} | ${GZIP} -c > $@
+else
 	paste ${DEV_SRC} ${DEV_TRG} | ${UNIQ} | ${SHUFFLE} | ${GZIP} -c > $@
+endif
 	echo -n "* total size of shuffled dev data: "        >> ${dir ${DEV_SRC}}README.md
 	${GZIP} -cd < $@ | wc -l                             >> ${dir ${DEV_SRC}}README.md
 
