@@ -53,16 +53,16 @@
 #---------------------------------------------------------------------
 # jobs for multilingual language group models
 #
-#   make tatoeba-group2eng ...... start train jobs for all language groups to English
-#   make tatoeba-eng2group ...... start train jobs for English to all language groups
-#   make tatoeba-langgroup ...... start train jobs for bi-directional models for all language groups
+#   make all-tatoeba-group2eng ...... start train jobs for all language groups to English
+#   make all-tatoeba-eng2group ...... start train jobs for English to all language groups
+#   make all-tatoeba-langgroup ...... start train jobs for bi-directional models for all language groups
 #
-#   make tatoeba-langgroups ..... make all jobs from above
+#   make all-tatoeba-langgroups ..... make all jobs from above
 #
 #
-#   make tatoeba-group2eng-dist . make package for all trained group2eng models
-#   make tatoeba-eng2group-dist . make package for all trained eng2group models
-#   make tatoeba-langgroup-dist . make package for all trained langgroup models
+#   make all-tatoeba-group2eng-dist . make package for all trained group2eng models
+#   make all-tatoeba-eng2group-dist . make package for all trained eng2group models
+#   make all-tatoeba-langgroup-dist . make package for all trained langgroup models
 #
 #
 # jobs for specific tasks and language groups, example task: "gmw2eng"
@@ -262,10 +262,10 @@ print-langgroups:
 ##
 ## language groups include parents and grandparents
 
-tatoeba-langgroups: 
-	${MAKE} tatoeba-group2eng
-	${MAKE} tatoeba-eng2group
-	${MAKE} tatoeba-langgroup
+all-tatoeba-langgroups: 
+	${MAKE} all-tatoeba-group2eng
+	${MAKE} all-tatoeba-eng2group
+	${MAKE} all-tatoeba-langgroup
 
 
 #### language-group to English
@@ -292,44 +292,56 @@ LANGGROUP_DIST    := $(patsubst %-train,%-dist,${LANGGROUP_TRAIN})
 LANGGROUP_FIT_DATA_SIZE=1000000
 
 ## start all jobs with 1 million sampled sentence pairs per language pair
-tatoeba-group2eng: 
-	${MAKE} MIN_SRCLANGS=2 MODELTYPE=transformer FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} ${GROUP2ENG_TRAIN}
+all-tatoeba-group2eng: 
+	${MAKE} MIN_SRCLANGS=2 MODELTYPE=transformer \
+		FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} ${GROUP2ENG_TRAIN}
 
-tatoeba-eng2group: 
-	${MAKE} MIN_TRGLANGS=2 MODELTYPE=transformer FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} ${ENG2GROUP_TRAIN}
+all-tatoeba-eng2group: 
+	${MAKE} MIN_TRGLANGS=2 MODELTYPE=transformer \
+		FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} ${ENG2GROUP_TRAIN}
 
-tatoeba-langgroup: 
+all-tatoeba-langgroup: 
 	${MAKE} MIN_SRCLANGS=2 MAX_SRCLANGS=30 PIVOT=eng \
 		MODELTYPE=transformer \
 		FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} ${LANGGROUP_TRAIN}
 
+## make all lang-group models using different data samples
+## (1m, 2m or 4m sentence pairs)
+##
+## make all-tatoeba-langgroups-1m
+## make all-tatoeba-langgroups-2m
+## make all-tatoeba-langgroups-4m
+## 
+## or eng2group and group2eng models, e.g.
+##
+## make all-tatoeba-group2eng-2m
+## make all-tatoeba-eng2group-2m
+##
+## make release packages for all group models, e.g.
+##
+## make all-tatoeba-group2eng-dist-2m
+## make all-tatoeba-langgroup-dist-2m
 
-## sample 2 million sentence pairs
-tatoeba-langgroups-2m: 
-	${MAKE} CONTINUE_EXISTING=1 LANGGROUP_FIT_DATA_SIZE=2000000 DATASET=opus2m MARIAN_VALID_FREQ=10000 \
-	tatoeba-group2eng tatoeba-eng2group tatoeba-langgroup
+%-1m:
+	${MAKE} LANGGROUP_FIT_DATA_SIZE=1000000 \
+		DATASET=opus1m \
+		MARIAN_VALID_FREQ=10000 \
+	${@:-2m=}
 
-tatoeba-langgroups-2m-dist:
-	${MAKE} FIT_DATA_SIZE=2000000 DATASET=opus2m \
-	tatoeba-group2eng-dist tatoeba-eng2groug-dist tatoeba-langgroug-dist
+%-2m:
+	${MAKE} CONTINUE_EXISTING=1 \
+		LANGGROUP_FIT_DATA_SIZE=2000000 \
+		DATASET=opus2m \
+		MARIAN_VALID_FREQ=10000 \
+	${@:-2m=}
 
-tatoeba-group2eng-2m-dist:
-	${MAKE} FIT_DATA_SIZE=2000000 DATASET=opus2m tatoeba-group2eng-dist
+%-4m:
+	${MAKE} CONTINUE_EXISTING=1 \
+		LANGGROUP_FIT_DATA_SIZE=4000000 \
+		DATASET=opus4m \
+		MARIAN_VALID_FREQ=10000 \
+	${@:-2m=}
 
-tatoeba-eng2group-2m-dist:
-	${MAKE} FIT_DATA_SIZE=2000000 DATASET=opus2m tatoeba-eng2group-dist
-
-
-
-## sample 4 million sentence pairs
-tatoeba-langgroups-4m: 
-	${MAKE} CONTINUE_EXISTING=1 LANGGROUP_FIT_DATA_SIZE=4000000 DATASET=opus4m MARIAN_VALID_FREQ=10000 \
-	tatoeba-group2eng tatoeba-eng2group 
-# tatoeba-langgroup
-
-tatoeba-langgroups-4m-dist:
-	${MAKE} FIT_DATA_SIZE=4000000 DATASET=opus4m \
-	tatoeba-group2eng-dist tatoeba-eng2groug-dist tatoeba-langgroug-dist
 
 
 ## evaluate and create dist packages
@@ -342,7 +354,7 @@ tatoeba-langgroups-4m-dist:
 #	${MAKE} ${ENG2GROUP_DIST}
 
 ## new: only start this if there is a model
-tatoeba-group2eng-dist:
+all-tatoeba-group2eng-dist:
 	for g in ${OPUS_LANG_GROUPS}; do \
 	  if [ `find ${TATOEBA_WORK}/$$g-eng -name '*.npz' | wc -l` -gt 0 ]; then \
 	    ${MAKE} MODELTYPE=transformer tatoeba-$${g}2eng-eval; \
@@ -351,7 +363,7 @@ tatoeba-group2eng-dist:
 	  fi \
 	done
 
-tatoeba-eng2group-dist:
+all-tatoeba-eng2group-dist:
 	for g in ${OPUS_LANG_GROUPS}; do \
 	  if [ `find ${TATOEBA_WORK}/eng-$$g -name '*.npz' | wc -l` -gt 0 ]; then \
 	    ${MAKE} MODELTYPE=transformer tatoeba-eng2$${g}-eval; \
@@ -360,7 +372,7 @@ tatoeba-eng2group-dist:
 	  fi \
 	done
 
-tatoeba-langgroup-dist:
+all-tatoeba-langgroup-dist:
 	for g in ${OPUS_LANG_GROUPS}; do \
 	  if [ `find ${TATOEBA_WORK}/$$g-$$g -name '*.npz' | wc -l` -gt 0 ]; then \
 	    ${MAKE} MODELTYPE=transformer PIVOT=eng tatoeba-$${g}2$${g}-eval; \
