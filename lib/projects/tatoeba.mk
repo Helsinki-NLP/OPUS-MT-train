@@ -248,6 +248,36 @@ tatoeba-results-md: tatoeba-results-sorted tatoeba-results-sorted-model tatoeba-
 
 
 
+tatoeba-continue-unfinished:
+	ls work-tatoeba/ | sort > $@.tt1
+	ls models-tatoeba/ | sort > $@.tt2
+	for d in `diff $@.tt1 $@.tt2 | grep '<' | cut -f2 -d' '`; do \
+	  if [ `find work-tatoeba/$$d -name '*.valid1.log' | wc -l` -gt 0 ]; then \
+	    if [ ! `find work-tatoeba/$$d -name '*.eval' | wc -l` -gt 0 ]; then \
+	      p=`echo $$d | sed 's/-/2/'`; \
+	      echo "${MAKE} tatoeba-$$p-train"; \
+	    fi \
+	  fi \
+	done
+	rm -f $@.tt1 $@.tt2
+
+tatoeba-release-unfinished:
+	ls work-tatoeba/ | sort > $@.tt1
+	ls models-tatoeba/ | sort > $@.tt2
+	for d in `diff $@.tt1 $@.tt2 | grep '<' | cut -f2 -d' '`; do \
+	  if [ `find work-tatoeba/$$d -name '*.valid1.log' | xargs cat | wc -l` -gt 0 ]; then \
+	    if [ ! `find work-tatoeba/$$d -name '*.eval' | wc -l` -gt 0 ]; then \
+	      p=`echo $$d | sed 's/-/2/'`; \
+	      ${MAKE} tatoeba-$$p-eval; \
+	      ${MAKE} tatoeba-$$p-evalall; \
+	      ${MAKE} tatoeba-$$p-dist; \
+	    fi \
+	  fi \
+	done
+	rm -f $@.tt1 $@.tt2
+
+
+
 ###########################################################################################
 # language groups
 ###########################################################################################
@@ -469,8 +499,8 @@ tatoeba-%-evalall:
 	  S="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))) | xargs iso639 -m -n}))"; \
 	  T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))) | xargs iso639 -m -n}))"; \
 	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" eval-tatoeba; \
-	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" eval-testsets-tatoeba; \
-	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" tatoeba-multilingual-eval )
+	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" tatoeba-multilingual-eval; \
+	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" eval-testsets-tatoeba )
 
 
 tatoeba-%-dist:
