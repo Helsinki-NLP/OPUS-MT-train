@@ -1116,6 +1116,7 @@ tatoeba-models-all:
 TATOEBA_READMES = $(wildcard models-tatoeba/*/README.md)
 
 models-tatoeba/released-models.txt: ${TATOEBA_READMES}
+	-cat $@ > $@.old
 	find models-tatoeba/ -name '*.eval.txt' | sort | xargs grep chrF2 > $@.1
 	find models-tatoeba/ -name '*.eval.txt' | sort | xargs grep BLEU > $@.2
 	cut -f3 -d '/' $@.1 | sed 's/\.eval.txt.*$$/.zip/' > $@.zip
@@ -1131,8 +1132,11 @@ models-tatoeba/released-models.txt: ${TATOEBA_READMES}
 	sed -e 's/\" \"\([^\"]*\)\" /\t\1\n/g' | sed 's/^\"//g' > $@.langs
 	paste $@.url $@.iso639-3 $@.iso639-1 $@.chrF2 $@.bleu $@.bp $@.reflen $@.langs > $@
 	rm -f $@.url $@.iso639-3 $@.iso639-1 $@.chrF2 $@.bleu $@.bp $@.reflen $@.1 $@.2 $@.langs $@.zip
+	cat $@.old $@.new | sort | uniq > $@
+	rm -f $@.old $@.new
 
 models-tatoeba/released-model-results.txt: ${TATOEBA_READMES}
+	-cat $@ > $@.old
 	find models-tatoeba/ -name 'README.md' | sort | \
 	xargs egrep -h '^(# |\| Tatoeba-test|\* download:)' |\
 	tr "\t" " " | tr "\n" "\t" | sed "s/# /\n# /g" |\
@@ -1140,8 +1144,9 @@ models-tatoeba/released-model-results.txt: ${TATOEBA_READMES}
 	grep -v '.multi.' |\
 	sed -e 's/Tatoeba-test.\S*\(...\....\) /\1/' |\
 	grep '^|' |\
-	sed -e 's/ *| */\t/g' | cut -f2,3,4,6 | sort -k1,1 -k3,3nr -k2,2nr -k4,4 > $@
-
+	sed -e 's/ *| */\t/g' | cut -f2,3,4,6 > $@.new
+	cat $@.old $@.new | sort -k1,1 -k3,3nr -k2,2nr -k4,4 | uniq > $@
+	rm -f $@.old $@.new
 
 tatoeba-results-all-subset-%: tatoeba-%.md tatoeba-results-all-sorted-langpair
 	( l="${shell grep '\[' $< | cut -f2 -d '[' | cut -f1 -d ']' | sort -u  | tr "\n" '|' | tr '-' '.' | sed 's/|$$//;s/\./\\\-/g'}"; \
