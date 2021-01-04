@@ -195,8 +195,9 @@ tatoeba-labels: ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.lab
 tatoeba-results:
 	rm -f tatoeba-results* tatoeba-models-all results/*.md
 	${MAKE} tatoeba-results-md
-	rm -f models-tatoeba/released-models.txt
 	${MAKE} models-tatoeba/released-models.txt
+	${MAKE} models-tatoeba/released-model-results.txt
+
 
 .PHONY: tatoeba-released-models
 tatoeba-released-models: models-tatoeba/released-models.txt
@@ -1111,11 +1112,15 @@ tatoeba-models-all:
 	rm -f $@.model $@.langpair $@.testset $@.chrF2 $@.bleu $@.bp $@.reflen
 	rm -f $@.modeldir $@.dataset $@.1 $@.2
 
-models-tatoeba/released-models.txt:
+
+TATOEBA_READMES = $(wildcard models-tatoeba/*/README.md)
+
+models-tatoeba/released-models.txt: ${TATOEBA_READMES}
 	find models-tatoeba/ -name '*.eval.txt' | sort | xargs grep chrF2 > $@.1
 	find models-tatoeba/ -name '*.eval.txt' | sort | xargs grep BLEU > $@.2
-	cut -f3 -d '/' $@.1 | sed 's/\.eval.txt.*$$/.zip/;s#^#${TATOEBA_DATAURL}/#' > $@.url
+	cut -f3 -d '/' $@.1 | sed 's/\.eval.txt.*$$/.zip/' > $@.zip
 	cut -f2 -d '/' $@.1 > $@.iso639-3
+	paste -d '/' $@.iso639-3 $@.zip | sed 's#^#${TATOEBA_DATAURL}/#' > $@.url
 	cut -f2 -d '/' $@.1 | xargs iso639 -2 -k -p | tr ' ' "\n" > $@.iso639-1
 	cut -f2 -d '=' $@.1 | cut -f2 -d ' ' > $@.chrF2
 	cut -f2 -d '=' $@.2 | cut -f2 -d ' ' > $@.bleu
@@ -1125,7 +1130,17 @@ models-tatoeba/released-models.txt:
 	xargs iso639 -k | sed 's/$$/ /' |\
 	sed -e 's/\" \"\([^\"]*\)\" /\t\1\n/g' | sed 's/^\"//g' > $@.langs
 	paste $@.url $@.iso639-3 $@.iso639-1 $@.chrF2 $@.bleu $@.bp $@.reflen $@.langs > $@
-	rm -f $@.url $@.iso639-3 $@.iso639-1 $@.chrF2 $@.bleu $@.bp $@.reflen $@.1 $@.2 $@.langs
+	rm -f $@.url $@.iso639-3 $@.iso639-1 $@.chrF2 $@.bleu $@.bp $@.reflen $@.1 $@.2 $@.langs $@.zip
+
+models-tatoeba/released-model-results.txt: ${TATOEBA_READMES}
+	find models-tatoeba/ -name 'README.md' | sort | \
+	xargs egrep -h '^(# |\| Tatoeba-test|\* download:)' |\
+	tr "\t" " " | tr "\n" "\t" | sed "s/# /\n# /g" |\
+	perl -e 'while (<>){s/^.*\((.*)\)/\1/;@_=split(/\t/);$$m=shift(@_);for (@_){print "$$_\t$$m\n";}}' |\
+	grep -v '.multi.' |\
+	sed -e 's/Tatoeba-test.\S*\(...\....\) /\1/' |\
+	grep '^|' |\
+	sed -e 's/ *| */\t/g' | cut -f2,3,4,6 | sort -k1,1 -k3,3nr -k2,2nr -k4,4 > $@
 
 
 tatoeba-results-all-subset-%: tatoeba-%.md tatoeba-results-all-sorted-langpair
