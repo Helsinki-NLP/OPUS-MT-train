@@ -362,23 +362,23 @@ all-tatoeba-langgroup:
 
 %-1m:
 	${MAKE} LANGGROUP_FIT_DATA_SIZE=1000000 \
-		DATASET=opus1m \
+		DATASET=${DATASET}1m \
 		MARIAN_VALID_FREQ=10000 \
-	${@:-2m=}
+	${@:-1m=}
 
 %-2m:
 	${MAKE} CONTINUE_EXISTING=1 \
 		LANGGROUP_FIT_DATA_SIZE=2000000 \
-		DATASET=opus2m \
+		DATASET=${DATASET}2m \
 		MARIAN_VALID_FREQ=10000 \
 	${@:-2m=}
 
 %-4m:
 	${MAKE} CONTINUE_EXISTING=1 \
 		LANGGROUP_FIT_DATA_SIZE=4000000 \
-		DATASET=opus4m \
+		DATASET=${DATASET}4m \
 		MARIAN_VALID_FREQ=10000 \
-	${@:-2m=}
+	${@:-4m=}
 
 
 
@@ -537,7 +537,7 @@ tatoeba-%-langtune:
 		MARIAN_VALID_FREQ=${TUNE_VALID_FREQ} \
 		MARIAN_EARLY_STOPPING=${TUNE_EARLY_STOPPING} \
 		GPUJOB_SUBMIT=${TUNE_GPUJOB_SUBMIT} \
-		DATASET=opus-${TUNE_SRC}${TUNE_TRG} \
+		DATASET=${DATASET}-${TUNE_SRC}${TUNE_TRG} \
 		TATOEBA_DEVSET_NAME=Tatoeba-dev.${TUNE_SRC}-${TUNE_TRG} \
 		TATOEBA_TESTSET_NAME=Tatoeba-test.${TUNE_SRC}-${TUNE_TRG} \
 		SRCLANGS="${TUNE_SRC}" \
@@ -1220,10 +1220,18 @@ models-tatoeba/released-model-results.txt: ${TATOEBA_READMES}
 	cat $@.old $@.new | sort -k1,1 -k3,3nr -k2,2nr -k4,4 | uniq > $@
 	rm -f $@.old $@.new
 
+## new: also consider the opposite translation direction!
 tatoeba-results-all-subset-%: tatoeba-%.md tatoeba-results-all-sorted-langpair
-	( l="${shell grep '\[' $< | cut -f2 -d '[' | cut -f1 -d ']' | sort -u  | tr "\n" '|' | tr '-' '.' | sed 's/|$$//;s/\./\\\-/g'}"; \
-	  grep -P "$$l" ${word 2,$^} |\
+	( l="${shell grep '\[' $< | cut -f2 -d '[' | cut -f1 -d ']' | sort -u  | tr "\n" '|' | sed 's/|$$//;s/\-/\\\-/g'}"; \
+	  r="${shell grep '\[' $< | cut -f2 -d '[' | cut -f1 -d ']' | sort -u  | sed 's/\(...\)-\(...\)/\2-\1/' | tr "\n" '|' | sed 's/|$$//;s/\-/\\\-/g'}"; \
+	  grep -P "$$l|$$r" ${word 2,$^} |\
 	  perl -pe '@a=split;print "\n${RESULT_TABLE_HEADER}" if ($$b ne $$a[1]);$$b=$$a[1];' > $@ )
+
+# tatoeba-results-all-subset-%-print: tatoeba-%.md tatoeba-results-all-sorted-langpair
+#	( l="${shell grep '\[' $< | cut -f2 -d '[' | cut -f1 -d ']' | sort -u  | tr "\n" '|' | sed 's/|$$//;s/\-/\\\-/g'}"; \
+#	  r="${shell grep '\[' $< | cut -f2 -d '[' | cut -f1 -d ']' | sort -u  | sed 's/\(...\)-\(...\)/\2-\1/' | tr "\n" '|' | sed 's/|$$//;s/\-/\\\-/g'}"; \
+#	  echo $$l; \
+#	  echo $$r; )
 
 tatoeba-results-all-langgroup: tatoeba-results-all
 	grep -P "${subst ${SPACE},-eng|,${OPUS_LANG_GROUPS}}-eng" $< >> $@
