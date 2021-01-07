@@ -241,6 +241,19 @@ USE_REST_DEVDATA ?= 1
 
 
 
+## for model fine-tuning
+
+TUNE_SRC ?= ${SRC}
+TUNE_TRG ?= ${TRG}
+
+TUNE_VALID_FREQ     ?= 1000
+TUNE_EARLY_STOPPING ?= 5
+TUNE_GPUJOB_SUBMIT  ?= 
+
+
+
+
+
 ## existing projects in WORKHOME
 ALL_LANG_PAIRS := ${shell ls ${WORKHOME} | grep -- '-' | grep -v old}
 ALL_BILINGUAL_MODELS := ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" |  grep -v -- '\+'}
@@ -311,13 +324,14 @@ LOCAL_MONO_DATA = ${TMPDIR}/${LANGSTR}/train/${DATASET}.mono
 ifeq (${words ${SRCLANGS}},1)
 ifeq (${words ${TRGLANGS}},1)
 
-  DEV_SRC   = ${WORKDIR}/val/${DEVSET}.src
-  DEV_TRG   = ${WORKDIR}/val/${DEVSET}.trg
+  DEVSET_NAME  ?= ${DEVSET}
+  TESTSET_NAME ?= ${TESTSET}
 
-  TEST_SRC  = ${WORKDIR}/test/${TESTSET}.src
-  TEST_TRG  = ${WORKDIR}/test/${TESTSET}.trg
-
-  TESTSET_NAME = ${TESTSET}
+#  DEV_SRC   = ${WORKDIR}/val/${DEVSET_NAME}.src
+#  DEV_TRG   = ${WORKDIR}/val/${DEVSET_NAME}.trg
+#
+#  TEST_SRC  = ${WORKDIR}/test/${TESTSET_NAME}.src
+#  TEST_TRG  = ${WORKDIR}/test/${TESTSET_NAME}.trg
 
 endif
 endif

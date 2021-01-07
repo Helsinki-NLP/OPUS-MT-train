@@ -107,10 +107,17 @@ TATOEBA_MONO      ?= ${TATOEBA_WORK}/data/mono
 
 TATOEBA_MODEL_CONTAINER := Tatoeba-MT-models
 
+TATOEBA_DEVSET       ?= Tatoeba-dev
+TATOEBA_TESTSET      ?= Tatoeba-test
+TATOEBA_DEVSET_NAME  ?= Tatoeba-dev
+TATOEBA_TESTSET_NAME ?= Tatoeba-test
+
+
 TATOEBA_PARAMS := TRAINSET=Tatoeba-train \
-		DEVSET=Tatoeba-dev \
-		TESTSET=Tatoeba-test \
-		TESTSET_NAME=Tatoeba-test \
+		DEVSET=${TATOEBA_DEVSET} \
+		TESTSET=${TATOEBA_TESTSET} \
+		DEVSET_NAME=${TATOEBA_DEVSET_NAME} \
+		TESTSET_NAME=${TATOEBA_TESTSET_NAME} \
 		SMALLEST_TRAINSIZE=1000 \
 		USE_REST_DEVDATA=0 \
 		HELDOUTSIZE=0 \
@@ -513,6 +520,28 @@ tatoeba-%-dist:
 
 
 
+## make data and start a job for
+## fine-tuning a mulitlingual tatoeba model
+## for a specific language pair
+## set SRC and TRG to specify the language pair, e.g.
+##
+##   make SRC=nld TRG=yid tatoeba-gem2gem-langtune
+##
+## (makes only sense if there is already a pre-trained multilingual model)
+
+tatoeba-%-langtune:
+	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-langtune,%,$@))); \
+	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-langtune,%,$@))); \
+	  ${MAKE} LANGPAIRSTR=$$s-$$t \
+		CONTINUE_EXISTING=1 \
+		MARIAN_VALID_FREQ=${TUNE_VALID_FREQ} \
+		MARIAN_EARLY_STOPPING=${TUNE_EARLY_STOPPING} \
+		GPUJOB_SUBMIT=${TUNE_GPUJOB_SUBMIT} \
+		DATASET=opus-${TUNE_SRC}${TUNE_TRG} \
+		TATOEBA_DEVSET_NAME=Tatoeba-dev.${TUNE_SRC}-${TUNE_TRG} \
+		TATOEBA_TESTSET_NAME=Tatoeba-test.${TUNE_SRC}-${TUNE_TRG} \
+		SRCLANGS="${TUNE_SRC}" \
+		TRGLANGS="${TUNE_TRG}" tatoeba-job )
 
 
 
@@ -652,9 +681,9 @@ tatoeba-multilingual-eval:
 	    if [ -e ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.src ]; then \
 	      ${MAKE} SRC=$$s TRG=$$t \
 		TRAINSET=Tatoeba-train \
-		DEVSET=Tatoeba-dev \
-		TESTSET=Tatoeba-test.$$s-$$t \
-		TESTSET_NAME=Tatoeba-test.$$s-$$t \
+		DEVSET=${TATOEBA_DEVSET} \
+		TESTSET=${TATOEBA_TESTSET}.$$s-$$t \
+		TESTSET_NAME=${TATOEBA_TESTSET}.$$s-$$t \
 		USE_REST_DEVDATA=0 \
 		HELDOUTSIZE=0 \
 		DEVSIZE=5000 \
@@ -709,6 +738,49 @@ tatoeba-multilingual-testsets:
 	    fi \
 	  done \
 	done
+
+
+
+
+# ## copy devsets into the multilingual model's test directory
+# .PHONY: tatoeba-multilingual-devsets
+# tatoeba-multilingual-devsets:
+# 	for s in ${SRCLANGS}; do \
+# 	  for t in ${TRGLANGS}; do \
+# 	    if [ ! -e ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.src ]; then \
+# 	      wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.txt ${TATOEBA_RAWGIT}/data/test/$$s-$$t/test.txt; \
+# 	      if [ -s ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.txt ]; then \
+# 	        echo "make Tatoeba-dev.$$s-$$t"; \
+# 		if [ "${words ${TRGLANGS}}" == "1" ]; then \
+# 		  cut -f3 ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.txt \
+# 		  > ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.src; \
+# 		else \
+# 	          cut -f2,3 ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.txt | \
+# 		  sed 's/^\([^ ]*\)	/>>\1<< /' \
+# 		  > ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.src; \
+# 		fi; \
+# 	        cut -f4 ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.txt \
+# 		> ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.trg; \
+# 	      else \
+# 	        wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.txt ${TATOEBA_RAWGIT}/data/test/$$t-$$s/test.txt; \
+# 	        if [ -s ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.txt ]; then \
+# 	          echo "make Tatoeba-dev.$$s-$$t"; \
+# 		  if [ "${words ${TRGLANGS}}" == "1" ]; then \
+# 		    cut -f4 ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.txt \
+# 		    > ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.src; \
+# 		  else \
+# 	            cut -f1,4 ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.txt | \
+# 		    sed 's/^\([^ ]*\)	/>>\1<< /' \
+# 		    > ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.src; \
+# 		  fi; \
+# 	          cut -f3 ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.txt \
+# 		  > ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.trg; \
+# 		fi \
+# 	      fi; \
+# 	      rm -f ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.txt; \
+# 	    fi \
+# 	  done \
+# 	done
 
 
 
