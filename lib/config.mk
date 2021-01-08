@@ -388,11 +388,19 @@ endif
 
 
 ## latest model with the same pre-processing but any data or modeltype
+## except for models that include the string 'tuned4' (fine-tuned models)
+## --> this will be used if the flag CONTINUE_EXISTING is set on
+
 ifdef CONTINUE_EXISTING
-  MODEL_LATEST       = $(firstword ${shell ls -t ${WORKDIR}/*.${PRE_SRC}-${PRE_TRG}.*.best-perplexity.npz 2>/dev/null})
-  MODEL_LATEST_VOCAB = $(shell echo "${MODEL_LATEST}" | \
-			sed 's|\.${PRE_SRC}-${PRE_TRG}\..*$$|.${PRE_SRC}-${PRE_TRG}.vocab.yml|')
+  MODEL_LATEST = $(firstword \
+	${shell ls -t ${WORKDIR}/*.${PRE_SRC}-${PRE_TRG}.*.best-perplexity.npz \
+		2>/dev/null | grep -v 'tuned4' })
+  MODEL_LATEST_VOCAB     = $(shell echo "${MODEL_LATEST}" | \
+		sed 's|\.${PRE_SRC}-${PRE_TRG}\..*$$|.${PRE_SRC}-${PRE_TRG}.vocab.yml|')
+  MODEL_LATEST_OPTIMIZER = $(shell echo "${MODEL_LATEST}" | \
+		sed 's|.best-perplexity.npz|.optimizer.npz|')
 endif
+
 
 
 ## test set translation and scores

@@ -533,19 +533,28 @@ tatoeba-%-langtune:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-langtune,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-langtune,%,$@))); \
 	  ${MAKE} LANGPAIRSTR=$$s-$$t \
-		CONTINUE_EXISTING=1 \
 		MARIAN_VALID_FREQ=${TUNE_VALID_FREQ} \
+		CONTINUE_EXISTING=1 \
 		MARIAN_EARLY_STOPPING=${TUNE_EARLY_STOPPING} \
+		MARIAN_EXTRA='-e 5 --no-restore-corpus' \
 		GPUJOB_SUBMIT=${TUNE_GPUJOB_SUBMIT} \
-		DATASET=${DATASET}-${TUNE_SRC}${TUNE_TRG} \
+		DATASET=${DATASET}-tuned4${TUNE_SRC}${TUNE_TRG} \
 		TATOEBA_DEVSET_NAME=Tatoeba-dev.${TUNE_SRC}-${TUNE_TRG} \
 		TATOEBA_TESTSET_NAME=Tatoeba-test.${TUNE_SRC}-${TUNE_TRG} \
 		SRCLANGS="${TUNE_SRC}" \
 		TRGLANGS="${TUNE_TRG}" tatoeba-job )
 
 
-
-
+tatoeba-%-langtune-dist:
+	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-langtune-dist,%,$@))); \
+	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-langtune-dist,%,$@))); \
+	  ${MAKE} LANGPAIRSTR=$$s-$$t \
+		SRCLANGS="${TUNE_SRC}" \
+		TRGLANGS="${TUNE_TRG}" \
+		DATASET=${DATASET}-tuned4${TUNE_SRC}${TUNE_TRG}
+		TATOEBA_DEVSET_NAME=Tatoeba-dev.${TUNE_SRC}-${TUNE_TRG} \
+		TATOEBA_TESTSET_NAME=Tatoeba-test.${TUNE_SRC}-${TUNE_TRG} \
+		${TATOEBA_PARAMS} dist )
 
 
 #################################################################################
