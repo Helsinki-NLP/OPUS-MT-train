@@ -450,9 +450,11 @@ gem-gem:
 
 
 
+##------------------------------------------------------------------------------------
 ## generic targets to start combinations of languages or language groups
 ## set variables below to avoid starting models with too few or too many languages
 ## on source or target side
+##------------------------------------------------------------------------------------
 
 MIN_SRCLANGS ?= 1
 MIN_TRGLANGS ?= 1
@@ -491,8 +493,6 @@ tatoeba-%-data:
 	       fi \
 	   fi )
 
-
-
 tatoeba-%-eval:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-eval,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-eval,%,$@))); \
@@ -500,6 +500,20 @@ tatoeba-%-eval:
 	  T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-eval,%,$@))) | xargs iso639 -m -n}))"; \
 	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} compare )
 
+
+tatoeba-%-testsets:
+	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-testsets,%,$@))); \
+	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-testsets,%,$@))); \
+	  S="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-testsets,%,$@))) | xargs iso639 -m -n}))"; \
+	  T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-testsets,%,$@))) | xargs iso639 -m -n}))"; \
+	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" tatoeba-multilingual-testsets )
+
+tatoeba-%-multieval:
+	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-multieval,%,$@))); \
+	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-multieval,%,$@))); \
+	  S="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-multieval,%,$@))) | xargs iso639 -m -n}))"; \
+	  T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-multieval,%,$@))) | xargs iso639 -m -n}))"; \
+	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" tatoeba-multilingual-eval )
 
 tatoeba-%-evalall:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))); \
@@ -510,7 +524,6 @@ tatoeba-%-evalall:
 	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" tatoeba-multilingual-eval; \
 	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" eval-testsets-tatoeba )
 
-
 tatoeba-%-dist:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))); \
@@ -519,7 +532,7 @@ tatoeba-%-dist:
 	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} best-dist )
 
 
-
+##------------------------------------------------------------------------------------
 ## make data and start a job for
 ## fine-tuning a mulitlingual tatoeba model
 ## for a specific language pair
@@ -528,6 +541,7 @@ tatoeba-%-dist:
 ##   make SRC=nld TRG=yid tatoeba-gem2gem-langtune
 ##
 ## (makes only sense if there is already a pre-trained multilingual model)
+##------------------------------------------------------------------------------------
 
 tatoeba-%-langtune:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-langtune,%,$@))); \
@@ -544,7 +558,6 @@ tatoeba-%-langtune:
 		SRCLANGS="${TUNE_SRC}" \
 		TRGLANGS="${TUNE_TRG}" tatoeba-job )
 
-
 tatoeba-%-langtune-dist:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-langtune-dist,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-langtune-dist,%,$@))); \
@@ -555,6 +568,7 @@ tatoeba-%-langtune-dist:
 		TATOEBA_DEVSET_NAME=Tatoeba-dev.${TUNE_SRC}-${TUNE_TRG} \
 		TATOEBA_TESTSET_NAME=Tatoeba-test.${TUNE_SRC}-${TUNE_TRG} \
 		${TATOEBA_PARAMS} dist )
+
 
 
 #################################################################################
@@ -714,7 +728,8 @@ tatoeba-multilingual-testsets:
 	for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
 	    if [ ! -e ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.src ]; then \
-	      wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt ${TATOEBA_RAWGIT}/data/test/$$s-$$t/test.txt; \
+	      wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt \
+			${TATOEBA_RAWGIT}/data/test/$$s-$$t/test.txt; \
 	      if [ -s ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt ]; then \
 	        echo "make Tatoeba-test.$$s-$$t"; \
 		if [ "${words ${TRGLANGS}}" == "1" ]; then \
@@ -728,7 +743,8 @@ tatoeba-multilingual-testsets:
 	        cut -f4 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt \
 		> ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.trg; \
 	      else \
-	        wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt ${TATOEBA_RAWGIT}/data/test/$$t-$$s/test.txt; \
+	        wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt \
+			${TATOEBA_RAWGIT}/data/test/$$t-$$s/test.txt; \
 	        if [ -s ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt ]; then \
 	          echo "make Tatoeba-test.$$s-$$t"; \
 		  if [ "${words ${TRGLANGS}}" == "1" ]; then \
@@ -747,49 +763,6 @@ tatoeba-multilingual-testsets:
 	    fi \
 	  done \
 	done
-
-
-
-
-# ## copy devsets into the multilingual model's test directory
-# .PHONY: tatoeba-multilingual-devsets
-# tatoeba-multilingual-devsets:
-# 	for s in ${SRCLANGS}; do \
-# 	  for t in ${TRGLANGS}; do \
-# 	    if [ ! -e ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.src ]; then \
-# 	      wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.txt ${TATOEBA_RAWGIT}/data/test/$$s-$$t/test.txt; \
-# 	      if [ -s ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.txt ]; then \
-# 	        echo "make Tatoeba-dev.$$s-$$t"; \
-# 		if [ "${words ${TRGLANGS}}" == "1" ]; then \
-# 		  cut -f3 ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.txt \
-# 		  > ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.src; \
-# 		else \
-# 	          cut -f2,3 ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.txt | \
-# 		  sed 's/^\([^ ]*\)	/>>\1<< /' \
-# 		  > ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.src; \
-# 		fi; \
-# 	        cut -f4 ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.txt \
-# 		> ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.trg; \
-# 	      else \
-# 	        wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.txt ${TATOEBA_RAWGIT}/data/test/$$t-$$s/test.txt; \
-# 	        if [ -s ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.txt ]; then \
-# 	          echo "make Tatoeba-dev.$$s-$$t"; \
-# 		  if [ "${words ${TRGLANGS}}" == "1" ]; then \
-# 		    cut -f4 ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.txt \
-# 		    > ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.src; \
-# 		  else \
-# 	            cut -f1,4 ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.txt | \
-# 		    sed 's/^\([^ ]*\)	/>>\1<< /' \
-# 		    > ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.src; \
-# 		  fi; \
-# 	          cut -f3 ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.txt \
-# 		  > ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.trg; \
-# 		fi \
-# 	      fi; \
-# 	      rm -f ${TATOEBA_WORK}/${LANGPAIRSTR}/val/Tatoeba-dev.$$s-$$t.txt; \
-# 	    fi \
-# 	  done \
-# 	done
 
 
 
@@ -1011,7 +984,7 @@ ${TATOEBA_MONO}/%.labels:
 	  touch ${dir $@}Tatoeba-train.${LANGPAIR}.clean.${TRGEXT}; \
 	fi
 #######################################
-# save all lang labels that appear the data
+# save all lang labels that appear in the data
 #######################################
 	cut -f1 ${dir $@}Tatoeba-*.${LANGPAIR}.clean.id | sort -u | grep -v '${SKIP_LANGIDS_PATTERN}' | \
 		tr "\n" ' ' | sed 's/^ *//;s/ *$$//' > $(@:.${SRCEXT}.gz=.${SRCEXT}.labels)
@@ -1236,12 +1209,6 @@ tatoeba-results-all-subset-%: tatoeba-%.md tatoeba-results-all-sorted-langpair
 	  grep -P "$$l|$$r" ${word 2,$^} |\
 	  perl -pe '@a=split;print "\n${RESULT_TABLE_HEADER}" if ($$b ne $$a[1]);$$b=$$a[1];' > $@ )
 
-# tatoeba-results-all-subset-%-print: tatoeba-%.md tatoeba-results-all-sorted-langpair
-#	( l="${shell grep '\[' $< | cut -f2 -d '[' | cut -f1 -d ']' | sort -u  | tr "\n" '|' | sed 's/|$$//;s/\-/\\\-/g'}"; \
-#	  r="${shell grep '\[' $< | cut -f2 -d '[' | cut -f1 -d ']' | sort -u  | sed 's/\(...\)-\(...\)/\2-\1/' | tr "\n" '|' | sed 's/|$$//;s/\-/\\\-/g'}"; \
-#	  echo $$l; \
-#	  echo $$r; )
-
 tatoeba-results-all-langgroup: tatoeba-results-all
 	grep -P "${subst ${SPACE},-eng|,${OPUS_LANG_GROUPS}}-eng" $< >> $@
 	grep -P "eng-${subst ${SPACE},|eng-,${OPUS_LANG_GROUPS}}" $< >> $@
@@ -1260,9 +1227,6 @@ tatoeba-results-all-sorted-chrf2: tatoeba-results-all
 
 tatoeba-results-all-sorted-bleu: tatoeba-results-all
 	sort -k3,3 -k5,5nr < $< > $@
-
-
-# perl -pe '@a=split;print "\nmodel\tlanguage-pair\ttestset\tchrF2\tBLEU\tBP\treference-length\n" if ($b ne $a[1]);$b=$a[1];' < tatoeba-results-all-sorted-langpair | less
 
 
 
@@ -1327,14 +1291,6 @@ results/tatoeba-results-%.md: tatoeba-results-% tatoeba-results-BLEU-sorted-mode
 	  sed 's#^\([^ 	]*\)#[\1](../models/\1)#' |\
 	  sed 's/	/ | /g;s/^/| /;s/$$/ |/'                                        >> $@ )
 
-#	( p=`grep -P 'ref_len = 1?[0-9]?[0-9]\)' tatoeba-results-BLEU-sorted-model | cut -f2 | sort -u | tr "\n" '|' | sed 's/|$$//'`; \
-#	  grep -v -P "\t($$p)\t" $< | xargs iso639 -p | tr '"' "\n" | grep [a-z]        > $@.langpair )
-#	( p=`grep -P 'ref_len = 1?[0-9]?[0-9]\)' tatoeba-results-BLEU-sorted-model | cut -f2 | sort -u | tr "\n" '|' | sed 's/|$$//'`; \
-#	  grep -v -P "\t($$p)\t" $< |\
-#	  sed 's#^\([^ 	]*\)#[\1](../models/\1)#' |\
-#	  sed 's/	/ | /g;s/^/| /;s/$$/ |/'                                        > $@.rest )
-#	paste $@.langpair $@.rest -d '|'                                                >> $@
-#	rm -f $@.langpair $@.rest
 
 
 results/tatoeba-results-chrF2%.md: tatoeba-results-chrF2% tatoeba-results-BLEU-sorted-model
@@ -1456,7 +1412,7 @@ tatoeba-results-langgroup: tatoeba-results-sorted-model
 
 
 ###############################################################################
-# auxiliary functions
+# auxiliary functions (REMOVE?)
 ###############################################################################
 
 
