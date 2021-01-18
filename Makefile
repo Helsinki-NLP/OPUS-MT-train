@@ -179,6 +179,7 @@ all: ${WORKDIR}/config.mk
 	${MAKE} train
 	${MAKE} eval
 	${MAKE} compare
+	${MAKE} eval-testsets
 
 
 

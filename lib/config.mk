@@ -218,8 +218,14 @@ OPUSLANGS := ${call get-opus-langs}
 POTENTIAL_DEVSETS = Tatoeba GlobalVoices infopankki JW300 bible-uedin
 BIGGER_BITEXTS   := ${call get-bigger-bitexts,${SRC},${TRG},${DEVSMALLSIZE}}
 SMALLER_BITEXTS  := ${call get-bigger-bitexts,${SRC},${TRG},${DEVMINSIZE}}
-DEVSET ?= ${firstword 	${foreach c,${POTENTIAL_DEVSETS},${filter ${c},${BIGGER_BITEXTS}}} \
-			${foreach c,${POTENTIAL_DEVSETS},${filter ${c},${SMALLER_BITEXTS}}}}
+DEVSET ?= ${firstword 	${filter ${POTENTIAL_DEVSETS},${BIGGER_BITEXTS}} \
+			${filter ${POTENTIAL_DEVSETS},${SMALLER_BITEXTS}}}
+
+## why would we need foreach?
+#DEVSET ?= ${firstword 	${foreach c,${POTENTIAL_DEVSETS},${filter ${c},${BIGGER_BITEXTS}}} \
+# 			${foreach c,${POTENTIAL_DEVSETS},${filter ${c},${SMALLER_BITEXTS}}}}
+
+
 
 ## increase dev/test sets for Tatoeba (very short sentences!)
 ifeq (${DEVSET},Tatoeba)
@@ -323,16 +329,8 @@ LOCAL_MONO_DATA = ${TMPDIR}/${LANGSTR}/train/${DATASET}.mono
 
 ifeq (${words ${SRCLANGS}},1)
 ifeq (${words ${TRGLANGS}},1)
-
   DEVSET_NAME  ?= ${DEVSET}
   TESTSET_NAME ?= ${TESTSET}
-
-#  DEV_SRC   = ${WORKDIR}/val/${DEVSET_NAME}.src
-#  DEV_TRG   = ${WORKDIR}/val/${DEVSET_NAME}.trg
-#
-#  TEST_SRC  = ${WORKDIR}/test/${TESTSET_NAME}.src
-#  TEST_TRG  = ${WORKDIR}/test/${TESTSET_NAME}.trg
-
 endif
 endif
 

@@ -153,6 +153,11 @@ OPUS_LANG_GRANDPARENTS := ${sort ${shell langgroup -p -n ${OPUS_LANG_PARENTS} 2>
 OPUS_LANG_GROUPS       := ${sort ${OPUS_LANG_PARENTS} ${OPUS_LANG_GRANDPARENTS}}
 
 
+.PHONY: tatoeba
+tatoeba:
+	${MAKE} tatoeba-prepare
+	${MAKE} all-tatoeba
+
 ## start unidirectional training job
 ## - make data first, then submit a job
 .PHONY: tatoeba-job
@@ -199,21 +204,41 @@ tatoeba-labels: ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.lab
 
 
 .PHONY: tatoeba-results
-tatoeba-results:
-	rm -f tatoeba-results* tatoeba-models-all results/*.md
-	${MAKE} tatoeba-results-md
-	${MAKE} models-tatoeba/released-models.txt
-	${MAKE} models-tatoeba/released-model-results.txt
-
+tatoeba-results: tatoeba-result-files \
+		tatoeba-results-md \
+		tatoeba-released-models
 
 .PHONY: tatoeba-released-models
-tatoeba-released-models: models-tatoeba/released-models.txt
+tatoeba-released-models: models-tatoeba/released-models.txt \
+		models-tatoeba/released-model-results.txt
+
+.PHONY: tatoeba-results-md
+tatoeba-result-files: work-tatoeba/tatoeba-results-sorted \
+		work-tatoeba/tatoeba-results-sorted-model \
+		work-tatoeba/tatoeba-results-sorted-langpair \
+		work-tatoeba/tatoeba-results-subset-zero \
+		work-tatoeba/tatoeba-results-subset-lowest \
+		work-tatoeba/tatoeba-results-subset-lower \
+		work-tatoeba/tatoeba-results-subset-medium \
+		work-tatoeba/tatoeba-results-subset-higher \
+		work-tatoeba/tatoeba-results-subset-highest \
+		work-tatoeba/tatoeba-results-all \
+		work-tatoeba/tatoeba-results-all-subset-zero \
+		work-tatoeba/tatoeba-results-all-subset-lowest \
+		work-tatoeba/tatoeba-results-all-subset-lower \
+		work-tatoeba/tatoeba-results-all-subset-medium \
+		work-tatoeba/tatoeba-results-all-subset-higher \
+		work-tatoeba/tatoeba-results-all-subset-highest \
+		work-tatoeba/tatoeba-models-all \
+
 
 ## create result tables in various variants and for various subsets
 ## markdown pages are for reading on-line in the Tatoeba Challenge git
 ## ---> link results dir to the local copy of the Tatoeba Challenge git
 .PHONY: tatoeba-results-md
-tatoeba-results-md: tatoeba-results-sorted tatoeba-results-sorted-model tatoeba-results-sorted-langpair \
+tatoeba-results-md: tatoeba-results-sorted \
+		tatoeba-results-sorted-model \
+		tatoeba-results-sorted-langpair \
 		results/tatoeba-results-sorted.md \
 		results/tatoeba-results-sorted-model.md \
 		results/tatoeba-results-sorted-langpair.md \
@@ -252,6 +277,7 @@ tatoeba-results-md: tatoeba-results-sorted tatoeba-results-sorted-model tatoeba-
 		results/tatoeba-results-all-subset-highest.md \
 		tatoeba-models-all \
 		results/tatoeba-models-all.md
+
 
 
 
@@ -342,6 +368,21 @@ all-tatoeba-langgroup:
 	${MAKE} MIN_SRCLANGS=2 MAX_SRCLANGS=30 PIVOT=eng \
 		MODELTYPE=transformer \
 		FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} ${LANGGROUP_TRAIN}
+
+all-tatoeba-cross-langgroups:
+	for s in ${OPUS_LANG_GROUPS}; do \
+	  for t in ${OPUS_LANG_GROUPS}; do \
+	    if [ "$$s" != "$$t" ]; then \
+		${MAKE} MIN_SRCLANGS=2 MIN_TRGLANGS=2 \
+			MAX_SRCLANGS=30 MAX_TRGLANGS=30 \
+			PIVOT=eng \
+			MODELTYPE=transformer \
+			FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} \
+		tatoeba-$${s}2$${t}-train; \
+	    fi \
+	  done \
+	done
+
 
 ## make all lang-group models using different data samples
 ## (1m, 2m or 4m sentence pairs)
@@ -506,14 +547,14 @@ tatoeba-%-testsets:
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-testsets,%,$@))); \
 	  S="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-testsets,%,$@))) | xargs iso639 -m -n}))"; \
 	  T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-testsets,%,$@))) | xargs iso639 -m -n}))"; \
-	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" tatoeba-multilingual-testsets )
+	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} tatoeba-multilingual-testsets )
 
 tatoeba-%-multieval:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-multieval,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-multieval,%,$@))); \
 	  S="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-multieval,%,$@))) | xargs iso639 -m -n}))"; \
 	  T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-multieval,%,$@))) | xargs iso639 -m -n}))"; \
-	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" tatoeba-multilingual-eval )
+	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} tatoeba-multilingual-eval )
 
 tatoeba-%-evalall:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))); \
@@ -529,7 +570,9 @@ tatoeba-%-dist:
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))); \
 	  S="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))) | xargs iso639 -m -n}))"; \
 	  T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))) | xargs iso639 -m -n}))"; \
-	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} best-dist )
+	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} dist )
+
+#	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} best-dist )
 
 
 ##------------------------------------------------------------------------------------
@@ -538,36 +581,83 @@ tatoeba-%-dist:
 ## for a specific language pair
 ## set SRC and TRG to specify the language pair, e.g.
 ##
-##   make SRC=nld TRG=yid tatoeba-gem2gem-langtune
+##   make TUNE_SRC=bel TUNE_TRG=nld tatoeba-zle2gmw-langtune
+##   make TUNE_SRC=bel TUNE_TRG=nld tatoeba-zle2gmw-langtunedist
 ##
-## (makes only sense if there is already a pre-trained multilingual model)
+## (makes only sense if there is already such a pre-trained multilingual model)
+## langtune for all language combinations:
+##
+##   make TUNE_SRC=bel TUNE_TRG=nld tatoeba-zle2gmw-langtuneall
+##   make TUNE_SRC=bel TUNE_TRG=nld tatoeba-zle2gmw-langtunealldist
+##
+## start langtunejobs:
+##
+##   make TUNE_SRC=bel TUNE_TRG=nld tatoeba-zle2gmw-langtunejob
+##   make TUNE_SRC=bel TUNE_TRG=nld tatoeba-zle2gmw-langtunealljobs
 ##------------------------------------------------------------------------------------
 
-tatoeba-%-langtune:
-	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-langtune,%,$@))); \
-	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-langtune,%,$@))); \
-	  ${MAKE} LANGPAIRSTR=$$s-$$t \
-		MARIAN_VALID_FREQ=${TUNE_VALID_FREQ} \
+TATOEBA_TUNE_PARAMS = MARIAN_VALID_FREQ=${TUNE_VALID_FREQ} \
 		CONTINUE_EXISTING=1 \
 		MARIAN_EARLY_STOPPING=${TUNE_EARLY_STOPPING} \
 		MARIAN_EXTRA='-e 5 --no-restore-corpus' \
 		GPUJOB_SUBMIT=${TUNE_GPUJOB_SUBMIT} \
-		DATASET=${DATASET}-tuned4${TUNE_SRC}${TUNE_TRG} \
+		DATASET=${DATASET}-tuned4${TUNE_SRC}2${TUNE_TRG} \
 		TATOEBA_DEVSET_NAME=Tatoeba-dev.${TUNE_SRC}-${TUNE_TRG} \
 		TATOEBA_TESTSET_NAME=Tatoeba-test.${TUNE_SRC}-${TUNE_TRG} \
 		SRCLANGS="${TUNE_SRC}" \
-		TRGLANGS="${TUNE_TRG}" tatoeba-job )
+		TRGLANGS="${TUNE_TRG}"
 
-tatoeba-%-langtune-dist:
-	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-langtune-dist,%,$@))); \
-	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-langtune-dist,%,$@))); \
-	  ${MAKE} LANGPAIRSTR=$$s-$$t \
-		SRCLANGS="${TUNE_SRC}" \
-		TRGLANGS="${TUNE_TRG}" \
-		DATASET=${DATASET}-tuned4${TUNE_SRC}${TUNE_TRG}
-		TATOEBA_DEVSET_NAME=Tatoeba-dev.${TUNE_SRC}-${TUNE_TRG} \
-		TATOEBA_TESTSET_NAME=Tatoeba-test.${TUNE_SRC}-${TUNE_TRG} \
-		${TATOEBA_PARAMS} dist )
+tatoeba-%-langtune:
+	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-langtune,%,$@))); \
+	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-langtune,%,$@))); \
+	  ${MAKE} LANGPAIRSTR=$$s-$$t ${TATOEBA_TUNE_PARAMS}  tatoeba )
+
+tatoeba-%-langtunejob:
+	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-langtunejob,%,$@))); \
+	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-langtunejob,%,$@))); \
+	  ${MAKE} LANGPAIRSTR=$$s-$$t ${TATOEBA_TUNE_PARAMS}  tatoeba-job )
+
+tatoeba-%-langtunedist:
+	${MAKE} DATASET=${DATASET}-tuned4${TUNE_SRC}2${TUNE_TRG} ${@:-langtunedist=-dist}
+
+tatoeba-%-langtuneall:
+	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-langtuneall,%,$@))); \
+	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-langtuneall,%,$@))); \
+	  S="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-langtuneall,%,$@))) | xargs iso639 -m -n}))"; \
+	  T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-langtuneall,%,$@))) | xargs iso639 -m -n}))"; \
+	  for a in $$S; do \
+	    for b in $$T; do \
+	      if [ "$$a" != "$$b" ]; then \
+	        ${MAKE} TUNE_SRC=$$a TUNE_TRG=$$b ${@:-langtuneall=-langtune}; \
+	      fi \
+	    done \
+	  done )
+
+tatoeba-%-langtunealldist:
+	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-langtunealldist,%,$@))); \
+	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-langtunealldist,%,$@))); \
+	  S="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-langtunealldist,%,$@))) | xargs iso639 -m -n}))"; \
+	  T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-langtunealldist,%,$@))) | xargs iso639 -m -n}))"; \
+	  for a in $$S; do \
+	    for b in $$T; do \
+	      if [ "$$a" != "$$b" ]; then \
+	        ${MAKE} TUNE_SRC=$$a TUNE_TRG=$$b ${@:-langtunealldist=-langtunedist}; \
+	      fi \
+	    done \
+	  done )
+
+tatoeba-%-langtunealljobs:
+	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-langtunealljobs,%,$@))); \
+	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-langtunealljobs,%,$@))); \
+	  S="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-langtunealljobs,%,$@))) | xargs iso639 -m -n}))"; \
+	  T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-langtunealljobs,%,$@))) | xargs iso639 -m -n}))"; \
+	  for a in $$S; do \
+	    for b in $$T; do \
+	      if [ "$$a" != "$$b" ]; then \
+	        ${MAKE} WALLTIME=12 TUNE_SRC=$$a TUNE_TRG=$$b ${@:-langtunealljobs=-langtunejob}; \
+	      fi \
+	    done \
+	  done )
 
 
 
@@ -1095,6 +1185,7 @@ testsets/${LANGPAIR}/Tatoeba-test.${LANGPAIR}.%: ${TATOEBA_DATA}/Tatoeba-test.${
 ## generate result tables
 ###############################################################################
 
+TATOEBA_READMES = $(wildcard models-tatoeba/*/README.md)
 
 # RESULT_MDTABLE_HEADER = | Model | Language Pair | Test Set | chrF2 | BLEU | BP | Reference Length |\n|:---|----|----|----:|---:|----:|---:|\n
 # ADD_MDHEADER = perl -pe '@a=split;print "\n${RESULT_MDTABLE_HEADER}" if ($$b ne $$a[1]);$$b=$$a[1];'
@@ -1133,8 +1224,25 @@ results/tatoeba-models-all.md: tatoeba-models-all
 	sed 's/	/ | /g;s/^/| /;s/$$/ |/'                                                   >> $@
 
 
+## update files in the workdir
+## (to be included in the git repository)
+
+work-tatoeba/tatoeba-results%: tatoeba-results%
+	mkdir -p ${dir $@}
+	-cat $@ > $@.old
+	cp $< $@.new
+	cat $@.old $@.new | sort | uniq > $@
+	rm -f $@.old $@.new
+
+work-tatoeba/tatoeba-models-all: tatoeba-models-all
+	mkdir -p ${dir $@}
+	-cat $@ > $@.old
+	cp $< $@.new
+	cat $@.old $@.new | sort | uniq > $@
+	rm -f $@.old $@.new
+
 ## get all results for all models and test sets
-tatoeba-results-all:
+tatoeba-results-all: ${TATOEBA_READMES}
 	find work-tatoeba -name '*.eval' | sort | xargs grep chrF2 > $@.1
 	find work-tatoeba -name '*.eval' | sort | xargs grep BLEU  > $@.2
 	cut -f3 -d '/' $@.1 | sed 's/^.*\.\([^\.]*\)\.\([^\.]*\)\.eval:.*$$/\1-\2/' > $@.langpair
@@ -1150,7 +1258,7 @@ tatoeba-results-all:
 	rm -f $@.model $@.langpair $@.testset $@.chrF2 $@.bleu $@.bp $@.reflen
 	rm -f $@.modeldir $@.dataset $@.1 $@.2
 
-tatoeba-models-all:
+tatoeba-models-all: ${TATOEBA_READMES}
 	find work-tatoeba -name 'Tatoeba-test.opus*.eval' | sort | xargs grep chrF2 > $@.1
 	find work-tatoeba -name 'Tatoeba-test.opus*.eval' | sort | xargs grep BLEU  > $@.2
 	cut -f3 -d '/' $@.1 | sed 's/^.*\.\([^\.]*\)\.\([^\.]*\)\.eval:.*$$/\1-\2/' > $@.langpair
@@ -1165,9 +1273,6 @@ tatoeba-models-all:
 	paste $@.model $@.langpair $@.testset $@.chrF2 $@.bleu $@.bp $@.reflen > $@
 	rm -f $@.model $@.langpair $@.testset $@.chrF2 $@.bleu $@.bp $@.reflen
 	rm -f $@.modeldir $@.dataset $@.1 $@.2
-
-
-TATOEBA_READMES = $(wildcard models-tatoeba/*/README.md)
 
 models-tatoeba/released-models.txt: ${TATOEBA_READMES}
 	-cat $@ > $@.old
