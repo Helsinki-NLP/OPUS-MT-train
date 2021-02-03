@@ -1,11 +1,28 @@
 
 
 MEMAD_LANGS = de en fi fr nl sv
-
+MEMAD_LANGS3 = deu eng fin fra nld swe
 
 #-------------------------------------------------------------------
 # models for the MeMAD project
 #-------------------------------------------------------------------
+
+tatoeba-memad:
+	${MAKE} SRCLANGS="${MEMAD_LANGS3}" TRGLANGS="${MEMAD_LANGS3}" \
+		SKIP_LANGPAIRS="deu-deu|eng-eng|fin-fin|fra-fra|nld-nld|swe-swe" \
+		MODELTYPE=transformer-align tatoeba-job-1m
+	${MAKE} SRCLANGS="${MEMAD_LANGS3}" TRGLANGS="eng" \
+		MODELTYPE=transformer-align tatoeba-job-1m
+	${MAKE} TRGLANGS="${MEMAD_LANGS3}" SRCLANGS="eng" \
+		MODELTYPE=transformer-align tatoeba-job-1m
+	for s in ${MEMAD_LANGS3}; do \
+	  for t in ${MEMAD_LANGS3}; do \
+	    if [ "$$s" != "$$t" ]; then \
+	      ${MAKE} SRCLANGS=$$s TRGLANGS=$$t MODELTYPE=transformer-align tatoeba-job; \
+	    fi \
+	  done \
+	done
+
 
 # FIT_DATA_SIZE=2000000 
 

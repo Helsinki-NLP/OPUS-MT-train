@@ -104,6 +104,8 @@ TATOEBA_WORK      ?= ${PWD}/work-tatoeba
 TATOEBA_DATA      ?= ${TATOEBA_WORK}/data/${PRE}
 TATOEBA_MONO      ?= ${TATOEBA_WORK}/data/mono
 
+WIKILANGS         ?= ${notdir ${wildcard backtranslate/wiki-iso639-3/*}}
+WIKIMACROLANGS    ?= $(sort ${shell ${GET_ISO_CODE} ${WIKILANGS}})
 
 TATOEBA_MODEL_CONTAINER := Tatoeba-MT-models
 
@@ -212,7 +214,7 @@ tatoeba-results: tatoeba-result-files \
 tatoeba-released-models: models-tatoeba/released-models.txt \
 		models-tatoeba/released-model-results.txt
 
-.PHONY: tatoeba-results-md
+.PHONY: tatoeba-results-files
 tatoeba-result-files: work-tatoeba/tatoeba-results-sorted \
 		work-tatoeba/tatoeba-results-sorted-model \
 		work-tatoeba/tatoeba-results-sorted-langpair \
@@ -311,6 +313,27 @@ tatoeba-release-unfinished:
 	rm -f $@.tt1 $@.tt2
 
 
+###########################################################################################
+# models for backtranslation
+###########################################################################################
+
+tatoeba-wiki2eng:
+	for l in ${WIKIMACROLANGS}; do \
+	  if [ ! `find work-tatoeba/$$l-eng -name '*.done' 2>/dev/null | wc -l` -gt 0 ]; then \
+	    ${MAKE} SRCLANGS=$$l TRGLANGS=eng tatoeba-job; \
+	  fi \
+	done
+
+## macro-languages that we missed before
+tatoeba-wiki2eng-macro:
+	for l in $(filter-out ${WIKILANGS},${WIKIMACROLANGS}); do \
+	  if [ ! `find work-tatoeba/$$l-eng -name '*.done' 2>/dev/null | wc -l` -gt 0 ]; then \
+	    ${MAKE} SRCLANGS=$$l TRGLANGS=eng tatoeba-job; \
+	  fi \
+	done
+
+tatoeba-print-missing-wiki:
+	@echo $(filter-out ${WIKILANGS},${WIKIMACROLANGS})
 
 ###########################################################################################
 # language groups
@@ -375,13 +398,40 @@ all-tatoeba-cross-langgroups:
 	    if [ "$$s" != "$$t" ]; then \
 		${MAKE} MIN_SRCLANGS=2 MIN_TRGLANGS=2 \
 			MAX_SRCLANGS=30 MAX_TRGLANGS=30 \
-			PIVOT=eng \
 			MODELTYPE=transformer \
 			FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} \
 		tatoeba-$${s}2$${t}-train; \
 	    fi \
 	  done \
 	done
+
+#			PIVOT=eng \
+
+all-tatoeba-crossfiu: all-tatoeba-group2fiu all-tatoeba-fiu2group
+
+all-tatoeba-group2fiu:
+	for s in ${OPUS_LANG_GROUPS}; do \
+	    if [ "$$s" != "fiu" ]; then \
+		${MAKE} MIN_SRCLANGS=2 MIN_TRGLANGS=2 \
+			MAX_SRCLANGS=30 MAX_TRGLANGS=30 \
+			MODELTYPE=transformer \
+			FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} \
+		tatoeba-$${s}2fiu-train; \
+	    fi \
+	done
+
+all-tatoeba-fiu2group:
+	for s in ${OPUS_LANG_GROUPS}; do \
+	    if [ "$$s" != "fiu" ]; then \
+		${MAKE} MIN_SRCLANGS=2 MIN_TRGLANGS=2 \
+			MAX_SRCLANGS=30 MAX_TRGLANGS=30 \
+			MODELTYPE=transformer \
+			FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} \
+		tatoeba-fiu2$${s}-train; \
+	    fi \
+	done
+
+
 
 
 ## make all lang-group models using different data samples
@@ -502,11 +552,15 @@ MIN_TRGLANGS ?= 1
 MAX_SRCLANGS ?= 7000
 MAX_TRGLANGS ?= 7000
 
+find-langgroup = $(filter ${OPUS_LANGS3},\
+			$(sort ${shell langgroup $(1) | xargs iso639 -m -n} ${1} ${2}))
+
 tatoeba-%-train:
 	-( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))); \
 	   t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))); \
-	   S="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))) | xargs iso639 -m -n}))"; \
-	   T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))) | xargs iso639 -m -n}))"; \
+	   S="${call find-langgroup,${firstword ${subst 2, ,${patsubst tatoeba-%-train,%,$@}}},${PIVOT}}"; \
+	   T="${call find-langgroup,${lastword ${subst 2, ,${patsubst tatoeba-%-train,%,$@}}},${PIVOT}}"; \
+
 	   if [ ! `find ${TATOEBA_WORK}/$$s-$$t -name '${DATASET}.*.done' | wc -l` -gt 0 ]; then \
 	     if [ `echo $$S | tr ' ' "\n" | wc -l` -ge ${MIN_SRCLANGS} ]; then \
 	       if [ `echo $$T | tr ' ' "\n" | wc -l` -ge ${MIN_TRGLANGS} ]; then \
@@ -522,8 +576,8 @@ tatoeba-%-train:
 tatoeba-%-data:
 	-( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-data,%,$@))); \
 	   t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-data,%,$@))); \
-	   S="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-data,%,$@))) | xargs iso639 -m -n}))"; \
-	   T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-data,%,$@))) | xargs iso639 -m -n}))"; \
+	   S="${call find-langgroup,${firstword ${subst 2, ,${patsubst tatoeba-%-data,%,$@}}},${PIVOT}}"; \
+	   T="${call find-langgroup,${lastword ${subst 2, ,${patsubst tatoeba-%-data,%,$@}}},${PIVOT}}"; \
 	     if [ `echo $$S | tr ' ' "\n" | wc -l` -ge ${MIN_SRCLANGS} ]; then \
 	       if [ `echo $$T | tr ' ' "\n" | wc -l` -ge ${MIN_TRGLANGS} ]; then \
 	         if [ `echo $$S | tr ' ' "\n" | wc -l` -le ${MAX_SRCLANGS} ]; then \
@@ -537,30 +591,30 @@ tatoeba-%-data:
 tatoeba-%-eval:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-eval,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-eval,%,$@))); \
-	  S="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-eval,%,$@))) | xargs iso639 -m -n}))"; \
-	  T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-eval,%,$@))) | xargs iso639 -m -n}))"; \
+	   S="${call find-langgroup,${firstword ${subst 2, ,${patsubst tatoeba-%-eval,%,$@}}},${PIVOT}}"; \
+	   T="${call find-langgroup,${lastword ${subst 2, ,${patsubst tatoeba-%-eval,%,$@}}},${PIVOT}}"; \
 	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} compare )
 
 
 tatoeba-%-testsets:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-testsets,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-testsets,%,$@))); \
-	  S="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-testsets,%,$@))) | xargs iso639 -m -n}))"; \
-	  T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-testsets,%,$@))) | xargs iso639 -m -n}))"; \
+	  S="${call find-langgroup,${firstword ${subst 2, ,${patsubst tatoeba-%-testsets,%,$@}}},${PIVOT}}"; \
+	  T="${call find-langgroup,${lastword ${subst 2, ,${patsubst tatoeba-%-testsets,%,$@}}},${PIVOT}}"; \
 	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} tatoeba-multilingual-testsets )
 
 tatoeba-%-multieval:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-multieval,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-multieval,%,$@))); \
-	  S="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-multieval,%,$@))) | xargs iso639 -m -n}))"; \
-	  T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-multieval,%,$@))) | xargs iso639 -m -n}))"; \
+	  S="${call find-langgroup,${firstword ${subst 2, ,${patsubst tatoeba-%-multieval,%,$@}}},${PIVOT}}"; \
+	  T="${call find-langgroup,${lastword ${subst 2, ,${patsubst tatoeba-%-multieval,%,$@}}},${PIVOT}}"; \
 	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} tatoeba-multilingual-eval )
 
 tatoeba-%-evalall:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))); \
-	  S="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))) | xargs iso639 -m -n}))"; \
-	  T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))) | xargs iso639 -m -n}))"; \
+	  S="${call find-langgroup,${firstword ${subst 2, ,${patsubst tatoeba-%-evalall,%,$@}}},${PIVOT}}"; \
+	  T="${call find-langgroup,${lastword ${subst 2, ,${patsubst tatoeba-%-evalall,%,$@}}},${PIVOT}}"; \
 	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" eval-tatoeba; \
 	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" tatoeba-multilingual-eval; \
 	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" eval-testsets-tatoeba )
@@ -568,8 +622,8 @@ tatoeba-%-evalall:
 tatoeba-%-dist:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))); \
-	  S="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))) | xargs iso639 -m -n}))"; \
-	  T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))) | xargs iso639 -m -n}))"; \
+	  S="${call find-langgroup,${firstword ${subst 2, ,${patsubst tatoeba-%-dist,%,$@}}},${PIVOT}}"; \
+	  T="${call find-langgroup,${lastword ${subst 2, ,${patsubst tatoeba-%-dist,%,$@}}},${PIVOT}}"; \
 	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} dist )
 
 #	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} best-dist )
