@@ -7,21 +7,70 @@ MEMAD_LANGS3 = deu eng fin fra nld swe
 # models for the MeMAD project
 #-------------------------------------------------------------------
 
-tatoeba-memad:
-	${MAKE} SRCLANGS="${MEMAD_LANGS3}" TRGLANGS="${MEMAD_LANGS3}" \
-		SKIP_LANGPAIRS="deu-deu|eng-eng|fin-fin|fra-fra|nld-nld|swe-swe" \
-		MODELTYPE=transformer-align tatoeba-job-1m
-	${MAKE} SRCLANGS="${MEMAD_LANGS3}" TRGLANGS="eng" \
-		MODELTYPE=transformer-align tatoeba-job-1m
-	${MAKE} TRGLANGS="${MEMAD_LANGS3}" SRCLANGS="eng" \
-		MODELTYPE=transformer-align tatoeba-job-1m
-	for s in ${MEMAD_LANGS3}; do \
+tatoeba-memad-is-done:
+	@for s in ${MEMAD_LANGS3}; do \
 	  for t in ${MEMAD_LANGS3}; do \
 	    if [ "$$s" != "$$t" ]; then \
-	      ${MAKE} SRCLANGS=$$s TRGLANGS=$$t MODELTYPE=transformer-align tatoeba-job; \
+	      ${MAKE} HPC_DISK=500 SRCLANGS=$$s TRGLANGS=$$t \
+			MODELTYPE=transformer-align is-done-tatoeba-1m; \
 	    fi \
 	  done \
 	done
+	@${MAKE} SRCLANGS="${MEMAD_LANGS3}" TRGLANGS="${MEMAD_LANGS3}" \
+		SKIP_LANGPAIRS="deu-deu|eng-eng|fin-fin|fra-fra|nld-nld|swe-swe" \
+		HPC_DISK=500 MODELTYPE=transformer-align is-done-tatoeba-1m
+	@${MAKE} SRCLANGS="${MEMAD_LANGS3}" TRGLANGS="eng" \
+		HPC_DISK=500 MODELTYPE=transformer-align is-done-tatoeba-1m
+	@${MAKE} TRGLANGS="${MEMAD_LANGS3}" SRCLANGS="eng" \
+		HPC_DISK=500 MODELTYPE=transformer-align is-done-tatoeba-1m
+
+tatoeba-memad:
+	@for s in ${MEMAD_LANGS3}; do \
+	  for t in ${MEMAD_LANGS3}; do \
+	    if [ "$$s" != "$$t" ]; then \
+	      ${MAKE} HPC_DISK=500 SRCLANGS=$$s TRGLANGS=$$t \
+			MODELTYPE=transformer-align tatoeba-job-1m; \
+	    fi \
+	  done \
+	done
+	@${MAKE} SRCLANGS="${MEMAD_LANGS3}" TRGLANGS="${MEMAD_LANGS3}" \
+		SKIP_LANGPAIRS="deu-deu|eng-eng|fin-fin|fra-fra|nld-nld|swe-swe" \
+		HPC_DISK=500 MODELTYPE=transformer-align tatoeba-job-1m
+	@${MAKE} SRCLANGS="${MEMAD_LANGS3}" TRGLANGS="eng" \
+		HPC_DISK=500 MODELTYPE=transformer-align tatoeba-job-1m
+	@${MAKE} TRGLANGS="${MEMAD_LANGS3}" SRCLANGS="eng" \
+		HPC_DISK=500 MODELTYPE=transformer-align tatoeba-job-1m
+
+
+tatoeba-memad-multi:
+	${MAKE} SRCLANGS="${MEMAD_LANGS3}" TRGLANGS="${MEMAD_LANGS3}" \
+		SKIP_LANGPAIRS="deu-deu|eng-eng|fin-fin|fra-fra|nld-nld|swe-swe" \
+		HPC_DISK=500 MODELTYPE=transformer-align tatoeba-job-1m
+	${MAKE} TRGLANGS="${MEMAD_LANGS3}" SRCLANGS="eng" \
+		HPC_DISK=500 MODELTYPE=transformer-align tatoeba-job-1m
+#	${MAKE} SRCLANGS="${MEMAD_LANGS3}" TRGLANGS="eng" \
+#		HPC_DISK=500 MODELTYPE=transformer-align tatoeba-job-1m
+
+
+tatoeba-memad-missing:
+	${MAKE} HPC_DISK=500 HPC_MEM=16g SRCLANGS=swe TRGLANGS=fra \
+		MODELTYPE=transformer-align tatoeba-job
+	${MAKE} HPC_DISK=500 HPC_MEM=16g SRCLANGS=swe TRGLANGS=nld \
+		MODELTYPE=transformer-align tatoeba-job
+	${MAKE} HPC_DISK=500 HPC_MEM=16g SRCLANGS=swe TRGLANGS=eng \
+		MODELTYPE=transformer-align tatoeba-job
+	${MAKE} HPC_DISK=500 HPC_MEM=16g SRCLANGS=swe TRGLANGS=deu \
+		MODELTYPE=transformer-align tatoeba-job
+
+tatoeba-memad-missing4:
+	${MAKE} HPC_DISK=500 HPC_MEM=16g SRCLANGS=eng TRGLANGS=nld \
+		MODELTYPE=transformer-align tatoeba-job
+	${MAKE} HPC_DISK=500 HPC_MEM=16g SRCLANGS=eng TRGLANGS=swe \
+		MODELTYPE=transformer-align tatoeba-job
+
+
+
+
 
 
 # FIT_DATA_SIZE=2000000 

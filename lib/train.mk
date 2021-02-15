@@ -11,6 +11,10 @@ resume:
 	rm -f ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
 	${MAKE} train
 
+is-done:
+	@if [ -e ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done ]; then \
+	  echo "............. ${LANGPAIRSTR}/${MODEL}.${MODELTYPE}.model${NR}.done"; \
+	fi
 
 #------------------------------------------------------------------------
 # vocabulary

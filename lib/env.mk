@@ -102,8 +102,8 @@ else ifneq ($(wildcard /wrk/tiedeman/research),)
   LOADGPU      = module load ${GPU_MODULES}
   LOADMODS     = ${LOADGPU}
 else ifeq (${shell hostname --domain 2>/dev/null},bullx)
-#  CSCPROJECT   = project_2002688
-  CSCPROJECT   = project_2002982
+  CSCPROJECT   = project_2002688
+#  CSCPROJECT   = project_2002982
   WORKHOME     = ${shell realpath ${PWD}/work}
   APPLHOME     = /projappl/project_2001194
   OPUSHOME     = /projappl/nlpl/data/OPUS

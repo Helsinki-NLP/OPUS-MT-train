@@ -37,7 +37,7 @@ local-dist:
 ## global distribution in models-dir, restrictions on BLEU
 global-dist release:
 	if  [ `grep BLEU $(TEST_EVALUATION) | cut -f3 -d ' ' | cut -f1 -d '.'` -ge ${MIN_BLEU_SCORE} ]; then \
-	  ${MAKE} MODELSHOME=${PWD}/models \
+	  ${MAKE} MODELSHOME=${RELEASEDIR} \
 		  MODELS_URL=https://object.pouta.csc.fi/${MODEL_CONTAINER} \
 	  dist; \
 	fi
@@ -169,7 +169,9 @@ endif
 POSTPROCESS_SCRIPT  = scripts/postprocess-${PREPROCESS_TYPE}.sh
 
 
+##--------------------------------------------------------------------------
 ## make the distribution package including test evaluation files and README
+##--------------------------------------------------------------------------
 
 ${DIST_PACKAGE}: ${MODEL_FINAL}
 ifneq (${SKIP_DIST_EVAL},1)
@@ -178,55 +180,108 @@ ifneq (${SKIP_DIST_EVAL},1)
 endif
 	@mkdir -p ${dir $@}
 	@touch ${WORKDIR}/source.tcmodel
-	@echo "# $(notdir ${@:.zip=})-${DATE}.zip" > ${WORKDIR}/README.md
-	@echo '' >> ${WORKDIR}/README.md
-	@echo "* dataset: ${DATASET}" >> ${WORKDIR}/README.md
-	@echo "* model: ${MODELTYPE}" >> ${WORKDIR}/README.md
-	@echo "* source language(s): ${SRCLANGS}" >> ${WORKDIR}/README.md
-	@echo "* target language(s): ${TRGLANGS}" >> ${WORKDIR}/README.md
-	@echo "* model: ${MODELTYPE}" >> ${WORKDIR}/README.md
-	@echo "* pre-processing: ${PREPROCESS_DESCRIPTION}" >> ${WORKDIR}/README.md
 	@cp ${PREPROCESS_SRCMODEL} ${WORKDIR}/source.${SUBWORD_TYPE}
 	@cp ${PREPROCESS_TRGMODEL} ${WORKDIR}/target.${SUBWORD_TYPE}
 	@cp ${PREPROCESS_SCRIPT} ${WORKDIR}/preprocess.sh
 	@cp ${POSTPROCESS_SCRIPT} ${WORKDIR}/postprocess.sh
-	@if [ ${words ${TRGLANGS}} -gt 1 ]; then \
-	  echo '* a sentence initial language token is required in the form of `>>id<<` (id = valid target language ID)' \
-		>> ${WORKDIR}/README.md; \
-	fi
+##-----------------------------
+## create YAML file
+##-----------------------------
+	@echo "release: ${LANGPAIRSTR}/$(notdir ${@:.zip=})-${DATE}.zip"  > ${@:.zip=}-${DATE}.yml
+	@echo "release-date: $(DATE)"                     >> ${@:.zip=}-${DATE}.yml
+	@echo "dataset-name: $(DATASET)"                  >> ${@:.zip=}-${DATE}.yml
+	@echo "modeltype: $(MODELTYPE)"                   >> ${@:.zip=}-${DATE}.yml
+	@echo "pre-processing: ${PREPROCESS_DESCRIPTION}" >> ${@:.zip=}-${DATE}.yml
+	@echo "subwords:"                                 >> ${@:.zip=}-${DATE}.yml
+	@echo "   - source: ${PRE_SRC}"                   >> ${@:.zip=}-${DATE}.yml
+	@echo "   - target: ${PRE_TRG}"                   >> ${@:.zip=}-${DATE}.yml
+	@echo "subword-models:"                           >> ${@:.zip=}-${DATE}.yml
+	@echo "   - source: source.${SUBWORD_TYPE}"       >> ${@:.zip=}-${DATE}.yml
+	@echo "   - target: target.${SUBWORD_TYPE}"       >> ${@:.zip=}-${DATE}.yml
+	@echo "source-languages:"                         >> ${@:.zip=}-${DATE}.yml
+ifdef USE_TARGET_LABELS
+	@echo "use-target-labels:"                        >> ${@:.zip=}-${DATE}.yml
+	@for t in ${TRGLANGS}; do \
+	  echo "   - >>$$t<<"                             >> ${@:.zip=}-${DATE}.yml; \
+	done
+endif
+	@for s in ${SRCLANGS}; do \
+	  echo "   - $$s"                                 >> ${@:.zip=}-${DATE}.yml; \
+	done
+	@echo "target-languages:"                         >> ${@:.zip=}-${DATE}.yml
+	@for t in ${TRGLANGS}; do \
+	  echo "   - $$t"                                 >> ${@:.zip=}-${DATE}.yml; \
+	done
+ifneq ("$(wildcard ${WORKDIR}/train/README.md)","")
+	@echo "training-data:"                            >> ${@:.zip=}-${DATE}.yml
+	@tr "\n" "~"  < ${WORKDIR}/train/README.md |\
+	tr "#" "\n" | grep '^ ${DATASET}~' | \
+	tail -1 | tr "~" "\n" | grep '^\* ' | \
+	grep -v 'total size' | sed 's/^\* /   - /'        >> ${@:.zip=}-${DATE}.yml
+endif
+ifneq ("$(wildcard ${WORKDIR}/val/README.md)","")
+	@echo "validation-data:"                          >> ${@:.zip=}-${DATE}.yml
+	grep '^\* ' ${WORKDIR}/val/README.md | \
+	sed 's/^\* /   - /'                               >> ${@:.zip=}-${DATE}.yml
+endif
+##-----------------------------
+## create README-file
+##-----------------------------
+	@echo "# $(notdir ${@:.zip=})-${DATE}.zip"           > ${WORKDIR}/README.md
+	@echo ''                                            >> ${WORKDIR}/README.md
+	@echo "* dataset: ${DATASET}"                       >> ${WORKDIR}/README.md
+	@echo "* model: ${MODELTYPE}"                       >> ${WORKDIR}/README.md
+	@echo "* source language(s): ${SRCLANGS}"           >> ${WORKDIR}/README.md
+	@echo "* target language(s): ${TRGLANGS}"           >> ${WORKDIR}/README.md
+	@echo "* model: ${MODELTYPE}"                       >> ${WORKDIR}/README.md
+	@echo "* pre-processing: ${PREPROCESS_DESCRIPTION}" >> ${WORKDIR}/README.md
+ifdef USE_TARGET_LABELS
+	echo '* a sentence initial language token is required in the form of `>>id<<` (id = valid target language ID)' >> ${WORKDIR}/README.md
+endif
 	@echo "* download: [$(notdir ${@:.zip=})-${DATE}.zip](${MODELS_URL}/${LANGPAIRSTR}/$(notdir ${@:.zip=})-${DATE}.zip)" >> ${WORKDIR}/README.md
-	if [ -e $(TEST_EVALUATION) ]; then \
-	  echo "* test set translations: [$(notdir ${@:.zip=})-${DATE}.test.txt](${MODELS_URL}/${LANGPAIRSTR}/$(notdir ${@:.zip=})-${DATE}.test.txt)" >> ${WORKDIR}/README.md; \
-	  echo "* test set scores: [$(notdir ${@:.zip=})-${DATE}.eval.txt](${MODELS_URL}/${LANGPAIRSTR}/$(notdir ${@:.zip=})-${DATE}.eval.txt)" >> ${WORKDIR}/README.md; \
-	  echo '' >> ${WORKDIR}/README.md; \
-	  if [ "${SKIP_DATA_DETAILS}" != "1" ]; then \
-	    if [ -e ${WORKDIR}/train/README.md ]; then \
-	      echo -n "## Training data: " >> ${WORKDIR}/README.md; \
-	      tr "\n" "~"  < ${WORKDIR}/train/README.md |\
-	      tr "#" "\n" | grep '${DATASET}' | \
-	      tail -1 | tr "~" "\n" >> ${WORKDIR}/README.md; \
-	      echo '' >> ${WORKDIR}/README.md; \
-	    fi; \
-	    if [ -e ${WORKDIR}/val/README.md ]; then \
-	      echo -n "#"                  >> ${WORKDIR}/README.md; \
-	      cat ${WORKDIR}/val/README.md >> ${WORKDIR}/README.md; \
-	      echo ''                      >> ${WORKDIR}/README.md; \
-	    fi; \
-	  fi; \
-	  echo '## Benchmarks' >> ${WORKDIR}/README.md; \
-	  echo '' >> ${WORKDIR}/README.md; \
-	  cd ${WORKDIR}; \
-	  grep -H BLEU *.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | \
-		sed 's/^\(.*\)\.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}\.\(.*\)\.eval:.*$$/\1.\2/' > $@.1; \
-	  grep BLEU *.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | cut -f3 -d ' ' > $@.2; \
-	  grep chrF *.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | cut -f3 -d ' ' > $@.3; \
-	  echo '| testset               | BLEU  | chr-F |' >> README.md; \
-	  echo '|-----------------------|-------|-------|' >> README.md; \
-	  paste $@.1 $@.2 $@.3 | sed  "s/\t/ 	| /g;s/^/| /;s/$$/ |/" | sort | uniq >> README.md; \
-	  rm -f $@.1 $@.2 $@.3; \
-	fi
-	@cat ${WORKDIR}/README.md >> ${dir $@}README.md
-	@echo '' >> ${dir $@}README.md
+ifneq (${SKIP_DATA_DETAILS},1)
+ifneq ("$(wildcard ${WORKDIR}/train/README.md)","")
+	@echo -n "## Training data: "                       >> ${WORKDIR}/README.md
+	@tr "\n" "~"  < ${WORKDIR}/train/README.md |\
+	tr "#" "\n" | grep '${DATASET}' | \
+	tail -1 | tr "~" "\n"                               >> ${WORKDIR}/README.md
+	@echo ''                                            >> ${WORKDIR}/README.md
+endif
+ifneq ("$(wildcard ${WORKDIR}/val/README.md)","")
+	@echo -n "#"                                        >> ${WORKDIR}/README.md
+	@cat ${WORKDIR}/val/README.md                       >> ${WORKDIR}/README.md
+	@echo ''                                            >> ${WORKDIR}/README.md
+endif
+endif
+##-----------------------------
+## add benchmark results
+##-----------------------------
+ifneq ("$(wildcard ${TEST_EVALUATION})","")
+	@echo "* test set translations: [$(notdir ${@:.zip=})-${DATE}.test.txt](${MODELS_URL}/${LANGPAIRSTR}/$(notdir ${@:.zip=})-${DATE}.test.txt)" >> ${WORKDIR}/README.md
+	@echo "* test set scores: [$(notdir ${@:.zip=})-${DATE}.eval.txt](${MODELS_URL}/${LANGPAIRSTR}/$(notdir ${@:.zip=})-${DATE}.eval.txt)" >> ${WORKDIR}/README.md
+	@echo '' >> ${WORKDIR}/README.md
+	@echo '## Benchmarks'                               >> ${WORKDIR}/README.md
+	@echo ''                                            >> ${WORKDIR}/README.md
+	@grep -H BLEU ${WORKDIR}/*.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | \
+	sed 's#^${WORKDIR}/\(.*\)\.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}\.\(.*\)\.eval:.*$$#\1.\2#' > $@.1
+	@grep BLEU ${WORKDIR}/*.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | cut -f3 -d ' ' > $@.2
+	@grep chrF ${WORKDIR}/*.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | cut -f3 -d ' ' > $@.3
+	@echo '| testset               | BLEU  | chr-F |'   >> ${WORKDIR}/README.md
+	@echo '|-----------------------|-------|-------|'   >> ${WORKDIR}/README.md
+	@paste $@.1 $@.2 $@.3 | \
+	sed  "s/\t/ 	| /g;s/^/| /;s/$$/ |/" | \
+	sort | uniq                                         >> ${WORKDIR}/README.md
+	@echo "BLEU-scores:"                                >> ${@:.zip=}-${DATE}.yml
+	@paste -d' ' $@.1 $@.2 | sed 's/ /: /;s/^/   - /'   >> ${@:.zip=}-${DATE}.yml
+	@echo "chr-F-scores:"                               >> ${@:.zip=}-${DATE}.yml
+	@paste -d' ' $@.1 $@.3 | sed 's/ /: /;s/^/   - /'   >> ${@:.zip=}-${DATE}.yml
+	@rm -f $@.1 $@.2 $@.3
+endif
+##-----------------------------
+## create the package
+##-----------------------------
+	@cat ${WORKDIR}/README.md                           >> ${dir $@}README.md
+	@echo ''                                            >> ${dir $@}README.md
 	@cp models/LICENSE ${WORKDIR}/
 	@chmod +x ${WORKDIR}/preprocess.sh
 	@sed -e 's# - .*/\([^/]*\)$$# - \1#' \
@@ -243,23 +298,25 @@ endif
 		${notdir ${MODEL_VALIDLOG}} \
 		${notdir ${MODEL_TRAINLOG}} \
 		source.* target.* decoder.yml preprocess.sh postprocess.sh
-	@if [ -e ${WORKDIR}/config.mk ]; then \
-	  cd ${WORKDIR} && zip -u ${notdir $@} config.mk; \
-	fi
+ifneq ("$(wildcard ${WORKDIR}/config.mk)","")
+	@cd ${WORKDIR} && zip -u ${notdir $@} config.mk
+endif
+##-----------------------------
+## move files to release dir and cleanup
+##-----------------------------
 	@mkdir -p ${dir $@}
 	@mv -f ${WORKDIR}/${notdir $@} ${@:.zip=}-${DATE}.zip
-	if [ -e $(TEST_EVALUATION) ]; then \
-	  cp $(TEST_EVALUATION) ${@:.zip=}-${DATE}.eval.txt; \
-	  cp $(TEST_COMPARISON) ${@:.zip=}-${DATE}.test.txt; \
-	fi
+ifneq ("$(wildcard ${TEST_EVALUATION})","")
+	@cp $(TEST_EVALUATION) ${@:.zip=}-${DATE}.eval.txt
+	@cp $(TEST_COMPARISON) ${@:.zip=}-${DATE}.test.txt
+endif
 	@rm -f $@
 	@cd ${dir $@} && ln -s $(notdir ${@:.zip=})-${DATE}.zip ${notdir $@}
 	@rm -f ${WORKDIR}/decoder.yml ${WORKDIR}/source.* ${WORKDIR}/target.*
 	@rm -f ${WORKDIR}/preprocess.sh ${WORKDIR}/postprocess.sh
 
 
-#	  grep -H BLEU *.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | \
-#		tr '.' '/' | cut -f1,5,6 -d '/' | tr '/' "." > $@.1; \
+
 
 
 
@@ -511,3 +568,31 @@ ifneq (${DATASET},${OLDDATASET})
 	  mv -f $$f `echo $$f | sed 's/${OLDDATASET}/${DATASET}/'`; \
 	done
 endif
+
+
+
+create-yaml:
+	for d in `find ${RELEASEDIR} -maxdepth 1 -mindepth 1 -type d`; do \
+	    scripts/readme2yaml.pl $$d; \
+	done
+
+
+remove-underperforming:
+	for d in `find ${RELEASEDIR}/ -type f -name '*.zip'`; do \
+	  b=`echo $$d | sed 's/\.zip//'`; \
+	  l=`echo $$b | sed 's#^${RELEASEDIR}/##' | xargs dirname`; \
+	  f=`basename $$b`; \
+	  if  [ `grep BLEU $$b.eval.txt | cut -f3 -d ' ' | cut -f1 -d '.'` -lt ${MIN_BLEU_SCORE} ]; then \
+	    echo "remove $$d;"; \
+	    swift delete ${MODEL_CONTAINER} $$l/$$f.zip; \
+	    swift delete ${MODEL_CONTAINER} $$l/$$f.eval.txt; \
+	    swift delete ${MODEL_CONTAINER} $$l/$$f.test.txt; \
+	    swift delete ${MODEL_CONTAINER} $$l/$$f.yml; \
+	    rm -f $$b.zip; \
+	    rm -f $$b.eval.txt; \
+	    rm -f $$b.test.txt; \
+	    rm -f $$b.yml; \
+	  else \
+	    echo "keep $$d"; \
+	  fi \
+	done

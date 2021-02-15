@@ -567,7 +567,7 @@ ifneq (${TESTSET},${DEVSET})
 	  ${MAKE} CLEAN_TEST_SRC=${TESTSET_DIR}/${TESTSET}.${SRCEXT}.${PRE}.gz \
 		  CLEAN_TEST_TRG=${TESTSET_DIR}/${TESTSET}.${TRGEXT}.${PRE}.gz \
 	  add-to-test-data; \
-	else \
+	elif [ ! -e $@ ]; then \
 	  for s in ${SRCLANGS}; do \
 	    for t in ${TRGLANGS}; do \
 	      if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
@@ -584,6 +584,9 @@ ifneq (${TESTSET},${DEVSET})
 	    echo ""                                                >> ${dir $@}/README.md; \
 	    echo "testset = top ${TESTSIZE} lines of $@.shuffled!" >> ${dir $@}/README.md; \
 	  fi \
+	else \
+	  echo "test set $@ exists already! Don't overwrite!"; \
+	  echo "TODO: should we touch it?"; \
 	fi
 else
 	mkdir -p ${dir $@}

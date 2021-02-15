@@ -14,6 +14,7 @@ include lib/projects/opus.mk
 include lib/projects/romance.mk
 include lib/projects/russian.mk
 include lib/projects/sami.mk
+include lib/projects/finno-ugric.mk
 include lib/projects/wikimedia.mk
 include lib/projects/wikimatrix.mk
 

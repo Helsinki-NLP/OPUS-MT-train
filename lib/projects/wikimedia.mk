@@ -9,6 +9,14 @@ as-en:
 	${MAKE} reverse-data-as-en
 	${MAKE} train-dynamic-en-as
 
+en-bcl:
+	${MAKE} SRCLANGS="en" TRGLANGS="bcl" DEVSET=wikimedia all-job
+
+bcl-en:
+	${MAKE} SRCLANGS="bcl" TRGLANGS="en" DEVSET=wikimedia all-job
+
+
+
 # ENAS_BPE = 4000
 ENAS_BPE  = 1000
 ENBCL_BPE = 1000
@@ -25,8 +33,6 @@ ENBCL_BPE = 1000
 
 
 %-en-bcl:
-	${MAKE} HELDOUTSIZE=0 DEVSIZE=1000 TESTSIZE=1000 DEVMINSIZE=100 BPESIZE=${ENBCL_BPE} \
-		SRCLANGS="en" TRGLANGS="bcl" EXCLUDE_CORPORA="WMT-News MPC1 wikimedia" \
-	${@:-en-bcl=}
+	${MAKE} SRCLANGS="en" TRGLANGS="bcl" DEVSET=wikimedia ${@:-en-bcl=}
 
 
