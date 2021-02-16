@@ -20,9 +20,9 @@ endif
 %.submit:
 	mkdir -p ${WORKDIR}
 	echo '#!/bin/bash -l' > $@
-	echo '#SBATCH -J "${LANGPAIRSTR}-${DATASET}-${@:.submit=}"' >>$@
-	echo '#SBATCH -o ${LANGPAIRSTR}-${DATASET}-${@:.submit=}.out.%j' >> $@
-	echo '#SBATCH -e ${LANGPAIRSTR}-${DATASET}-${@:.submit=}.err.%j' >> $@
+	echo '#SBATCH -J "$(subst -,,${LANGPAIRSTR})${@:.submit=}"' >>$@
+	echo '#SBATCH -o $(subst -,,${LANGPAIRSTR})${@:.submit=}.out.%j' >> $@
+	echo '#SBATCH -e $(subst -,,${LANGPAIRSTR})${@:.submit=}.err.%j' >> $@
 	echo '#SBATCH --mem=${HPC_MEM}' >> $@
 	echo '#SBATCH --exclude=r18g08' >> $@
 ifdef EMAIL
@@ -61,9 +61,9 @@ endif
 %.submitcpu:
 	mkdir -p ${WORKDIR}
 	echo '#!/bin/bash -l' > $@
-	echo '#SBATCH -J "${@:.submitcpu=}"' >>$@
-	echo '#SBATCH -o ${@:.submitcpu=}.out.%j' >> $@
-	echo '#SBATCH -e ${@:.submitcpu=}.err.%j' >> $@
+	echo '#SBATCH -J "${LANGPAIRSTR}${@:.submitcpu=}"' >>$@
+	echo '#SBATCH -o ${LANGPAIRSTR}${@:.submitcpu=}.out.%j' >> $@
+	echo '#SBATCH -e ${LANGPAIRSTR}${@:.submitcpu=}.err.%j' >> $@
 	echo '#SBATCH --mem=${HPC_MEM}' >> $@
 ifdef EMAIL
 	echo '#SBATCH --mail-type=END' >> $@

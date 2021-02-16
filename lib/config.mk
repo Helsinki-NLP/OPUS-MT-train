@@ -23,8 +23,10 @@ endif
 
 
 ## final default is sv-fi
-SRCLANGS ?= sv
-TRGLANGS ?= fi
+## NEW: don't do this ... can create confusion ...
+##
+# SRCLANGS ?= sv
+# TRGLANGS ?= fi
 
 
 ## set SRC and TRG unless they are specified already

@@ -33,10 +33,29 @@ while (<F>){
 	$modelinfo{$model}{'dataset-name'} = $1;
     }
     if (/^* source language\(s\): (.*)$/){
-	@{$modelinfo{$model}{'source-languages'}} = split(/\s+/,$1);
+	my @languages = split(/\s+/,$1);
+	foreach (@languages){
+	    s/[\-\_].*//;
+	    $modelinfo{$model}{'source-languages'}{$_}++;
+	}
+    }
+    if (/^* valid language labels: (.*)$/){
+	@{$modelinfo{$model}{'use-target-labels'}} = split(/\s+/,$1);
     }
     if (/^* target language\(s\): (.*)$/){
-	@{$modelinfo{$model}{'target-languages'}} = split(/\s+/,$1);
+	my @languages = split(/\s+/,$1);
+	unless (exists $modelinfo{$model}{'use-target-labels'}){
+	    if ($#languages){
+		$modelinfo{$model}{'use-target-labels'} = [];
+		foreach (@languages){
+		    push(@{$modelinfo{$model}{'use-target-labels'}},'>>'.$_.'<<');
+		}
+	    }
+	}
+	foreach (@languages){
+	    s/[\-\_].*//;
+	    $modelinfo{$model}{'target-languages'}{$_}++;
+	}
     }
     if (/^* pre\-processing: (.*)$/){
 	$modelinfo{$model}{'pre-processing'} = $1;
@@ -55,9 +74,49 @@ while (<F>){
     }
     if (/^\|/){
 	my @scores = split(/\s*\|\s*/);
+	next unless ($scores[2]=~/[0-9]/);
+
+	## normalise the odd test set names
+	if ($scores[1]=~/\.([^\.]+)\.([^\.]+)$/){
+	    my ($s,$t) = ($1,$2);
+	    $scores[1]=~s/[\-\.]$s\-?$t\.$s\.$t$/.$s.$t/;
+	}
+	$scores[1]=~s/\.([^\.]+)\.([^\.]+)$/.$1-$2/;
+
 	if ($scores[2]=~/[0-9]/){
-	    push(@{$modelinfo{$model}{'BLEU-scores'}},$scores[1].': '.$scores[2]);
-	    push(@{$modelinfo{$model}{'chr-F-scores'}},$scores[1].': '.$scores[3]);
+	    # push(@{$modelinfo{$model}{'BLEU-scores'}},$scores[1].': '.$scores[2]);
+	    # push(@{$modelinfo{$model}{'chr-F-scores'}},$scores[1].': '.$scores[3]);
+	    $modelinfo{$model}{'BLEU-scores'}{$scores[1].': '.$scores[2]}++;
+	    $modelinfo{$model}{'chr-F-scores'}{$scores[1].': '.$scores[3]}++;
+	}
+	if (@scores > 3 && $scores[4]=~/[0-9]/){
+	    # push(@{$modelinfo{$model}{'test-data'}},"$scores[1]: $scores[4]/$scores[5]");
+	    $modelinfo{$model}{'test-data'}{"$scores[1]: $scores[4]/$scores[5]"}++;
+	}
+	elsif ($scores[1]=~/^(.*)\.([^\.]+)\-([^\.]+)$/){
+	    my $testset = $1;
+	    my ($src,$trg) = ($2,$3);
+	    my ($lines,$words) = (0,0);
+	    if ($testset eq 'Tatoeba-test'){
+		if ($scores[1] eq 'Tatoeba-test' || $src eq 'multi' || $trg eq 'multi'){
+		    my $evalfile = $model;
+		    $evalfile=~s/\.zip/.test.txt/;
+		    if (-e "models-tatoeba/$langpair/$evalfile" ){
+			my $counts = `sed -n '2~4p' models-tatoeba/$langpair/$evalfile | wc -lw`;
+			$counts=~s/^\s*//;
+			($lines,$words) = split(/\s+/,$counts);
+		    }
+		}
+		else{
+		    ($lines,$words) = get_tatoeba_counts($src,$trg);
+		}
+	    }
+	    elsif (-e "testsets/$src-$trg/$testset.$trg.gz"){
+		my $counts = `zcat testsets/$src-$trg/$testset.$trg.gz | wc -lw`;
+		$counts=~s/^\s*//;
+		($lines,$words) = split(/\s+/,$counts);
+	    }
+	    $modelinfo{$model}{'test-data'}{"$scores[1]: $lines/$words"}++;
 	}
     }
 }
@@ -79,17 +138,18 @@ foreach my $m (keys %modelinfo){
 }
 
 
-## add info about target language labels
-foreach my $m (keys %modelinfo){
-    if (exists $modelinfo{$m}{'target-languages'}){
-	if ($#{$modelinfo{$m}{'target-languages'}}){
-	    $modelinfo{$m}{'use-target-labels'} = [];
-	    foreach (@{$modelinfo{$m}{'target-languages'}}){
-		push(@{$modelinfo{$m}{'use-target-labels'}},'>>'.$_.'<<');
-	    }
-	}
-    }
-}
+# ## add info about target language labels
+# foreach my $m (keys %modelinfo){
+#     if (exists $modelinfo{$m}{'target-languages'}){
+# 	if ($#{$modelinfo{$m}{'target-languages'}}){
+# 	    $modelinfo{$m}{'use-target-labels'} = [];
+# 	    foreach (@{$modelinfo{$m}{'target-languages'}}){
+# 		push(@{$modelinfo{$m}{'use-target-labels'}},'>>'.$_.'<<');
+# 	    }
+# 	}
+#     }
+# }
+
 
 ## print the yml files
 foreach my $m (keys %modelinfo){
@@ -103,12 +163,19 @@ foreach my $m (keys %modelinfo){
 
     foreach my $k ('release', 'release-date', 'dataset-name', 'modeltype',
 		   'pre-processing', 'subwords', 'subword-models', 
-		   'source-languages', 'target-languages',
-		   'use-target-labels', 'BLEU-scores', 'chr-F-scores'){
+		   'source-languages', 'target-languages', 'use-target-labels', 
+		   'training-data', 'validation-data', 'test-data',
+		   'BLEU-scores', 'chr-F-scores'){
 	next unless (exists $modelinfo{$m}{$k});
 	if (ref($modelinfo{$m}{$k}) eq 'ARRAY'){
 	    print F "$k:\n";
 	    foreach (@{$modelinfo{$m}{$k}}){
+		print F "   - $_\n";
+	    }
+	}
+	elsif (ref($modelinfo{$m}{$k}) eq 'HASH'){
+	    print F "$k:\n";
+	    foreach (sort keys %{$modelinfo{$m}{$k}}){
 		print F "   - $_\n";
 	    }
 	}
@@ -124,10 +191,30 @@ foreach my $m (keys %modelinfo){
 		print F "   - $_\n";
 	    }
 	}
+	elsif (ref($modelinfo{$m}{$k}) eq 'HASH'){
+	    print F "$k:\n";
+	    foreach (sort keys %{$modelinfo{$m}{$k}}){
+		print F "   - $_\n";
+	    }
+	}
 	else{
 	    print F "$k: $modelinfo{$m}{$k}\n";
 	}
     }
     close F;
 
+}
+
+sub get_tatoeba_counts{
+    my ($src,$trg) = @_;
+    my $pair = $src lt $trg ? "$src-$trg" : "$trg-src";
+    my $counts = '';
+    if ($src lt $trg){
+	$counts = `wget -qq -O - https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master/data/test/$src-$trg/test.txt | cut -f4 | wc -lw`;
+    }
+    else{
+	$counts = `wget -qq -O - https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master/data/test/$trg-$src/test.txt | cut -f3 | wc -lw`;
+    }
+    $counts=~s/^\s*//;
+    return split(/\s+/,$counts);
 }

@@ -285,7 +285,8 @@ tatoeba-labels: ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.lab
 
 
 
-
+## restart all language pairs of models that have not yet converged
+## TODO: takes only the first model found in the directory
 tatoeba-continue-unfinished:
 	for d in `find work-tatoeba/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/`; do \
 	  if [ `find work-tatoeba/$$d -maxdepth 1 -name '*.valid1.log' | grep -v tuned | wc -l` -gt 0 ]; then \
@@ -298,19 +299,9 @@ tatoeba-continue-unfinished:
 	  fi \
 	done
 
-tatoeba-release-finished:
-	for d in `find work-tatoeba/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/`; do \
-	  if [ `find work-tatoeba/$$d -maxdepth 1 -name '*.valid1.log' | grep -v tuned | wc -l` -gt 0 ]; then \
-	    if [ `find work-tatoeba/$$d -maxdepth 1 -name '*.done' | grep -v tuned | wc -l` -gt 0 ]; then \
-	      p=`echo $$d | sed 's/-/2/'`; \
-	      m=`ls work-tatoeba/$$d/*.done | head -1 | cut -f3 -d/ | cut -f3 -d.`; \
-	      t=`ls work-tatoeba/$$d/*.done | head -1 | cut -f3 -d/ | cut -f1 -d.`; \
-	      ${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-evalall; \
-	      ${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-dist; \
-	    fi \
-	  fi \
-	done
-
+## restart all language pairs of unreleased models
+## unless they are converged already
+## TODO: takes only the first model found in the directory
 tatoeba-continue-unreleased:
 	find work-tatoeba/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/ | sort > $@.tt1
 	find models-tatoeba/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/ | sort > $@.tt2
@@ -326,6 +317,39 @@ tatoeba-continue-unreleased:
 	done
 	rm -f $@.tt1 $@.tt2
 
+
+## release all language pairs
+## (including lang-group models)
+## TODO: takes only the first model found in the directory
+tatoeba-release-all:
+	for d in `find work-tatoeba/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/`; do \
+	  if [ `find work-tatoeba/$$d -maxdepth 1 -name '*.valid1.log' | grep -v tuned | wc -l` -gt 0 ]; then \
+	    p=`echo $$d | sed 's/-/2/'`; \
+	    m=`ls work-tatoeba/$$d/*.valid1.log | head -1 | cut -f3 -d/ | cut -f3 -d.`; \
+	    t=`ls work-tatoeba/$$d/*.valid1.log | head -1 | cut -f3 -d/ | cut -f1 -d.`; \
+	    ${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-evalall; \
+	    ${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-dist; \
+	  fi \
+	done
+
+## release all models that have converged
+## TODO: takes only the first model found in the directory
+tatoeba-release-finished:
+	for d in `find work-tatoeba/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/`; do \
+	  if [ `find work-tatoeba/$$d -maxdepth 1 -name '*.valid1.log' | grep -v tuned | wc -l` -gt 0 ]; then \
+	    if [ `find work-tatoeba/$$d -maxdepth 1 -name '*.done' | grep -v tuned | wc -l` -gt 0 ]; then \
+	      p=`echo $$d | sed 's/-/2/'`; \
+	      m=`ls work-tatoeba/$$d/*.done | head -1 | cut -f3 -d/ | cut -f3 -d.`; \
+	      t=`ls work-tatoeba/$$d/*.done | head -1 | cut -f3 -d/ | cut -f1 -d.`; \
+	      ${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-evalall; \
+	      ${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-dist; \
+	    fi \
+	  fi \
+	done
+
+
+## release all models that are not yet released
+## TODO: takes only the first model found in the directory
 tatoeba-release-unreleased:
 	find work-tatoeba/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/ | sort > $@.tt1
 	find models-tatoeba/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/ | sort > $@.tt2
@@ -336,6 +360,21 @@ tatoeba-release-unreleased:
 	      t=`ls work-tatoeba/$$d/*.valid1.log | head -1 | cut -f3 -d/ | cut -f1 -d.`; \
 	      ${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-evalall; \
 	      ${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-dist; \
+	  fi \
+	done
+	rm -f $@.tt1 $@.tt2
+
+
+tatoeba-release-unreleased-test:
+	find work-tatoeba/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/ | sort > $@.tt1
+	find models-tatoeba/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/ | sort > $@.tt2
+	for d in `diff $@.tt1 $@.tt2 | grep '<' | cut -f2 -d' '`; do \
+	  if [ `find work-tatoeba/$$d -maxdepth 1 -name '*.valid1.log' | grep -v tuned | wc -l` -gt 0 ]; then \
+	      p=`echo $$d | sed 's/-/2/'`; \
+	      m=`ls work-tatoeba/$$d/*.valid1.log | head -1 | cut -f3 -d/ | cut -f3 -d.`; \
+	      t=`ls work-tatoeba/$$d/*.valid1.log | head -1 | cut -f3 -d/ | cut -f1 -d.`; \
+	      echo "${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-evalall"; \
+	      echo "${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-dist"; \
 	  fi \
 	done
 	rm -f $@.tt1 $@.tt2
@@ -561,14 +600,39 @@ MAX_SRCLANGS ?= 7000
 MAX_TRGLANGS ?= 7000
 
 find-langgroup = $(filter ${OPUS_LANGS3},\
-			$(sort ${shell langgroup $(1) | xargs iso639 -m -n} ${1} ${2}))
+		$(sort ${shell langgroup $(1) | xargs iso639 -m -n} ${1} ${2}))
 
+find-srclanggroup = $(call find-langgroup,$(firstword ${subst -, ,${subst 2, ,${1}}}),${2})
+find-trglanggroup = $(call find-langgroup,$(lastword ${subst -, ,${subst 2, ,${1}}}),${2})
+
+
+
+## create data sets (also works for language groups)
+tatoeba-%-data:
+	-( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-data,%,$@))); \
+	   t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-data,%,$@))); \
+	   S="${call find-srclanggroup,${patsubst tatoeba-%-data,%,$@},${PIVOT}}"; \
+	   T="${call find-trglanggroup,${patsubst tatoeba-%-data,%,$@},${PIVOT}}"; \
+	     if [ `echo $$S | tr ' ' "\n" | wc -l` -ge ${MIN_SRCLANGS} ]; then \
+	       if [ `echo $$T | tr ' ' "\n" | wc -l` -ge ${MIN_TRGLANGS} ]; then \
+	         if [ `echo $$S | tr ' ' "\n" | wc -l` -le ${MAX_SRCLANGS} ]; then \
+	           if [ `echo $$T | tr ' ' "\n" | wc -l` -le ${MAX_TRGLANGS} ]; then \
+	             ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" tatoeba-prepare; \
+	           fi \
+	         fi \
+	       fi \
+	   fi )
+
+
+## start the training job
+## - create config file
+## - create data sets
+## - submit SLURM training job
 tatoeba-%-train:
 	-( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))); \
 	   t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))); \
-	   S="${call find-langgroup,${firstword ${subst 2, ,${patsubst tatoeba-%-train,%,$@}}},${PIVOT}}"; \
-	   T="${call find-langgroup,${lastword ${subst 2, ,${patsubst tatoeba-%-train,%,$@}}},${PIVOT}}"; \
-
+	   S="${call find-srclanggroup,${patsubst tatoeba-%-train,%,$@},${PIVOT}}"; \
+	   T="${call find-trglanggroup,${patsubst tatoeba-%-train,%,$@},${PIVOT}}"; \
 	   if [ ! `find ${TATOEBA_WORK}/$$s-$$t -name '${DATASET}.*.done' | wc -l` -gt 0 ]; then \
 	     if [ `echo $$S | tr ' ' "\n" | wc -l` -ge ${MIN_SRCLANGS} ]; then \
 	       if [ `echo $$T | tr ' ' "\n" | wc -l` -ge ${MIN_TRGLANGS} ]; then \
@@ -581,76 +645,75 @@ tatoeba-%-train:
 	     fi \
 	   fi )
 
-tatoeba-%-data:
-	-( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-data,%,$@))); \
-	   t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-data,%,$@))); \
-	   S="${call find-langgroup,${firstword ${subst 2, ,${patsubst tatoeba-%-data,%,$@}}},${PIVOT}}"; \
-	   T="${call find-langgroup,${lastword ${subst 2, ,${patsubst tatoeba-%-data,%,$@}}},${PIVOT}}"; \
-	     if [ `echo $$S | tr ' ' "\n" | wc -l` -ge ${MIN_SRCLANGS} ]; then \
-	       if [ `echo $$T | tr ' ' "\n" | wc -l` -ge ${MIN_TRGLANGS} ]; then \
-	         if [ `echo $$S | tr ' ' "\n" | wc -l` -le ${MAX_SRCLANGS} ]; then \
-	           if [ `echo $$T | tr ' ' "\n" | wc -l` -le ${MAX_TRGLANGS} ]; then \
-	             ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" tatoeba-prepare; \
-	           fi \
-	         fi \
-	       fi \
-	   fi )
 
+#	   S="${call find-langgroup,${firstword ${subst 2, ,${patsubst tatoeba-%-train,%,$@}}},${PIVOT}}"; \
+#	   T="${call find-langgroup,${lastword ${subst 2, ,${patsubst tatoeba-%-train,%,$@}}},${PIVOT}}"; \
+
+
+
+## evaluate with the model-specific test set
 tatoeba-%-eval:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-eval,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-eval,%,$@))); \
-	   S="${call find-langgroup,${firstword ${subst 2, ,${patsubst tatoeba-%-eval,%,$@}}},${PIVOT}}"; \
-	   T="${call find-langgroup,${lastword ${subst 2, ,${patsubst tatoeba-%-eval,%,$@}}},${PIVOT}}"; \
 	  if [ -e work-tatoeba/$$s-$$t ]; then \
 	    if [ `find work-tatoeba/$$s-$$t/ -name '*.npz' | wc -l` -gt 0 ]; then \
-	      ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} compare; \
+	      ${MAKE} LANGPAIRSTR=$$s-$$t \
+		SRCLANGS="${call find-srclanggroup,${patsubst tatoeba-%-eval,%,$@},${PIVOT}}" \
+		TRGLANGS="${call find-trglanggroup,${patsubst tatoeba-%-eval,%,$@},${PIVOT}}" \
+		compare-tatoeba; \
 	    fi \
 	  fi )
 
-
-tatoeba-%-testsets:
-	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-testsets,%,$@))); \
-	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-testsets,%,$@))); \
-	  S="${call find-langgroup,${firstword ${subst 2, ,${patsubst tatoeba-%-testsets,%,$@}}},${PIVOT}}"; \
-	  T="${call find-langgroup,${lastword ${subst 2, ,${patsubst tatoeba-%-testsets,%,$@}}},${PIVOT}}"; \
-	  if [ -e work-tatoeba/$$s-$$t ]; then \
-	    ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} tatoeba-multilingual-testsets; \
-	  fi )
-
+## run evaluation for indivudual language pairs
+## in case of multilingual models
 tatoeba-%-multieval:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-multieval,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-multieval,%,$@))); \
-	  S="${call find-langgroup,${firstword ${subst 2, ,${patsubst tatoeba-%-multieval,%,$@}}},${PIVOT}}"; \
-	  T="${call find-langgroup,${lastword ${subst 2, ,${patsubst tatoeba-%-multieval,%,$@}}},${PIVOT}}"; \
 	  if [ -e work-tatoeba/$$s-$$t ]; then \
 	    if [ `find work-tatoeba/$$s-$$t/ -name '*.npz' | wc -l` -gt 0 ]; then \
-	      ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} tatoeba-multilingual-eval; \
+	      if [ `echo "$$S $$T" | tr ' ' "\n" | wc -l` -gt 2 ]; then \
+	        ${MAKE} LANGPAIRSTR=$$s-$$t \
+		SRCLANGS="${call find-srclanggroup,${patsubst tatoeba-%-multieval,%,$@},${PIVOT}}" \
+		TRGLANGS="${call find-trglanggroup,${patsubst tatoeba-%-multieval,%,$@},${PIVOT}}" \
+		tatoeba-multilingual-eval; \
+	      fi \
 	    fi \
 	  fi )
 
+## do all benchmark tests
+## - model specific test set
+## - other language-specific test sets
+## - individual language pairs for multilingual models
 tatoeba-%-evalall:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-evalall,%,$@))); \
-	  S="${call find-langgroup,${firstword ${subst 2, ,${patsubst tatoeba-%-evalall,%,$@}}},${PIVOT}}"; \
-	  T="${call find-langgroup,${lastword ${subst 2, ,${patsubst tatoeba-%-evalall,%,$@}}},${PIVOT}}"; \
 	  if [ -e work-tatoeba/$$s-$$t ]; then \
 	    if [ `find work-tatoeba/$$s-$$t/ -name '*.npz' | wc -l` -gt 0 ]; then \
-	      ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} eval-tatoeba; \
-	      ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} tatoeba-multilingual-eval; \
-	      ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} eval-testsets-tatoeba; \
+	      ${MAKE} LANGPAIRSTR=$$s-$$t \
+		SRCLANGS="${call find-srclanggroup,${patsubst tatoeba-%-evalall,%,$@},${PIVOT}}" \
+		TRGLANGS="${call find-trglanggroup,${patsubst tatoeba-%-evalall,%,$@},${PIVOT}}" \
+		eval-testsets-tatoeba; \
+	      ${MAKE} ${@:-evalall=-multieval}
 	    fi \
 	  fi )
+
+
+## create a release package
+## (only if BLEU is > MIN_BLEU_SCORE)
+## (suffix -release is an alias for -dist)
+
+tatoeba-%-release:
+	${MAKE} ${@:-release=-dist}
 
 tatoeba-%-dist:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))); \
-	  S="${call find-langgroup,${firstword ${subst 2, ,${patsubst tatoeba-%-dist,%,$@}}},${PIVOT}}"; \
-	  T="${call find-langgroup,${lastword ${subst 2, ,${patsubst tatoeba-%-dist,%,$@}}},${PIVOT}}"; \
 	  if [ -e work-tatoeba/$$s-$$t ]; then \
-	    ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} release; \
+	    ${MAKE} LANGPAIRSTR=$$s-$$t \
+		SRCLANGS="${call find-srclanggroup,${patsubst tatoeba-%-dist,%,$@},${PIVOT}}" \
+		TRGLANGS="${call find-trglanggroup,${patsubst tatoeba-%-dist,%,$@},${PIVOT}}" \
+		release-tatoeba; \
 	  fi )
-
-#	  ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" ${TATOEBA_PARAMS} best-dist )
 
 
 ##------------------------------------------------------------------------------------
@@ -864,10 +927,6 @@ tatoeba-trainsize-%.txt: tatoeba-%.md
 
 
 ## evaluate all individual language pairs for a multilingual model
-#
-# TODO: this line seems to create trouble
-#       (but why?)
-# 	-${MAKE} tatoeba-multilingual-testsets
 
 .PHONY: tatoeba-multilingual-eval
 tatoeba-multilingual-eval:
@@ -948,26 +1007,55 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-testsets.done:
 ## generic targets for tatoba models
 ###############################################################################
 
+.PHONY: tatoeba-langlabel-files
+tatoeba-langlabel-files: 	${TATOEBA_WORK}/${LANGPAIRSTR}/language-labels.src \
+				${TATOEBA_WORK}/${LANGPAIRSTR}/language-labels.trg \
+				${TATOEBA_WORK}/${LANGPAIRSTR}/languages.src \
+				${TATOEBA_WORK}/${LANGPAIRSTR}/languages.trg
+
+${TATOEBA_WORK}/${LANGPAIRSTR}/language-labels.src: 
+	${MAKE} ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels
+	cat ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels | \
+	sed 's/ *$$//;s/^ *//' > $@
+
+${TATOEBA_WORK}/${LANGPAIRSTR}/language-labels.trg: 
+	${MAKE} ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${TRGEXT}.labels
+	cat ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${TRGEXT}.labels | \
+	sed 's/ *$$//;s/^ *//' > $@
+
+${TATOEBA_WORK}/${LANGPAIRSTR}/languages.%: ${TATOEBA_WORK}/${LANGPAIRSTR}/language-labels.%
+	cat $< | tr ' ' "\n" | cut -f1 -d'_' | cut -f1 -d'-' | \
+	sed 's/ *$$//;s/^ *//' | tr "\n" ' '  > $@
+
+
 
 ## generic target for tatoeba challenge jobs
-%-tatoeba: ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels \
-	   ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${TRGEXT}.labels
-	if [ -s ${word 1,$^} ]; then \
-	  if [ -s ${word 2,$^} ]; then \
-	    ${MAKE} ${TATOEBA_PARAMS} \
+%-tatoeba: 	${TATOEBA_WORK}/${LANGPAIRSTR}/language-labels.src \
+		${TATOEBA_WORK}/${LANGPAIRSTR}/language-labels.trg
+	${MAKE} ${TATOEBA_PARAMS} \
 		LANGPAIRSTR=${LANGPAIRSTR} \
-		SRCLANGS="${shell cat ${word 1,$^} | sed 's/ *$$//;s/^ *//'}" \
-		TRGLANGS="${shell cat ${word 2,$^} | sed 's/ *$$//;s/^ *//'}" \
+		SRCLANGS="${shell cat ${word 1,$^}}" \
+		TRGLANGS="${shell cat ${word 2,$^}}" \
 		SRC=${SRC} TRG=${TRG} \
 		EMAIL= \
-	    ${@:-tatoeba=}; \
-	  fi \
-	fi
+	${@:-tatoeba=}
 
-%-bttatoeba: 	${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels \
-		${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${TRGEXT}.labels
-	for s in ${shell cat ${word 1,$^} | sed 's/ *$$//;s/^ *//'}; do \
-	  for t in ${shell cat ${word 2,$^} | sed 's/ *$$//;s/^ *//'}; do \
+#	if [ -s ${word 1,$^} ]; then \
+# 	  if [ -s ${word 2,$^} ]; then \
+# 	    ${MAKE} ${TATOEBA_PARAMS} \
+# 		LANGPAIRSTR=${LANGPAIRSTR} \
+# 		SRCLANGS="${shell cat ${word 1,$^}" \
+# 		TRGLANGS="${shell cat ${word 2,$^}" \
+# 		SRC=${SRC} TRG=${TRG} \
+# 		EMAIL= \
+# 	    ${@:-tatoeba=}; \
+# 	  fi \
+# 	fi
+
+%-bttatoeba: 	${TATOEBA_WORK}/${LANGPAIRSTR}/language-labels.src \
+		${TATOEBA_WORK}/${LANGPAIRSTR}/language-labels.trg
+	for s in ${shell cat ${word 1,$^}}; do \
+	  for t in ${shell cat ${word 2,$^}}; do \
 	    echo "${MAKE} -C backtranslate \
 		SRC=$$s TRG=$$t \
 		WIKI_HOME=wiki-iso639-3 \
