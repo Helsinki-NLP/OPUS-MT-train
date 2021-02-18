@@ -241,11 +241,13 @@ ifneq ("$(wildcard ${WORKDIR}/train/README.md)","")
 	@tr "\n" "~"  < ${WORKDIR}/train/README.md |\
 	tr "#" "\n" | grep '^ ${DATASET}~' | \
 	tail -1 | tr "~" "\n" | grep '^\* ' | \
+	grep -v ': *$$' | grep -v ' 0$$' | \
 	grep -v 'total size' | sed 's/^\* /   - /'        >> ${@:.zip=}-${DATE}.yml
 endif
 ifneq ("$(wildcard ${WORKDIR}/val/README.md)","")
 	@echo "validation-data:"                          >> ${@:.zip=}-${DATE}.yml
 	grep '^\* ' ${WORKDIR}/val/README.md | \
+	grep -v ' 0$$' | \
 	sed 's/^\* /   - /'                               >> ${@:.zip=}-${DATE}.yml
 endif
 ##-----------------------------
@@ -314,7 +316,7 @@ ifneq ("$(wildcard ${TEST_EVALUATION})","")
 	@paste -d' ' $@.1 $@.2 | sed 's/ /: /;s/^/   - /'           >> ${@:.zip=}-${DATE}.yml
 	@echo "chr-F-scores:"                                       >> ${@:.zip=}-${DATE}.yml
 	@paste -d' ' $@.1 $@.3 | sed 's/ /: /;s/^/   - /'           >> ${@:.zip=}-${DATE}.yml
-	@rm -f $@.1 $@.2 $@.3 $@.4 $@.5 $@.6 $@.testsize $@.testset
+	@rm -f $@.1 $@.2 $@.3 $@.4 $@.5 $@.6 $@.7 $@.testsize $@.testset
 endif
 ##-----------------------------
 ## create the package
@@ -336,7 +338,8 @@ endif
 		${notdir ${MODEL_TRGVOCAB}} \
 		${notdir ${MODEL_VALIDLOG}} \
 		${notdir ${MODEL_TRAINLOG}} \
-		source.* target.* decoder.yml preprocess.sh postprocess.sh
+		source.* target.* decoder.yml \
+		preprocess.sh postprocess.sh
 ifneq ("$(wildcard ${WORKDIR}/config.mk)","")
 	@cd ${WORKDIR} && zip -u ${notdir $@} config.mk
 endif

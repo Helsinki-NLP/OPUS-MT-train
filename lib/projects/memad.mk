@@ -7,35 +7,43 @@ MEMAD_LANGS3 = deu eng fin fra nld swe
 # models for the MeMAD project
 #-------------------------------------------------------------------
 
-tatoeba-memad:
+tatoeba-memad: tatoeba-memad-multi tatoeba-memad-bilingual
+
+tatoeba-memad-multi: tatoeba-memad-m2m tatoeba-memad-m2e tatoeba-memad-e2m
+
+tatoeba-memad-e2m:
+	${MAKE} TRGLANGS="${MEMAD_LANGS3}" SRCLANGS="eng" \
+		HPC_DISK=500 MODELTYPE=transformer-align tatoeba-job-1m
+
+tatoeba-memad-m2e:
+	${MAKE} SRCLANGS="${MEMAD_LANGS3}" TRGLANGS="eng" \
+		HPC_DISK=500 MODELTYPE=transformer-align tatoeba-job-1m
+
+tatoeba-memad-m2m:
+	${MAKE} SRCLANGS="${MEMAD_LANGS3}" TRGLANGS="${MEMAD_LANGS3}" \
+		SKIP_LANGPAIRS="deu-deu|eng-eng|fin-fin|fra-fra|nld-nld|swe-swe" \
+		HPC_DISK=500 MODELTYPE=transformer-align tatoeba-job-1m
+
+tatoeba-memad-bilingual:
 	@for s in ${MEMAD_LANGS3}; do \
 	  for t in ${MEMAD_LANGS3}; do \
 	    if [ "$$s" != "$$t" ]; then \
 	      ${MAKE} HPC_DISK=500 SRCLANGS=$$s TRGLANGS=$$t \
-			MODELTYPE=transformer-align tatoeba-job-1m; \
+			MODELTYPE=transformer-align tatoeba-job; \
 	    fi \
 	  done \
 	done
-	@${MAKE} SRCLANGS="${MEMAD_LANGS3}" TRGLANGS="${MEMAD_LANGS3}" \
-		SKIP_LANGPAIRS="deu-deu|eng-eng|fin-fin|fra-fra|nld-nld|swe-swe" \
-		HPC_DISK=500 MODELTYPE=transformer-align tatoeba-job-1m
-	@${MAKE} SRCLANGS="${MEMAD_LANGS3}" TRGLANGS="eng" \
-		HPC_DISK=500 MODELTYPE=transformer-align tatoeba-job-1m
-	@${MAKE} TRGLANGS="${MEMAD_LANGS3}" SRCLANGS="eng" \
-		HPC_DISK=500 MODELTYPE=transformer-align tatoeba-job-1m
 
 
-tatoeba-memad-multi:
-	${MAKE} SRCLANGS="${MEMAD_LANGS3}" TRGLANGS="${MEMAD_LANGS3}" \
-		SKIP_LANGPAIRS="deu-deu|eng-eng|fin-fin|fra-fra|nld-nld|swe-swe" \
-		HPC_DISK=500 MODELTYPE=transformer-align tatoeba-job-1m
-	${MAKE} TRGLANGS="${MEMAD_LANGS3}" SRCLANGS="eng" \
-		HPC_DISK=500 MODELTYPE=transformer-align tatoeba-job-1m
-	${MAKE} SRCLANGS="${MEMAD_LANGS3}" TRGLANGS="eng" \
-		HPC_DISK=500 MODELTYPE=transformer-align tatoeba-job-1m
+tatoeba-test-fisv:
+	${MAKE} TESTSET_HOME=${PWD}/memad-testsets \
+		MODELTYPE=transformer-align \
+	tatoeba-fin2swe-testsets
 
-
-
+tatoeba-testtuned-fisv:
+	${MAKE} TESTSET_HOME=${PWD}/memad-testsets \
+		MODELTYPE=transformer \
+	tatoeba-fin2swe-tuneeval
 
 
 

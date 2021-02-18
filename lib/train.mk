@@ -1,21 +1,6 @@
 # -*-makefile-*-
 
 
-## resume training on an existing model
-resume:
-	if [ -e ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.npz.best-perplexity.npz ]; then \
-	  cp ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.npz.best-perplexity.npz \
-	     ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.npz; \
-	fi
-	sleep 1
-	rm -f ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
-	${MAKE} train
-
-is-done:
-	@if [ -e ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done ]; then \
-	  echo "............. ${LANGPAIRSTR}/${MODEL}.${MODELTYPE}.model${NR}.done"; \
-	fi
-
 #------------------------------------------------------------------------
 # vocabulary
 #------------------------------------------------------------------------
@@ -73,8 +58,25 @@ MARIAN_MODELS_DONE = 	${WORKDIR}/${MODEL}.transformer.model${NR}.done \
 			${WORKDIR}/${MODEL}.transformer-align.model${NR}.done
 
 MARIAN_TRAIN_PREREQS = 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
-			${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz \
-			${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG}
+			${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz
+
+
+## define validation and early-stopping parameters
+ifndef SKIP_VALIDATION
+  MARIAN_TRAIN_PREREQS += ${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG}
+  MARIAN_STOP_CRITERIA = --early-stopping ${MARIAN_EARLY_STOPPING} \
+        --valid-freq ${MARIAN_VALID_FREQ} \
+        --valid-sets ${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG} \
+        --valid-metrics perplexity \
+        --valid-mini-batch ${MARIAN_VALID_MINI_BATCH} \
+	--valid-log ${WORKDIR}/${MODEL}.${MODELTYPE}.valid${NR}.log \
+        --beam-size 12 --normalize 1 --allow-unk \
+	--overwrite --keep-best
+  MODEL_FINAL = ${WORKDIR}/${MODEL_BASENAME}.npz.best-perplexity.npz
+else
+  MODEL_FINAL = ${WORKDIR}/${MODEL_BASENAME}.npz
+endif
+
 
 ## dependencies and extra parameters
 ifeq (${MODELTYPE},transformer-align)
@@ -101,6 +103,7 @@ endif
 ##--------------------------------------------------------------------
 	${MAKE} ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB}
 	${LOADMODS} && ${MARIAN_TRAIN} ${MARIAN_EXTRA} \
+	${MARIAN_STOP_CRITERIA} \
         --model $(@:.done=.npz) \
 	--type transformer \
         --train-sets ${word 1,$^} ${word 2,$^} ${MARIAN_TRAIN_WEIGHTS} \
@@ -109,16 +112,9 @@ endif
         --mini-batch-fit \
 	-w ${MARIAN_WORKSPACE} \
 	--maxi-batch ${MARIAN_MAXI_BATCH} \
-        --early-stopping ${MARIAN_EARLY_STOPPING} \
-        --valid-freq ${MARIAN_VALID_FREQ} \
 	--save-freq ${MARIAN_SAVE_FREQ} \
 	--disp-freq ${MARIAN_DISP_FREQ} \
-        --valid-sets ${word 3,$^} ${word 4,$^} \
-        --valid-metrics perplexity \
-        --valid-mini-batch ${MARIAN_VALID_MINI_BATCH} \
-        --beam-size 12 --normalize 1 --allow-unk \
         --log $(@:.model${NR}.done=.train${NR}.log) \
-	--valid-log $(@:.model${NR}.done=.valid${NR}.log) \
         --enc-depth 6 --dec-depth 6 \
         --transformer-heads 8 \
         --transformer-postprocess-emb d \
@@ -128,10 +124,44 @@ endif
         --learn-rate 0.0003 --lr-warmup 16000 --lr-decay-inv-sqrt 16000 --lr-report \
         --optimizer-params 0.9 0.98 1e-09 --clip-norm 5 \
         --tied-embeddings-all \
-	--overwrite --keep-best \
 	--devices ${MARIAN_GPUS} \
         --sync-sgd --seed ${SEED} \
 	--sqlite \
 	--tempdir ${TMPDIR} \
         --exponential-smoothing
 	touch $@
+
+
+
+
+
+#        --early-stopping ${MARIAN_EARLY_STOPPING} \
+#         --valid-freq ${MARIAN_VALID_FREQ} \
+# 	--save-freq ${MARIAN_SAVE_FREQ} \
+# 	--disp-freq ${MARIAN_DISP_FREQ} \
+#         --valid-sets ${word 3,$^} ${word 4,$^} \
+#         --valid-metrics perplexity \
+#         --valid-mini-batch ${MARIAN_VALID_MINI_BATCH} \
+#         --beam-size 12 --normalize 1 --allow-unk \
+# 	--valid-log $(@:.model${NR}.done=.valid${NR}.log) \
+# 	--overwrite --keep-best \
+
+
+
+
+## TODO: do we need the following recipes?
+
+## resume training on an existing model
+resume:
+	if [ -e ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.npz.best-perplexity.npz ]; then \
+	  cp ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.npz.best-perplexity.npz \
+	     ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.npz; \
+	fi
+	sleep 1
+	rm -f ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
+	${MAKE} train
+
+is-done:
+	@if [ -e ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done ]; then \
+	  echo "............. ${LANGPAIRSTR}/${MODEL}.${MODELTYPE}.model${NR}.done"; \
+	fi
