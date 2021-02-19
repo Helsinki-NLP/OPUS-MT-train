@@ -1174,49 +1174,66 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-languages.%: ${TATOEBA_WORK}/${LANGPAI
 
 
 
+## fetch data for all language combinations
+## TODO: should we check whether we are supposed to skip some language pairs?
+
+.PHONY: fetch-tatoeba-datasets
+fetch-tatoeba-datasets:
+	-for s in ${SRCLANGS}; do \
+	  for t in ${TRGLANGS}; do \
+	    if [ "$$s" \< "$$t" ]; then \
+	      ${MAKE} SRCLANGS=$$s TRGLANGS=$$t \
+		${TATOEBA_DATA}/Tatoeba-train.$$s-$$t.clean.$$s.gz; \
+	    else \
+	      ${MAKE} SRCLANGS=$$t TRGLANGS=$$s \
+		${TATOEBA_DATA}/Tatoeba-train.$$t-$$s.clean.$$t.gz; \
+	    fi \
+	  done \
+	done
 
 
+## collect all language labels in all language pairs
+## (each language pair may include several language variants)
+## --> this is necessary to set the languages that are present in a model
 
 ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.src:
+	${MAKE} fetch-tatoeba-datasets
 	mkdir -p ${dir $@}
 	for s in ${SRCLANGS}; do \
 	    for t in ${TRGLANGS}; do \
 	      if [ -e ${TATOEBA_DATA}/Tatoeba-train.$$s-$$t.clean.$$s.labels ]; then \
-		cat ${TATOEBA_DATA}/Tatoeba-train.$$s-$$t.clean.$$s.labels >> $@.tmp; \
-		echo -n ' ' >> $@.tmp; \
+		cat ${TATOEBA_DATA}/Tatoeba-train.$$s-$$t.clean.$$s.labels >> $@.src; \
+		echo -n ' ' >> $@.src; \
 	      elif [ -e ${TATOEBA_DATA}/Tatoeba-train.$$t-$$s.clean.$$s.labels ]; then \
-		cat ${TATOEBA_DATA}/Tatoeba-train.$$t-$$s.clean.$$s.labels >> $@.tmp; \
-		echo -n ' ' >> $@.tmp; \
-	      fi \
-	    done \
-	done
-	if [ -e $@.tmp ]; then \
-	  cat $@.tmp | tr ' ' "\n" | sort -u | tr "\n" ' ' | sed 's/ *$$//' > $@; \
-	  rm $@.tmp; \
-	else \
-	  echo "${SRCLANGS}" > $@; \
-	fi
-
-
-${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.trg:
-	mkdir -p ${dir $@}
-	for s in ${SRCLANGS}; do \
-	    for t in ${TRGLANGS}; do \
+		cat ${TATOEBA_DATA}/Tatoeba-train.$$t-$$s.clean.$$s.labels >> $@.src; \
+		echo -n ' ' >> $@.src; \
+	      fi; \
 	      if [ -e ${TATOEBA_DATA}/Tatoeba-train.$$s-$$t.clean.$$t.labels ]; then \
-		cat ${TATOEBA_DATA}/Tatoeba-train.$$s-$$t.clean.$$t.labels >> $@.tmp; \
-		echo -n ' ' >> $@.tmp; \
+		cat ${TATOEBA_DATA}/Tatoeba-train.$$s-$$t.clean.$$t.labels >> $@.trg; \
+		echo -n ' ' >> $@.trg; \
 	      elif [ -e ${TATOEBA_DATA}/Tatoeba-train.$$t-$$s.clean.$$t.labels ]; then \
-		cat ${TATOEBA_DATA}/Tatoeba-train.$$t-$$s.clean.$$t.labels >> $@.tmp; \
-		echo -n ' ' >> $@.tmp; \
-	      fi \
+		cat ${TATOEBA_DATA}/Tatoeba-train.$$t-$$s.clean.$$t.labels >> $@.trg; \
+		echo -n ' ' >> $@.trg; \
+	      fi; \
 	    done \
 	done
-	if [ -e $@.tmp ]; then \
-	  cat $@.tmp | tr ' ' "\n" | sort -u | tr "\n" ' ' | sed 's/ *$$//' > $@; \
-	  rm $@.tmp; \
+	if [ -e $@.src ]; then \
+	  cat $@.src | tr ' ' "\n" | sort -u | tr "\n" ' ' | sed 's/ *$$//' > $@; \
+	  rm $@.src; \
 	else \
 	  echo "${SRCLANGS}" > $@; \
 	fi
+	if [ -e $@.trg ]; then \
+	  cat $@.trg | tr ' ' "\n" | sort -u | tr "\n" ' ' | sed 's/ *$$//' > $(@:.src=.trg); \
+	  rm $@.trg; \
+	else \
+	  echo "${TRGLANGS}" > $(@:.src=.trg); \
+	fi
+
+
+${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.trg: ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.src
+	if [ ! -e $@ ]; then rm $<; ${MAKE} $<; fi
+	echo "done"
 
 
 ###############################################################################
