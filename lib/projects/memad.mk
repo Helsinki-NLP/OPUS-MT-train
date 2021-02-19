@@ -4,7 +4,7 @@ MEMAD_LANGS = de en fi fr nl sv
 MEMAD_LANGS3 = deu eng fin fra nld swe
 
 #-------------------------------------------------------------------
-# models for the MeMAD project
+# models for the MeMAD project based on Tatoeba MT challenge data
 #-------------------------------------------------------------------
 
 tatoeba-memad: tatoeba-memad-multi tatoeba-memad-bilingual
@@ -35,17 +35,122 @@ tatoeba-memad-bilingual:
 	done
 
 
-tatoeba-test-fisv:
+
+#----------------------------------------------------------------
+# fine-tuning on YLE subtitle data
+#----------------------------------------------------------------
+
+tatoeba-yletest-fisv:
 	${MAKE} TESTSET_HOME=${PWD}/memad-testsets \
 		MODELTYPE=transformer-align \
 	tatoeba-fin2swe-testsets
 
+
+MEMAD_SUBTYPE  = FIN-SWE
+MEMAD_LANGPAIR = fin2swe
+MEMAD_TUNETASK = tune
+
+tatoeba-yletune-all: tatoeba-yletune-finswe-all tatoeba-yletune-swefin-all
+tatoeba-yletune-finswe-all: tatoeba-yletune-finswe tatoeba-yletune-fihswe \
+			tatoeba-yletune-finswh tatoeba-yletune-fihswh tatoeba-yletune-fisw
+tatoeba-yletune-swefin-all: tatoeba-yletune-swefin tatoeba-yletune-swefih \
+			tatoeba-yletune-swhfin tatoeba-yletune-swhfih tatoeba-yletune-swfi
+
+
+tatoeba-yletune-finswe:
+	${MAKE} MEMAD_SUBTYPE=FIN-SWE MEMAD_LANGPAIR=fin2swe tatoeba-yletune
+
+tatoeba-yletune-fihswe:
+	${MAKE} MEMAD_SUBTYPE=FIH-SWE MEMAD_LANGPAIR=fin2swe tatoeba-yletune
+
+tatoeba-yletune-finswh:
+	${MAKE} MEMAD_SUBTYPE=FIN-SWH MEMAD_LANGPAIR=fin2swe tatoeba-yletune
+
+tatoeba-yletune-fihswh:
+	${MAKE} MEMAD_SUBTYPE=FIH-SWH MEMAD_LANGPAIR=fin2swe tatoeba-yletune
+
+tatoeba-yletune-fisw:
+	${MAKE} MEMAD_SUBTYPE=FI-SW MEMAD_LANGPAIR=fin2swe tatoeba-yletune
+
+
+
+tatoeba-yletune-swefin:
+	${MAKE} MEMAD_SUBTYPE=FIN-SWE MEMAD_LANGPAIR=swe2fin tatoeba-yletune
+
+tatoeba-yletune-swefih:
+	${MAKE} MEMAD_SUBTYPE=FIH-SWE MEMAD_LANGPAIR=swe2fin tatoeba-yletune
+
+tatoeba-yletune-swhfin:
+	${MAKE} MEMAD_SUBTYPE=FIN-SWH MEMAD_LANGPAIR=swe2fin tatoeba-yletune
+
+tatoeba-yletune-swhfih:
+	${MAKE} MEMAD_SUBTYPE=FIH-SWH MEMAD_LANGPAIR=swe2fin tatoeba-yletune
+
+tatoeba-yletune-swfi:
+	${MAKE} MEMAD_SUBTYPE=FI-SW MEMAD_LANGPAIR=swe2fin tatoeba-yletune
+
+
+tatoeba-yletune:
+	${MAKE} TESTSET_HOME=${PWD}/memad-testsets \
+		MODELTYPE=transformer-align \
+		TUNE_TRAINSET=YLE-train.${MEMAD_SUBTYPE} \
+		TUNE_DEVSET=YLE-dev.${MEMAD_SUBTYPE} \
+		TUNE_TESTSET=YLE-test.${MEMAD_SUBTYPE} \
+	tatoeba-${MEMAD_LANGPAIR}-${MEMAD_TUNETASK}
+
+
+## tuning with OpenSubtitles
+## (does not seem to work well ...)
+
+tatoeba-tune-fisv:
+	${MAKE} TESTSET_HOME=${PWD}/memad-testsets \
+		MODELTYPE=transformer-align \
+	tatoeba-fin2swe-domaintune
+
 tatoeba-testtuned-fisv:
 	${MAKE} TESTSET_HOME=${PWD}/memad-testsets \
-		MODELTYPE=transformer \
-	tatoeba-fin2swe-tuneeval
+		MODELTYPE=transformer-align \
+	tatoeba-fin2swe-evalall tatoeba-swe2fin-domaintuneeval
+
+tatoeba-tune-svfi:
+	${MAKE} TESTSET_HOME=${PWD}/memad-testsets \
+		MODELTYPE=transformer-align \
+	tatoeba-swe2fin-domaintune
+
+tatoeba-testtuned-svfi:
+	${MAKE} TESTSET_HOME=${PWD}/memad-testsets \
+		MODELTYPE=transformer-align \
+	tatoeba-swe2fin-evalall tatoeba-swe2fin-domaintuneeval
 
 
+MEMAD_DATATYPE = train
+MEMAD_LANGPAIR = fin-swe
+MEMAD_LANG3 = FIN
+MEMAD_LANG2 = fi
+
+memad-yle-data:
+	for s in FIN-SWE FIN-SWH FIH-SWE FIH-SWH FI-SW; do \
+	  for d in train dev test; do \
+	    ${MAKE} MEMAD_DATATYPE=$$d MEMAD_LANG3=fin MEMAD_LANGPAIR=fin-swe MEMAD_LANG2=fi \
+		work-tatoeba/data/simple/YLE-$$d.$$s.fin-swe.clean.fin.gz \
+		work-tatoeba/data/simple/YLE-$$d.$$s.fin-swe.clean.fin.labels; \
+	    ${MAKE} MEMAD_DATATYPE=$$d MEMAD_LANG3=swe MEMAD_LANGPAIR=fin-swe MEMAD_LANG2=sv \
+		work-tatoeba/data/simple/YLE-$$d.$$s.fin-swe.clean.swe.gz \
+		work-tatoeba/data/simple/YLE-$$d.$$s.fin-swe.clean.swe.labels; \
+	  done \
+	done
+
+work-tatoeba/data/simple/YLE-${MEMAD_DATATYPE}.%.${MEMAD_LANGPAIR}.clean.${MEMAD_LANG3}.gz: YLE/%.${MEMAD_DATATYPE}.${MEMAD_LANG2}
+	gzip -c < $< > $@
+
+work-tatoeba/data/simple/YLE-${MEMAD_DATATYPE}.%.${MEMAD_LANGPAIR}.clean.${MEMAD_LANG3}.labels:
+	echo -n ${MEMAD_LANG3} > $@
+
+
+
+#----------------------------------------------------------------
+# other OPUS models
+#----------------------------------------------------------------
 
 # FIT_DATA_SIZE=2000000 
 

@@ -754,7 +754,7 @@ TATOEBA_LANGTUNE_PARAMS = CONTINUE_EXISTING=1 \
 			SRCLANGS="${TUNE_SRC}" \
 			TRGLANGS="${TUNE_TRG}"
 
-TATOEBA_TUNE_PARAMS = 	CONTINUE_EXISTING=1 \
+TATOEBA_DOMAINTUNE_PARAMS = 	CONTINUE_EXISTING=1 \
 			SKIP_VALIDATION=1 \
 			MARIAN_DISP_FREQ=${TUNE_DISP_FREQ} \
 			MARIAN_SAVE_FREQ=${TUNE_SAVE_FREQ} \
@@ -764,6 +764,19 @@ TATOEBA_TUNE_PARAMS = 	CONTINUE_EXISTING=1 \
 			TATOEBA_TRAINSET=Tatoeba-${TUNE_DOMAIN}-train \
 			DATASET=${DATASET}-tuned4${TUNE_DOMAIN}
 
+TATOEBA_TUNE_PARAMS = CONTINUE_EXISTING=1 \
+			MARIAN_VALID_FREQ=${TUNE_VALID_FREQ} \
+			MARIAN_DISP_FREQ=${TUNE_DISP_FREQ} \
+			MARIAN_SAVE_FREQ=${TUNE_SAVE_FREQ} \
+			MARIAN_EARLY_STOPPING=${TUNE_EARLY_STOPPING} \
+			MARIAN_EXTRA='-e 5 --no-restore-corpus' \
+			GPUJOB_SUBMIT=${TUNE_GPUJOB_SUBMIT} \
+			DATASET=${DATASET}-tuned4${TUNE_TRAINSET} \
+			TATOEBA_TRAINSET=${TUNE_TRAINSET} \
+			TATOEBA_DEVSET_NAME=${TUNE_DEVSET} \
+			TATOEBA_TESTSET_NAME=${TUNE_TESTSET}
+
+
 tatoeba-%-tune: tatoeba-%-data
 	${MAKE} ${TATOEBA_TUNE_PARAMS} ${patsubst tatoeba-%-tune,tatoeba-%-train,$@}
 
@@ -772,6 +785,17 @@ tatoeba-%-tuneeval:
 
 tatoeba-%-tunedist:
 	${MAKE} ${TATOEBA_TUNE_PARAMS} ${patsubst tatoeba-%-tunedist,tatoeba-%-dist,$@}
+
+
+
+tatoeba-%-domaintune: tatoeba-%-data
+	${MAKE} ${TATOEBA_DOMAINTUNE_PARAMS} ${patsubst tatoeba-%-domaintune,tatoeba-%-train,$@}
+
+tatoeba-%-domaintuneeval:
+	${MAKE} ${TATOEBA_DOMAINTUNE_PARAMS} ${patsubst tatoeba-%-domaintuneeval,tatoeba-%-evalall,$@}
+
+tatoeba-%-domaintunedist:
+	${MAKE} ${TATOEBA_DOMAINTUNE_PARAMS} ${patsubst tatoeba-%-domaintunedist,tatoeba-%-dist,$@}
 
 
 tatoeba-%-langtune:
