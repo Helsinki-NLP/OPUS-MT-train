@@ -348,6 +348,7 @@ endif
 ##-----------------------------
 	@mkdir -p ${dir $@}
 	@mv -f ${WORKDIR}/${notdir $@} ${@:.zip=}-${DATE}.zip
+	@cd ${dir $@} && zip -u ${notdir ${@:.zip=}-${DATE}.zip} ${notdir ${@:.zip=}-${DATE}.yml}
 ifneq ("$(wildcard ${TEST_EVALUATION})","")
 	@cp $(TEST_EVALUATION) ${@:.zip=}-${DATE}.eval.txt
 	@cp $(TEST_COMPARISON) ${@:.zip=}-${DATE}.test.txt

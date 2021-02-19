@@ -204,8 +204,11 @@ tatoeba-eval:
 .PHONY: tatoeba-data tatoeba-labels
 # tatoeba-data: ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.gz
 tatoeba-data: data-tatoeba
-tatoeba-labels: ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels \
-		${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${TRGEXT}.labels
+tatoeba-labels: ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.src \
+		${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.trg
+
+#		${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels \
+#		${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${TRGEXT}.labels
 
 
 # .PHONY: tatoeba-results
@@ -801,12 +804,16 @@ tatoeba-%-domaintunedist:
 tatoeba-%-langtune:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-langtune,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-langtune,%,$@))); \
-	  ${MAKE} LANGPAIRSTR=$$s-$$t ${TATOEBA_LANGTUNE_PARAMS}  tatoeba )
+	  if [ -d ${TATOEBA_WORK}/$$s-$$t ]; then \
+	    ${MAKE} LANGPAIRSTR=$$s-$$t ${TATOEBA_LANGTUNE_PARAMS}  tatoeba; \
+	  fi )
 
 tatoeba-%-langtunejob:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-langtunejob,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-langtunejob,%,$@))); \
-	  ${MAKE} LANGPAIRSTR=$$s-$$t ${TATOEBA_LANGTUNE_PARAMS}  tatoeba-job )
+	  if [ -d ${TATOEBA_WORK}/$$s-$$t ]; then \
+	    ${MAKE} LANGPAIRSTR=$$s-$$t ${TATOEBA_LANGTUNE_PARAMS}  tatoeba-job; \
+	  fi )
 
 tatoeba-%-langtunedist:
 	${MAKE} DATASET=${DATASET}-tuned4${TUNE_SRC}2${TUNE_TRG} ${@:-langtunedist=-dist}
@@ -814,8 +821,8 @@ tatoeba-%-langtunedist:
 tatoeba-%-langtuneall:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-langtuneall,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-langtuneall,%,$@))); \
-	  S="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-langtuneall,%,$@))) | xargs iso639 -m -n}))"; \
-	  T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-langtuneall,%,$@))) | xargs iso639 -m -n}))"; \
+	  S="${call find-srclanggroup,${patsubst tatoeba-%-langtuneall,%,$@},''}"; \
+	  T="${call find-trglanggroup,${patsubst tatoeba-%-langtuneall,%,$@},''}"; \
 	  for a in $$S; do \
 	    for b in $$T; do \
 	      if [ "$$a" != "$$b" ]; then \
@@ -827,8 +834,8 @@ tatoeba-%-langtuneall:
 tatoeba-%-langtunealldist:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-langtunealldist,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-langtunealldist,%,$@))); \
-	  S="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-langtunealldist,%,$@))) | xargs iso639 -m -n}))"; \
-	  T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-langtunealldist,%,$@))) | xargs iso639 -m -n}))"; \
+	  S="${call find-srclanggroup,${patsubst tatoeba-%-langtunealldist,%,$@},''}"; \
+	  T="${call find-trglanggroup,${patsubst tatoeba-%-langtunealldist,%,$@},''}"; \
 	  for a in $$S; do \
 	    for b in $$T; do \
 	      if [ "$$a" != "$$b" ]; then \
@@ -840,8 +847,8 @@ tatoeba-%-langtunealldist:
 tatoeba-%-langtunealljobs:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-langtunealljobs,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-langtunealljobs,%,$@))); \
-	  S="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(firstword $(subst 2, ,$(patsubst tatoeba-%-langtunealljobs,%,$@))) | xargs iso639 -m -n}))"; \
-	  T="$(filter ${OPUS_LANGS3},$(sort ${PIVOT} ${shell langgroup $(lastword  $(subst 2, ,$(patsubst tatoeba-%-langtunealljobs,%,$@))) | xargs iso639 -m -n}))"; \
+	  S="${call find-srclanggroup,${patsubst tatoeba-%-langtunealljobs,%,$@},''}"; \
+	  T="${call find-trglanggroup,${patsubst tatoeba-%-langtunealljobs,%,$@},''}"; \
 	  for a in $$S; do \
 	    for b in $$T; do \
 	      if [ "$$a" != "$$b" ]; then \
@@ -1063,24 +1070,24 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-testsets.done:
 ###############################################################################
 
 .PHONY: tatoeba-langlabel-files
-tatoeba-langlabel-files: 	${TATOEBA_WORK}/${LANGPAIRSTR}/language-labels.src \
-				${TATOEBA_WORK}/${LANGPAIRSTR}/language-labels.trg \
-				${TATOEBA_WORK}/${LANGPAIRSTR}/languages.src \
-				${TATOEBA_WORK}/${LANGPAIRSTR}/languages.trg
+tatoeba-langlabel-files: 	${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.src \
+				${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.trg \
+				${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-languages.src \
+				${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-languages.trg
 
-${TATOEBA_WORK}/${LANGPAIRSTR}/language-labels.src: 
-	mkdir -p ${dir $@}
-	${MAKE} ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels
-	cat ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels | \
-	sed 's/ *$$//;s/^ *//' > $@
+# ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.src: 
+# 	mkdir -p ${dir $@}
+# 	${MAKE} ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels
+# 	cat ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels | \
+# 	sed 's/ *$$//;s/^ *//' > $@
 
-${TATOEBA_WORK}/${LANGPAIRSTR}/language-labels.trg: 
-	mkdir -p ${dir $@}
-	${MAKE} ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${TRGEXT}.labels
-	cat ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${TRGEXT}.labels | \
-	sed 's/ *$$//;s/^ *//' > $@
+# ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.trg: 
+# 	mkdir -p ${dir $@}
+# 	${MAKE} ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${TRGEXT}.labels
+# 	cat ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${TRGEXT}.labels | \
+# 	sed 's/ *$$//;s/^ *//' > $@
 
-${TATOEBA_WORK}/${LANGPAIRSTR}/languages.%: ${TATOEBA_WORK}/${LANGPAIRSTR}/language-labels.%
+${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-languages.%: ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.%
 	mkdir -p ${dir $@}
 	cat $< | tr ' ' "\n" | cut -f1 -d'_' | cut -f1 -d'-' | \
 	sed 's/ *$$//;s/^ *//' | tr "\n" ' '  > $@
@@ -1088,8 +1095,8 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/languages.%: ${TATOEBA_WORK}/${LANGPAIRSTR}/langu
 
 
 ## generic target for tatoeba challenge jobs
-%-tatoeba: 	${TATOEBA_WORK}/${LANGPAIRSTR}/language-labels.src \
-		${TATOEBA_WORK}/${LANGPAIRSTR}/language-labels.trg
+%-tatoeba: 	${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.src \
+		${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.trg
 	${MAKE} ${TATOEBA_PARAMS} \
 		LANGPAIRSTR=${LANGPAIRSTR} \
 		SRCLANGS="${shell cat ${word 1,$^}}" \
@@ -1098,20 +1105,9 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/languages.%: ${TATOEBA_WORK}/${LANGPAIRSTR}/langu
 		EMAIL= \
 	${@:-tatoeba=}
 
-#	if [ -s ${word 1,$^} ]; then \
-# 	  if [ -s ${word 2,$^} ]; then \
-# 	    ${MAKE} ${TATOEBA_PARAMS} \
-# 		LANGPAIRSTR=${LANGPAIRSTR} \
-# 		SRCLANGS="${shell cat ${word 1,$^}" \
-# 		TRGLANGS="${shell cat ${word 2,$^}" \
-# 		SRC=${SRC} TRG=${TRG} \
-# 		EMAIL= \
-# 	    ${@:-tatoeba=}; \
-# 	  fi \
-# 	fi
 
-%-bttatoeba: 	${TATOEBA_WORK}/${LANGPAIRSTR}/language-labels.src \
-		${TATOEBA_WORK}/${LANGPAIRSTR}/language-labels.trg
+%-bttatoeba: 	${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.src \
+		${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.trg
 	for s in ${shell cat ${word 1,$^}}; do \
 	  for t in ${shell cat ${word 2,$^}}; do \
 	    echo "${MAKE} -C backtranslate \
@@ -1129,53 +1125,98 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/languages.%: ${TATOEBA_WORK}/${LANGPAIRSTR}/langu
 .PRECIOUS: 	${TATOEBA_DATA}/Tatoeba-train.${LANGPAIR}.clean.${SRCEXT}.gz \
 		${TATOEBA_DATA}/Tatoeba-train.${LANGPAIR}.clean.${TRGEXT}.gz
 
-## all language labels in all language pairs
-## (each language pair may include several language variants)
-## --> this is necessary to set the languages that are present in a model
+# ## all language labels in all language pairs
+# ## (each language pair may include several language variants)
+# ## --> this is necessary to set the languages that are present in a model
 
-${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels:
-	-for s in ${SRCLANGS}; do \
-	  for t in ${TRGLANGS}; do \
-	    if [ "$$s" \< "$$t" ]; then \
-	      ${MAKE} SRCLANGS=$$s TRGLANGS=$$t \
-		${TATOEBA_DATA}/Tatoeba-train.$$s-$$t.clean.$$s.gz; \
-	    else \
-	      ${MAKE} SRCLANGS=$$t TRGLANGS=$$s \
-		${TATOEBA_DATA}/Tatoeba-train.$$t-$$s.clean.$$t.gz; \
-	    fi \
-	  done \
-	done
+# ${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${SRCEXT}.labels:
+# 	-for s in ${SRCLANGS}; do \
+# 	  for t in ${TRGLANGS}; do \
+# 	    if [ "$$s" \< "$$t" ]; then \
+# 	      ${MAKE} SRCLANGS=$$s TRGLANGS=$$t \
+# 		${TATOEBA_DATA}/Tatoeba-train.$$s-$$t.clean.$$s.gz; \
+# 	    else \
+# 	      ${MAKE} SRCLANGS=$$t TRGLANGS=$$s \
+# 		${TATOEBA_DATA}/Tatoeba-train.$$t-$$s.clean.$$t.gz; \
+# 	    fi \
+# 	  done \
+# 	done
+# 	for s in ${SRCLANGS}; do \
+# 	    for t in ${TRGLANGS}; do \
+# 	      if [ -e ${TATOEBA_DATA}/Tatoeba-train.$$s-$$t.clean.$$s.labels ]; then \
+# 		cat ${TATOEBA_DATA}/Tatoeba-train.$$s-$$t.clean.$$s.labels >> $@.src; \
+# 		echo -n ' ' >> $@.src; \
+# 	      elif [ -e ${TATOEBA_DATA}/Tatoeba-train.$$t-$$s.clean.$$s.labels ]; then \
+# 		cat ${TATOEBA_DATA}/Tatoeba-train.$$t-$$s.clean.$$s.labels >> $@.src; \
+# 		echo -n ' ' >> $@.src; \
+# 	      fi \
+# 	    done \
+# 	done
+# 	for s in ${SRCLANGS}; do \
+# 	    for t in ${TRGLANGS}; do \
+# 	      if [ -e ${TATOEBA_DATA}/Tatoeba-train.$$s-$$t.clean.$$t.labels ]; then \
+# 		cat ${TATOEBA_DATA}/Tatoeba-train.$$s-$$t.clean.$$t.labels >> $@.trg; \
+# 		echo -n ' ' >> $@.trg; \
+# 	      elif [ -e ${TATOEBA_DATA}/Tatoeba-train.$$t-$$s.clean.$$t.labels ]; then \
+# 		cat ${TATOEBA_DATA}/Tatoeba-train.$$t-$$s.clean.$$t.labels >> $@.trg; \
+# 		echo -n ' ' >> $@.trg; \
+# 	      fi \
+# 	    done \
+# 	done
+# 	cat $@.src | tr ' ' "\n" | sort -u | tr "\n" ' ' | sed 's/ *$$//' > $@
+# 	cat $@.trg | tr ' ' "\n" | sort -u | tr "\n" ' ' | sed 's/ *$$//' > $(@:.${SRCEXT}.labels=.${TRGEXT}.labels)
+# 	rm -f $@.src $@.trg
+
+
+# %.${LANGPAIRSTR}.clean.${TRGEXT}.labels: %.${LANGPAIRSTR}.clean.${SRCEXT}.labels
+# 	if [ ! -e $@ ]; then rm $<; ${MAKE} $<; fi
+# 	echo "done"
+
+
+
+
+
+
+${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.src:
+	mkdir -p ${dir $@}
 	for s in ${SRCLANGS}; do \
 	    for t in ${TRGLANGS}; do \
 	      if [ -e ${TATOEBA_DATA}/Tatoeba-train.$$s-$$t.clean.$$s.labels ]; then \
-		cat ${TATOEBA_DATA}/Tatoeba-train.$$s-$$t.clean.$$s.labels >> $@.src; \
-		echo -n ' ' >> $@.src; \
+		cat ${TATOEBA_DATA}/Tatoeba-train.$$s-$$t.clean.$$s.labels >> $@.tmp; \
+		echo -n ' ' >> $@.tmp; \
 	      elif [ -e ${TATOEBA_DATA}/Tatoeba-train.$$t-$$s.clean.$$s.labels ]; then \
-		cat ${TATOEBA_DATA}/Tatoeba-train.$$t-$$s.clean.$$s.labels >> $@.src; \
-		echo -n ' ' >> $@.src; \
+		cat ${TATOEBA_DATA}/Tatoeba-train.$$t-$$s.clean.$$s.labels >> $@.tmp; \
+		echo -n ' ' >> $@.tmp; \
 	      fi \
 	    done \
 	done
+	if [ -e $@.tmp ]; then \
+	  cat $@.tmp | tr ' ' "\n" | sort -u | tr "\n" ' ' | sed 's/ *$$//' > $@; \
+	  rm $@.tmp; \
+	else \
+	  echo "${SRCLANGS}" > $@; \
+	fi
+
+
+${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.trg:
+	mkdir -p ${dir $@}
 	for s in ${SRCLANGS}; do \
 	    for t in ${TRGLANGS}; do \
 	      if [ -e ${TATOEBA_DATA}/Tatoeba-train.$$s-$$t.clean.$$t.labels ]; then \
-		cat ${TATOEBA_DATA}/Tatoeba-train.$$s-$$t.clean.$$t.labels >> $@.trg; \
-		echo -n ' ' >> $@.trg; \
+		cat ${TATOEBA_DATA}/Tatoeba-train.$$s-$$t.clean.$$t.labels >> $@.tmp; \
+		echo -n ' ' >> $@.tmp; \
 	      elif [ -e ${TATOEBA_DATA}/Tatoeba-train.$$t-$$s.clean.$$t.labels ]; then \
-		cat ${TATOEBA_DATA}/Tatoeba-train.$$t-$$s.clean.$$t.labels >> $@.trg; \
-		echo -n ' ' >> $@.trg; \
+		cat ${TATOEBA_DATA}/Tatoeba-train.$$t-$$s.clean.$$t.labels >> $@.tmp; \
+		echo -n ' ' >> $@.tmp; \
 	      fi \
 	    done \
 	done
-	cat $@.src | tr ' ' "\n" | sort -u | tr "\n" ' ' | sed 's/ *$$//' > $@
-	cat $@.trg | tr ' ' "\n" | sort -u | tr "\n" ' ' | sed 's/ *$$//' > $(@:.${SRCEXT}.labels=.${TRGEXT}.labels)
-	rm -f $@.src $@.trg
-
-
-
-%.${LANGPAIRSTR}.clean.${TRGEXT}.labels: %.${LANGPAIRSTR}.clean.${SRCEXT}.labels
-	if [ ! -e $@ ]; then rm $<; ${MAKE} $<; fi
-	echo "done"
+	if [ -e $@.tmp ]; then \
+	  cat $@.tmp | tr ' ' "\n" | sort -u | tr "\n" ' ' | sed 's/ *$$//' > $@; \
+	  rm $@.tmp; \
+	else \
+	  echo "${SRCLANGS}" > $@; \
+	fi
 
 
 ###############################################################################
