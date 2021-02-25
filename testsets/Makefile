@@ -30,6 +30,18 @@ ${TICO19_TEST}: %/tico19-test.en.gz: tico19-testset/test/test.%.tsv
 	cut -f4 $< | tail -n +2 | sed 's/^ *//;s/ *$$//' | gzip -c > ${@:en.gz=${patsubst en-%/,%,$(dir $@)}}.gz
 
 
+TICODATADIRS = $(sort $(subst /,,${dir ${wildcard */tico19-test.*}}))
+crosslink-tico:
+	-for d in ${TICODATADIRS}; do \
+	  s=`echo "$$d" | cut -f1 -d'-'`; \
+	  t=`echo "$$d" | cut -f2 -d'-'`; \
+	  mkdir -p $$t-$$s; \
+	  cd $$t-$$s; \
+	  ln -s ../$$d/tico19* .; \
+	  cd ..; \
+	done
+
+
 
 
 

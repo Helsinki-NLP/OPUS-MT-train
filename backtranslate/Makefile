@@ -40,15 +40,19 @@ MODELHOME ?= ${MODELSDIR}/${LANGPAIR}
 ##     we need the UTF8 sort order
 ## --> use bash sort and UTF8 locale
 # MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/*-20*.zip}}}
-MODELZIP  = ${lastword ${shell ls ${MODELHOME}/*-20*.zip | LANG=en_US.UTF-8 sort}}
-MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
+ifneq (${wildcard ${MODELHOME}},)
+  MODELZIP  = ${lastword ${shell ls ${MODELHOME}/*-20*.zip 2>/dev/null | LANG=en_US.UTF-8 sort}}
+  MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
+endif
 
 ifeq (${MODELNAME},)
+ifneq (${wildcard ${WORKHOME/models/${LANGPAIR}}},)
   MODELHOME = ../${notdir ${WORKHOME}}/models/${LANGPAIR}
   # MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/*-20*.zip}}}
   # MODELZIP  = ${lastword ${sort ${wildcard ${MODELHOME}/opus-20*.zip}}}
-  MODELZIP  = ${lastword ${shell ls ${MODELHOME}/*-20*.zip | LANG=en_US.UTF-8 sort}}
+  MODELZIP  = ${lastword ${shell ls ${MODELHOME}/*-20*.zip 2>/dev/null | LANG=en_US.UTF-8 sort}}
   MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
+endif
 endif
 
 ## set to 1 if the model for backtranslation is a multi-target model
@@ -263,7 +267,7 @@ all-wikis-all-langs: index.html
 	done
 
 
-## aux function to pring the selected modelname
+## aux function to print the selected modelname
 .PHONY: print-modelname
 print-modelname:
 	@echo ${MODELNAME}

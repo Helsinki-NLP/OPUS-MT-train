@@ -61,9 +61,9 @@ endif
 %.submitcpu:
 	mkdir -p ${WORKDIR}
 	echo '#!/bin/bash -l' > $@
-	echo '#SBATCH -J "${LANGPAIRSTR}${@:.submitcpu=}"' >>$@
-	echo '#SBATCH -o ${LANGPAIRSTR}${@:.submitcpu=}.out.%j' >> $@
-	echo '#SBATCH -e ${LANGPAIRSTR}${@:.submitcpu=}.err.%j' >> $@
+	echo '#SBATCH -J "$(subst -,,${LANGPAIRSTR})${@:.submitcpu=}"' >>$@
+	echo '#SBATCH -o $(subst -,,${LANGPAIRSTR})${@:.submitcpu=}.out.%j' >> $@
+	echo '#SBATCH -e $(subst -,,${LANGPAIRSTR})${@:.submitcpu=}.err.%j' >> $@
 	echo '#SBATCH --mem=${HPC_MEM}' >> $@
 ifdef EMAIL
 	echo '#SBATCH --mail-type=END' >> $@

@@ -36,6 +36,46 @@ tatoeba-memad-bilingual:
 
 
 
+tatoeba-memad-dist:
+	${MAKE} TRGLANGS="${MEMAD_LANGS3}" SRCLANGS="eng" \
+		MODELTYPE=transformer-align \
+		tatoeba-multilingual-eval-1m compare-tatoeba-1m eval-testsets-tatoeba-1m
+	${MAKE} TRGLANGS="${MEMAD_LANGS3}" SRCLANGS="eng" \
+		TATOEBA_RELEASEDIR=models-memad \
+		TATOEBA_MODELSHOME=models-memad \
+		MODELTYPE=transformer-align release-tatoeba-1m
+	${MAKE} SRCLANGS="${MEMAD_LANGS3}" TRGLANGS="eng" \
+		MODELTYPE=transformer-align \
+		tatoeba-multilingual-eval-1m compare-tatoeba-1m eval-testsets-tatoeba-1m
+	${MAKE} SRCLANGS="${MEMAD_LANGS3}" TRGLANGS="eng" \
+		TATOEBA_RELEASEDIR=models-memad \
+		TATOEBA_MODELSHOME=models-memad \
+		MODELTYPE=transformer-align release-tatoeba-1m
+	${MAKE} SRCLANGS="${MEMAD_LANGS3}" TRGLANGS="${MEMAD_LANGS3}" \
+		SKIP_LANGPAIRS="deu-deu|eng-eng|fin-fin|fra-fra|nld-nld|swe-swe" \
+		MODELTYPE=transformer-align \
+		tatoeba-multilingual-eval-1m compare-tatoeba-1m eval-testsets-tatoeba-1m
+	${MAKE} SRCLANGS="${MEMAD_LANGS3}" TRGLANGS="${MEMAD_LANGS3}" \
+		SKIP_LANGPAIRS="deu-deu|eng-eng|fin-fin|fra-fra|nld-nld|swe-swe" \
+		TATOEBA_RELEASEDIR=models-memad \
+		TATOEBA_MODELSHOME=models-memad \
+		MODELTYPE=transformer-align release-tatoeba-1m
+	@for s in ${MEMAD_LANGS3}; do \
+	  for t in ${MEMAD_LANGS3}; do \
+	    if [ "$$s" != "$$t" ]; then \
+	      ${MAKE} SRCLANGS=$$s TRGLANGS=$$t \
+			MODELTYPE=transformer-align \
+		tatoeba-multilingual-eval compare-tatoeba eval-testsets-tatoeba; \
+	      ${MAKE} SRCLANGS=$$s TRGLANGS=$$t \
+			TATOEBA_RELEASEDIR=models-memad \
+			TATOEBA_MODELSHOME=models-memad \
+			MODELTYPE=transformer-align release-tatoeba; \
+	    fi \
+	  done \
+	done
+
+
+
 #----------------------------------------------------------------
 # fine-tuning on YLE subtitle data
 #----------------------------------------------------------------
@@ -50,11 +90,21 @@ MEMAD_SUBTYPE  = FIN-SWE
 MEMAD_LANGPAIR = fin2swe
 MEMAD_TUNETASK = tune
 
+
 tatoeba-yletune-all: tatoeba-yletune-finswe-all tatoeba-yletune-swefin-all
 tatoeba-yletune-finswe-all: tatoeba-yletune-finswe tatoeba-yletune-fihswe \
 			tatoeba-yletune-finswh tatoeba-yletune-fihswh tatoeba-yletune-fisw
 tatoeba-yletune-swefin-all: tatoeba-yletune-swefin tatoeba-yletune-swefih \
 			tatoeba-yletune-swhfin tatoeba-yletune-swhfih tatoeba-yletune-swfi
+
+tatoeba-yleeval-all:
+	${MAKE} MEMAD_TUNETASK=tuneeval tatoeba-yletune-all
+
+tatoeba-yledist-all:
+	${MAKE} MEMAD_TUNETASK=tunedist \
+		TATOEBA_RELEASEDIR=models-memad-tuned \
+		TATOEBA_MODELSHOME=models-memad-tuned \
+	tatoeba-yletune-all
 
 
 tatoeba-yletune-finswe:

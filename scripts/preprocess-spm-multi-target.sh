@@ -2,8 +2,15 @@
 #
 # USAGE preprocess.sh source-langid target-langid spmodel [noflags] < input > output
 #
-#
 # replace SPMENCODE with your own setup! 
+#
+# CHANGES
+#
+#  * issue with perl code that removes control characters
+#    unicode property Other = \p{C}) seems to remove 
+#    newline characters as well --> add negative lookahead
+#    to avoid removing newline characters!
+
 
 if [ `hostname -d` == "bullx" ]; then
   APPLHOME=/projappl/project_2001569
@@ -90,7 +97,7 @@ else
 	-e 's/【/\[/g' \
 	-e 's/】/\]/g' \
 	-e 's/％/\%/g' |    
-	perl -C -pe 's/\p{C}/ /g;' |
+	perl -C -pe  's/(?!\n)\p{C}/ /g;'
 	sed 's/  */ /g;s/^ *//g;s/ *$//g' |
 	${SPMENCODE} --model $3 |
 	sed "s/^/>>$2<< /"
