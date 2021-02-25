@@ -66,7 +66,25 @@ LOADMODS = echo "nothing to load"
 WORKHOME = ${PWD}/work
 
 
-ifeq (${shell hostname},dx6-ibs-p2)
+
+ifeq (${shell hostname -d 2>/dev/null},mahti.csc.fi)
+  CSCPROJECT    = project_2003093
+#  CSCPROJECT   = project_2002982
+  WORKHOME      = ${shell realpath ${PWD}/work}
+  APPLHOME      = /projappl/project_2003093/
+  OPUSHOME      = /projappl/nlpl/data/OPUS
+  MOSESHOME     = ${APPLHOME}/install/mosesdecoder
+  MOSESSCRIPTS  = ${MOSESHOME}/scripts
+  EFLOMAL_HOME  = ${APPLHOME}/install/eflomal/
+  MARIAN_HOME   = ${APPLHOME}/install/marian/build/
+  MARIAN        = ${MARIAN_HOME}
+  SPM_HOME      = ${MARIAN_HOME}
+  CPU_MODULES   = python-env
+  HPC_QUEUE     = medium
+  LOADCPU       = module load ${CPU_MODULES}
+  SUBMIT_PREFIX = submitcpu
+  export PATH := ${APPLHOME}/bin:${PATH}
+else ifeq (${shell hostname},dx6-ibs-p2)
   GPU          = pascal
   APPLHOME     = /opt/tools
   WORKHOME     = ${shell realpath ${PWD}/work}
@@ -122,13 +140,13 @@ else ifeq (${shell hostname --domain 2>/dev/null},bullx)
   export PATH := ${APPLHOME}/bin:${PATH}
 endif
 
+SUBMIT_PREFIX ?= submit
 
 ifdef LOCAL_SCRATCH
   TMPDIR       = ${LOCAL_SCRATCH}
 endif
 
 TMPDIR ?= /tmp
-
 
 ## tools and their locations
 

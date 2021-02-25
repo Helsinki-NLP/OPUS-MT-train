@@ -155,10 +155,13 @@ translate-all:
 	done
 
 ## create jobs for translating all parts
+## (only start the job if the file does not exist yet)
 .PHONY: translate-all-parts-jobs
 translate-all-parts-jobs: ${LANGPAIR}/${MODELNAME}/decoder.yml
 	for p in ${PARTS}; do \
-	  ${MAKE} PART=$$p translate.submit; \
+	  if [ ! -e ${OUTPUT_DIR}/${WIKISOURCE}.$${p}_${MODELNAME}.${LANGPAIR}.${TRG}.gz ]; then \
+	    ${MAKE} PART=$$p translate.${SUBMIT_PREFIX}; \
+	  fi \
 	done
 
 ## create jobs for translating all parts of all wikis
