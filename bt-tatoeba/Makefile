@@ -11,9 +11,8 @@ include ../lib/env.mk
 include ../lib/config.mk
 include ../lib/slurm.mk
 
-SRC ?= fin
-TRG ?= eng
-
+SRC = fin
+TRG = eng
 
 
 # TATOEBA_STORAGE     = https://object.pouta.csc.fi/Tatoeba-Challenge
@@ -22,6 +21,8 @@ TATOEBA_GITRAW        = https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-C
 TATOEBA_RELEASED      = ${TATOEBA_GITRAW}/models/released-model-results-all.txt
 TATOEBA_MODEL_STORAGE = https://object.pouta.csc.fi/Tatoeba-MT-models
 
+## container for storing backtranslations
+BT_CONTAINER          = Tatoeba-MT-bt
 
 ## various sources are available
 ## can be general wikipedia, wikinews, wikibooks, ...
@@ -70,9 +71,9 @@ WIKI_SRC     = ${OUTPUT_DIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${SR
 WIKI_PRE     = ${OUTPUT_DIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.spm.gz
 WIKI_TRG     = ${OUTPUT_DIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${TRG}.gz
 
-WIKI_LATEST_SRC = ${OUTPUT_DIR}/latest/${WIKISOURCE}.${PART}.${LANGPAIR}.${SRC}.gz
-WIKI_LATEST_TRG = ${OUTPUT_DIR}/latest/${WIKISOURCE}.${PART}.${LANGPAIR}.${TRG}.gz
-
+WIKI_LATEST_SRC    = ${OUTPUT_DIR}/latest/${WIKISOURCE}.${PART}.${LANGPAIR}.${SRC}.gz
+WIKI_LATEST_TRG    = ${OUTPUT_DIR}/latest/${WIKISOURCE}.${PART}.${LANGPAIR}.${TRG}.gz
+WIKI_LATEST_README = ${OUTPUT_DIR}/latest/README.md
 
 ## all parts of this wiki
 PARTS = ${sort ${patsubst ${WIKI_DIR}/${LANGID}/${WIKISOURCE}.%.gz,%,\
@@ -130,6 +131,33 @@ all2eng:
 	done
 
 
+release-all: upload-all released-data.txt released-data-size.txt
+	swift upload ${BT_CONTAINER} released-data-size.txt
+
+.PHONY: upload
+upload: ${WIKI_LATEST_README}
+	swift upload ${BT_CONTAINER} --changed --skip-identical ${LANGPAIR}/latest
+	swift post ${BT_CONTAINER} --read-acl ".r:*"
+
+.PHONY: upload-all
+upload-all:
+	for d in `find . -maxdepth 1 -type d -name '*-*' -printf "%f "`; do \
+	  s=`echo $$d | cut -f1 -d'-'`; \
+	  t=`echo $$d | cut -f2 -d'-'`; \
+	  make SRC=$$s TRG=$$t ${@:-all=}; \
+	done
+
+released-data.txt: .
+	swift list ${BT_CONTAINER} | grep -v README.md > $@
+	swift upload ${BT_CONTAINER} $@
+
+released-data-size.txt: .
+	${MAKE} check-latest-all | grep '^[0-9]' > $@
+	cat $@ | awk '{ sum += $$1 } END { print sum }' > $@.tmp
+	cat $@.tmp >> $@
+	rm -f cat $@.tmp
+
+
 .PHONY: fetch
 fetch: ${WIKI_DIR}/${SRC}
 
@@ -140,7 +168,7 @@ prepare: ${LANGPAIR}/${MODELNAME}/decoder.yml ${WIKI_TXT}
 prepare-allwikis: ${LANGPAIR}/${MODELNAME}/decoder.yml ${ALLWIKIS_TXT}
 
 .PHONY: translate
-translate: ${WIKI_LATEST_TRG}
+translate: ${WIKI_LATEST_README} ${WIKI_LATEST_TRG}
 	${MAKE} ${WIKI_LATEST_SRC}
 
 ## translate all parts
@@ -285,6 +313,8 @@ ${WIKI_LATEST_TRG}: ${WIKI_TRG}
 	mkdir -p ${dir $@}
 	cp $< $@
 
+${WIKI_LATEST_README}: ${LANGPAIR}/${MODELNAME}/README.md
+	cp $< $@
 
 
 ## translate
