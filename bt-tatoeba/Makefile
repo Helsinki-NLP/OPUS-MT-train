@@ -19,7 +19,7 @@ TRG ?= eng
 # TATOEBA_STORAGE     = https://object.pouta.csc.fi/Tatoeba-Challenge
 TATOEBA_STORAGE       = https://object.pouta.csc.fi/Tatoeba-Challenge-WikiShuffled
 TATOEBA_GITRAW        = https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
-TATOEBA_RELEASED      = ${TATOEBA_GITRAW}/models/released-model-results.txt
+TATOEBA_RELEASED      = ${TATOEBA_GITRAW}/models/released-model-results-all.txt
 TATOEBA_MODEL_STORAGE = https://object.pouta.csc.fi/Tatoeba-MT-models
 
 
@@ -46,8 +46,7 @@ PWD := $(shell pwd)
 
 
 # MODELZIP = https://object.pouta.csc.fi/Tatoeba-Challenge/ang.tar
-MODELZIP := ${shell wget -qq -O - ${TATOEBA_GITRAW}/models/released-model-results.txt |\
-		grep '^${LANGPAIR}' | head -1 | cut -f4}
+MODELZIP := ${shell wget -qq -O - ${TATOEBA_RELEASED} | grep '^${LANGPAIR}' | head -1 | cut -f4}
 MODELINFO = ${patsubst ${TATOEBA_MODEL_STORAGE}/%.zip,${TATOEBA_GITRAW}/models/%.yml,${MODELZIP}}
 MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
 
@@ -58,6 +57,8 @@ endif
 
 RELEASED_WIKIS := $(patsubst %.tar,%,${shell wget -qq -O - ${TATOEBA_GITRAW}/Wiki.md | \
 					grep -o 'WikiShuffled/...\.tar' | cut -f2 -d'/'})
+
+RELEASED_WIKIS_REV = ${shell (for d in ${RELEASED_WIKIS}; do echo $$d; done) | tac}
 
 
 WIKI_DIR     = ${PWD}/wiki
@@ -124,8 +125,8 @@ all-jobs: fetch
 	${MAKE} translate-all-jobs
 
 all2eng:
-	for w in ${filter-out eng,${RELEASED_WIKIS}}; do \
-	  echo "make SRC=$$w TRG=eng all-jobs"; \
+	for w in ${filter-out eng,${RELEASED_WIKIS_REV}}; do \
+	  make EMAIL= HPC_CORES=128 HPC_MEM=160g HPC_TIME=24:00 SRC=$$w TRG=eng all-jobs; \
 	done
 
 
@@ -160,6 +161,7 @@ translate-all:
 translate-all-parts-jobs: ${LANGPAIR}/${MODELNAME}/decoder.yml
 	for p in ${PARTS}; do \
 	  if [ ! -e ${OUTPUT_DIR}/${WIKISOURCE}.$${p}_${MODELNAME}.${LANGPAIR}.${TRG}.gz ]; then \
+	    rm -f translate.${SUBMIT_PREFIX}; \
 	    ${MAKE} PART=$$p translate.${SUBMIT_PREFIX}; \
 	  fi \
 	done
@@ -306,21 +308,79 @@ ifneq (${MODELZIP},)
 endif
 
 
+check-latest:
+	@if [ -d ${LANGPAIR}/latest ]; then \
+	  for S in `ls ${LANGPAIR}/latest/*.${SRC}.gz`; do \
+	    T=`echo $$S | sed 's/.${SRC}.gz/.${TRG}.gz/'`; \
+	    a=`${GZCAT} $$S | wc -l`; \
+	    b=`${GZCAT} $$T | wc -l`; \
+	    if [ $$a != $$b ]; then \
+	      echo "$$a != $$b	$$S	$$T"; \
+	    else \
+	      echo "$$a	$$S	$$T"; \
+	    fi \
+	  done \
+	fi
+
+check-translated:
+	@for S in `ls ${LANGPAIR}/*.${SRC}.gz`; do \
+	    T=`echo $$S | sed 's/.${SRC}.gz/.${TRG}.gz/'`; \
+	    a=`${GZCAT} $$S | wc -l`; \
+	    b=`${GZCAT} $$T | wc -l`; \
+	    if [ $$a != $$b ]; then \
+	      echo "$$a != $$b	$$S	$$T"; \
+	    else \
+	      echo "$$a	$$S	$$T"; \
+	    fi \
+	done
 
 check-length:
+	@echo "check ${LANGPAIR}"
+	@${MAKE} check-translated
+	@${MAKE} check-latest
+
+
+remove-%-all check-%-all:
 	for d in `find . -maxdepth 1 -type d -name '*-*' -printf "%f "`; do \
 	  s=`echo $$d | cut -f1 -d'-'`; \
 	  t=`echo $$d | cut -f2 -d'-'`; \
-	  echo "check $$d"; \
-	  for S in `ls $$d/*.$$s.gz`; do \
-	    T=`echo $$S | sed 's/.$$s.gz/.$$t.gz/'`; \
-	    echo "$$S -- $$T"; \
-	    ${GZCAT} $$S | wc -l; \
-	    ${GZCAT} $$T | wc -l; \
-	    if [ `${GZCAT} $$S | wc -l` != `${GZCAT} $$T | wc -l` ]; then \
-	      echo "$$S != $$T"; \
-	    fi \
-	  done \
+	  make SRC=$$s TRG=$$t ${@:-all=}; \
 	done
 
+
+
+remove-incomplete:
+	${MAKE} remove-incomplete-translated
+	${MAKE} remove-incomplete-latest
+
+remove-incomplete-translated:
+	@echo "check ${LANGPAIR}"
+	@mkdir -p ${LANGPAIR}/incomplete
+	@for S in `ls ${LANGPAIR}/*.${SRC}.gz`; do \
+	    T=`echo $$S | sed 's/.${SRC}.gz/.${TRG}.gz/'`; \
+	    a=`${GZCAT} $$S | wc -l`; \
+	    b=`${GZCAT} $$T | wc -l`; \
+	    if [ $$a != $$b ]; then \
+	      echo "$$a != $$b	$$S	$$T"; \
+	      mv $$S ${LANGPAIR}/incomplete/; \
+	      mv $$T ${LANGPAIR}/incomplete/; \
+	    fi \
+	done
+
+
+remove-incomplete-latest:
+	@echo "check ${LANGPAIR}"
+	@mkdir -p ${LANGPAIR}/incomplete/latest
+	@if [ -d ${LANGPAIR}/latest ]; then \
+	  for S in `ls ${LANGPAIR}/latest/*.${SRC}.gz`; do \
+	    T=`echo $$S | sed 's/.${SRC}.gz/.${TRG}.gz/'`; \
+	    a=`${GZCAT} $$S | wc -l`; \
+	    b=`${GZCAT} $$T | wc -l`; \
+	    if [ $$a != $$b ]; then \
+	      echo "$$a != $$b	$$S	$$T"; \
+	      mv $$S ${LANGPAIR}/incomplete/latest/; \
+	      mv $$T ${LANGPAIR}/incomplete/latest/; \
+	    fi \
+	  done \
+	fi
 
