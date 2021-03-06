@@ -23,6 +23,7 @@ TATOEBA_MODEL_STORAGE = https://object.pouta.csc.fi/Tatoeba-MT-models
 
 ## container for storing backtranslations
 BT_CONTAINER          = Tatoeba-MT-bt
+BT_CWORK_ONTAINER     = project-Tatoeba-MT-bt
 
 ## various sources are available
 ## can be general wikipedia, wikinews, wikibooks, ...
@@ -131,11 +132,15 @@ all2eng:
 	done
 
 
+#---------------------------------------------------------------
+# release data 
+#---------------------------------------------------------------
+
 release-all: upload-all released-data.txt released-data-size.txt
 	swift upload ${BT_CONTAINER} released-data-size.txt
 
-.PHONY: upload
-upload: ${WIKI_LATEST_README}
+.PHONY: upload release
+release upload: ${WIKI_LATEST_README}
 	swift upload ${BT_CONTAINER} --changed --skip-identical ${LANGPAIR}/latest
 	swift post ${BT_CONTAINER} --read-acl ".r:*"
 
@@ -157,9 +162,37 @@ released-data-size.txt: .
 	cat $@.tmp >> $@
 	rm -f cat $@.tmp
 
+# download released data
 
-.PHONY: fetch
-fetch: ${WIKI_DIR}/${SRC}
+.PHONY: download
+download: ${WIKI_DIR}/${SRC}
+
+
+#---------------------------------------------------------------
+# store / fetch translations
+# (this is for storing work files and not for releasing data!)
+#---------------------------------------------------------------
+
+.PHONY: store
+store:
+	a-put -b ${BT_WORK_CONTAINER} --nc --follow-links --override ${LANGPAIR}
+
+.PHONY: store-all
+store-all:
+	for d in `find . -maxdepth 1 -type d -name '*-*' -printf "%f "`; do \
+	  s=`echo $$d | cut -f1 -d'-'`; \
+	  t=`echo $$d | cut -f2 -d'-'`; \
+	  make SRC=$$s TRG=$$t ${@:-all=}; \
+	done
+
+.PHONY: retrieve fetch
+retrieve fetch:
+	cd ${WORK_DESTDIR} && a-get ${WORK_CONTAINER}/${LANGPAIR}.tar
+
+
+
+
+
 
 .PHONY: prepare
 prepare: ${LANGPAIR}/${MODELNAME}/decoder.yml ${WIKI_TXT}
