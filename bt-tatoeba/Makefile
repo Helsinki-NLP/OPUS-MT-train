@@ -19,6 +19,7 @@ TRG = eng
 TATOEBA_STORAGE       = https://object.pouta.csc.fi/Tatoeba-Challenge-WikiShuffled
 TATOEBA_GITRAW        = https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
 TATOEBA_RELEASED      = ${TATOEBA_GITRAW}/models/released-model-results-all.txt
+TATOEBA_RELEASED_BT   = https://object.pouta.csc.fi/Tatoeba-MT-bt/released-data.txt
 TATOEBA_MODEL_STORAGE = https://object.pouta.csc.fi/Tatoeba-MT-models
 
 ## container for storing backtranslations
@@ -131,6 +132,16 @@ all2eng:
 	done
 
 
+# RELEASED_BT_ALL := ${shell wget -qq -O - ${TATOEBA_RELEASED_BT}}
+RELEASED_BT := ${shell wget -qq -O - ${TATOEBA_RELEASED_BT} | grep '^${LANGPAIR}/'}
+
+fetch-bt:
+	for d in ${RELEASED_BT}; do \
+	  echo "fetch $$d"; \
+	  mkdir -p `dirname $$d`; \
+	  wget -qq -O $$d https://object.pouta.csc.fi/Tatoeba-MT-bt/$$d; \
+	done
+
 release-all: upload-all released-data.txt released-data-size.txt
 	swift upload ${BT_CONTAINER} released-data-size.txt
 
@@ -148,7 +159,7 @@ upload-all:
 	done
 
 released-data.txt: .
-	swift list ${BT_CONTAINER} | grep -v README.md > $@
+	swift list ${BT_CONTAINER} | grep -v README.md | grep -v '.txt' > $@
 	swift upload ${BT_CONTAINER} $@
 
 released-data-size.txt: .

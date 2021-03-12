@@ -141,6 +141,8 @@
 #
 #--------------------------------------------------------------------
 
+## model-specific configuration file
+MODELCONFIG = config.mk
 
 # check and adjust lib/env.mk and lib/config.mk
 
@@ -155,8 +157,8 @@ include lib/config.mk
 # load model-specific configuration parameters
 # if they exist in the work directory
 
-ifneq ($(wildcard ${WORKDIR}/config.mk),)
-  include ${WORKDIR}/config.mk
+ifneq ($(wildcard ${WORKDIR}/${MODELCONFIG}),)
+  include ${WORKDIR}/${MODELCONFIG}
 endif
 
 include lib/data.mk
@@ -174,7 +176,7 @@ include lib/projects.mk
 
 
 .PHONY: all
-all: ${WORKDIR}/config.mk
+all: ${WORKDIR}/${MODELCONFIG}
 	${MAKE} data
 	${MAKE} train
 	${MAKE} eval
@@ -191,7 +193,7 @@ all: ${WORKDIR}/config.mk
 #---------------------------------------------------------------------
 
 .PHONY: all-and-backtranslate
-all-and-backtranslate: ${WORKDIR}/config.mk
+all-and-backtranslate: ${WORKDIR}/${MODELCONFIG}
 	${MAKE} data
 	${MAKE} train
 	${MAKE} eval
@@ -210,7 +212,7 @@ all-and-backtranslate: ${WORKDIR}/config.mk
 	done
 
 .PHONY: all-and-backtranslate-allwikis
-all-and-backtranslate-allwikis: ${WORKDIR}/config.mk
+all-and-backtranslate-allwikis: ${WORKDIR}/${MODELCONFIG}
 	${MAKE} data
 	${MAKE} train
 	${MAKE} eval
@@ -230,7 +232,7 @@ all-and-backtranslate-allwikis: ${WORKDIR}/config.mk
 	done
 
 .PHONY: all-and-backtranslate-allwikiparts
-all-and-backtranslate-allwikiparts: ${WORKDIR}/config.mk
+all-and-backtranslate-allwikiparts: ${WORKDIR}/${MODELCONFIG}
 	${MAKE} data
 	${MAKE} train
 	${MAKE} eval
@@ -276,7 +278,7 @@ all-with-bt-allparts:
 
 ## job1: submit jobs to create data, train models, backtranslate all, and train again
 
-job1: ${WORKDIR}/config.mk
+job1: ${WORKDIR}/${MODELCONFIG}
 	${MAKE} HPC_MEM=12g HPC_CORES=4 job1-step1.submitcpu
 
 job1-step1:
@@ -307,7 +309,7 @@ job1-step3:
 #------------------------------------------------------------------------
 
 .PHONY: all-job
-all-job: ${WORKDIR}/config.mk
+all-job: ${WORKDIR}/${MODELCONFIG}
 	${MAKE} data
 	${MAKE} train-and-eval-job
 

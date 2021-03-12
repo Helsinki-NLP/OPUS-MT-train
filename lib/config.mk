@@ -3,6 +3,11 @@
 # model configurations
 #
 
+
+## name of the model-specific configuration file
+MODELCONFIG ?= config.mk
+
+
 ## various ways of setting the model languages
 
 ## (1) explicitly set source and target languages, for example:
@@ -491,7 +496,7 @@ endif
 ## TODO: is it OK to delete LOCAL_TRAIN data?
 
 .PHONY: config local-config
-config local-config: ${WORKDIR}/config.mk
+config local-config: ${WORKDIR}/${MODELCONFIG}
 
 SMALLEST_TRAINSIZE = 10000
 SMALL_TRAINSIZE    = 100000
@@ -499,7 +504,7 @@ MEDIUM_TRAINSIZE   = 500000
 LARGE_TRAINSIZE    = 1000000
 LARGEST_TRAINSIZE  = 10000000
 
-${WORKDIR}/config.mk:
+${WORKDIR}/${MODELCONFIG}:
 	mkdir -p ${dir $@}
 	if [ -e ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz ]; then \
 	  ${MAKE} ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.charfreq \
