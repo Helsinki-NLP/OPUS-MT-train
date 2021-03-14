@@ -123,7 +123,9 @@ endif
 ## in multi-target models
 ifneq (${words ${TRGLANGS}},1)
   USE_TARGET_LABELS = 1
+  TARGET_LABELS ?= $(patsubst %,>>%<<,${TRGLANGS})
 endif
+
 
 ## size of dev data, test data and BPE merge operations
 ## NEW default size = 2500 (keep more for training for small languages)
@@ -385,7 +387,7 @@ MODEL_DECODER    = ${MODEL_FINAL}.decoder.yml
 ## marian_vocab from training data
 
 ifeq ($(USE_SPM_VOCAB),1)
-  MODEL_VOCAB     = ${WORKDIR}/${MODEL}.vocab
+  MODEL_VOCAB     = ${WORKDIR}/${MODEL}.vocab.yml
   MODEL_SRCVOCAB  = ${WORKDIR}/${MODEL}.src.vocab
   MODEL_TRGVOCAB  = ${WORKDIR}/${MODEL}.trg.vocab
 else
@@ -600,6 +602,9 @@ endif
 	echo "USE_REST_DEVDATA  = ${USE_REST_DEVDATA}"   >> $@
 ifdef USE_TARGET_LABELS
 	echo "USE_TARGET_LABELS = ${USE_TARGET_LABELS}"  >> $@
+endif
+ifdef USE_SPM_VOCAB
+	echo "USE_SPM_VOCAB = ${USE_SPM_VOCAB}"  >> $@
 endif
 
 

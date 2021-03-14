@@ -328,7 +328,7 @@ ifdef USE_TARGET_LABELS
 	echo '* a sentence initial language token is required in the form of `>>id<<` (id = valid target language ID)' >> $@
 	@echo "* valid language labels: ${LANGUAGELABELS}"  >> $@
 endif
-	@echo "* download: [$(notdir ${RELEASE_PACKAGE})](${MODELS_URL}/${LANGPAIRSTR}/$(notdir ${RELEASE_PACKAGE})" >> $@
+	@echo "* download: [$(notdir ${RELEASE_PACKAGE})](${MODELS_URL}/${LANGPAIRSTR}/$(notdir ${RELEASE_PACKAGE}))" >> $@
 ifneq (${SKIP_DATA_DETAILS},1)
 ifneq ("$(wildcard ${WORKDIR}/train/README.md)","")
 	@echo -n "## Training data: "                       >> $@
@@ -347,8 +347,8 @@ endif
 ## add benchmark results
 ##-----------------------------
 ifneq ("$(wildcard ${TEST_EVALUATION})","")
-	@echo "* test set translations: [$(notdir ${@:.zip=})-${DATE}.test.txt](${MODELS_URL}/${LANGPAIRSTR}/$(notdir ${@:.zip=})-${DATE}.test.txt)" >> $@
-	@echo "* test set scores: [$(notdir ${@:.zip=})-${DATE}.eval.txt](${MODELS_URL}/${LANGPAIRSTR}/$(notdir ${@:.zip=})-${DATE}.eval.txt)" >> $@
+	@echo "* test set translations: [$(patsubst %.zip,%.test.txt,$(notdir ${RELEASE_PACKAGE}))](${MODELS_URL}/${LANGPAIRSTR}/$(patsubst %.zip,%.test.txt,$(notdir ${RELEASE_PACKAGE})))" >> $@
+	@echo "* test set scores: [$(patsubst %.zip,%.eval.txt,$(notdir ${RELEASE_PACKAGE}))](${MODELS_URL}/${LANGPAIRSTR}/$(patsubst %.zip,%.eval.txt,$(notdir ${RELEASE_PACKAGE})))" >> $@
 	@echo '' >> $@
 	@echo '## Benchmarks'                                       >> $@
 	@echo ''                                                    >> $@
@@ -462,6 +462,7 @@ refresh-release:
 	fi
 
 refresh-release-yml:
+ifneq ("$(wildcard ${TEST_EVALUATION})","")
 	if [[ ${DIST_PACKAGE} -nt ${MODEL_FINAL} ]]; then \
 	  echo "updating ${patsubst %.zip,%.yml,${shell realpath ${DIST_PACKAGE}}}"; \
 	  d=`realpath ${DIST_PACKAGE} | xargs basename | sed 's/^[^\-]*\-//;s/\.zip$$//'`; \
@@ -470,8 +471,13 @@ refresh-release-yml:
 	  fi; \
 	  make DATE="$$d" release-yml; \
 	fi
+else
+	@echo "no evaluation results found (${TEST_EVALUATION})"
+	@echo "---------> skip refreshing the yml file"
+endif
 
 refresh-release-readme:
+ifneq ("$(wildcard ${TEST_EVALUATION})","")
 	if [[ ${DIST_PACKAGE} -nt ${MODEL_FINAL} ]]; then \
 	  echo "updating ${LANGPAIRSTR}/README.md for ${notdir ${shell realpath ${DIST_PACKAGE}}}"; \
 	  d=`realpath ${DIST_PACKAGE} | xargs basename | sed 's/^[^\-]*\-//;s/\.zip$$//'`; \
@@ -480,7 +486,10 @@ refresh-release-readme:
 	  fi; \
 	  make DATE="$$d" release-readme; \
 	fi
-
+else
+	@echo "no evaluation results found (${TEST_EVALUATION})"
+	@echo "---------> skip refreshing the readme file"
+endif
 
 
 

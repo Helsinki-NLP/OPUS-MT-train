@@ -120,6 +120,29 @@ TATOEBA_RELEASEDIR   = ${PWD}/models-tatoeba
 TATOEBA_MODELSHOME   = ${PWD}/models-tatoeba
 TATOEBA_BTHOME       = ${PWD}/bt-tatoeba
 
+
+## file with the source and target languages in the current model
+
+TATOEBA_SRCLABELFILE = ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.src
+TATOEBA_TRGLABELFILE = ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.trg
+
+## get source and target languages from the label files
+
+ifneq (${wildcard ${TATOEBA_SRCLABELFILE}},)
+  TATOEBA_SRCLANGS = ${shell cat ${TATOEBA_SRCLABELFILE}}
+endif
+ifneq (${wildcard ${TATOEBA_TRGLABELFILE}},)
+  TATOEBA_TRGLANGS = ${shell cat ${TATOEBA_TRGLABELFILE}}
+endif
+ifndef USE_TARGET_LABELS
+ifneq (${words ${TATOEBA_TRGLANGS}},1)
+  USE_TARGET_LABELS = 1
+  TARGET_LABELS = $(patsubst %,>>%<<,${TATOEBA_TRGLANGS})
+endif
+endif
+
+
+
 TATOEBA_PARAMS := TRAINSET=${TATOEBA_TRAINSET} \
 		DEVSET=${TATOEBA_DEVSET} \
 		TESTSET=${TATOEBA_TESTSET} \
@@ -214,88 +237,10 @@ tatoeba-labels: ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.src \
 #		${TATOEBA_DATA}/Tatoeba-train.${LANGPAIRSTR}.clean.${TRGEXT}.labels
 
 
-# .PHONY: tatoeba-results
-# tatoeba-results: tatoeba-result-files \
-# 		tatoeba-results-md \
-# 		tatoeba-released-models
-
-# .PHONY: tatoeba-released-models
-# tatoeba-released-models: models-tatoeba/released-models.txt \
-# 		models-tatoeba/released-model-results.txt
-
-# .PHONY: tatoeba-results-files
-# tatoeba-result-files: work-tatoeba/tatoeba-results-sorted \
-# 		work-tatoeba/tatoeba-results-sorted-model \
-# 		work-tatoeba/tatoeba-results-sorted-langpair \
-# 		work-tatoeba/tatoeba-results-subset-zero \
-# 		work-tatoeba/tatoeba-results-subset-lowest \
-# 		work-tatoeba/tatoeba-results-subset-lower \
-# 		work-tatoeba/tatoeba-results-subset-medium \
-# 		work-tatoeba/tatoeba-results-subset-higher \
-# 		work-tatoeba/tatoeba-results-subset-highest \
-# 		work-tatoeba/tatoeba-results-all \
-# 		work-tatoeba/tatoeba-results-all-subset-zero \
-# 		work-tatoeba/tatoeba-results-all-subset-lowest \
-# 		work-tatoeba/tatoeba-results-all-subset-lower \
-# 		work-tatoeba/tatoeba-results-all-subset-medium \
-# 		work-tatoeba/tatoeba-results-all-subset-higher \
-# 		work-tatoeba/tatoeba-results-all-subset-highest \
-# 		work-tatoeba/tatoeba-models-all \
-
-
-# ## create result tables in various variants and for various subsets
-# ## markdown pages are for reading on-line in the Tatoeba Challenge git
-# ## ---> link results dir to the local copy of the Tatoeba Challenge git
-# .PHONY: tatoeba-results-md
-# tatoeba-results-md: tatoeba-results-sorted \
-# 		tatoeba-results-sorted-model \
-# 		tatoeba-results-sorted-langpair \
-# 		results/tatoeba-results-sorted.md \
-# 		results/tatoeba-results-sorted-model.md \
-# 		results/tatoeba-results-sorted-langpair.md \
-# 		results/tatoeba-results-BLEU-sorted.md \
-# 		results/tatoeba-results-BLEU-sorted-model.md \
-# 		results/tatoeba-results-BLEU-sorted-langpair.md \
-# 		results/tatoeba-results-chrF2-sorted.md \
-# 		results/tatoeba-results-chrF2-sorted-model.md \
-# 		results/tatoeba-results-chrF2-sorted-langpair.md \
-# 		tatoeba-results-subset-zero \
-# 		tatoeba-results-subset-lowest \
-# 		tatoeba-results-subset-lower \
-# 		tatoeba-results-subset-medium \
-# 		tatoeba-results-subset-higher \
-# 		tatoeba-results-subset-highest \
-# 		results/tatoeba-results-subset-zero.md \
-# 		results/tatoeba-results-subset-lowest.md \
-# 		results/tatoeba-results-subset-lower.md \
-# 		results/tatoeba-results-subset-medium.md \
-# 		results/tatoeba-results-subset-higher.md \
-# 		results/tatoeba-results-subset-highest.md \
-# 		results/tatoeba-results-langgroup.md \
-# 		tatoeba-results-all \
-# 		tatoeba-results-all-subset-zero \
-# 		tatoeba-results-all-subset-lowest \
-# 		tatoeba-results-all-subset-lower \
-# 		tatoeba-results-all-subset-medium \
-# 		tatoeba-results-all-subset-higher \
-# 		tatoeba-results-all-subset-highest \
-# 		tatoeba-models-all \
-# 		results/tatoeba-models-all.md
-
-# #		results/tatoeba-results-all.md \
-# #		results/tatoeba-results-all-subset-zero.md \
-# #		results/tatoeba-results-all-subset-lowest.md \
-# #		results/tatoeba-results-all-subset-lower.md \
-# #		results/tatoeba-results-all-subset-medium.md \
-# #		results/tatoeba-results-all-subset-higher.md \
-# #		results/tatoeba-results-all-subset-highest.md \
-
-
-
 ## restart all language pairs of models that have not yet converged
 ## TODO: takes only the first model found in the directory
 tatoeba-continue-unfinished:
-	for d in `find ${TATOEBA_WORK}/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/`; do \
+	for d in `find ${TATOEBA_WORK}/  -maxdepth 1 -type d -name '???-???' -printf " %f"`; do \
 	  if [ `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.valid1.log' | grep -v tuned | wc -l` -gt 0 ]; then \
 	    if [ ! `find ${TATOEBA_WORK}/$$d -maxdepth 1  -name '*.done' | grep -v tuned | wc -l` -gt 0 ]; then \
 	      p=`echo $$d | sed 's/-/2/'`; \
@@ -310,8 +255,8 @@ tatoeba-continue-unfinished:
 ## unless they are converged already
 ## TODO: takes only the first model found in the directory
 tatoeba-continue-unreleased:
-	find ${TATOEBA_WORK}/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/ | sort > $@.tt1
-	find models-tatoeba/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/ | sort > $@.tt2
+	find ${TATOEBA_WORK}/       -maxdepth 1 -type d -name '???-???' -printf " %f" | sort > $@.tt1
+	find ${TATOEBA_MODELSHOME}/ -maxdepth 1 -type d -name '???-???' -printf " %f" | sort > $@.tt2
 	for d in `diff $@.tt1 $@.tt2 | grep '<' | cut -f2 -d' '`; do \
 	  if [ `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.valid1.log' | grep -v tuned | wc -l` -gt 0 ]; then \
 	    if [ ! `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.done' | grep -v tuned | wc -l` -gt 0 ]; then \
@@ -327,67 +272,71 @@ tatoeba-continue-unreleased:
 
 ## release all language pairs
 ## (including lang-group models)
-## TODO: takes only the first model found in the directory
 tatoeba-release-all:
-	for d in `find ${TATOEBA_WORK}/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/`; do \
-	  if [ `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.valid1.log' | grep -v tuned | wc -l` -gt 0 ]; then \
+	for d in `find ${TATOEBA_WORK}/ -maxdepth 1 -type d -name '???-???' -printf " %f"`; do \
+	  for f in `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.valid1.log' -printf " %f" | grep -v tuned`; do \
 	    p=`echo $$d | sed 's/-/2/'`; \
-	    m=`ls ${TATOEBA_WORK}/$$d/*.valid1.log | head -1 | cut -f3 -d/ | cut -f3 -d.`; \
-	    t=`ls ${TATOEBA_WORK}/$$d/*.valid1.log | head -1 | cut -f3 -d/ | cut -f1 -d.`; \
+	    m=`echo $$f | cut -f3 -d.`; \
+	    t=`echo $$f | cut -f1 -d.`; \
 	    ${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-evalall; \
 	    ${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-dist; \
-	  fi \
+	  done \
 	done
 
 ## release all models that have converged
-## TODO: takes only the first model found in the directory
 tatoeba-release-finished:
-	for d in `find ${TATOEBA_WORK}/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/`; do \
-	  if [ `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.valid1.log' | grep -v tuned | wc -l` -gt 0 ]; then \
-	    if [ `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.done' | grep -v tuned | wc -l` -gt 0 ]; then \
+	for d in `find ${TATOEBA_WORK}/ -maxdepth 1 -type d -name '???-???' -printf " %f"`; do \
+	  for f in `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.done' -printf " %f" | grep -v tuned`; do \
 	      p=`echo $$d | sed 's/-/2/'`; \
-	      m=`ls ${TATOEBA_WORK}/$$d/*.done | head -1 | cut -f3 -d/ | cut -f3 -d.`; \
-	      t=`ls ${TATOEBA_WORK}/$$d/*.done | head -1 | cut -f3 -d/ | cut -f1 -d.`; \
+	      m=`echo $$f | cut -f3 -d.`; \
+	      t=`echo $$f | cut -f1 -d.`; \
 	      ${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-evalall; \
 	      ${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-dist; \
-	    fi \
-	  fi \
+	  done \
 	done
 
 
 ## release all models that are not yet released
-## TODO: takes only the first model found in the directory
 tatoeba-release-unreleased:
 	find ${TATOEBA_WORK}/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/ | sort > $@.tt1
 	find models-tatoeba/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/ | sort > $@.tt2
 	for d in `diff $@.tt1 $@.tt2 | grep '<' | cut -f2 -d' '`; do \
-	  if [ `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.valid1.log' | grep -v tuned | wc -l` -gt 0 ]; then \
+	  for f in `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.valid1.log' -printf " %f" | grep -v tuned`; do \
 	      p=`echo $$d | sed 's/-/2/'`; \
-	      m=`ls ${TATOEBA_WORK}/$$d/*.valid1.log | head -1 | cut -f3 -d/ | cut -f3 -d.`; \
-	      t=`ls ${TATOEBA_WORK}/$$d/*.valid1.log | head -1 | cut -f3 -d/ | cut -f1 -d.`; \
+	      m=`echo $$f | cut -f3 -d.`; \
+	      t=`echo $$f | cut -f1 -d.`; \
 	      ${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-evalall; \
 	      ${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-dist; \
 	  fi \
 	done
 	rm -f $@.tt1 $@.tt2
 
-
 tatoeba-release-unreleased-test:
-	find ${TATOEBA_WORK}/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/ | sort > $@.tt1
-	find models-tatoeba/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/ | sort > $@.tt2
+	find ${TATOEBA_WORK}/ -maxdepth 1 -type d -name '???-???' -printf " %f" | sort > $@.tt1
+	find ${TATOEBA_MODELSHOME}/ -maxdepth 1 -type d -name '???-???' -printf " %f" | sort > $@.tt2
 	for d in `diff $@.tt1 $@.tt2 | grep '<' | cut -f2 -d' '`; do \
-	  if [ `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.valid1.log' | grep -v tuned | wc -l` -gt 0 ]; then \
+	  for f in `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.valid1.log' -printf " %f" | grep -v tuned`; do \
 	      p=`echo $$d | sed 's/-/2/'`; \
-	      m=`ls ${TATOEBA_WORK}/$$d/*.valid1.log | head -1 | cut -f3 -d/ | cut -f3 -d.`; \
-	      t=`ls ${TATOEBA_WORK}/$$d/*.valid1.log | head -1 | cut -f3 -d/ | cut -f1 -d.`; \
+	      m=`echo $$f | cut -f3 -d.`; \
+	      t=`echo $$f | cut -f1 -d.`; \
 	      echo "${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-evalall"; \
 	      echo "${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-dist"; \
-	  fi \
+	  done \
 	done
 	rm -f $@.tt1 $@.tt2
 
-
-
+## refresh release info for the latest model that converged in each directory
+## ---> be aware of the danger of overwriting existing files
+## ---> backups are stored in models-backup
+tatoeba-refresh-finished:
+	for d in `find ${TATOEBA_WORK}/ -maxdepth 1 -type d -name '???-???' -printf " %f"`; do \
+	  for f in `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.done' -printf "%A@\t%f\n" | sort -nr | cut -f2 | grep -v tuned | head -1`; do \
+	      p=`echo $$d | sed 's/-/2/'`; \
+	      m=`echo $$f | cut -f3 -d.`; \
+	      t=`echo $$f | cut -f1 -d.`; \
+	      ${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-refresh; \
+	  done \
+	done
 
 
 
@@ -1218,19 +1167,21 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-testsets.done:
 	      wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.tmp \
 			${TATOEBA_RAWGIT}/data/test/$$s-$$t/test.txt; \
 	      if [ -s ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.tmp ]; then \
-	        echo "make Tatoeba-test.$$s-$$t"; \
 		cat ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.tmp $(FIXLANGIDS) \
-		> ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt; \
-		if [ "${USE_TARGET_LABELS}" == "1" ]; then \
-	          cut -f2,3 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt | \
-		  sed 's/^\([^ ]*\)	/>>\1<< /' \
-		  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.src; \
-		else \
-		  cut -f3 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt \
-		  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.src; \
+			> ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt; \
+		if [ "$$s-$$t" != ${LANGPAIRSTR} ]; then \
+	          echo "make Tatoeba-test.$$s-$$t"; \
+		  if [ "${USE_TARGET_LABELS}" == "1" ]; then \
+	            cut -f2,3 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt | \
+		    sed 's/^\([^ ]*\)	/>>\1<< /' \
+		    > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.src; \
+		  else \
+		    cut -f3 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt \
+		    > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.src; \
+		  fi; \
+	          cut -f4 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt \
+		  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.trg; \
 		fi; \
-	        cut -f4 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt \
-		> ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.trg; \
 		S=`cut -f1 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt |\
 			sort -u | tr "\n" ' ' | sed 's/ *$$//'`; \
 		T=`cut -f2 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt |\
@@ -1239,21 +1190,23 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-testsets.done:
 		  echo "extracting test sets for individual sub-language pairs!"; \
 		  for a in $$S; do \
 		    for b in $$T; do \
-		      if [ ! -e ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$a-$$b.src ]; then \
-	                echo "make Tatoeba-test.$$a-$$b"; \
-		        if [ "${USE_TARGET_LABELS}" == "1" ]; then \
+		      if [ "$$a-$$b" != ${LANGPAIRSTR} ]; then \
+		        if [ ! -e ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$a-$$b.src ]; then \
+	                  echo "make Tatoeba-test.$$a-$$b"; \
+		          if [ "${USE_TARGET_LABELS}" == "1" ]; then \
+		            grep "$$a	$$b	" < ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt |\
+			    cut -f2,3 | sed 's/^\([^ ]*\)	/>>\1<< /' \
+			    > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$a-$$b.src; \
+		          else \
+		            grep "$$a	$$b	" < ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt |\
+			    cut -f3 | sed 's/^\([^ ]*\)	/>>\1<< /' \
+			    > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$a-$$b.src; \
+		          fi; \
 		          grep "$$a	$$b	" < ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt |\
-			  cut -f2,3 | sed 's/^\([^ ]*\)	/>>\1<< /' \
-			  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$a-$$b.src; \
-		        else \
-		          grep "$$a	$$b	" < ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt |\
-			  cut -f3 | sed 's/^\([^ ]*\)	/>>\1<< /' \
-			  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$a-$$b.src; \
-		        fi; \
-		        grep "$$a	$$b	" < ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt |\
-		        cut -f4 | sed 's/^\([^ ]*\)	/>>\1<< /' \
-			> ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$a-$$b.trg; \
-		      fi \
+		          cut -f4 | sed 's/^\([^ ]*\)	/>>\1<< /' \
+			  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$a-$$b.trg; \
+		        fi \
+	              fi \
 		    done \
 		  done \
 		fi; \
@@ -1261,19 +1214,21 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-testsets.done:
 	        wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.tmp \
 			${TATOEBA_RAWGIT}/data/test/$$t-$$s/test.txt; \
 	        if [ -s ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.tmp ]; then \
-	          echo "make Tatoeba-test.$$s-$$t"; \
 		  cat ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.tmp $(FIXLANGIDS) \
-		  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt; \
-		  if [ "${USE_TARGET_LABELS}" == "1" ]; then \
-	            cut -f1,4 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt | \
-		    sed 's/^\([^ ]*\)	/>>\1<< /' \
-		    > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.src; \
-		  else \
-		    cut -f4 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt \
-		    > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.src; \
+			> ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt; \
+		  if [ "$$s-$$t" != ${LANGPAIRSTR} ]; then \
+	            echo "make Tatoeba-test.$$s-$$t"; \
+		    if [ "${USE_TARGET_LABELS}" == "1" ]; then \
+	              cut -f1,4 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt | \
+		      sed 's/^\([^ ]*\)	/>>\1<< /' \
+		      > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.src; \
+		    else \
+		      cut -f4 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt \
+		      > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.src; \
+		    fi; \
+	            cut -f3 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt \
+		    > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.trg; \
 		  fi; \
-	          cut -f3 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt \
-		  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.trg; \
 		  S=`cut -f2 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt |\
 			sort -u | tr "\n" ' ' | sed 's/ *$$//'`; \
 		  T=`cut -f1 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt |\
@@ -1282,20 +1237,22 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-testsets.done:
 		    echo "extracting test sets for individual sub-language pairs!"; \
 		    for a in $$S; do \
 		      for b in $$T; do \
-		        if [ ! -e ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$a-$$b.src ]; then \
-	                  echo "make Tatoeba-test.$$a-$$b"; \
-		          if [ "${USE_TARGET_LABELS}" == "1" ]; then \
+		        if [ "$$a-$$b" != ${LANGPAIRSTR} ]; then \
+		          if [ ! -e ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$a-$$b.src ]; then \
+	                    echo "make Tatoeba-test.$$a-$$b"; \
+		            if [ "${USE_TARGET_LABELS}" == "1" ]; then \
+		              grep "$$b	$$a	" < ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt |\
+			      cut -f1,4 | sed 's/^\([^ ]*\)	/>>\1<< /' \
+			      > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$a-$$b.src; \
+		            else \
+		              grep "$$b	$$a	" < ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt |\
+			      cut -f4 | sed 's/^\([^ ]*\)	/>>\1<< /' \
+			      > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$a-$$b.src; \
+		            fi; \
 		            grep "$$b	$$a	" < ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt |\
-			    cut -f1,4 | sed 's/^\([^ ]*\)	/>>\1<< /' \
-			    > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$a-$$b.src; \
-		          else \
-		            grep "$$b	$$a	" < ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt |\
-			    cut -f4 | sed 's/^\([^ ]*\)	/>>\1<< /' \
-			    > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$a-$$b.src; \
-		          fi; \
-		          grep "$$b	$$a	" < ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$s-$$t.txt |\
-		          cut -f3 | sed 's/^\([^ ]*\)	/>>\1<< /' \
-			  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$a-$$b.trg; \
+		            cut -f3 | sed 's/^\([^ ]*\)	/>>\1<< /' \
+			    > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-test.$$a-$$b.trg; \
+		          fi \
 		        fi \
 		      done \
 		    done \
@@ -1472,8 +1429,7 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-languages.%: ${TATOEBA_WORK}/${LANGPAI
 
 
 ## generic target for tatoeba challenge jobs
-%-tatoeba: 	${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.src \
-		${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.trg
+%-tatoeba: ${TATOEBA_SRCLABELFILE} ${TATOEBA_TRGLABELFILE}
 	${MAKE} ${TATOEBA_PARAMS} \
 		LANGPAIRSTR=${LANGPAIRSTR} \
 		SRCLANGS="${shell cat ${word 1,$^}}" \
@@ -1595,7 +1551,7 @@ KEEP_LANGIDS         = bos_Cyrl cmn cnr cnr_Latn csb diq dnj dty fas fqs ful fur
 			nor nor_Latn oss_Latn pan plt pnb_Guru pob prs qug quw quy quz qvi rmn rmy ruk san swa swc \
 			syr syr_Syrc tgk_Latn thy tlh tmh toi tuk_Cyrl urd_Deva xal_Latn yid_Latn zho zlm
 SKIP_LANGIDS         = ${filter-out ${KEEP_LANGIDS},${TRAIN_ONLY_LANGIDS}} \
-			ang ara_Latn bul_Latn ell_Latn heb_Latn nob_Hebr rus_Latn
+			ang ara_Latn arq_Latn apc_Latn bul_Latn ell_Latn heb_Latn nob_Hebr rus_Latn
 SKIP_LANGIDS_PATTERN = ^\(${subst ${SPACE},\|,${SKIP_LANGIDS}}\)$$
 
 ## modify language IDs in training data to adjust them to test sets
@@ -1608,7 +1564,6 @@ FIXLANGIDS = 	| sed 's/zho\(.*\)_HK/yue\1/g;s/zho\(.*\)_CN/cmn\1/g;s/zho\(.*\)_T
 		| sed 's/\_[A-Z][A-Z]//g' \
 		| sed 's/\-[a-z]*//g' \
 		| sed 's/jpn_[A-Za-z]*/jpn/g' \
-		| sed 's/ara_Latn/ara/;s/arq_Latn/arq/;' \
 		| sed 's/kor_[A-Za-z]*/kor/g' \
 		| sed 's/nor_Latn/nor/g' \
 		| sed 's/nor/nob/g' \
@@ -1616,6 +1571,10 @@ FIXLANGIDS = 	| sed 's/zho\(.*\)_HK/yue\1/g;s/zho\(.*\)_CN/cmn\1/g;s/zho\(.*\)_T
 		| sed 's/syr_Syrc/syr/g' \
 		| sed 's/yid_Latn/yid/g' \
 		| perl -pe 'if (/(cjy|cmn|gan|lzh|nan|wuu|yue|zho)_([A-Za-z]{4})/){if ($$2 ne "Hans" && $$2 ne "Hant"){s/(cjy|cmn|gan|lzh|nan|wuu|yue|zho)_([A-Za-z]{4})/$$1/} }'
+
+
+#		| sed 's/ara_Latn/ara/;s/arq_Latn/arq/;' \
+
 
 
 print-skiplangids:
@@ -1730,13 +1689,12 @@ ${TATOEBA_MONO}/%.labels:
 	        echo "extract $$s-$$t data"; \
 	        for d in dev test train; do \
 		  if [ -e ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id ]; then \
-	            echo "........ make ${dir $@}Tatoeba-$$d.$$s-$$t"; \
 	            paste ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id \
 		          ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT} \
 		          ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT} |\
 	            grep -P "$$s\t$$t\t" > ${dir $@}Tatoeba-$$d.$$s-$$t; \
 	            if [ -s ${dir $@}Tatoeba-$$d.$$s-$$t ]; then \
-	              echo "........ compress to ${dir $@}Tatoeba-$$d.$$s-$$t.clean.*.gz"; \
+	              echo "........ make ${dir $@}Tatoeba-$$d.$$s-$$t.clean.*.gz"; \
 	              cut -f3 ${dir $@}Tatoeba-$$d.$$s-$$t | ${GZIP} -c > ${dir $@}Tatoeba-$$d.$$s-$$t.clean.$$s.gz; \
 	              cut -f4 ${dir $@}Tatoeba-$$d.$$s-$$t | ${GZIP} -c > ${dir $@}Tatoeba-$$d.$$s-$$t.clean.$$t.gz; \
 	            fi; \
@@ -1747,13 +1705,12 @@ ${TATOEBA_MONO}/%.labels:
 	        echo "extract $$t-$$s data"; \
 	        for d in dev test train; do \
 		  if [ -e ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id ]; then \
-	            echo "........ make ${dir $@}Tatoeba-$$d.$$t-$$s"; \
 	            paste ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id \
 		          ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT} \
 		          ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT} |\
 	            grep -P "$$s\t$$t\t" > ${dir $@}Tatoeba-$$d.$$t-$$s; \
 	            if [ -s ${dir $@}Tatoeba-$$d.$$t-$$s ]; then \
-	              echo "........ compress to ${dir $@}Tatoeba-$$d.$$t-$$s.clean.*.gz"; \
+	              echo "........ make ${dir $@}Tatoeba-$$d.$$t-$$s.clean.*.gz"; \
 	              cut -f3 ${dir $@}Tatoeba-$$d.$$t-$$s | ${GZIP} -c > ${dir $@}Tatoeba-$$d.$$t-$$s.clean.$$t.gz; \
 	              cut -f4 ${dir $@}Tatoeba-$$d.$$t-$$s | ${GZIP} -c > ${dir $@}Tatoeba-$$d.$$t-$$s.clean.$$s.gz; \
 	            fi; \
@@ -1766,7 +1723,7 @@ ${TATOEBA_MONO}/%.labels:
 	fi
 #######################################
 # Finally, compress the big files with
-# all the differnt language variants.
+# all the different language variants.
 # If the code is the same as one of the
 # variants then remove the file instead.
 #######################################
