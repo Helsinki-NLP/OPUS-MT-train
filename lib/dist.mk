@@ -200,11 +200,15 @@ RAWSRCLANGS = ${sort ${basename ${basename ${subst _,.,${subst -,.,${SRCLANGS}}}
 RAWTRGLANGS = ${sort ${basename ${basename ${subst _,.,${subst -,.,${TRGLANGS}}}}}}
 
 ## language labels in multilingual models
-## (NEW: take them directly from the model vocabulary
-##  tto avoid listing labels that are not used)
-
 # LANGUAGELABELS = ${patsubst %,>>%<<,${TRGLANGS}}
-LANGUAGELABELS = ${shell grep '">>.*<<"' ${MODEL_SRCVOCAB} | cut -f1 -d: | sed 's/"//g'}
+
+## BETTER: take them directly from the model vocabulary!
+## advantage: list all labels that are valid in the model
+## disadvantage: can be misleading because we may have labels that are not trained
+##
+LANGUAGELABELS    = ${shell grep '">>.*<<"' ${MODEL_SRCVOCAB} | cut -f1 -d: | sed 's/"//g'}
+LANGUAGELABELSRAW = ${shell echo "${LANGUAGELABELS}" | sed 's/>>//g;s/<<//g'}
+
 
 
 model-yml: ${MODEL_YML}
@@ -244,18 +248,24 @@ ${MODEL_YML}: ${MODEL_FINAL}
 	@echo "release-date: $(DATE)"                     >> $@
 	@echo "dataset-name: $(DATASET)"                  >> $@
 	@echo "modeltype: $(MODELTYPE)"                   >> $@
+	@echo "vocabulary:"                               >> $@
+	@echo "   source: ${notdir ${MODEL_SRCVOCAB}}"  >> $@
+	@echo "   target: ${notdir ${MODEL_TRGVOCAB}}"  >> $@
 	@echo "pre-processing: ${PREPROCESS_DESCRIPTION}" >> $@
 	@echo "subwords:"                                 >> $@
-	@echo "   - source: ${PRE_SRC}"                   >> $@
-	@echo "   - target: ${PRE_TRG}"                   >> $@
+	@echo "   source: ${PRE_SRC}"                   >> $@
+	@echo "   target: ${PRE_TRG}"                   >> $@
 	@echo "subword-models:"                           >> $@
-	@echo "   - source: source.${SUBWORD_TYPE}"       >> $@
-	@echo "   - target: target.${SUBWORD_TYPE}"       >> $@
+	@echo "   source: source.${SUBWORD_TYPE}"       >> $@
+	@echo "   target: target.${SUBWORD_TYPE}"       >> $@
 ifdef USE_TARGET_LABELS
 	@echo "use-target-labels:"                        >> $@
-	@for t in ${TRGLANGS}; do \
-	  echo "   - >>$$t<<"                             >> $@; \
+	@for t in ${LANGUAGELABELSRAW}; do \
+	  echo "   - \">>$$t<<\""                         >> $@; \
 	done
+#	@for t in ${TRGLANGS}; do \
+#	  echo "   - '>>$$t<<'"                           >> $@; \
+#	done
 endif
 	@echo "source-languages:"                         >> $@
 	@for s in ${RAWSRCLANGS}; do\
@@ -271,13 +281,13 @@ ifneq ("$(wildcard ${WORKDIR}/train/README.md)","")
 	tr "#" "\n" | grep '^ ${DATASET}~' | \
 	tail -1 | tr "~" "\n" | grep '^\* ' | \
 	grep -v ': *$$' | grep -v ' 0$$' | \
-	grep -v 'total size' | sed 's/^\* /   - /'        >> $@
+	grep -v 'total size' | sed 's/^\* /   /'          >> $@
 endif
 ifneq ("$(wildcard ${WORKDIR}/val/README.md)","")
 	@echo "validation-data:"                          >> $@
 	grep '^\* ' ${WORKDIR}/val/README.md | \
 	grep -v ' 0$$' | \
-	sed 's/^\* /   - /'                               >> $@
+	sed 's/^\* /   /'                                 >> $@
 endif
 ##-----------------------------
 ## add benchmark results
@@ -301,11 +311,11 @@ ifneq ("$(wildcard ${TEST_EVALUATION})","")
 	cut -f7 -d ' ' > $@.6
 	@paste -d '/' $@.4 $@.5                                      > $@.7
 	@echo "test-data:"                                          >> $@
-	@paste -d' ' $@.1 $@.7 | sed 's/ /: /;s/^/   - /;'          >> $@
+	@paste -d' ' $@.1 $@.7 | sed 's/ /: /;s/^/   /;'            >> $@
 	@echo "BLEU-scores:"                                        >> $@
-	@paste -d' ' $@.1 $@.2 | sed 's/ /: /;s/^/   - /'           >> $@
+	@paste -d' ' $@.1 $@.2 | sed 's/ /: /;s/^/   /'             >> $@
 	@echo "chr-F-scores:"                                       >> $@
-	@paste -d' ' $@.1 $@.3 | sed 's/ /: /;s/^/   - /'           >> $@
+	@paste -d' ' $@.1 $@.3 | sed 's/ /: /;s/^/   /'             >> $@
 	@rm -f $@.1 $@.2 $@.3 $@.4 $@.5 $@.6 $@.7
 endif
 
@@ -785,7 +795,7 @@ ${EVALTRANSL}: # ${WORKHOME}/eval/%.test.txt: ${MODELSHOME}/%.compare
 
 
 ######################################################################
-## handle old models in previous work directories
+## misc recipes ... all kind of fixes
 ## obsolete now?
 ######################################################################
 
@@ -948,3 +958,38 @@ remove-underperforming:
 	    echo "keep $$d"; \
 	  fi \
 	done
+
+
+dist-remove-no-date-dist:
+	swift list ${MODEL_CONTAINER} > index.txt
+	for d in `grep opus.zip index.txt`; do \
+	  swift delete ${MODEL_CONTAINER} $$d; \
+	done
+
+dist-remove-old-yml:
+	swift list Tatoeba-MT-models > index.txt
+	for d in `grep old-yml index.txt`; do \
+	  swift delete Tatoeba-MT-models $$d; \
+	done
+
+dist-fix-preprocess:
+	mkdir -p tmp
+	( cd tmp; \
+	  swift list Tatoeba-MT-models > index.txt; \
+	  for d in `grep '.zip' index.txt`; do \
+	    echo "check $$d ..."; \
+	    swift download Tatoeba-MT-models $$d; \
+	    unzip $$d preprocess.sh; \
+	    mv preprocess.sh preprocess-old.sh; \
+	    sed 's#perl -C -pe.*$$#perl -C -pe  "s/(?!\\n)\\p{C}/ /g;" |#' \
+	      < preprocess-old.sh > preprocess.sh; \
+	    chmod +x ${dir $@}/preprocess.sh; \
+	    if [ `diff preprocess-old.sh preprocess.sh | wc -l` -gt 0 ]; then \
+	      echo "replace old preprocess in $$d and upload again"; \
+	      zip -u $$d preprocess.sh; \
+	      swift upload Tatoeba-MT-models --changed --skip-identical $$d; \
+	    fi; \
+	    rm -f preprocess.sh; \
+	    rm -f $$d; \
+	  done )
+

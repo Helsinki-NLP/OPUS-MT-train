@@ -21,8 +21,9 @@ AMERICASNLP_TRGALL = $(sort ${AMERICASNLP_TRG} ${AMERICASNLP_TRG_EXTRA} \
 # AMERICASNLP_TRGALL = ${sort ${AMERICASNLP_TRG} ${AMERICASNLP_TRG_EXTRA} ${LANGGROUP_NAI} ${LANGGROUP_SAI}}
 
 
+AMERICASNLP_BPESIZE       = 32000 
 AMERICASNLP_FIT_DATA_SIZE = 100000
-AMERICASNLP_PIVOT = en
+AMERICASNLP_PIVOT         = en
 
 
 # /scratch/project_2001194/yves/americas/backtrans/merged/*.dedup.*
@@ -78,6 +79,27 @@ americasnlp-testdata:
 	done
 
 
+AMERICASNLP_YVES_SPLITDIR = /scratch/project_2001194/yves/americas/backtrans/split_dev
+
+americasnlp-finetunedata:
+	for l in aym bzd cni gn hch nah oto quy shp tar; do \
+	    if [ $$l \< es ]; then p="$$l-es"; else p="es-$$l"; fi; \
+	    head -50 ${AMERICASNLP_YVES_SPLITDIR}/dev1_$$l.$$l |\
+	      gzip -c > ${AMERICASNLP_WORK}/data/simple/americasnlp2021-tunedev.$$p.clean.$$l.gz; \
+	    head -50 ${AMERICASNLP_YVES_SPLITDIR}/dev1_$$l.es |\
+	      gzip -c > ${AMERICASNLP_WORK}/data/simple/americasnlp2021-tunedev.$$p.clean.es.gz; \
+	    tail -n +51 ${AMERICASNLP_YVES_SPLITDIR}/dev1_$$l.$$l |\
+	      gzip -c > ${AMERICASNLP_WORK}/data/simple/americasnlp2021-tunetrain.$$p.clean.$$l.gz; \
+	    tail -n +51 ${AMERICASNLP_YVES_SPLITDIR}/dev1_$$l.es |\
+	    gzip -c > ${AMERICASNLP_WORK}/data/simple/americasnlp2021-tunetrain.$$p.clean.es.gz; \
+	    gzip -c < ${AMERICASNLP_YVES_SPLITDIR}/dev2_$$l.$$l \
+		> ${AMERICASNLP_WORK}/data/simple/americasnlp2021-tunetest.$$p.clean.$$l.gz; \
+	    gzip -c < ${AMERICASNLP_YVES_SPLITDIR}/dev2_$$l.es \
+		> ${AMERICASNLP_WORK}/data/simple/americasnlp2021-tunetest.$$p.clean.es.gz; \
+	 done
+
+
+
 AMERICASNLP_YVES_BTDIR = /scratch/project_2001194/yves/americas/backtrans/merged
 
 americasnlp-btdata:
@@ -97,9 +119,9 @@ americasnlp-btdata:
 		BACKTRANS_HOME=${AMERICASNLP_BTHOME} \
 		TESTSET_HOME=${AMERICASNLP_TESTSETS} \
 		MODELTYPE=transformer-align \
-		SRCBPESIZE=32000 \
-		TRGBPESIZE=32000 \
-		BPESIZE=32000 \
+		SRCBPESIZE=${AMERICASNLP_BPESIZE} \
+		TRGBPESIZE=${AMERICASNLP_BPESIZE} \
+		BPESIZE=${AMERICASNLP_BPESIZE} \
 		GPUJOB_HPC_MEM=8g \
 		MARIAN_VALID_FREQ=2500 \
 		DATASET=americasnlp \
@@ -123,27 +145,99 @@ americasnlp-btdata:
 		MARIAN_EARLY_STOPPING=${TUNE_EARLY_STOPPING} \
 		MARIAN_EXTRA='-e 5 --no-restore-corpus' \
 		GPUJOB_SUBMIT=${TUNE_GPUJOB_SUBMIT} \
-		DATASET=americasnlp-tuned4${TUNE_SRC}2${TUNE_TRG} \
+		DATASET=opus-americasnlp-tuned4${TUNE_SRC}2${TUNE_TRG} \
 		SRCLANGS="${TUNE_SRC}" \
 		TRGLANGS="${TUNE_TRG}" \
+		USE_TARGET_LABELS=1 \
+		USE_REST_DEVDATA=0 \
 		WORKHOME=${AMERICASNLP_WORK} \
 		BACKTRANS_HOME=${AMERICASNLP_BTHOME} \
 		TESTSET_HOME=${AMERICASNLP_TESTSETS} \
 		MODELTYPE=transformer-align \
-		SRCBPESIZE=32000 \
-		TRGBPESIZE=32000 \
-		BPESIZE=32000 \
+		SRCBPESIZE=${AMERICASNLP_BPESIZE} \
+		TRGBPESIZE=${AMERICASNLP_BPESIZE} \
+		BPESIZE=${AMERICASNLP_BPESIZE} \
 		GPUJOB_HPC_MEM=8g \
-		TRAINSET=americasnlp2021-train \
-		EXTRA_TRAINSET=americasnlp2021-train \
-		DEVSET=americasnlp2021-dev \
-		TESTSET=americasnlp2021-test \
-		DEVSET_NAME=americasnlp2021-dev \
-		TESTSET_NAME=americasnlp2021-test \
-		FIT_DATA_SIZE=${AMERICASNLP_FIT_DATA_SIZE} \
-		SHUFFLE_DATA=1 \
-		LANGPAIRSTR="es-xx" \
+		TRAINSET=americasnlp2021-tunetrain \
+		EXTRA_TRAINSET=americasnlp2021-tunetrain \
+		DEVSET=americasnlp2021-tunedev \
+		TESTSET=americasnlp2021-tunetest \
+		DEVSET_NAME=americasnlp2021-tunedev \
+		TESTSET_NAME=americasnlp2021-tunetest \
+		LANGPAIRSTR="es+en-xx" \
 	${@:-americasnlp-langtune=}
+
+
+## tune for all languages
+
+%-americasnlp-tune:
+	make 	MODEL_LATEST=${AMERICASNLP_WORK}/es+en-xx/opus-americasnlp.spm32k-spm32k.transformer-align.model1.npz.best-perplexity.npz \
+		MODEL_LATEST_VOCAB=${AMERICASNLP_WORK}/es+en-xx/opus-americasnlp.spm32k-spm32k.vocab.yml \
+		MARIAN_VALID_FREQ=${TUNE_VALID_FREQ} \
+		MARIAN_DISP_FREQ=${TUNE_DISP_FREQ} \
+		MARIAN_SAVE_FREQ=${TUNE_SAVE_FREQ} \
+		MARIAN_EARLY_STOPPING=${TUNE_EARLY_STOPPING} \
+		MARIAN_EXTRA='-e 5 --no-restore-corpus' \
+		GPUJOB_SUBMIT=${TUNE_GPUJOB_SUBMIT} \
+		DATASET=opus-americasnlp-tuned4es2all \
+		SRCLANGS="es" \
+		TRGLANGS="aym bzd cni gn hch nah oto quy shp tar" \
+		USE_TARGET_LABELS=1 \
+		USE_REST_DEVDATA=0 \
+		WORKHOME=${AMERICASNLP_WORK} \
+		BACKTRANS_HOME=${AMERICASNLP_BTHOME} \
+		TESTSET_HOME=${AMERICASNLP_TESTSETS} \
+		MODELTYPE=transformer-align \
+		SRCBPESIZE=${AMERICASNLP_BPESIZE} \
+		TRGBPESIZE=${AMERICASNLP_BPESIZE} \
+		BPESIZE=${AMERICASNLP_BPESIZE} \
+		GPUJOB_HPC_MEM=8g \
+		TRAINSET=americasnlp2021-tunetrain \
+		EXTRA_TRAINSET=americasnlp2021-tunetrain \
+		DEVSET=americasnlp2021-tunedev \
+		TESTSET=americasnlp2021-tunetest \
+		DEVSET_NAME=americasnlp2021-tunedev \
+		TESTSET_NAME=americasnlp2021-tunetest \
+		LANGPAIRSTR="es+en-xx" \
+	${@:-americasnlp-tune=}
+
+
+%-americasnlp-tunebt:
+	make 	MODEL_LATEST=${AMERICASNLP_WORK}/es+en-xx/opus-americasnlp+bt.spm32k-spm32k.transformer-align.model1.npz.best-perplexity.npz \
+		MODEL_LATEST_VOCAB=${AMERICASNLP_WORK}/es+en-xx/opus-americasnlp+bt.spm32k-spm32k.vocab.yml \
+		MARIAN_VALID_FREQ=${TUNE_VALID_FREQ} \
+		MARIAN_DISP_FREQ=${TUNE_DISP_FREQ} \
+		MARIAN_SAVE_FREQ=${TUNE_SAVE_FREQ} \
+		MARIAN_EARLY_STOPPING=${TUNE_EARLY_STOPPING} \
+		MARIAN_EXTRA='-e 5 --no-restore-corpus' \
+		GPUJOB_SUBMIT=${TUNE_GPUJOB_SUBMIT} \
+		DATASET=opus-americasnlp+bt-tuned4es2all \
+		SRCLANGS="es" \
+		TRGLANGS="aym bzd cni gn hch nah oto quy shp tar" \
+		USE_TARGET_LABELS=1 \
+		USE_REST_DEVDATA=0 \
+		WORKHOME=${AMERICASNLP_WORK} \
+		BACKTRANS_HOME=${AMERICASNLP_BTHOME} \
+		TESTSET_HOME=${AMERICASNLP_TESTSETS} \
+		MODELTYPE=transformer-align \
+		SRCBPESIZE=${AMERICASNLP_BPESIZE} \
+		TRGBPESIZE=${AMERICASNLP_BPESIZE} \
+		BPESIZE=${AMERICASNLP_BPESIZE} \
+		GPUJOB_HPC_MEM=8g \
+		TRAINSET=americasnlp2021-tunetrain \
+		EXTRA_TRAINSET=americasnlp2021-tunetrain \
+		DEVSET=americasnlp2021-tunedev \
+		TESTSET=americasnlp2021-tunetest \
+		DEVSET_NAME=americasnlp2021-tunedev \
+		TESTSET_NAME=americasnlp2021-tunetest \
+		LANGPAIRSTR="es+en-xx" \
+	${@:-americasnlp-tunebt=}
+
+
+
+
+
+
 
 
 
@@ -154,9 +248,9 @@ americasnlp-btdata:
 		BACKTRANS_HOME=${AMERICASNLP_BTHOME} \
 		TESTSET_HOME=${AMERICASNLP_TESTSETS} \
 		MODELTYPE=transformer-align \
-		SRCBPESIZE=32000 \
-		TRGBPESIZE=32000 \
-		BPESIZE=32000 \
+		SRCBPESIZE=${AMERICASNLP_BPESIZE} \
+		TRGBPESIZE=${AMERICASNLP_BPESIZE} \
+		BPESIZE=${AMERICASNLP_BPESIZE} \
 		GPUJOB_HPC_MEM=8g \
 		MARIAN_VALID_FREQ=2500 \
 		DATASET=americasnlp \
@@ -179,9 +273,9 @@ americasnlp-btdata:
 		BACKTRANS_HOME=${AMERICASNLP_BTHOME} \
 		TESTSET_HOME=${AMERICASNLP_TESTSETS} \
 		MODELTYPE=transformer-align \
-		SRCBPESIZE=32000 \
-		TRGBPESIZE=32000 \
-		BPESIZE=32000 \
+		SRCBPESIZE=${AMERICASNLP_BPESIZE} \
+		TRGBPESIZE=${AMERICASNLP_BPESIZE} \
+		BPESIZE=${AMERICASNLP_BPESIZE} \
 		GPUJOB_HPC_MEM=8g \
 		DATASET=opus-americasnlp \
 		EXTRA_TRAINSET=americasnlp2021-train \
@@ -201,9 +295,9 @@ americasnlp-btdata:
 		BACKTRANS_HOME=${AMERICASNLP_BTHOME} \
 		TESTSET_HOME=${AMERICASNLP_TESTSETS} \
 		MODELTYPE=transformer-align \
-		SRCBPESIZE=32000 \
-		TRGBPESIZE=32000 \
-		BPESIZE=32000 \
+		SRCBPESIZE=${AMERICASNLP_BPESIZE} \
+		TRGBPESIZE=${AMERICASNLP_BPESIZE} \
+		BPESIZE=${AMERICASNLP_BPESIZE} \
 		GPUJOB_HPC_MEM=8g \
 		DATASET=opus-americasnlp \
 		EXTRA_TRAINSET=americasnlp2021-train \

@@ -28,6 +28,9 @@ SPMEXTRA =
 ## set to 1 if you want to generate SPM vocab file
 GENERATE_SPM_VOC = 0
 
+# SPM_INPUT_SIZE  = 10000000
+SPM_INPUT_SIZE    = 2000000
+SPM_SHUFFLE_INPUT = 0
 
 ## we keep the dependency on LOCAL_TRAIN_SRC
 ## to make multi-threaded make calls behave properly
@@ -52,10 +55,12 @@ endif
 	if [ `cat ${LOCAL_TRAIN_SRC}.charfreq | wc -l` -gt 1000 ]; then \
 	  ${SPM_TRAIN} ${SPMEXTRA} \
 		--model_prefix=$@ --vocab_size=$(SRCBPESIZE) --input=${LOCAL_TRAIN_SRC}.text \
+		--input_sentence_size ${SPM_INPUT_SIZE} --shuffle_input_sentence ${SPM_SHUFFLE_INPUT} \
 		--character_coverage=0.9995 --hard_vocab_limit=false; \
 	else \
 	  ${SPM_TRAIN} ${SPMEXTRA} \
 		--model_prefix=$@ --vocab_size=$(SRCBPESIZE) --input=${LOCAL_TRAIN_SRC}.text \
+		--input_sentence_size ${SPM_INPUT_SIZE} --shuffle_input_sentence ${SPM_SHUFFLE_INPUT} \
 		--character_coverage=1.0 --hard_vocab_limit=false; \
 	fi
 	mv $@.model $@
@@ -82,10 +87,12 @@ else
 	if [ `cat ${LOCAL_TRAIN_TRG}.charfreq | wc -l` -gt 1000 ]; then \
 	  ${SPM_TRAIN} ${SPMEXTRA} \
 		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=${LOCAL_TRAIN_TRG}.text \
+		--input_sentence_size ${SPM_INPUT_SIZE} --shuffle_input_sentence ${SPM_SHUFFLE_INPUT} \
 		--character_coverage=0.9995 --hard_vocab_limit=false; \
 	else \
 	  ${SPM_TRAIN} ${SPMEXTRA} \
 		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=${LOCAL_TRAIN_TRG}.text \
+		--input_sentence_size ${SPM_INPUT_SIZE} --shuffle_input_sentence ${SPM_SHUFFLE_INPUT} \
 		--character_coverage=1.0 --hard_vocab_limit=false; \
 	fi
 	mv $@.model $@
@@ -161,10 +168,12 @@ ifeq ($(wildcard ${SPMMODEL}),)
 	if [ `cat ${LOCAL_MONO_DATA}.${PRE}.charfreq | wc -l` -gt 1000 ]; then \
 	  ${SPM_TRAIN} ${SPMEXTRA} \
 		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=$<.text \
+		--input_sentence_size ${SPM_INPUT_SIZE} --shuffle_input_sentence ${SPM_SHUFFLE_INPUT} \
 		--character_coverage=0.9995 --hard_vocab_limit=false; \
 	else \
 	  ${SPM_TRAIN} ${SPMEXTRA} \
 		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=$<.text \
+		--input_sentence_size ${SPM_INPUT_SIZE} --shuffle_input_sentence ${SPM_SHUFFLE_INPUT} \
 		--character_coverage=1.0 --hard_vocab_limit=false; \
 	fi
 	mv $@.model $@

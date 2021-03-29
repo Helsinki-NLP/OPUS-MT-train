@@ -27,13 +27,6 @@ ifdef LANGPAIRS
 endif
 
 
-## final default is sv-fi
-## NEW: don't do this ... can create confusion ...
-##
-# SRCLANGS ?= sv
-# TRGLANGS ?= fi
-
-
 ## set SRC and TRG unless they are specified already
 ifneq (${words ${SRCLANGS}},1)
   SRC ?= multi
@@ -54,43 +47,66 @@ endif
 # TRG ?= ${lastword ${TRGLANGS}}
 
 
+##----------------------------------------------------------------------
 ## SKIP_LANGPAIRS can be used to skip certain language pairs
 ## in data preparation for multilingual models
 ## ---> this can be good to skip BIG language pairs
 ##      that would very much dominate all the data
 ## must be a pattern that can be matched by egrep
 ## e.g. en-de|en-fr
+##----------------------------------------------------------------------
 
 SKIP_LANGPAIRS ?= "nothing"
 
 
+##----------------------------------------------------------------------
 ## set SHUFFLE_DATA if you want to shuffle data for 
 ## each language pair to be added to the training data
 ## --> especially useful in connection with FIT_DATA_SIZE
-##  
+##----------------------------------------------------------------------
+
 # SHUFFLE_DATA = 1
 
 ## devtest data is shuffled by default
 SHUFFLE_DEVDATA = 1
 
 
+##----------------------------------------------------------------------
 ## set FIT_DATA_SIZE to a specific value to fit the training data
 ## to a certain number of lines for each language pair in the collection
 ## --> especially useful for multilingual models for balancing the 
 ##     the size for each language pair
 ## the script does both, over- and undersampling
-##
+##----------------------------------------------------------------------
+
 # FIT_DATA_SIZE = 100000
+
+## similar for the dev data: set FIT_DEVDATA_SIZE to
+## balance the size of the devdata for each language pair
+##
+# FIT_DEVDATA_SIZE = 
+
+## define a default dev size fit for multilingual models
+## TODO: is 1000 too small? or too big?
+## TODO: should this depend on the number of languages involved?
+
+ifneq (${words ${TRGLANGS}},1)
+  FIT_DEVDATA_SIZE ?= 1000
+endif
+ifneq (${words ${SRCLANGS}},1)
+  FIT_DEVDATA_SIZE ?= 1000
+endif
 
 ## maximum number of repeating the same data set 
 ## in oversampling
 MAX_OVER_SAMPLING ?= 50
 
 
+##----------------------------------------------------------------------
 ## set CHECK_TRAINDATA_SIZE if you want to check that each
 ## bitext has equal number of lines in source and target
 ## ---> this only prints a warning if not
-##
+##----------------------------------------------------------------------
 # CHECK_TRAINDATA_SIZE
 
 
@@ -134,11 +150,10 @@ endif
 DEVSIZE     = 2500
 TESTSIZE    = 2500
 
-## NEW: significantly reduce devminsize
-## (= absolute minimum we need as devdata)
-## NEW: define an alternative small size for DEV and TEST
-## OLD DEVMINSIZE:
-# DEVMINSIZE  = 1000
+## set some additional thresholds for 
+## the size of test and dev data
+## DEVMINSIZE is the absolute minimum we require
+## to run any training procedures
 
 DEVSMALLSIZE  = 1000
 TESTSMALLSIZE = 1000
@@ -154,24 +169,8 @@ OPUSREAD_ARGS =
 ## resources in OPUS
 ##----------------------------------------------------------------------------
 
-## OLD: get corpora directly from the file system
-#
-# ELRA_CORPORA = ${patsubst %/latest/xml/${LANGPAIR}.xml.gz,%,\
-#		${patsubst ${OPUSHOME}/%,%,\
-#		${shell ls ${OPUSHOME}/ELRA-*/latest/xml/${LANGPAIR}.xml.gz 2>/dev/null}}}
-#
-# EXCLUDE_CORPORA ?= WMT-News MPC1 ${ELRA_CORPORA}
-#
-# OPUSCORPORA  = $(filter-out ${EXCLUDE_CORPORA},${patsubst %/latest/xml/${LANGPAIR}.xml.gz,%,\
-#		${patsubst ${OPUSHOME}/%,%,\
-#		${shell ls ${OPUSHOME}/*/latest/xml/${LANGPAIR}.xml.gz 2>/dev/null}}})
-#
-# OPUSMONOCORPORA = $(filter-out ${EXCLUDE_CORPORA} ,${patsubst %/latest/mono/${LANGID}.txt.gz,%,\
-#		${patsubst ${OPUSHOME}/%,%,\
-#		${shell ls ${OPUSHOME}/*/latest/mono/${LANGID}.txt.gz}}})
 
-
-## NEW: get data from the OPUS-API
+## get available data from the OPUS-API
 
 OPUSAPI = http://opus.nlpl.eu/opusapi/
 
@@ -183,7 +182,6 @@ get-opus-langs     = ${shell wget -qq -O - ${OPUSAPI}?languages=True | ${JQ} '.l
 get-opus-version   = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&corpus=${3}\&preprocessing=xml\&version=latest | ${JQ} '.corpora[] | .version' | sed 's/"//g' | head -1}
 get-elra-bitexts   = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&corpora=True | \
 	${JQ} '.corpora[]' | tr '"' ' ' | grep '^ *ELR[CA][-_]'}
-
 
 
 ## start of some functions to check whether there is a resource for downloading
@@ -362,8 +360,8 @@ TEST_TRG  ?= ${WORKDIR}/test/${TESTSET_NAME}.trg
 
 MODEL_SUBDIR =
 MODEL        = ${MODEL_SUBDIR}${DATASET}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
-# MODELTYPE  = transformer-align
-MODELTYPE    = transformer
+MODELTYPE    = transformer-align
+# MODELTYPE  = transformer
 NR           = 1
 
 MODEL_BASENAME   = ${MODEL}.${MODELTYPE}.model${NR}
@@ -597,6 +595,9 @@ ifdef SHUFFLE_DATA
 endif
 ifdef FIT_DATA_SIZE
 	echo "FIT_DATA_SIZE     = ${FIT_DATA_SIZE}"      >> $@
+endif
+ifdef FIT_DEVDATA_SIZE
+	echo "FIT_DEVDATA_SIZE  = ${FIT_DEVDATA_SIZE}"   >> $@
 endif
 	echo "MAX_OVER_SAMPLING = ${MAX_OVER_SAMPLING}"  >> $@
 	echo "USE_REST_DEVDATA  = ${USE_REST_DEVDATA}"   >> $@

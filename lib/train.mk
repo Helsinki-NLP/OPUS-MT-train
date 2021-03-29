@@ -12,6 +12,9 @@ ifeq (${SUBWORDS},spm)
 ## sentence piece models (concatenate and yamlify)
 
 ${MODEL_VOCAB}: ${SPMSRCMODEL} ${SPMTRGMODEL}
+ifneq (${MODEL_LATEST_VOCAB},)
+	cp ${MODEL_LATEST_VOCAB} ${MODEL_VOCAB}
+else
 	cut -f1 < ${word 1,$^}.vocab > ${@:.vocab.yml=.src.vocab}
 	cut -f1 < ${word 2,$^}.vocab > ${@:.vocab.yml=.trg.vocab}
 ifeq (${USE_TARGET_LABELS},1)
@@ -23,6 +26,8 @@ endif
 	cut -f2 $@.numbered | sed 's/\\/\\\\/g;s/\"/\\\"/g;s/^\(.*\)$$/"\1"/;s/$$/:/'> $@.tokens
 	paste -d ' ' $@.tokens $@.ids > $@
 	rm -f $@.tokens $@.ids $@.numbered
+endif
+
 
 else
 
@@ -173,10 +178,11 @@ endif
         --transformer-dropout ${MARIAN_DROPOUT} \
 	--label-smoothing 0.1 \
         --learn-rate 0.0003 --lr-warmup 16000 --lr-decay-inv-sqrt 16000 --lr-report \
-        --optimizer-params 0.9 0.98 1e-09 --clip-norm 5 \
+        --optimizer-params 0.9 0.98 1e-09 --clip-norm 5 --fp16 \
         ${MARIAN_TIE_EMBEDDINGS} \
 	--devices ${MARIAN_GPUS} \
-        --sync-sgd --seed ${SEED} \
+        --sync-sgd \
+	--seed ${SEED} \
 	--sqlite \
 	--tempdir ${TMPDIR} \
         --exponential-smoothing

@@ -16,7 +16,10 @@ my $file = shift(@ARGV);
 my $count=0;
 my $repeated=0;
 while ($count < $size){
-    open F,"<$file" || die "cannot read from $file!\n";
+    if ($file=~/\.gz$/){
+	open F,"gzip -cd <$file |" || die "cannot open $file";
+    }
+    else{ open F,"<$file" || die "cannot read from $file!\n"; }    
     while (<F>){
 	$count++;
 	print;

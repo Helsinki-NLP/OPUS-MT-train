@@ -134,10 +134,11 @@ endif
 ifneq (${wildcard ${TATOEBA_TRGLABELFILE}},)
   TATOEBA_TRGLANGS = ${shell cat ${TATOEBA_TRGLABELFILE}}
 endif
-ifndef USE_TARGET_LABELS
+# ifndef USE_TARGET_LABELS
+ifdef TATOEBA_TRGLANGS
 ifneq (${words ${TATOEBA_TRGLANGS}},1)
   USE_TARGET_LABELS = 1
-  TARGET_LABELS = $(patsubst %,>>%<<,${TATOEBA_TRGLANGS})
+  TARGET_LABELS = $(patsubst %,>>%<<,$(sort ${TATOEBA_TRGLANGS} ${TATOEBA_TRGLANG_GROUP}))
 endif
 endif
 
@@ -616,6 +617,12 @@ find-srclanggroup = $(call find-langgroup,$(firstword ${subst -, ,${subst 2, ,${
 find-trglanggroup = $(call find-langgroup,$(lastword ${subst -, ,${subst 2, ,${1}}}),${2})
 
 
+tatoeba-%-langs:
+	-( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-langs,%,$@))); \
+	   t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-langs,%,$@))); \
+	   echo "${call find-srclanggroup,${patsubst tatoeba-%-langs,%,$@},${PIVOT}}"; \
+	   echo "${call find-trglanggroup,${patsubst tatoeba-%-langs,%,$@},${PIVOT}}"; )
+
 
 ## create data sets (also works for language groups)
 tatoeba-%-data:
@@ -627,11 +634,23 @@ tatoeba-%-data:
 	       if [ `echo $$T | tr ' ' "\n" | wc -l` -ge ${MIN_TRGLANGS} ]; then \
 	         if [ `echo $$S | tr ' ' "\n" | wc -l` -le ${MAX_SRCLANGS} ]; then \
 	           if [ `echo $$T | tr ' ' "\n" | wc -l` -le ${MAX_TRGLANGS} ]; then \
-	             ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" tatoeba-prepare; \
+	             ${MAKE} LANGPAIRSTR=$$s-$$t \
+			SRCLANGS="$$S" TRGLANGS="$$T" \
+			TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
+			TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
+			tatoeba-prepare; \
 	           fi \
 	         fi \
 	       fi \
 	   fi )
+
+
+## create data sets (also works for language groups)
+tatoeba-labeltest:
+	@echo "${call find-trglanggroup,eng2roa,}"
+	@echo "${call find-langgroup,roa,}"
+	@echo "${shell langgroup roa | xargs iso639 -m -n}"
+	@echo "$(filter ${OPUS_LANGS3},${shell langgroup roa | xargs iso639 -m -n})"
 
 
 ## start the training job
@@ -648,7 +667,10 @@ tatoeba-%-train:
 	       if [ `echo $$T | tr ' ' "\n" | wc -l` -ge ${MIN_TRGLANGS} ]; then \
 	         if [ `echo $$S | tr ' ' "\n" | wc -l` -le ${MAX_SRCLANGS} ]; then \
 	           if [ `echo $$T | tr ' ' "\n" | wc -l` -le ${MAX_TRGLANGS} ]; then \
-	             ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" tatoeba-job; \
+	             ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" \
+			TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
+			TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
+			tatoeba-job; \
 	           fi \
 	         fi \
 	       fi \
@@ -670,6 +692,8 @@ tatoeba-%-eval:
 	      ${MAKE} LANGPAIRSTR=$$s-$$t \
 		SRCLANGS="${call find-srclanggroup,${patsubst tatoeba-%-eval,%,$@},${PIVOT}}" \
 		TRGLANGS="${call find-trglanggroup,${patsubst tatoeba-%-eval,%,$@},${PIVOT}}" \
+		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
+		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
 		compare-tatoeba; \
 	    fi \
 	  fi )
@@ -683,8 +707,14 @@ tatoeba-%-multieval:
 	  T="${call find-trglanggroup,${patsubst tatoeba-%-multieval,%,$@},${PIVOT}}"; \
 	  if [ -e ${TATOEBA_WORK}/$$s-$$t ]; then \
 	    if [ `find ${TATOEBA_WORK}/$$s-$$t/ -name '*.npz' | wc -l` -gt 0 ]; then \
-	      ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" tatoeba-multilingual-eval; \
-	      ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" tatoeba-sublang-eval; \
+	      ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" \
+		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
+		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
+		tatoeba-multilingual-eval; \
+	      ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" \
+		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
+		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
+		tatoeba-sublang-eval; \
 	    fi \
 	  fi )
 
@@ -697,6 +727,8 @@ tatoeba-%-eval-testsets:
 	      ${MAKE} LANGPAIRSTR=$$s-$$t \
 		SRCLANGS="${call find-srclanggroup,${patsubst tatoeba-%-eval-testsets,%,$@},${PIVOT}}" \
 		TRGLANGS="${call find-trglanggroup,${patsubst tatoeba-%-eval-testsets,%,$@},${PIVOT}}" \
+		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
+		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
 		eval-testsets-tatoeba; \
 	    fi \
 	  fi )
@@ -710,6 +742,8 @@ tatoeba-%-testsets:
 	      ${MAKE} LANGPAIRSTR=$$s-$$t \
 		SRCLANGS="${call find-srclanggroup,${patsubst tatoeba-%-testsets,%,$@},${PIVOT}}" \
 		TRGLANGS="${call find-trglanggroup,${patsubst tatoeba-%-testsets,%,$@},${PIVOT}}" \
+		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
+		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
 		tatoeba-multilingual-testsets; \
 	    fi \
 	  fi )
@@ -719,7 +753,7 @@ tatoeba-%-testsets:
 ## - model specific test set
 ## - other language-specific test sets
 ## - individual language pairs for multilingual models
-tatoeba-%-evalall: tatoeba-%-eval-testsets tatoeba-%-multieval
+tatoeba-%-evalall: tatoeba-%-eval tatoeba-%-multieval tatoeba-%-eval-testsets
 	@echo "Done!"
 
 
@@ -739,6 +773,8 @@ tatoeba-%-dist:
 	    ${MAKE} LANGPAIRSTR=$$s-$$t \
 		SRCLANGS="${call find-srclanggroup,${patsubst tatoeba-%-dist,%,$@},${PIVOT}}" \
 		TRGLANGS="${call find-trglanggroup,${patsubst tatoeba-%-dist,%,$@},${PIVOT}}" \
+		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
+		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
 		release-tatoeba; \
 	  fi )
 
@@ -759,6 +795,8 @@ tatoeba-%-refresh-release-readme:
 	    ${MAKE} LANGPAIRSTR=$$s-$$t \
 		SRCLANGS="${call find-srclanggroup,${patsubst tatoeba-%-refresh-release-readme,%,$@},${PIVOT}}" \
 		TRGLANGS="${call find-trglanggroup,${patsubst tatoeba-%-refresh-release-readme,%,$@},${PIVOT}}" \
+		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
+		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
 		refresh-release-readme-tatoeba; \
 	  fi )
 
@@ -781,6 +819,8 @@ tatoeba-%-refresh-release: tatoeba-%-refresh-release-yml tatoeba-%-refresh-relea
 	    ${MAKE} LANGPAIRSTR=$$s-$$t \
 		SRCLANGS="${call find-srclanggroup,${patsubst tatoeba-%-refresh-release,%,$@},${PIVOT}}" \
 		TRGLANGS="${call find-trglanggroup,${patsubst tatoeba-%-refresh-release,%,$@},${PIVOT}}" \
+		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
+		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
 		refresh-release-tatoeba; \
 	  fi )
 
