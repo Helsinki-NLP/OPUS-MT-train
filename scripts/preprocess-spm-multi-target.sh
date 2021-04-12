@@ -12,12 +12,7 @@
 #    to avoid removing newline characters!
 
 
-if [ `hostname -d` == "bullx" ]; then
-  APPLHOME=/projappl/project_2001569
-  SPMENCODE=${APPLHOME}/marian-dev/build-spm/spm_encode
-else
-  SPMENCODE=`which spm_encode || echo "${PWD}/tools/marian-dev/build/spm_encode"`
-fi
+SPMENCODE=`which spm_encode || echo "${PWD}/tools/marian-dev/build/spm_encode"`
 
 
 if [ "$4" == "noflags" ]; then
@@ -97,7 +92,7 @@ else
 	-e 's/【/\[/g' \
 	-e 's/】/\]/g' \
 	-e 's/％/\%/g' |    
-	perl -C -pe  's/(?!\n)\p{C}/ /g;'
+	perl -C -pe  's/(?!\n)\p{C}/ /g;' |
 	sed 's/  */ /g;s/^ *//g;s/ *$//g' |
 	${SPMENCODE} --model $3 |
 	sed "s/^/>>$2<< /"

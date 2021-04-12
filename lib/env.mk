@@ -129,8 +129,8 @@ else ifeq (${shell hostname --domain 2>/dev/null},bullx)
   MOSESHOME    = ${APPLHOME}/mosesdecoder
   MOSESSCRIPTS = ${MOSESHOME}/scripts
   EFLOMAL_HOME = ${APPLHOME}/eflomal/
-  MARIAN_HOME  = ${APPLHOME}/marian-dev/build/
-  MARIAN       = ${APPLHOME}/marian-dev/build
+  MARIAN_HOME  = ${APPLHOME}/marian/build/
+  MARIAN       = ${APPLHOME}/marian/build
   SPM_HOME     = ${MARIAN_HOME}
   GPU          = v100
   GPU_MODULES  = python-env 

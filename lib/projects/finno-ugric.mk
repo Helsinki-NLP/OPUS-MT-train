@@ -1,6 +1,64 @@
 # -*-makefile-*-
 
 
+
+FIU2XXX = $(wildcard models-tatoeba/fiu-???)
+XXX2FIU = $(wildcard models-tatoeba/???-fiu)
+
+
+fiu2xxx-print-results:
+	@for d in ${FIU2XXX}; do \
+	  s='fiu';\
+	  t=`echo $$d | cut -f3 -d'-'`;\
+	  echo '\begin{table}[]'; \
+	  echo '\centering'; \
+	  echo '\begin{tabular}{|c|cc|}'; \
+	  echo '\hline'; \
+	  echo "$$s-$$t	& chr-F2 & BLEU \\\\"; \
+	  echo '\hline'; \
+	  cat $$d/README.md |\
+	  tr "\n#" "~\n" | tail -1 | tr '~' "\n" |\
+	  grep 'Tatoeba-test' | \
+	  sed 's/Tatoeba-test\.//' |\
+	  perl -e 'while (<>){@a=split(/\s*\|\s*/);print if ($$a[4]>=100);}' |\
+	  cut -f2-4 -d'|' | tr '|' '&' | sed 's/$$/\\\\/'; \
+	  echo '\end{tabular}'; \
+	  echo -n '\caption{Results from the multilingual translation model between Finno-Ugric languages and '; \
+	  iso639 $$t | tr '"' ' '; \
+	  echo 'measured on the Tatoeba test set.}'; \
+	  echo '\label{tab:my_label}'; \
+	  echo '\end{table}'; \
+	  echo ""; \
+	done
+
+
+xxx2fiu-print-results:
+	@for d in ${XXX2FIU}; do \
+	  t='fiu';\
+	  s=`echo $$d | cut -f2 -d'/' | cut -f1 -d'-'`;\
+	  echo '\begin{table}[]'; \
+	  echo '\centering'; \
+	  echo '\begin{tabular}{|c|cc|}'; \
+	  echo '\hline'; \
+	  echo "$$s-$$t	& chr-F2 & BLEU \\\\"; \
+	  echo '\hline'; \
+	  cat $$d/README.md |\
+	  tr "\n#" "~\n" | tail -1 | tr '~' "\n" |\
+	  grep 'Tatoeba-test' | \
+	  sed 's/Tatoeba-test\.//' |\
+	  perl -e 'while (<>){@a=split(/\s*\|\s*/);print if ($$a[4]>=100);}' |\
+	  cut -f2-4 -d'|' | tr '|' '&' | sed 's/$$/\\\\/'; \
+	  echo '\end{tabular}'; \
+	  echo -n '\caption{Results from the multilingual translation model between '; \
+	  iso639 $$s | tr '"' ' '; \
+	  echo 'and Finno-Ugric languages measured on the Tatoeba test set.}'; \
+	  echo '\label{tab:my_label}'; \
+	  echo '\end{table}'; \
+	  echo ""; \
+	done
+
+
+
 # FIU_DATASIZE = -1m
 
 train-tatoeba-crossfiu: train-tatoeba-group2fiu train-tatoeba-fiu2group

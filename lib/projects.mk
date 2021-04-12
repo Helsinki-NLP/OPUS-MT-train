@@ -22,3 +22,5 @@ include lib/projects/doclevel.mk
 include lib/projects/simplify.mk
 
 include lib/projects/tatoeba.mk
+
+include lib/projects/americasnlp2021.mk

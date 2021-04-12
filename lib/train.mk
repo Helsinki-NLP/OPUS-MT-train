@@ -5,13 +5,39 @@
 # vocabulary
 #------------------------------------------------------------------------
 
-## make vocabulary
+
+ifeq (${SUBWORDS},spm)
+
+## make vocabulary from the source and target language specific
+## sentence piece models (concatenate and yamlify)
+
+${MODEL_VOCAB}: ${SPMSRCMODEL} ${SPMTRGMODEL}
+ifneq (${MODEL_LATEST_VOCAB},)
+	cp ${MODEL_LATEST_VOCAB} ${MODEL_VOCAB}
+else
+	cut -f1 < ${word 1,$^}.vocab > ${@:.vocab.yml=.src.vocab}
+	cut -f1 < ${word 2,$^}.vocab > ${@:.vocab.yml=.trg.vocab}
+ifeq (${USE_TARGET_LABELS},1)
+	echo "${TARGET_LABELS}" | tr ' ' "\n" >> ${@:.vocab.yml=.src.vocab}
+endif
+	cat ${@:.vocab.yml=.src.vocab} ${@:.vocab.yml=.trg.vocab} | \
+	sort -u | nl -v 0 | sed 's/^ *//'> $@.numbered
+	cut -f1 $@.numbered > $@.ids
+	cut -f2 $@.numbered | sed 's/\\/\\\\/g;s/\"/\\\"/g;s/^\(.*\)$$/"\1"/;s/$$/:/'> $@.tokens
+	paste -d ' ' $@.tokens $@.ids > $@
+	rm -f $@.tokens $@.ids $@.numbered
+endif
+
+
+else
+
+## fallback: make vocabulary from the training data
 ## - no new vocabulary is created if the file already exists!
 ## - need to delete the file if you want to create a new one!
 
 ${MODEL_VOCAB}:	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 		${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz
-ifeq ($(wildcard ${MODEL_VOCAB}),)
+ifeq ($(wildcard ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB}),)
 ifneq (${MODEL_LATEST_VOCAB},)
 	cp ${MODEL_LATEST_VOCAB} ${MODEL_VOCAB}
 else
@@ -25,15 +51,26 @@ else
 	touch $@
 endif
 
+endif
 
-## get vocabulary from sentence piece model
+
+
+## if USE_SPM_VOCAB is set:
+## get separate source and target language vocabularies
+## from the two individual sentence piece models
+
 ifeq ($(USE_SPM_VOCAB),1)
 ${MODEL_SRCVOCAB}: ${SPMSRCMODEL}
 	cut -f1 < $<.vocab > $@
+ifeq (${USE_TARGET_LABELS},1)
+	echo "${TARGET_LABELS}" | tr ' ' "\n" >> $@
+endif
 
 ${MODEL_TRGVOCAB}: ${SPMTRGMODEL}
 	cut -f1  < $<.vocab > $@
 endif
+
+
 
 
 print-latest:
@@ -49,9 +86,6 @@ endif
 # training MarianNMT models
 #------------------------------------------------------------------------
 
-## NEW: take away dependency on ${MODEL_VOCAB}
-## (will be created by marian if it does not exist)
-
 
 ## possible model variants
 MARIAN_MODELS_DONE = 	${WORKDIR}/${MODEL}.transformer.model${NR}.done \
@@ -62,6 +96,12 @@ MARIAN_TRAIN_PREREQS = 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 
 
 ## define validation and early-stopping parameters
+## as well as pre-requisites for training the model
+##
+## NEW: take away dependency on ${MODEL_VOCAB}
+## (will be created by marian if it does not exist)
+## TODO: should we create the dependency again?
+
 ifndef SKIP_VALIDATION
   MARIAN_TRAIN_PREREQS += ${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG}
   MARIAN_STOP_CRITERIA = --early-stopping ${MARIAN_EARLY_STOPPING} \
@@ -78,14 +118,30 @@ else
 endif
 
 
+## tie all embeddings if we have a common vocab
+## for target and source language
+## otherwise: only tie target embeddings
+
+ifeq ($(USE_SPM_VOCAB),1)
+  MARIAN_TIE_EMBEDDINGS = --tied-embeddings
+else
+  MARIAN_TIE_EMBEDDINGS = --tied-embeddings-all
+endif
+
+
+
 ## dependencies and extra parameters
+## for models with guided alignment
+
 ifeq (${MODELTYPE},transformer-align)
   MARIAN_TRAIN_PREREQS += ${TRAIN_ALG}
   MARIAN_EXTRA += --guided-alignment ${TRAIN_ALG}
 endif
 
 
-## train transformer model
+
+## finally: recipe for training transformer model
+
 ${MARIAN_MODELS_DONE}: ${MARIAN_TRAIN_PREREQS}
 	mkdir -p ${dir $@}
 ##--------------------------------------------------------------------
@@ -122,10 +178,11 @@ endif
         --transformer-dropout ${MARIAN_DROPOUT} \
 	--label-smoothing 0.1 \
         --learn-rate 0.0003 --lr-warmup 16000 --lr-decay-inv-sqrt 16000 --lr-report \
-        --optimizer-params 0.9 0.98 1e-09 --clip-norm 5 \
-        --tied-embeddings-all \
+        --optimizer-params 0.9 0.98 1e-09 --clip-norm 5 --fp16 \
+        ${MARIAN_TIE_EMBEDDINGS} \
 	--devices ${MARIAN_GPUS} \
-        --sync-sgd --seed ${SEED} \
+        --sync-sgd \
+	--seed ${SEED} \
 	--sqlite \
 	--tempdir ${TMPDIR} \
         --exponential-smoothing
@@ -135,16 +192,6 @@ endif
 
 
 
-#        --early-stopping ${MARIAN_EARLY_STOPPING} \
-#         --valid-freq ${MARIAN_VALID_FREQ} \
-# 	--save-freq ${MARIAN_SAVE_FREQ} \
-# 	--disp-freq ${MARIAN_DISP_FREQ} \
-#         --valid-sets ${word 3,$^} ${word 4,$^} \
-#         --valid-metrics perplexity \
-#         --valid-mini-batch ${MARIAN_VALID_MINI_BATCH} \
-#         --beam-size 12 --normalize 1 --allow-unk \
-# 	--valid-log $(@:.model${NR}.done=.valid${NR}.log) \
-# 	--overwrite --keep-best \
 
 
 

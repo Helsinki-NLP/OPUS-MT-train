@@ -247,6 +247,9 @@ BT_MODEL_BASE  = ${BT_MODEL}.${MODELTYPE}.model${NR}
 BT_MODEL_START = ${WORKDIR}/${BT_MODEL_BASE}.npz
 BT_MODEL_VOCAB = ${WORKDIR}/${BT_MODEL}.vocab.yml
 
+BT_MARIAN_EARLY_STOPPING = 15
+
+
 # %-add-backtranslations:
 %-bt:
 ifneq (${wildcard ${MODEL_FINAL}},)
@@ -256,8 +259,11 @@ ifeq (${wildcard ${BT_MODEL_START}},)
 endif
 endif
 	rm -f ${WORKHOME}/${LANGPAIRSTR}/train.submit
-	${MAKE} DATASET=${DATASET}+bt USE_BACKTRANS=1 \
-		MARIAN_EARLY_STOPPING=15 \
+	${MAKE} DATASET=${DATASET}+bt \
+		USE_BACKTRANS=1 \
+		CONTINUE_EXISTING=1 \
+		MODELCONFIG=config-bt.mk \
+		MARIAN_EARLY_STOPPING=${BT_MARIAN_EARLY_STOPPING} \
 	${@:-bt=}
 
 #		CLEAN_TRAIN_SRC="${CLEAN_TRAIN_SRC} ${BACKTRANS_SRC}" \
@@ -280,6 +286,7 @@ endif
 	rm -f ${WORKHOME}/${LANGPAIRSTR}/train.submit
 	${MAKE} DATASET=${DATASET}+pivot \
 		USE_PIVOTING=1 \
+		CONTINUE_EXISTING=1 \
 		MARIAN_EARLY_STOPPING=10 \
 	${@:-pivot=}
 

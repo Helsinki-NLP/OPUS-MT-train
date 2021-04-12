@@ -9,7 +9,10 @@
 #  - shuffle dev/test data and divide into to disjoint sets
 #  - reverse data sets for the other translation direction (bilingual models only)
 #  - run word alignment if necessary (models with guided alignment = transformer-align)
-
+#
+#
+# TODO: write data info to some model-specific file insetad of README.md
+#       (applies for train/val/test!)
 
 
 ## training data size (generates count if not in README.md)
@@ -52,10 +55,12 @@ endif
 ## - use only the latest backtranslations
 ##   if such a subdir exists
 
-ifneq (${wildcard backtranslate/${TRG}-${SRC}/latest},)
-  BACKTRANS_DIR = backtranslate/${TRG}-${SRC}/latest
+BACKTRANS_HOME = backtranslate
+
+ifneq (${wildcard ${BACKTRANS_HOME}/${TRG}-${SRC}/latest},)
+  BACKTRANS_DIR = ${BACKTRANS_HOME}/${TRG}-${SRC}/latest
 else
-  BACKTRANS_DIR = backtranslate/${TRG}-${SRC}
+  BACKTRANS_DIR = ${BACKTRANS_HOME}/${TRG}-${SRC}
 endif
 
 ## TODO: make it possible to select only parts of the BT data
@@ -346,6 +351,14 @@ endif
 endif
 
 
+## add language labels to the source language
+## if we have multiple target languages
+
+ifeq (${USE_TARGET_LABELS},1)
+  LABEL_SOURCE_DATA = | sed "s/^/>>${TRG}<< /"
+endif
+
+
 ## add to the training data
 
 add-to-local-train-data: ${CLEAN_TRAIN_SRC} ${CLEAN_TRAIN_TRG}
@@ -375,17 +388,10 @@ endif
 	done
 	echo ""                                               >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 ######################################
-# do we need to add target language labels?
+# create local data files (add label if necessary)
 ######################################
-ifeq (${USE_TARGET_LABELS},1)
-	@echo "set target language labels";
-	@${ZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} ${CUT_DATA_SETS} 2>/dev/null |\
-	sed "s/^/>>${TRG}<< /" > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
-else
-	@echo "only one target language"
 	@${ZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} ${CUT_DATA_SETS} 2>/dev/null \
-		> ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
-endif
+		${LABEL_SOURCE_DATA} > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
 	@${ZCAT} ${wildcard ${CLEAN_TRAIN_TRG}} ${CUT_DATA_SETS} 2>/dev/null \
 		> ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
 ######################################
@@ -440,6 +446,10 @@ show-devdata:
 raw-devdata: ${DEV_SRC} ${DEV_TRG}
 
 
+## TODO: should we have some kind of balanced shuffling
+##       to avoid bias towards bigger language pairs?
+## maybe introduce over/undersampling of dev data like we have for train data?
+
 ${DEV_SRC}.shuffled.gz:
 	mkdir -p ${dir $@}
 	rm -f ${DEV_SRC} ${DEV_TRG}
@@ -459,13 +469,13 @@ ifeq (${SHUFFLE_DEVDATA},0)
 else
 	paste ${DEV_SRC} ${DEV_TRG} | ${UNIQ} | ${SHUFFLE} | ${GZIP} -c > $@
 endif
-	echo -n "* total size of shuffled dev data: "        >> ${dir ${DEV_SRC}}README.md
-	${GZIP} -cd < $@ | wc -l                             >> ${dir ${DEV_SRC}}README.md
+	echo -n "* total-size-shuffled: "            >> ${dir ${DEV_SRC}}README.md
+	${GZIP} -cd < $@ | wc -l                     >> ${dir ${DEV_SRC}}README.md
 
 ## OLD: don't uniq the dev-data ...
 ##
 #	paste ${DEV_SRC} ${DEV_TRG} | ${SHUFFLE} | ${GZIP} -c > $@
-
+#	echo -n "* total size of shuffled dev data: "        >> ${dir ${DEV_SRC}}README.md
 
 
 ## if we have less than twice the amount of DEVMINSIZE in the data set
@@ -511,17 +521,17 @@ else
 	@${GZIP} -cd < $< | cut -f2 | tail -n +$$((${DEVSIZE} + 1)) | ${GZIP} -c > ${DEV_TRG}.notused.gz
 endif
 	@echo ""                                         >> ${dir ${DEV_SRC}}/README.md
-	@echo -n "* devset = top "                       >> ${dir ${DEV_SRC}}/README.md
+	@echo -n "* devset-selected: top "               >> ${dir ${DEV_SRC}}/README.md
 	@wc -l < ${DEV_SRC} | tr "\n" ' '                >> ${dir ${DEV_SRC}}/README.md
 	@echo " lines of ${notdir $@}.shuffled!"         >> ${dir ${DEV_SRC}}/README.md
 ifeq (${DEVSET},${TESTSET})
-	@echo -n "* testset = next "                     >> ${dir ${DEV_SRC}}/README.md
+	@echo -n "* testset-selected: next "             >> ${dir ${DEV_SRC}}/README.md
 	@wc -l < ${TEST_SRC} | tr "\n" ' '               >> ${dir ${DEV_SRC}}/README.md
 	@echo " lines of ${notdir $@}.shuffled!"         >> ${dir ${DEV_SRC}}/README.md
-	@echo "* remaining lines are added to traindata" >> ${dir ${DEV_SRC}}/README.md
+	@echo "* devset-unused: added to traindata"      >> ${dir ${DEV_SRC}}/README.md
 	@echo "# Test data"                               > ${dir ${TEST_SRC}}/README.md
 	@echo ""                                         >> ${dir ${TEST_SRC}}/README.md
-	@echo -n "testset = next "                       >> ${dir ${TEST_SRC}}/README.md
+	@echo -n "testset-selected: next "               >> ${dir ${TEST_SRC}}/README.md
 	@wc -l < ${TEST_SRC} | tr "\n" ' '               >> ${dir ${TEST_SRC}}/README.md
 	@echo " lines of ../val/${notdir $@}.shuffled!"  >> ${dir ${TEST_SRC}}/README.md
 endif
@@ -536,15 +546,20 @@ add-to-dev-data: ${CLEAN_DEV_SRC} ${CLEAN_DEV_TRG}
 	@mkdir -p ${dir ${DEV_SRC}}
 	@echo -n "* ${LANGPAIR}: ${DEVSET}, "         >> ${dir ${DEV_SRC}}README.md
 	@${ZCAT} ${CLEAN_DEV_SRC} 2>/dev/null | wc -l >> ${dir ${DEV_SRC}}README.md
-ifeq (${USE_TARGET_LABELS},1)
-	@echo "more than one target language";
-	@${ZCAT} ${CLEAN_DEV_SRC} 2>/dev/null |\
-	sed "s/^/>>${TRG}<< /" >> ${DEV_SRC}
+#-----------------------------------------------------------------
+# sample devdata to balance size between different language pairs
+# (only if FIT_DEVDATA_SIZE is set)
+#-----------------------------------------------------------------
+ifdef FIT_DEVDATA_SIZE
+	@echo "sample dev data to fit size = ${FIT_DEVDATA_SIZE}"
+	@scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DEVDATA_SIZE} \
+		${CLEAN_DEV_SRC} 2>/dev/null ${LABEL_SOURCE_DATA} >> ${DEV_SRC}
+	@scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DEVDATA_SIZE} \
+		${CLEAN_DEV_TRG} 2>/dev/null                      >> ${DEV_TRG}
 else
-	@echo "only one target language"
-	@${ZCAT} ${CLEAN_DEV_SRC} 2>/dev/null >> ${DEV_SRC}
+	@${ZCAT} ${CLEAN_DEV_SRC} 2>/dev/null ${LABEL_SOURCE_DATA} >> ${DEV_SRC}
+	@${ZCAT} ${CLEAN_DEV_TRG} 2>/dev/null                      >> ${DEV_TRG}
 endif
-	@${ZCAT} ${CLEAN_DEV_TRG} 2>/dev/null >> ${DEV_TRG}
 
 
 ####################
@@ -581,8 +596,8 @@ ifneq (${TESTSET},${DEVSET})
 	    paste ${TEST_SRC} ${TEST_TRG} | ${SHUFFLE} | ${GZIP} -c > $@.shuffled.gz; \
 	    ${GZIP} -cd < $@.shuffled.gz | cut -f1 | tail -${TESTSIZE} > ${TEST_SRC}; \
 	    ${GZIP} -cd < $@.shuffled.gz | cut -f2 | tail -${TESTSIZE} > ${TEST_TRG}; \
-	    echo ""                                                >> ${dir $@}/README.md; \
-	    echo "testset = top ${TESTSIZE} lines of $@.shuffled!" >> ${dir $@}/README.md; \
+	    echo ""                                                        >> ${dir $@}/README.md; \
+	    echo "testset-selected: top ${TESTSIZE} lines of $@.shuffled!" >> ${dir $@}/README.md; \
 	  fi \
 	else \
 	  echo "test set $@ exists already! Don't overwrite!"; \
@@ -609,15 +624,8 @@ ${TEST_TRG}: ${TEST_SRC}
 add-to-test-data: ${CLEAN_TEST_SRC}
 	@echo "add to testset: ${CLEAN_TEST_SRC}"
 	@echo "* ${LANGPAIR}: ${TESTSET}" >> ${dir ${TEST_SRC}}README.md
-ifeq (${USE_TARGET_LABELS},1)
-	@echo "more than one target language";
-	@${ZCAT} ${CLEAN_TEST_SRC} 2>/dev/null |\
-	sed "s/^/>>${TRG}<< /" >> ${TEST_SRC}
-else
-	@echo "only one target language"
-	@${ZCAT} ${CLEAN_TEST_SRC} 2>/dev/null >> ${TEST_SRC}
-endif
-	@${ZCAT} ${CLEAN_TEST_TRG} 2>/dev/null >> ${TEST_TRG}
+	@${ZCAT} ${CLEAN_TEST_SRC} 2>/dev/null ${LABEL_SOURCE_DATA} >> ${TEST_SRC}
+	@${ZCAT} ${CLEAN_TEST_TRG} 2>/dev/null                      >> ${TEST_TRG}
 
 
 
