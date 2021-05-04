@@ -106,6 +106,24 @@ TATOEBA_WORK      ?= ${PWD}/work-tatoeba
 TATOEBA_DATA      ?= ${TATOEBA_WORK}/data/${PRE}
 TATOEBA_MONO      ?= ${TATOEBA_WORK}/data/mono
 
+
+## data count files (file basename)
+TATOEBA_DATA_COUNT_BASE = ${TATOEBA_RAWGIT}/data/release/${TATOEBA_VERSION}/released-bitexts
+
+## all released language pairs with test sets > 200 test pairs
+## also extract all source languages that are available for a give target language
+## and vice versa
+TATOEBA_RELEASED_DATA   = $(shell wget -qq -O - ${TATOEBA_DATA_COUNT_BASE}-min200.txt | cut -f1)
+TATOEBA_AVAILABLE_TRG   = ${sort ${filter-out ${SRC},${subst -, ,${filter %-${SRC} ${SRC}-%,${TATOEBA_RELEASED_DATA}}}}}
+TATOEBA_AVAILABLE_SRC   = ${sort ${filter-out ${TRG},${subst -, ,${filter %-${TRG} ${TRG}-%,${TATOEBA_RELEASED_DATA}}}}}
+
+## extract language pairs for a specific subset
+TATOEBA_SUBSET               = lower
+TATOEBA_RELEASED_SUBSET      = $(shell wget -qq -O - ${TATOEBA_DATA_COUNT_BASE}-${TATOEBA_SUBSET}.txt | cut -f1)
+TATOEBA_AVAILABLE_SUBSET_TRG = ${sort ${filter-out ${SRC},${subst -, ,${filter %-${SRC} ${SRC}-%,${TATOEBA_RELEASED_SUBSET}}}}}
+TATOEBA_AVAILABLE_SUBSET_SRC = ${sort ${filter-out ${TRG},${subst -, ,${filter %-${TRG} ${TRG}-%,${TATOEBA_RELEASED_SUBSET}}}}}
+
+
 WIKILANGS         ?= ${notdir ${wildcard backtranslate/wiki-iso639-3/*}}
 WIKIMACROLANGS    ?= $(sort ${shell ${GET_ISO_CODE} ${WIKILANGS}})
 
@@ -119,7 +137,7 @@ TATOEBA_TESTSET_NAME = Tatoeba-test
 TATOEBA_RELEASEDIR   = ${PWD}/models-tatoeba
 TATOEBA_MODELSHOME   = ${PWD}/models-tatoeba
 TATOEBA_BTHOME       = ${PWD}/bt-tatoeba
-
+TATOEBA_MIN_BLEU     = 10
 
 ## file with the source and target languages in the current model
 
@@ -163,7 +181,7 @@ TATOEBA_PARAMS := TRAINSET=${TATOEBA_TRAINSET} \
 		MODEL_CONTAINER=${TATOEBA_MODEL_CONTAINER} \
 		ALT_MODEL_DIR=tatoeba \
 		SKIP_DATA_DETAILS=1 \
-		MIN_BLEU_SCORE=10
+		MIN_BLEU_SCORE=${TATOEBA_MIN_BLEU}
 
 
 
@@ -338,6 +356,92 @@ tatoeba-refresh-finished:
 	      ${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-refresh; \
 	  done \
 	done
+
+
+###########################################################################################
+# start combinations with a specific source/target language
+###########################################################################################
+#
+# make SRC=deu tatoeba-src2all-reasonable
+# make SRC=deu tatoeba-src2all-small
+#
+# make TRG=deu tatoeba-all2trg-reasonable
+# make TRG=deu tatoeba-all2trg-small
+#
+
+
+tatoeba-src2all:
+	for l in ${TATOEBA_AVAILABLE_SUBSET_TRG}; do \
+	    ${MAKE} tatoeba-${SRC}2$$l-train; \
+	done
+
+tatoeba-src2langgroup:
+	for l in ${sort ${shell langgroup -p -n ${TATOEBA_AVAILABLE_SUBSET_TRG} 2>/dev/null}}; do \
+	    ${MAKE} tatoeba-${SRC}2$$l-train-1m; \
+	done
+
+
+tatoeba-all2trg:
+	for l in ${TATOEBA_AVAILABLE_SUBSET_SRC}; do \
+	    ${MAKE} tatoeba-$${l}2${TRG}-train; \
+	done
+
+tatoeba-all2trg-print:
+	for l in ${TATOEBA_AVAILABLE_SUBSET_SRC}; do \
+	    echo "${MAKE} tatoeba-$${l}2${TRG}-train"; \
+	done
+
+
+tatoeba-langgroup2trg:
+	for l in ${sort ${shell langgroup -p -n ${TATOEBA_AVAILABLE_SUBSET_SRC} 2>/dev/null}}; do \
+	    ${MAKE} tatoeba-$${l}2${TRG}-train-1m; \
+	done
+
+
+## all subsets
+
+tatoeba-src2all-subsets:
+	${MAKE} TATOEBA_SUBSET=lowest  tatoeba-src2all
+	${MAKE} TATOEBA_SUBSET=lower   tatoeba-src2all
+	${MAKE} TATOEBA_SUBSET=medium  tatoeba-src2all
+	${MAKE} TATOEBA_SUBSET=higher  tatoeba-src2all
+	${MAKE} TATOEBA_SUBSET=highest tatoeba-src2all
+
+tatoeba-all2trg-subsets:
+	${MAKE} TATOEBA_SUBSET=lowest  tatoeba-all2trg
+	${MAKE} TATOEBA_SUBSET=lower   tatoeba-all2trg
+	${MAKE} TATOEBA_SUBSET=medium  tatoeba-all2trg
+	${MAKE} TATOEBA_SUBSET=higher  tatoeba-all2trg
+	${MAKE} TATOEBA_SUBSET=highest tatoeba-all2trg
+
+
+## reasonable size (all except lower and lowest)
+
+tatoeba-src2all-reasonable:
+	${MAKE} TATOEBA_SUBSET=medium  tatoeba-src2all
+	${MAKE} TATOEBA_SUBSET=higher  tatoeba-src2all
+	${MAKE} TATOEBA_SUBSET=highest tatoeba-src2all
+
+tatoeba-all2trg-reasonable:
+	${MAKE} TATOEBA_SUBSET=medium  tatoeba-all2trg
+	${MAKE} TATOEBA_SUBSET=higher  tatoeba-all2trg
+	${MAKE} TATOEBA_SUBSET=highest tatoeba-all2trg
+
+
+## backoff to multilingual models and language groups
+## lower / lowest resource languages and zero-shot
+
+tatoeba-src2all-small:
+	${MAKE} TATOEBA_SUBSET=lower     tatoeba-src2langgroup
+	${MAKE} TATOEBA_SUBSET=lowest    tatoeba-src2langgroup
+	${MAKE} TATOEBA_SUBSET=zero-shot tatoeba-src2langgroup
+
+tatoeba-all2trg-small:
+	${MAKE} TATOEBA_SUBSET=lower     tatoeba-langgroup2trg
+	${MAKE} TATOEBA_SUBSET=lowest    tatoeba-langgroup2trg
+	${MAKE} TATOEBA_SUBSET=zero-shot tatoeba-langgroup2trg
+
+
 
 
 
@@ -1732,11 +1836,12 @@ ${TATOEBA_MONO}/%.labels:
 	            paste ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id \
 		          ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT} \
 		          ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT} |\
-	            grep -P "$$s\t$$t\t" > ${dir $@}Tatoeba-$$d.$$s-$$t; \
+	            grep -P "$$s\t$$t\t" | cut -f3,4 |\
+		    scripts/filter/filter-korean.sh ${SRC} ${TRG} $$d > ${dir $@}Tatoeba-$$d.$$s-$$t; \
 	            if [ -s ${dir $@}Tatoeba-$$d.$$s-$$t ]; then \
 	              echo "........ make ${dir $@}Tatoeba-$$d.$$s-$$t.clean.*.gz"; \
-	              cut -f3 ${dir $@}Tatoeba-$$d.$$s-$$t | ${GZIP} -c > ${dir $@}Tatoeba-$$d.$$s-$$t.clean.$$s.gz; \
-	              cut -f4 ${dir $@}Tatoeba-$$d.$$s-$$t | ${GZIP} -c > ${dir $@}Tatoeba-$$d.$$s-$$t.clean.$$t.gz; \
+	              cut -f1 ${dir $@}Tatoeba-$$d.$$s-$$t | ${GZIP} -c > ${dir $@}Tatoeba-$$d.$$s-$$t.clean.$$s.gz; \
+	              cut -f2 ${dir $@}Tatoeba-$$d.$$s-$$t | ${GZIP} -c > ${dir $@}Tatoeba-$$d.$$s-$$t.clean.$$t.gz; \
 	            fi; \
 	            rm -f ${dir $@}Tatoeba-$$d.$$s-$$t; \
 		  fi \
@@ -1748,11 +1853,12 @@ ${TATOEBA_MONO}/%.labels:
 	            paste ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.id \
 		          ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${TRGEXT} \
 		          ${dir $@}Tatoeba-$$d.${LANGPAIR}.clean.${SRCEXT} |\
-	            grep -P "$$s\t$$t\t" > ${dir $@}Tatoeba-$$d.$$t-$$s; \
+	            grep -P "$$s\t$$t\t" | cut -f3,4 |\
+		    scripts/filter/filter-korean.sh ${TRG} ${SRC} $$d > ${dir $@}Tatoeba-$$d.$$t-$$s; \
 	            if [ -s ${dir $@}Tatoeba-$$d.$$t-$$s ]; then \
 	              echo "........ make ${dir $@}Tatoeba-$$d.$$t-$$s.clean.*.gz"; \
-	              cut -f3 ${dir $@}Tatoeba-$$d.$$t-$$s | ${GZIP} -c > ${dir $@}Tatoeba-$$d.$$t-$$s.clean.$$t.gz; \
-	              cut -f4 ${dir $@}Tatoeba-$$d.$$t-$$s | ${GZIP} -c > ${dir $@}Tatoeba-$$d.$$t-$$s.clean.$$s.gz; \
+	              cut -f1 ${dir $@}Tatoeba-$$d.$$t-$$s | ${GZIP} -c > ${dir $@}Tatoeba-$$d.$$t-$$s.clean.$$t.gz; \
+	              cut -f2 ${dir $@}Tatoeba-$$d.$$t-$$s | ${GZIP} -c > ${dir $@}Tatoeba-$$d.$$t-$$s.clean.$$s.gz; \
 	            fi; \
 	            rm -f ${dir $@}Tatoeba-$$d.$$t-$$s; \
 		  fi \

@@ -523,17 +523,17 @@ endif
 	@echo ""                                         >> ${dir ${DEV_SRC}}/README.md
 	@echo -n "* devset-selected: top "               >> ${dir ${DEV_SRC}}/README.md
 	@wc -l < ${DEV_SRC} | tr "\n" ' '                >> ${dir ${DEV_SRC}}/README.md
-	@echo " lines of ${notdir $@}.shuffled!"         >> ${dir ${DEV_SRC}}/README.md
+	@echo " lines of ${notdir $@}.shuffled"          >> ${dir ${DEV_SRC}}/README.md
 ifeq (${DEVSET},${TESTSET})
 	@echo -n "* testset-selected: next "             >> ${dir ${DEV_SRC}}/README.md
 	@wc -l < ${TEST_SRC} | tr "\n" ' '               >> ${dir ${DEV_SRC}}/README.md
-	@echo " lines of ${notdir $@}.shuffled!"         >> ${dir ${DEV_SRC}}/README.md
+	@echo " lines of ${notdir $@}.shuffled "         >> ${dir ${DEV_SRC}}/README.md
 	@echo "* devset-unused: added to traindata"      >> ${dir ${DEV_SRC}}/README.md
 	@echo "# Test data"                               > ${dir ${TEST_SRC}}/README.md
 	@echo ""                                         >> ${dir ${TEST_SRC}}/README.md
 	@echo -n "testset-selected: next "               >> ${dir ${TEST_SRC}}/README.md
 	@wc -l < ${TEST_SRC} | tr "\n" ' '               >> ${dir ${TEST_SRC}}/README.md
-	@echo " lines of ../val/${notdir $@}.shuffled!"  >> ${dir ${TEST_SRC}}/README.md
+	@echo " lines of ../val/${notdir $@}.shuffled"   >> ${dir ${TEST_SRC}}/README.md
 endif
 
 

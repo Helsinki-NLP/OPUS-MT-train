@@ -270,6 +270,18 @@ endif
 #		CLEAN_TRAIN_TRG="${CLEAN_TRAIN_TRG} ${BACKTRANS_TRG}" \
 
 
+## train on back-translations only
+%-btonly:
+	rm -f ${WORKHOME}/${LANGPAIRSTR}/train.submit
+	${MAKE} DATASET=${DATASET}+btonly \
+		USE_BACKTRANS=1 \
+		CONTINUE_EXISTING=1 \
+		MODELCONFIG=config-bt.mk \
+		TRAINSET= TATOEBA_TRAINSET= \
+	${@:-btonly=}
+
+
+
 
 PIVOT_MODEL       = ${MODEL_SUBDIR}${DATASET}+pivot${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
 PIVOT_MODEL_BASE  = ${PIVOT_MODEL}.${MODELTYPE}.model${NR}

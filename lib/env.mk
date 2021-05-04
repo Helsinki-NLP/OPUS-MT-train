@@ -68,8 +68,8 @@ WORKHOME = ${PWD}/work
 
 
 ifeq (${shell hostname -d 2>/dev/null},mahti.csc.fi)
-#  CSCPROJECT    = project_2002688
-  CSCPROJECT   = project_2003093
+  CSCPROJECT    = project_2002688
+#  CSCPROJECT   = project_2003093
 #  CSCPROJECT   = project_2002982
   WORKHOME      = ${shell realpath ${PWD}/work}
   APPLHOME      = /projappl/project_2003093/
@@ -180,7 +180,6 @@ MARIAN_VOCAB   = ${MARIAN_HOME}marian-vocab
 
 
 TOKENIZER    = ${MOSESSCRIPTS}/tokenizer
-
 
 
 ## BPE
