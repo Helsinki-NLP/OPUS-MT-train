@@ -285,7 +285,7 @@ ${TOOLSDIR}/jq/jq:
 ${TOOLSDIR}/marian-dev/build/marian: ${PROTOC}
 	mkdir -p ${dir $@}
 	cd ${dir $@} && cmake -DUSE_SENTENCEPIECE=on ${MARIAN_BUILD_OPTIONS} ..
-	${MAKE} -C ${dir $@} -j
+	${MAKE} -C ${dir $@} -j8
 
 ${TOOLSDIR}/protobuf/bin/protoc:
 	cd tools && git clone https://github.com/protocolbuffers/protobuf.git
