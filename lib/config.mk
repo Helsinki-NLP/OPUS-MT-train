@@ -315,7 +315,24 @@ PRE_TRG   = ${SUBWORDS}${TRGBPESIZE:000=}k
 ## default name of the data set (and the model)
 ##-------------------------------------
 
-DATASET ?= opus
+TRAINSET_NAME ?= opus
+DATASET       ?= ${TRAINSET_NAME}
+
+## dev and test data come from one specific data set
+## if we have a bilingual model
+
+ifeq (${words ${SRCLANGS}},1)
+ifeq (${words ${TRGLANGS}},1)
+  DEVSET_NAME  ?= ${DEVSET}
+  TESTSET_NAME ?= ${TESTSET}
+endif
+endif
+
+## otherwise we give them a generic name
+
+DEVSET_NAME  ?= opus-dev
+TESTSET_NAME ?= opus-test
+
 
 ## DATADIR = directory where the train/dev/test data are
 ## WORKDIR = directory used for training
@@ -336,20 +353,6 @@ LOCAL_TRAIN_SRC = ${TMPDIR}/${LANGPAIRSTR}/train/${DATASET}.src
 LOCAL_TRAIN_TRG = ${TMPDIR}/${LANGPAIRSTR}/train/${DATASET}.trg
 LOCAL_MONO_DATA = ${TMPDIR}/${LANGSTR}/train/${DATASET}.mono
 
-## dev and test data come from one specific data set
-## if we have a bilingual model
-
-ifeq (${words ${SRCLANGS}},1)
-ifeq (${words ${TRGLANGS}},1)
-  DEVSET_NAME  ?= ${DEVSET}
-  TESTSET_NAME ?= ${TESTSET}
-endif
-endif
-
-## otherwise we give them a generic name
-
-DEVSET_NAME  ?= opus-dev
-TESTSET_NAME ?= opus-test
 
 DEV_SRC   ?= ${WORKDIR}/val/${DEVSET_NAME}.src
 DEV_TRG   ?= ${WORKDIR}/val/${DEVSET_NAME}.trg

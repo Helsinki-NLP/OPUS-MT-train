@@ -10,7 +10,7 @@
 tmpsrc=`mktemp`
 tmptrg=`mktemp`
 tmplang=`mktemp`
-
+column=0
 
 if [ "$1" == "kor" ] || [ "$1" == "ko" ]; then
     column=1
