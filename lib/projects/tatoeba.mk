@@ -274,8 +274,8 @@ tatoeba-continue-unfinished:
 ## unless they are converged already
 ## TODO: takes only the first model found in the directory
 tatoeba-continue-unreleased:
-	find ${TATOEBA_WORK}/       -maxdepth 1 -type d -name '???-???' -printf " %f" | sort > $@.tt1
-	find ${TATOEBA_MODELSHOME}/ -maxdepth 1 -type d -name '???-???' -printf " %f" | sort > $@.tt2
+	find ${TATOEBA_WORK}/       -maxdepth 1 -type d -name '???-???' -printf "%f\n" | sort > $@.tt1
+	find ${TATOEBA_MODELSHOME}/ -maxdepth 1 -type d -name '???-???' -printf "%f\n" | sort > $@.tt2
 	for d in `diff $@.tt1 $@.tt2 | grep '<' | cut -f2 -d' '`; do \
 	  if [ `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.valid1.log' | grep -v tuned | wc -l` -gt 0 ]; then \
 	    if [ ! `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.done' | grep -v tuned | wc -l` -gt 0 ]; then \
@@ -317,8 +317,8 @@ tatoeba-release-finished:
 
 ## release all models that are not yet released
 tatoeba-release-unreleased:
-	find ${TATOEBA_WORK}/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/ | sort > $@.tt1
-	find models-tatoeba/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/ | sort > $@.tt2
+	find ${TATOEBA_WORK}/       -maxdepth 1 -type d -name '???-???' -printf "%f\n" | sort > $@.tt1
+	find ${TATOEBA_MODELSHOME}/ -maxdepth 1 -type d -name '???-???' -printf "%f\n" | sort > $@.tt2
 	for d in `diff $@.tt1 $@.tt2 | grep '<' | cut -f2 -d' '`; do \
 	  for f in `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.valid1.log' -printf " %f" | grep -v tuned`; do \
 	      p=`echo $$d | sed 's/-/2/'`; \
@@ -326,13 +326,13 @@ tatoeba-release-unreleased:
 	      t=`echo $$f | cut -f1 -d.`; \
 	      ${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-evalall; \
 	      ${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-dist; \
-	  fi \
+	  done \
 	done
 	rm -f $@.tt1 $@.tt2
 
 tatoeba-release-unreleased-test:
-	find ${TATOEBA_WORK}/ -maxdepth 1 -type d -name '???-???' -printf " %f" | sort > $@.tt1
-	find ${TATOEBA_MODELSHOME}/ -maxdepth 1 -type d -name '???-???' -printf " %f" | sort > $@.tt2
+	find ${TATOEBA_WORK}/       -maxdepth 1 -type d -name '???-???' -printf "%f\n" | sort > $@.tt1
+	find ${TATOEBA_MODELSHOME}/ -maxdepth 1 -type d -name '???-???' -printf "%f\n" | sort > $@.tt2
 	for d in `diff $@.tt1 $@.tt2 | grep '<' | cut -f2 -d' '`; do \
 	  for f in `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.valid1.log' -printf " %f" | grep -v tuned`; do \
 	      p=`echo $$d | sed 's/-/2/'`; \
@@ -342,7 +342,7 @@ tatoeba-release-unreleased-test:
 	      echo "${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-dist"; \
 	  done \
 	done
-	rm -f $@.tt1 $@.tt2
+#	rm -f $@.tt1 $@.tt2
 
 ## refresh release info for the latest model that converged in each directory
 ## ---> be aware of the danger of overwriting existing files
@@ -372,29 +372,23 @@ tatoeba-refresh-finished:
 
 tatoeba-src2all:
 	for l in ${TATOEBA_AVAILABLE_SUBSET_TRG}; do \
-	    ${MAKE} tatoeba-${SRC}2$$l-train; \
+	    ${MAKE} tatoeba-${SRC}2$$l-trainjob; \
 	done
 
 tatoeba-src2langgroup:
 	for l in ${sort ${shell langgroup -p -n ${TATOEBA_AVAILABLE_SUBSET_TRG} 2>/dev/null}}; do \
-	    ${MAKE} tatoeba-${SRC}2$$l-train-1m; \
+	    ${MAKE} tatoeba-${SRC}2$$l-trainjob-1m; \
 	done
 
 
 tatoeba-all2trg:
 	for l in ${TATOEBA_AVAILABLE_SUBSET_SRC}; do \
-	    ${MAKE} tatoeba-$${l}2${TRG}-train; \
+	    ${MAKE} tatoeba-$${l}2${TRG}-trainjob; \
 	done
-
-tatoeba-all2trg-print:
-	for l in ${TATOEBA_AVAILABLE_SUBSET_SRC}; do \
-	    echo "${MAKE} tatoeba-$${l}2${TRG}-train"; \
-	done
-
 
 tatoeba-langgroup2trg:
 	for l in ${sort ${shell langgroup -p -n ${TATOEBA_AVAILABLE_SUBSET_SRC} 2>/dev/null}}; do \
-	    ${MAKE} tatoeba-$${l}2${TRG}-train-1m; \
+	    ${MAKE} tatoeba-$${l}2${TRG}-trainjob-1m; \
 	done
 
 
@@ -757,16 +751,45 @@ tatoeba-labeltest:
 	@echo "$(filter ${OPUS_LANGS3},${shell langgroup roa | xargs iso639 -m -n})"
 
 
-## start the training job
+## train a tatoeba model
 ## - create config file
 ## - create data sets
-## - submit SLURM training job
+## - run training and evaluation
 tatoeba-%-train:
 	-( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))); \
 	   t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))); \
 	   S="${call find-srclanggroup,${patsubst tatoeba-%-train,%,$@},${PIVOT}}"; \
 	   T="${call find-trglanggroup,${patsubst tatoeba-%-train,%,$@},${PIVOT}}"; \
-	   if [ ! `find ${TATOEBA_WORK}/$$s-$$t -maxdepth 1 -name '${DATASET}.*.done' | wc -l` -gt 0 ]; then \
+	   if [ ! `find ${TATOEBA_WORK}/$$s-$$t -maxdepth 1 -name '${DATASET}.*${MODELTYPE}.model${NR}.done' | wc -l` -gt 0 ]; then \
+	     if [ `echo $$S | tr ' ' "\n" | wc -l` -ge ${MIN_SRCLANGS} ]; then \
+	       if [ `echo $$T | tr ' ' "\n" | wc -l` -ge ${MIN_TRGLANGS} ]; then \
+	         if [ `echo $$S | tr ' ' "\n" | wc -l` -le ${MAX_SRCLANGS} ]; then \
+	           if [ `echo $$T | tr ' ' "\n" | wc -l` -le ${MAX_TRGLANGS} ]; then \
+	             ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" \
+			TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
+			TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
+			tatoeba-prepare; \
+	             ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" \
+			TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
+			TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
+			all-tatoeba; \
+	           fi \
+	         fi \
+	       fi \
+	     fi \
+	   fi )
+
+
+## start the training job
+## - create config file
+## - create data sets
+## - submit SLURM training job
+tatoeba-%-trainjob:
+	-( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-trainjob,%,$@))); \
+	   t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-trainjob,%,$@))); \
+	   S="${call find-srclanggroup,${patsubst tatoeba-%-trainjob,%,$@},${PIVOT}}"; \
+	   T="${call find-trglanggroup,${patsubst tatoeba-%-trainjob,%,$@},${PIVOT}}"; \
+	   if [ ! `find ${TATOEBA_WORK}/$$s-$$t -maxdepth 1 -name '${DATASET}.*${MODELTYPE}.model${NR}.done' | wc -l` -gt 0 ]; then \
 	     if [ `echo $$S | tr ' ' "\n" | wc -l` -ge ${MIN_SRCLANGS} ]; then \
 	       if [ `echo $$T | tr ' ' "\n" | wc -l` -ge ${MIN_TRGLANGS} ]; then \
 	         if [ `echo $$S | tr ' ' "\n" | wc -l` -le ${MAX_SRCLANGS} ]; then \

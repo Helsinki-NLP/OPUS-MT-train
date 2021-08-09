@@ -266,8 +266,31 @@ endif
 		MARIAN_EARLY_STOPPING=${BT_MARIAN_EARLY_STOPPING} \
 	${@:-bt=}
 
-#		CLEAN_TRAIN_SRC="${CLEAN_TRAIN_SRC} ${BACKTRANS_SRC}" \
-#		CLEAN_TRAIN_TRG="${CLEAN_TRAIN_TRG} ${BACKTRANS_TRG}" \
+
+## add forward translations
+
+FT_MODEL       = ${MODEL_SUBDIR}${DATASET}+ft${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
+FT_MODEL_BASE  = ${FT_MODEL}.${MODELTYPE}.model${NR}
+FT_MODEL_START = ${WORKDIR}/${FT_MODEL_BASE}.npz
+FT_MODEL_VOCAB = ${WORKDIR}/${FT_MODEL}.vocab.yml
+
+FT_MARIAN_EARLY_STOPPING = 15
+
+%-ft:
+ifneq (${wildcard ${MODEL_FINAL}},)
+ifeq (${wildcard ${FT_MODEL_START}},)
+	cp ${MODEL_FINAL} ${FT_MODEL_START}
+	cp ${MODEL_VOCAB} ${FT_MODEL_VOCAB}
+endif
+endif
+	rm -f ${WORKHOME}/${LANGPAIRSTR}/train.submit
+	${MAKE} DATASET=${DATASET}+ft \
+		USE_FORWARDTRANS=1 \
+		CONTINUE_EXISTING=1 \
+		MODELCONFIG=config-ft.mk \
+		MARIAN_EARLY_STOPPING=${FT_MARIAN_EARLY_STOPPING} \
+	${@:-ft=}
+
 
 
 ## train on back-translations only
@@ -275,11 +298,32 @@ endif
 	rm -f ${WORKHOME}/${LANGPAIRSTR}/train.submit
 	${MAKE} DATASET=${DATASET}+btonly \
 		USE_BACKTRANS=1 \
-		CONTINUE_EXISTING=1 \
 		MODELCONFIG=config-bt.mk \
 		TRAINSET= TATOEBA_TRAINSET= \
 	${@:-btonly=}
 
+## train on forward-translations only
+%-ftonly:
+	rm -f ${WORKHOME}/${LANGPAIRSTR}/train.submit
+	${MAKE} DATASET=${DATASET}+ftonly \
+		USE_FORWARDTRANS=1 \
+		MODELCONFIG=config-ft.mk \
+		TRAINSET= TATOEBA_TRAINSET= \
+	${@:-ftonly=}
+
+
+## only forward translated training data
+## (for knowledge distillation)
+## TODO: better have a separate set for those data sets
+##       to make it possible to combine with other forward translations
+%-ft-train-only:
+	rm -f ${WORKHOME}/${LANGPAIRSTR}/train.submit
+	${MAKE} DATASET=${DATASET}+ft-train-only \
+		USE_FORWARDTRANS=1 \
+		FORWARDTRANS_HOME=${PWD}/ft-tatoeba \
+		MODELCONFIG=config-ft-train.mk \
+		TRAINSET= TATOEBA_TRAINSET= \
+	${@:-ft-train-only=}
 
 
 

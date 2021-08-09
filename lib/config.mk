@@ -359,10 +359,15 @@ TEST_TRG  ?= ${WORKDIR}/test/${TESTSET_NAME}.trg
 
 
 MODEL_SUBDIR =
-MODEL        = ${MODEL_SUBDIR}${DATASET}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
-MODELTYPE    = transformer-align
-# MODELTYPE  = transformer
-NR           = 1
+MODEL        =  ${MODEL_SUBDIR}${DATASET}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
+MODELTYPES   = 	transformer \
+		transformer-big \
+		transformer-align \
+		transformer-big-align \
+		transformer-small-align \
+		transformer-tiny-align
+MODELTYPE    =  transformer-align
+NR           =  1
 
 MODEL_BASENAME   = ${MODEL}.${MODELTYPE}.model${NR}
 MODEL_VALIDLOG   = ${MODEL}.${MODELTYPE}.valid${NR}.log
@@ -423,16 +428,20 @@ TEST_COMPARISON  = ${TEST_TRANSLATION}.compare
 
 ## parameters for running Marian NMT
 
-MARIAN_GPUS             = 0
+MARIAN_GPUS             ?= 0
 MARIAN_EXTRA            = 
-MARIAN_VALID_FREQ       = 10000
-MARIAN_SAVE_FREQ        = ${MARIAN_VALID_FREQ}
-MARIAN_DISP_FREQ        = ${MARIAN_VALID_FREQ}
-MARIAN_EARLY_STOPPING   = 10
-MARIAN_VALID_MINI_BATCH = 16
-MARIAN_MAXI_BATCH       = 500
-MARIAN_DROPOUT          = 0.1
-MARIAN_MAX_LENGTH	= 500
+MARIAN_VALID_FREQ       ?= 10000
+MARIAN_SAVE_FREQ        ?= ${MARIAN_VALID_FREQ}
+MARIAN_DISP_FREQ        ?= ${MARIAN_VALID_FREQ}
+MARIAN_EARLY_STOPPING   ?= 10
+MARIAN_VALID_MINI_BATCH ?= 16
+MARIAN_MAXI_BATCH       ?= 500
+MARIAN_DROPOUT          ?= 0.1
+MARIAN_MAX_LENGTH	?= 500
+MARIAN_ENC_DEPTH        ?= 6
+MARIAN_DEC_DEPTH        ?= 6
+MARIAN_ATT_HEADS        ?= 8
+MARIAN_DIM_EMB          ?= 512
 
 MARIAN_DECODER_GPU    = -b 12 -n1 -d ${MARIAN_GPUS} \
 			--mini-batch 8 --maxi-batch 32 --maxi-batch-sort src \
@@ -440,7 +449,7 @@ MARIAN_DECODER_GPU    = -b 12 -n1 -d ${MARIAN_GPUS} \
 MARIAN_DECODER_CPU    = -b 12 -n1 --cpu-threads ${HPC_CORES} \
 			--mini-batch 8 --maxi-batch 32 --maxi-batch-sort src \
 			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop
-MARIAN_DECODER_FLAGS = ${MARIAN_DECODER_GPU}
+MARIAN_DECODER_FLAGS  = ${MARIAN_DECODER_GPU}
 
 
 ## TODO: currently marianNMT crashes with workspace > 26000
