@@ -3,10 +3,6 @@
 # Makefile for running models with data from the Tatoeba Translation Challenge
 # https://github.com/Helsinki-NLP/Tatoeba-Challenge
 #
-# NEWS
-#
-# - MODELTYPE=transformer is now default for all Tatoeba models
-#   (no guided alignment!)
 #
 #---------------------------------------------------------------------
 # train and evaluate a single translation pair, for example:
@@ -90,8 +86,7 @@
 
 ## general parameters for Tatoeba models
 
-
-## NEW: release
+## Tatoeba Challenge Data release number
 # TATOEBA_VERSION   ?= v2020-07-28
 TATOEBA_VERSION   ?= v2021-08-07
 
@@ -99,17 +94,17 @@ TATOEBA_DATAURL   := https://object.pouta.csc.fi/Tatoeba-Challenge
 TATOEBA_TEST_URL  := ${TATOEBA_DATAURL}-${TATOEBA_VERSION}
 TATOEBA_TRAIN_URL := ${TATOEBA_DATAURL}-${TATOEBA_VERSION}
 TATOEBA_MONO_URL  := ${TATOEBA_DATAURL}-${TATOEBA_VERSION}
-# TATOEBA_TEST_URL  := ${TATOEBA_DATAURL}
-# TATOEBA_TRAIN_URL := ${TATOEBA_DATAURL}
-# TATOEBA_MONO_URL  := ${TATOEBA_DATAURL}
-TATOEBA_RAWGIT    := https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
 TATOEBA_WORK      ?= ${PWD}/work-tatoeba
 TATOEBA_DATA      ?= ${TATOEBA_WORK}/data/${PRE}
 TATOEBA_MONO      ?= ${TATOEBA_WORK}/data/mono
 
+# TATOEBA_RAWGIT         := https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
+TATOEBA_RAWGIT_MASTER    := https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
+TATOEBA_RAWGIT_RELEASE   := https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/${TATOEBA_VERSION}
+
 
 ## data count files (file basename)
-TATOEBA_DATA_COUNT_BASE = ${TATOEBA_RAWGIT}/data/release/${TATOEBA_VERSION}/released-bitexts
+TATOEBA_DATA_COUNT_BASE = ${TATOEBA_RAWGIT_MASTER}/data/release/${TATOEBA_VERSION}/released-bitexts
 
 ## all released language pairs with test sets > 200 test pairs
 ## also extract all source languages that are available for a give target language
@@ -132,7 +127,7 @@ WIKIMACROLANGS    ?= $(sort ${shell ${GET_ISO_CODE} ${WIKILANGS}})
 TATOEBA_MODEL_CONTAINER := Tatoeba-MT-models
 
 ## this will be the base name of the model file
-TATOEBA_DATASET       := opusTC$(subst -,,${TATOEBA_VERSION})
+TATOEBA_DATASET       := ${DATASET}TC$(subst -,,${TATOEBA_VERSION})
 
 TATOEBA_TRAINSET      := Tatoeba-train-${TATOEBA_VERSION}
 TATOEBA_DEVSET        := Tatoeba-dev-${TATOEBA_VERSION}
@@ -525,21 +520,21 @@ all-tatoeba-langgroups:
 
 #### language-group to English
 
-GROUP2ENG_TRAIN   := $(patsubst %,tatoeba-%2eng-train,${OPUS_LANG_GROUPS})
+GROUP2ENG_TRAIN   := $(patsubst %,tatoeba-%2eng-trainjob,${OPUS_LANG_GROUPS})
 GROUP2ENG_EVAL    := $(patsubst %,tatoeba-%2eng-eval,${OPUS_LANG_GROUPS})
 GROUP2ENG_EVALALL := $(patsubst %,tatoeba-%2eng-evalall,${OPUS_LANG_GROUPS})
 GROUP2ENG_DIST    := $(patsubst %,tatoeba-%2eng-dist,${OPUS_LANG_GROUPS})
 
 #### English to language group
 
-ENG2GROUP_TRAIN   := $(patsubst %,tatoeba-eng2%-train,${OPUS_LANG_GROUPS})
+ENG2GROUP_TRAIN   := $(patsubst %,tatoeba-eng2%-trainjob,${OPUS_LANG_GROUPS})
 ENG2GROUP_EVAL    := $(patsubst %,tatoeba-eng2%-eval,${OPUS_LANG_GROUPS})
 ENG2GROUP_EVALALL := $(patsubst %,tatoeba-eng2%-evalall,${OPUS_LANG_GROUPS})
 ENG2GROUP_DIST    := $(patsubst %,tatoeba-eng2%-dist,${OPUS_LANG_GROUPS})
 
 #### multilingual language-group (bi-directional
 
-LANGGROUP_TRAIN   := $(foreach G,${OPUS_LANG_GROUPS},tatoeba-${G}2${G}-train)
+LANGGROUP_TRAIN   := $(foreach G,${OPUS_LANG_GROUPS},tatoeba-${G}2${G}-trainjob)
 LANGGROUP_EVAL    := $(patsubst %-train,%-eval,${LANGGROUP_TRAIN})
 LANGGROUP_EVALALL := $(patsubst %-train,%-evalall,${LANGGROUP_TRAIN})
 LANGGROUP_DIST    := $(patsubst %-train,%-dist,${LANGGROUP_TRAIN})
@@ -547,17 +542,17 @@ LANGGROUP_DIST    := $(patsubst %-train,%-dist,${LANGGROUP_TRAIN})
 LANGGROUP_FIT_DATA_SIZE=1000000
 
 ## start all jobs with 1 million sampled sentence pairs per language pair
+## (OLD: MODELTYPE=transformer)
 all-tatoeba-group2eng: 
-	${MAKE} MIN_SRCLANGS=2 MODELTYPE=transformer \
+	${MAKE} MIN_SRCLANGS=2 SKIP_LANGPAIRS="eng-eng" \
 		FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} ${GROUP2ENG_TRAIN}
 
 all-tatoeba-eng2group: 
-	${MAKE} MIN_TRGLANGS=2 MODELTYPE=transformer \
+	${MAKE} MIN_TRGLANGS=2 SKIP_LANGPAIRS="eng-eng" \
 		FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} ${ENG2GROUP_TRAIN}
 
 all-tatoeba-langgroup: 
-	${MAKE} MIN_SRCLANGS=2 MAX_SRCLANGS=30 PIVOT=eng \
-		MODELTYPE=transformer \
+	${MAKE} MIN_SRCLANGS=2 MAX_SRCLANGS=30 PIVOT=eng SKIP_LANGPAIRS="eng-eng" \
 		FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} ${LANGGROUP_TRAIN}
 
 all-tatoeba-cross-langgroups:
@@ -566,7 +561,6 @@ all-tatoeba-cross-langgroups:
 	    if [ "$$s" != "$$t" ]; then \
 		${MAKE} MIN_SRCLANGS=2 MIN_TRGLANGS=2 \
 			MAX_SRCLANGS=30 MAX_TRGLANGS=30 \
-			MODELTYPE=transformer \
 			FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} \
 		tatoeba-$${s}2$${t}-train; \
 	    fi \
@@ -786,6 +780,10 @@ tatoeba-%-train:
 	       fi \
 	     fi \
 	   fi )
+
+test-fiu2eng:
+	echo "${call find-srclanggroup,${patsubst test-%,%,$@},${PIVOT}}"
+	echo "${call find-trglanggroup,${patsubst test-%,%,$@},${PIVOT}}"
 
 
 ## start the training job
@@ -1129,7 +1127,7 @@ tatoeba-%-langtunealljobs:
 
 ## get the markdown page for a specific subset
 tatoeba-%.md:
-	wget -O $@ ${TATOEBA_RAWGIT}/subsets/${patsubst tatoeba-%,%,$@}
+	wget -O $@ ${TATOEBA_RAWGIT_MASTER}/subsets/${TATOEBA_VERSION}/${patsubst tatoeba-%,%,$@}
 
 
 ## run all language pairs for a given subset
@@ -1340,7 +1338,7 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-testsets.done:
 	@for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
 	      wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp \
-			${TATOEBA_RAWGIT}/data/test/$$s-$$t/test.txt; \
+			${TATOEBA_RAWGIT_RELEASE}/data/test/$$s-$$t/test.txt; \
 	      if [ -s ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp ]; then \
 		cat ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp $(FIXLANGIDS) \
 			> ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt; \
@@ -1387,7 +1385,7 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-testsets.done:
 		fi; \
 	      else \
 	        wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp \
-			${TATOEBA_RAWGIT}/data/test/$$t-$$s/test.txt; \
+			${TATOEBA_RAWGIT_RELEASE}/data/test/$$t-$$s/test.txt; \
 	        if [ -s ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp ]; then \
 		  cat ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp $(FIXLANGIDS) \
 			> ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt; \
@@ -1726,7 +1724,7 @@ KEEP_LANGIDS         = bos_Cyrl cmn cnr cnr_Latn csb diq dnj dty fas fqs ful fur
 			nor nor_Latn oss_Latn pan plt pnb_Guru pob prs qug quw quy quz qvi rmn rmy ruk san swa swc \
 			syr syr_Syrc tgk_Latn thy tlh tmh toi tuk_Cyrl urd_Deva xal_Latn yid_Latn zho zlm
 SKIP_LANGIDS         = ${filter-out ${KEEP_LANGIDS},${TRAIN_ONLY_LANGIDS}} \
-			ang ara_Latn arq_Latn apc_Latn bul_Latn ell_Latn heb_Latn nob_Hebr rus_Latn
+			ang ara_Latn arq_Latn apc_Latn bul_Latn ell_Latn eng_Tibt eng_Zinh heb_Latn hun_Zinh nob_Hebr rus_Latn
 SKIP_LANGIDS_PATTERN = ^\(${subst ${SPACE},\|,${SKIP_LANGIDS}}\)$$
 
 ## modify language IDs in training data to adjust them to test sets
@@ -1738,6 +1736,9 @@ SKIP_LANGIDS_PATTERN = ^\(${subst ${SPACE},\|,${SKIP_LANGIDS}}\)$$
 FIXLANGIDS = 	| sed 's/zho\(.*\)_HK/yue\1/g;s/zho\(.*\)_CN/cmn\1/g;s/zho\(.*\)_TW/cmn\1/g;s/zho/cmn/g;' \
 		| sed 's/\_[A-Z][A-Z]//g' \
 		| sed 's/\-[a-z]*//g' \
+		| sed 's/\_Brai//g' \
+		| sed 's/\_Zinh//g' \
+		| sed 's/\_Tibt//g' \
 		| sed 's/jpn_[A-Za-z]*/jpn/g' \
 		| sed 's/kor_[A-Za-z]*/kor/g' \
 		| sed 's/nor_Latn/nor/g' \
@@ -1807,7 +1808,8 @@ TATOEBA_TMPDATADIR = data/release/${TATOEBA_VERSION}/${LANGPAIR}
 	  mv $@.d/${TATOEBA_TMPDATADIR}/test.trg ${dir $@}${TATOEBA_TESTSET}.${LANGPAIR}.clean.${TRGEXT}; \
 	  cat $@.d/${TATOEBA_TMPDATADIR}/test.id $(FIXLANGIDS) > ${dir $@}${TATOEBA_TESTSET}.${LANGPAIR}.clean.id; \
 	fi
-	@if [ -e $@.d/${TATOEBA_TMPDATADIR}/dev.src ]; then \
+	@if [ -e $@.d/${TATOEBA_TMPDATADIR}/dev.src ] && \
+	    [ `cat $@.d/${TATOEBA_TMPDATADIR}/dev.src | wc -l` -gt 50 ]; then \
 	  echo "........ move dev files to ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.*"; \
 	  mv $@.d/${TATOEBA_TMPDATADIR}/dev.src ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.${SRCEXT}; \
 	  mv $@.d/${TATOEBA_TMPDATADIR}/dev.trg ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.${TRGEXT}; \
@@ -1821,7 +1823,7 @@ TATOEBA_TMPDATADIR = data/release/${TATOEBA_VERSION}/${LANGPAIR}
 	  fi; \
 	else \
 	  if [ -e $@.d/${TATOEBA_TMPDATADIR}/train.src.gz ]; then \
-	    echo "no devdata available - get top 1000 from training data!"; \
+	    echo "........ too little devdata available - get top 1000 from training data!"; \
 	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.src.gz | head -1000 > ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.${SRCEXT}; \
 	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.trg.gz | head -1000 > ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.${TRGEXT}; \
 	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.id.gz  | head -1000 | cut -f2,3 $(FIXLANGIDS) > ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.id; \
@@ -1830,6 +1832,12 @@ TATOEBA_TMPDATADIR = data/release/${TATOEBA_VERSION}/${LANGPAIR}
 	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.trg.gz | tail -n +1001 > ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${TRGEXT}; \
 	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.id.gz  | tail -n +1001 | cut -f2,3 $(FIXLANGIDS) > ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.id; \
 	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.id.gz  | tail -n +1001 | cut -f1 > ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.domain; \
+	  fi; \
+	  if [ -e $@.d/${TATOEBA_TMPDATADIR}/dev.src ]; then \
+	    echo "........ add dev files to ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.*"; \
+	    cat $@.d/${TATOEBA_TMPDATADIR}/dev.src >> ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.${SRCEXT}; \
+	    cat $@.d/${TATOEBA_TMPDATADIR}/dev.trg >> ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.${TRGEXT}; \
+	    cat $@.d/${TATOEBA_TMPDATADIR}/dev.id $(FIXLANGIDS) >> ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.id; \
 	  fi \
 	fi
 ## make sure that training data file exists even if it is empty
@@ -1842,10 +1850,10 @@ TATOEBA_TMPDATADIR = data/release/${TATOEBA_VERSION}/${LANGPAIR}
 #######################################
 	@cut -f1 ${dir $@}Tatoeba-*.${LANGPAIR}.clean.id | sort -u | \
 		grep -v '${SKIP_LANGIDS_PATTERN}' | \
-		tr "\n" ' ' | sed 's/^ *//;s/ *$$//' > $(@:.${SRCEXT}.gz=.${SRCEXT}.labels)
+		tr "\n" ' ' | sed 's/^ *//;s/ *$$//' > $(@:.${SRCEXT}.gz=.${SORTSRCEXT}.labels)
 	@cut -f2 ${dir $@}Tatoeba-*.${LANGPAIR}.clean.id | sort -u | \
 		grep -v '${SKIP_LANGIDS_PATTERN}' | \
-		tr "\n" ' ' | sed 's/^ *//;s/ *$$//' > $(@:.${SRCEXT}.gz=.${TRGEXT}.labels)
+		tr "\n" ' ' | sed 's/^ *//;s/ *$$//' > $(@:.${SRCEXT}.gz=.${SORTTRGEXT}.labels)
 	@cat ${dir $@}Tatoeba-*.${LANGPAIR}.clean.domain | sort -u |\
 		tr "\n" ' ' | sed 's/^ *//;s/ *$$//' > $(@:.${SRCEXT}.gz=.domains)
 #######################################

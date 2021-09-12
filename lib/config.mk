@@ -112,8 +112,10 @@ MAX_OVER_SAMPLING ?= 50
 
 # sorted languages and langpair used to match resources in OPUS
 SORTLANGS   = $(sort ${SRC} ${TRG})
+SORTSRC     = ${firstword ${SORTLANGS}}
+SORTTRG     = ${lastword ${SORTLANGS}}
+LANGPAIR    = ${SORTSRC}-${SORTTRG}
 SPACE       = $(empty) $(empty)
-LANGPAIR    = ${firstword ${SORTLANGS}}-${lastword ${SORTLANGS}}
 LANGSRCSTR  = ${subst ${SPACE},+,$(SRCLANGS)}
 LANGTRGSTR  = ${subst ${SPACE},+,$(TRGLANGS)}
 LANGPAIRSTR = ${LANGSRCSTR}-${LANGTRGSTR}
@@ -128,11 +130,15 @@ LANGSTR ?= ${subst ${SPACE},+,$(LANGS)}
 ## for same language pairs: add numeric extension
 ## (this is neccessary to keep source and target files separate)
 ifeq (${SRC},$(TRG))
-  SRCEXT = ${SRC}1
-  TRGEXT = ${SRC}2
+  SRCEXT     = ${SRC}1
+  TRGEXT     = ${SRC}2
+  SORTSRCEXT = ${SORTSRC}1
+  SORTTRGEXT = ${SORTSRC}2
 else
-  SRCEXT = ${SRC}
-  TRGEXT = ${TRG}
+  SRCEXT     = ${SRC}
+  TRGEXT     = ${TRG}
+  SORTSRCEXT = ${SORTSRC}
+  SORTTRGEXT = ${SORTTRG}
 endif
 
 ## set a flag to use target language labels

@@ -422,7 +422,7 @@ ifdef SHUFFLE_DATA
 endif
 ######################################
 #  FIT_DATA_SIZE is set?
-#    --> fit data to speciic size
+#    --> fit data to specific size
 #    --> under/over sampling!
 ######################################
 	@echo -n "* ${SRC}-${TRG}: total size = " >> ${dir ${LOCAL_TRAIN_SRC}}README.md

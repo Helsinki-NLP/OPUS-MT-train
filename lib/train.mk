@@ -13,7 +13,9 @@ ifeq (${SUBWORDS},spm)
 
 ${MODEL_VOCAB}: ${SPMSRCMODEL} ${SPMTRGMODEL}
 ifneq (${MODEL_LATEST_VOCAB},)
+ifneq (${MODEL_LATEST_VOCAB},${MODEL_VOCAB})
 	cp ${MODEL_LATEST_VOCAB} ${MODEL_VOCAB}
+endif
 else
 	cut -f1 < ${word 1,$^}.vocab > ${@:.vocab.yml=.src.vocab}
 	cut -f1 < ${word 2,$^}.vocab > ${@:.vocab.yml=.trg.vocab}
@@ -39,7 +41,9 @@ ${MODEL_VOCAB}:	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 		${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz
 ifeq ($(wildcard ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB}),)
 ifneq (${MODEL_LATEST_VOCAB},)
+ifneq (${MODEL_LATEST_VOCAB},${MODEL_VOCAB})
 	cp ${MODEL_LATEST_VOCAB} ${MODEL_VOCAB}
+endif
 else
 	mkdir -p ${dir $@}
 	${LOADMODS} && ${ZCAT} $^ | ${MARIAN_VOCAB} --max-size ${VOCABSIZE} > $@
@@ -184,8 +188,12 @@ ${MARIAN_MODELS_DONE}: ${MARIAN_TRAIN_PREREQS}
 ifeq (${wildcard ${MODEL_START}},)
 ifneq (${MODEL_LATEST},)
 ifneq (${MODEL_LATEST_VOCAB},)
+ifneq (${MODEL_LATEST_VOCAB},${MODEL_VOCAB})
 	cp ${MODEL_LATEST_VOCAB} ${MODEL_VOCAB}
+endif
+ifneq (${MODEL_LATEST},${MODEL_START})
 	cp ${MODEL_LATEST} ${MODEL_START}
+endif
 endif
 endif
 endif

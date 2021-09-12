@@ -222,11 +222,18 @@ tatoeba-print-reliable-trg:
 	@echo ${TATOEBA_RELIABLE_TRG}
 
 
-# RELEASED_BT_ALL := ${shell wget -qq -O - ${TATOEBA_RELEASED_BT}}
+RELEASED_BT_ALL := ${shell wget -qq -O - ${TATOEBA_RELEASED_BT}}
 RELEASED_BT := ${shell wget -qq -O - ${TATOEBA_RELEASED_BT} | grep '^${LANGPAIR}/'}
 
 fetch-bt:
 	for d in ${RELEASED_BT}; do \
+	  echo "fetch $$d"; \
+	  mkdir -p `dirname $$d`; \
+	  wget -qq -O $$d https://object.pouta.csc.fi/Tatoeba-MT-bt/$$d; \
+	done
+
+fetch-all-bt:
+	for d in ${RELEASED_BT_ALL}; do \
 	  echo "fetch $$d"; \
 	  mkdir -p `dirname $$d`; \
 	  wget -qq -O $$d https://object.pouta.csc.fi/Tatoeba-MT-bt/$$d; \
