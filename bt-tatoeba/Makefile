@@ -67,12 +67,23 @@ ifneq (${MULTI_TARGET_MODEL},0)
 endif
 
 
+## macro-language IDs
+## TODO: need to do something better than hard-coding this here
+TATOEBA_MACRO_LANGS = hbs nor msa
 
 
 ## target languages of reliable models for current source language 
 ## reliable is defined as BLEU scores above 20.0
-TATOEBA_RELIABLE_TRG  := ${shell wget -qq -O - ${TATOEBA_RELEASED} | grep '^${SRC}-' | \
+##
+TATOEBA_RELIABLE_TRG_BLEU  := ${shell wget -qq -O - ${TATOEBA_RELEASED} | grep '^${SRC}-' | \
 				egrep '\s[2-9][0-9]\.' | cut -f1 | sort -u | cut -f2 -d-}
+
+## alternative: chr-F2 >= 0.4
+TATOEBA_RELIABLE_TRG_CHRF  := ${shell wget -qq -O - ${TATOEBA_RELEASED} | grep '^${SRC}-' | \
+				egrep '[a-z]\s0\.[4-9]' | cut -f1 | sort -u | cut -f2 -d-}
+
+## accept both
+TATOEBA_RELIABLE_TRG = $(filter-out ${TATOEBA_MACRO_LANGS},$(sort ${TATOEBA_RELIABLE_TRG_BLEU} ${TATOEBA_RELIABLE_TRG_CHRF}))
 
 
 #####################################################################################
@@ -83,8 +94,14 @@ TATOEBA_RELIABLE_TRG  := ${shell wget -qq -O - ${TATOEBA_RELEASED} | grep '^${SR
 ## all "reliable" released tanslation models
 # TATOEBA_AVAILABLE_NMT := ${shell wget -qq -O - ${TATOEBA_RELEASED} | egrep '\s[2-9][0-9]\.' | cut -f1 | sort -u}
 
-TATOEBA_RELIABLE_SRC  := ${shell wget -qq -O - ${TATOEBA_RELEASED} | grep -- '-${TRG}	' | \
+TATOEBA_RELIABLE_SRC_BLEU  := ${shell wget -qq -O - ${TATOEBA_RELEASED} | grep -- '-${TRG}	' | \
 				egrep '\s[2-9][0-9]\.' | cut -f1 | sort -u | cut -f1 -d-}
+
+TATOEBA_RELIABLE_SRC_CHRF  := ${shell wget -qq -O - ${TATOEBA_RELEASED} | grep -- '-${TRG}	' | \
+				egrep '[a-z]\s0\.[4-9]' | cut -f1 | sort -u | cut -f1 -d-}
+
+TATOEBA_RELIABLE_SRC = $(sort ${TATOEBA_RELIABLE_SRC_BLEU} ${TATOEBA_RELIABLE_SRC_CHRF})
+
 
 ## TODO: is it OK to turn zho into cmn?
 ## NOTE: also needs to fix the grep pattern in recipe for ${WIKI_DIR}/${SRC} !!!!
@@ -96,9 +113,11 @@ TATOEBA_TRANSLATABLE_WIKILANGS3 := ${sort ${shell iso639 -m -n ${TATOEBA_TRANSLA
 
 print-wikilangs:
 	@echo ${TATOEBA_RELIABLE_TRG}
-	@echo ${TATOEBA_RELIABLE_SRC}
-	@echo ${TATOEBA_TRANSLATABLE_WIKILANGS}
-	@echo ${TATOEBA_TRANSLATABLE_WIKILANGS3}
+
+#	@echo ${TATOEBA_RELIABLE_SRC}
+#	@echo ${TATOEBA_TRANSLATABLE_WIKILANGS}
+#	@echo ${TATOEBA_TRANSLATABLE_WIKILANGS3}
+
 
 #####################################################################################
 #####################################################################################
@@ -209,17 +228,17 @@ all2trg:
 eng2all:
 	${MAKE} SRC=eng TRG=fin src2all
 
+
 ## translate current source language to all reliable target languages
 src2all:
 	for t in ${TATOEBA_RELIABLE_TRG}; do \
-	  ${MAKE} EMAIL= HPC_CORES=128 HPC_MEM=160g HPC_TIME=24:00 SRC=${SRC} TRG=$$t prepare; \
-	  ${MAKE} EMAIL= HPC_CORES=128 HPC_MEM=160g HPC_TIME=24:00 SRC=${SRC} TRG=$$t translate.${SUBMIT_PREFIX}; \
+	  if [ ! -e ${SRC}-$$t/latest/${WIKISOURCE}.${PART}.${SRC}-$$t.$$t.gz ]; then \
+	    ${MAKE} EMAIL= HPC_CORES=128 HPC_MEM=160g HPC_TIME=24:00 SRC=${SRC} TRG=$$t prepare; \
+	    ${MAKE} EMAIL= HPC_CORES=128 HPC_MEM=160g HPC_TIME=24:00 SRC=${SRC} TRG=$$t translate.${SUBMIT_PREFIX}; \
+	  fi \
 	done
 
 
-
-tatoeba-print-reliable-trg:
-	@echo ${TATOEBA_RELIABLE_TRG}
 
 
 # RELEASED_BT_ALL := ${shell wget -qq -O - ${TATOEBA_RELEASED_BT}}
@@ -381,13 +400,13 @@ endif
 
 
 
-${WIKI_DIR}/${SRC}/%.${PART}.gz: | ${WIKI_DIR}/${SRC}
+${WIKI_DIR}/${SRC}/%.${PART}.gz: | ${WIKI_DIR}/${SRC}/.done
 	${GZCAT} ${@:.${PART}.gz=.txt.gz} |\
 	split -l ${SPLIT_SIZE} - ${patsubst %${PART}.gz,%,$@}
 	${GZIP} -f ${patsubst %${PART}.gz,%,$@}??
+	rm -f ${@:.${PART}.gz=.txt.gz}
 
-
-${WIKI_DIR}/${SRC}/%.txt.gz: ${WIKI_DIR}/${SRC}
+${WIKI_DIR}/${SRC}/%.txt.gz: ${WIKI_DIR}/${SRC}/.done
 	echo "done!"
 
 
@@ -395,25 +414,37 @@ ${WIKI_DIR}/${SRC}/%.txt.gz: ${WIKI_DIR}/${SRC}
 ## --> multiple languages can be included in one release (like nno in nor)
 ## --> shuffle the data as well
 
-${WIKI_DIR}/${SRC}:
-	mkdir -p $@
+# fetch
+${WIKI_DIR}/${SRC}/data:
+	mkdir -p ${dir $@}
 	wget -O $@.tar ${TATOEBA_STORAGE}/${shell iso639 -m -n ${SRC}}.tar
-	tar -C $@ -xf $@.tar
+	tar -C ${dir $@} -xf $@.tar
 	rm -f $@.tar
-	for f in `find $@ -name '*.id.gz'`; do \
+
+# de-duplicate and shuffle
+${WIKI_DIR}/${SRC}/${WIKISOURCE}.txt.gz:
+	${MAKE} ${WIKI_DIR}/${SRC}/data
+	for f in `find ${dir $@} -name '*.id.gz'`; do \
 	  t=`echo $$f | sed 's/\.id\.gz/.txt.gz/'`; \
 	  l=`echo ${SRC} | sed 's/cmn/zho/;s/nob/nor.*/'`; \
 	  paste <(${GZIP} -cd $$f) <(${GZIP} -cd $$t) |\
 	  grep "^$$l	" | cut -f2 | grep . | \
-	  ${SHUFFLE} | ${GZIP} -c >  $@/`basename $$t`; \
+	  ${UNIQ} | ${SHUFFLE} | ${GZIP} -c >  ${dir $@}`basename $$t`; \
 	done
-	rm -fr $@/data
-	for f in `find $@ -name '*.txt.gz'`; do \
+	rm -fr ${WIKI_DIR}/${SRC}/data
+
+# remove empty files
+${WIKI_DIR}/${SRC}/.done:
+	mkdir -p ${dir $@}
+	${MAKE} ${WIKI_DIR}/${SRC}/${WIKISOURCE}.txt.gz
+	for f in `find ${dir $@} -name '*.txt.gz'`; do \
 	  if [ ! `${GZIP} -cd $$f | head | wc -l` -gt 0 ]; then \
 	    rm -f $$f; \
 	  fi \
 	done
-	find $@ -name '*.txt.gz' -delete
+	touch $@
+
+
 
 
 ## OLD: retrieve the old shuffled wiki release
@@ -494,6 +525,7 @@ ifneq (${MODELZIP},)
 		-i ${PWD}/$< \
 		-c decoder.yml \
 		-d ${MARIAN_GPUS} \
+		--quiet-translation \
 		${MARIAN_DECODER_FLAGS} |\
 	sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' |\
 	gzip -c > ${PWD}/$@
