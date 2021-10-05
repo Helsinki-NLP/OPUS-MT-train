@@ -55,7 +55,8 @@ endif
 ## - use only the latest backtranslations
 ##   if such a subdir exists
 
-BACKTRANS_HOME = backtranslate
+BACKTRANS_HOME    = backtranslate
+FORWARDTRANS_HOME = ${BACKTRANS_HOME}
 
 ifneq (${wildcard ${BACKTRANS_HOME}/${TRG}-${SRC}/latest},)
   BACKTRANS_DIR = ${BACKTRANS_HOME}/${TRG}-${SRC}/latest
@@ -63,12 +64,24 @@ else
   BACKTRANS_DIR = ${BACKTRANS_HOME}/${TRG}-${SRC}
 endif
 
+ifneq (${wildcard ${BACKTRANS_HOME}/${SRC}-${TRG}/latest},)
+  FORWARDTRANS_DIR = ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest
+else
+  FORWARDTRANS_DIR = ${FORWARDTRANS_HOME}/${SRC}-${TRG}
+endif
+
+
 ## TODO: make it possible to select only parts of the BT data
 ## ---> use TRAINDATA_SIZE to take max the same amount of all shuffled BT data
 
 ifeq (${USE_BACKTRANS},1)
   BACKTRANS_SRC = ${sort ${wildcard ${BACKTRANS_DIR}/*.${SRCEXT}.gz}}
   BACKTRANS_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${BACKTRANS_SRC}}
+endif
+
+ifeq (${USE_FORWARDTRANS},1)
+  FORWARDTRANS_SRC = ${sort ${wildcard ${FORWARDTRANS_DIR}/*.${SRCEXT}.gz}}
+  FORWARDTRANS_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${FORWARDTRANS_SRC}}
 endif
 
 ifeq (${USE_PIVOTING},1)
@@ -83,7 +96,7 @@ endif
 ##-------------------------------------------------------------
 
 CLEAN_TRAIN_SRC    = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.clean.${SRCEXT}.gz,${TRAINSET}} \
-			${BACKTRANS_SRC} ${PIVOTING_SRC}
+			${BACKTRANS_SRC} ${FORWARDTRANS_SRC} ${PIVOTING_SRC}
 CLEAN_TRAIN_TRG    = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_TRAIN_SRC}}
 
 CLEAN_DEV_SRC      = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.clean.${SRCEXT}.gz,${DEVSET}}
@@ -409,7 +422,7 @@ ifdef SHUFFLE_DATA
 endif
 ######################################
 #  FIT_DATA_SIZE is set?
-#    --> fit data to speciic size
+#    --> fit data to specific size
 #    --> under/over sampling!
 ######################################
 	@echo -n "* ${SRC}-${TRG}: total size = " >> ${dir ${LOCAL_TRAIN_SRC}}README.md
@@ -523,17 +536,17 @@ endif
 	@echo ""                                         >> ${dir ${DEV_SRC}}/README.md
 	@echo -n "* devset-selected: top "               >> ${dir ${DEV_SRC}}/README.md
 	@wc -l < ${DEV_SRC} | tr "\n" ' '                >> ${dir ${DEV_SRC}}/README.md
-	@echo " lines of ${notdir $@}.shuffled!"         >> ${dir ${DEV_SRC}}/README.md
+	@echo " lines of ${notdir $@}.shuffled"          >> ${dir ${DEV_SRC}}/README.md
 ifeq (${DEVSET},${TESTSET})
 	@echo -n "* testset-selected: next "             >> ${dir ${DEV_SRC}}/README.md
 	@wc -l < ${TEST_SRC} | tr "\n" ' '               >> ${dir ${DEV_SRC}}/README.md
-	@echo " lines of ${notdir $@}.shuffled!"         >> ${dir ${DEV_SRC}}/README.md
+	@echo " lines of ${notdir $@}.shuffled "         >> ${dir ${DEV_SRC}}/README.md
 	@echo "* devset-unused: added to traindata"      >> ${dir ${DEV_SRC}}/README.md
 	@echo "# Test data"                               > ${dir ${TEST_SRC}}/README.md
 	@echo ""                                         >> ${dir ${TEST_SRC}}/README.md
 	@echo -n "testset-selected: next "               >> ${dir ${TEST_SRC}}/README.md
 	@wc -l < ${TEST_SRC} | tr "\n" ' '               >> ${dir ${TEST_SRC}}/README.md
-	@echo " lines of ../val/${notdir $@}.shuffled!"  >> ${dir ${TEST_SRC}}/README.md
+	@echo " lines of ../val/${notdir $@}.shuffled"   >> ${dir ${TEST_SRC}}/README.md
 endif
 
 

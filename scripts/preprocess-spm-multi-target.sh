@@ -93,6 +93,7 @@ else
 	-e 's/】/\]/g' \
 	-e 's/％/\%/g' |    
 	perl -C -pe  's/(?!\n)\p{C}/ /g;' |
+	perl -CIOE -pe 's/[\x{2060}\x{200B}\x{feff}]//g' |\
 	sed 's/  */ /g;s/^ *//g;s/ *$//g' |
 	${SPMENCODE} --model $3 |
 	sed "s/^/>>$2<< /"

@@ -50,6 +50,12 @@ fi-zh:
 	train-dynamic.submitcpu
 
 
+
+# Tatoeba: more than 100 test sentences:
+# ain dan deu eng enm epo est fkv fra heb hun ita jpn kor kur lat lit nld nor pol por rus spa swe tur zho
+
+
+
 #-------------------------------------------------------------------
 # add THL backtranslation data (and also all other backtranslations)
 #-------------------------------------------------------------------

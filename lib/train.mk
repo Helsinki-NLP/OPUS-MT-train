@@ -13,7 +13,9 @@ ifeq (${SUBWORDS},spm)
 
 ${MODEL_VOCAB}: ${SPMSRCMODEL} ${SPMTRGMODEL}
 ifneq (${MODEL_LATEST_VOCAB},)
+ifneq (${MODEL_LATEST_VOCAB},${MODEL_VOCAB})
 	cp ${MODEL_LATEST_VOCAB} ${MODEL_VOCAB}
+endif
 else
 	cut -f1 < ${word 1,$^}.vocab > ${@:.vocab.yml=.src.vocab}
 	cut -f1 < ${word 2,$^}.vocab > ${@:.vocab.yml=.trg.vocab}
@@ -39,7 +41,9 @@ ${MODEL_VOCAB}:	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 		${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz
 ifeq ($(wildcard ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB}),)
 ifneq (${MODEL_LATEST_VOCAB},)
+ifneq (${MODEL_LATEST_VOCAB},${MODEL_VOCAB})
 	cp ${MODEL_LATEST_VOCAB} ${MODEL_VOCAB}
+endif
 else
 	mkdir -p ${dir $@}
 	${LOADMODS} && ${ZCAT} $^ | ${MARIAN_VOCAB} --max-size ${VOCABSIZE} > $@
@@ -88,8 +92,7 @@ endif
 
 
 ## possible model variants
-MARIAN_MODELS_DONE = 	${WORKDIR}/${MODEL}.transformer.model${NR}.done \
-			${WORKDIR}/${MODEL}.transformer-align.model${NR}.done
+MARIAN_MODELS_DONE   = 	${patsubst %,${WORKDIR}/${MODEL}.%.model${NR}.done,${MODELTYPES}}
 
 MARIAN_TRAIN_PREREQS = 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 			${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz
@@ -138,6 +141,40 @@ ifeq (${MODELTYPE},transformer-align)
   MARIAN_EXTRA += --guided-alignment ${TRAIN_ALG}
 endif
 
+ifeq (${MODELTYPE},transformer-small-align)
+  MARIAN_ENC_DEPTH = 6
+  MARIAN_DEC_DEPTH = 2
+  MARIAN_ATT_HEADS = 8
+  MARIAN_DIM_EMB = 512
+  MARIAN_TRAIN_PREREQS += ${TRAIN_ALG}
+  MARIAN_EXTRA += --guided-alignment ${TRAIN_ALG} --transformer-decoder-autoreg rnn --dec-cell ssru
+endif
+
+ifeq (${MODELTYPE},transformer-tiny-align)
+  MARIAN_ENC_DEPTH = 3
+  MARIAN_DEC_DEPTH = 2
+  MARIAN_ATT_HEADS = 8
+  MARIAN_DIM_EMB = 256
+  MARIAN_TRAIN_PREREQS += ${TRAIN_ALG}
+  MARIAN_EXTRA += --guided-alignment ${TRAIN_ALG} --transformer-decoder-autoreg rnn --dec-cell ssru
+endif
+
+ifeq (${MODELTYPE},transformer-big-align)
+  MARIAN_ENC_DEPTH = 12
+  MARIAN_ATT_HEADS = 16
+  MARIAN_DIM_EMB = 1024
+  MARIAN_TRAIN_PREREQS += ${TRAIN_ALG}
+  MARIAN_EXTRA += --guided-alignment ${TRAIN_ALG}
+  GPUJOB_HPC_MEM = 16g
+endif
+
+ifeq (${MODELTYPE},transformer-big)
+  MARIAN_ENC_DEPTH = 12
+  MARIAN_ATT_HEADS = 16
+  MARIAN_DIM_EMB = 1024
+  GPUJOB_HPC_MEM = 16g
+endif
+
 
 
 ## finally: recipe for training transformer model
@@ -151,8 +188,12 @@ ${MARIAN_MODELS_DONE}: ${MARIAN_TRAIN_PREREQS}
 ifeq (${wildcard ${MODEL_START}},)
 ifneq (${MODEL_LATEST},)
 ifneq (${MODEL_LATEST_VOCAB},)
+ifneq (${MODEL_LATEST_VOCAB},${MODEL_VOCAB})
 	cp ${MODEL_LATEST_VOCAB} ${MODEL_VOCAB}
+endif
+ifneq (${MODEL_LATEST},${MODEL_START})
 	cp ${MODEL_LATEST} ${MODEL_START}
+endif
 endif
 endif
 endif
@@ -161,9 +202,8 @@ endif
 	${LOADMODS} && ${MARIAN_TRAIN} ${MARIAN_EXTRA} \
 	${MARIAN_STOP_CRITERIA} \
         --model $(@:.done=.npz) \
-	--type transformer \
         --train-sets ${word 1,$^} ${word 2,$^} ${MARIAN_TRAIN_WEIGHTS} \
-        --max-length 500 \
+        --max-length ${MARIAN_MAX_LENGTH} \
         --vocabs ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB} \
         --mini-batch-fit \
 	-w ${MARIAN_WORKSPACE} \
@@ -171,8 +211,11 @@ endif
 	--save-freq ${MARIAN_SAVE_FREQ} \
 	--disp-freq ${MARIAN_DISP_FREQ} \
         --log $(@:.model${NR}.done=.train${NR}.log) \
-        --enc-depth 6 --dec-depth 6 \
-        --transformer-heads 8 \
+	--type transformer \
+        --enc-depth ${MARIAN_ENC_DEPTH} \
+	--dec-depth ${MARIAN_DEC_DEPTH} \
+	--dim-emb ${MARIAN_DIM_EMB} \
+        --transformer-heads ${MARIAN_ATT_HEADS} \
         --transformer-postprocess-emb d \
         --transformer-postprocess dan \
         --transformer-dropout ${MARIAN_DROPOUT} \

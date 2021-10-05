@@ -112,8 +112,10 @@ MAX_OVER_SAMPLING ?= 50
 
 # sorted languages and langpair used to match resources in OPUS
 SORTLANGS   = $(sort ${SRC} ${TRG})
+SORTSRC     = ${firstword ${SORTLANGS}}
+SORTTRG     = ${lastword ${SORTLANGS}}
+LANGPAIR    = ${SORTSRC}-${SORTTRG}
 SPACE       = $(empty) $(empty)
-LANGPAIR    = ${firstword ${SORTLANGS}}-${lastword ${SORTLANGS}}
 LANGSRCSTR  = ${subst ${SPACE},+,$(SRCLANGS)}
 LANGTRGSTR  = ${subst ${SPACE},+,$(TRGLANGS)}
 LANGPAIRSTR = ${LANGSRCSTR}-${LANGTRGSTR}
@@ -128,11 +130,15 @@ LANGSTR ?= ${subst ${SPACE},+,$(LANGS)}
 ## for same language pairs: add numeric extension
 ## (this is neccessary to keep source and target files separate)
 ifeq (${SRC},$(TRG))
-  SRCEXT = ${SRC}1
-  TRGEXT = ${SRC}2
+  SRCEXT     = ${SRC}1
+  TRGEXT     = ${SRC}2
+  SORTSRCEXT = ${SORTSRC}1
+  SORTTRGEXT = ${SORTSRC}2
 else
-  SRCEXT = ${SRC}
-  TRGEXT = ${TRG}
+  SRCEXT     = ${SRC}
+  TRGEXT     = ${TRG}
+  SORTSRCEXT = ${SORTSRC}
+  SORTTRGEXT = ${SORTTRG}
 endif
 
 ## set a flag to use target language labels
@@ -315,7 +321,24 @@ PRE_TRG   = ${SUBWORDS}${TRGBPESIZE:000=}k
 ## default name of the data set (and the model)
 ##-------------------------------------
 
-DATASET ?= opus
+TRAINSET_NAME ?= opus
+DATASET       ?= ${TRAINSET_NAME}
+
+## dev and test data come from one specific data set
+## if we have a bilingual model
+
+ifeq (${words ${SRCLANGS}},1)
+ifeq (${words ${TRGLANGS}},1)
+  DEVSET_NAME  ?= ${DEVSET}
+  TESTSET_NAME ?= ${TESTSET}
+endif
+endif
+
+## otherwise we give them a generic name
+
+DEVSET_NAME  ?= opus-dev
+TESTSET_NAME ?= opus-test
+
 
 ## DATADIR = directory where the train/dev/test data are
 ## WORKDIR = directory used for training
@@ -336,20 +359,6 @@ LOCAL_TRAIN_SRC = ${TMPDIR}/${LANGPAIRSTR}/train/${DATASET}.src
 LOCAL_TRAIN_TRG = ${TMPDIR}/${LANGPAIRSTR}/train/${DATASET}.trg
 LOCAL_MONO_DATA = ${TMPDIR}/${LANGSTR}/train/${DATASET}.mono
 
-## dev and test data come from one specific data set
-## if we have a bilingual model
-
-ifeq (${words ${SRCLANGS}},1)
-ifeq (${words ${TRGLANGS}},1)
-  DEVSET_NAME  ?= ${DEVSET}
-  TESTSET_NAME ?= ${TESTSET}
-endif
-endif
-
-## otherwise we give them a generic name
-
-DEVSET_NAME  ?= opus-dev
-TESTSET_NAME ?= opus-test
 
 DEV_SRC   ?= ${WORKDIR}/val/${DEVSET_NAME}.src
 DEV_TRG   ?= ${WORKDIR}/val/${DEVSET_NAME}.trg
@@ -359,10 +368,15 @@ TEST_TRG  ?= ${WORKDIR}/test/${TESTSET_NAME}.trg
 
 
 MODEL_SUBDIR =
-MODEL        = ${MODEL_SUBDIR}${DATASET}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
-MODELTYPE    = transformer-align
-# MODELTYPE  = transformer
-NR           = 1
+MODEL        =  ${MODEL_SUBDIR}${DATASET}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
+MODELTYPES   = 	transformer \
+		transformer-big \
+		transformer-align \
+		transformer-big-align \
+		transformer-small-align \
+		transformer-tiny-align
+MODELTYPE    =  transformer-align
+NR           =  1
 
 MODEL_BASENAME   = ${MODEL}.${MODELTYPE}.model${NR}
 MODEL_VALIDLOG   = ${MODEL}.${MODELTYPE}.valid${NR}.log
@@ -423,16 +437,20 @@ TEST_COMPARISON  = ${TEST_TRANSLATION}.compare
 
 ## parameters for running Marian NMT
 
-MARIAN_GPUS             = 0
+MARIAN_GPUS             ?= 0
 MARIAN_EXTRA            = 
-MARIAN_VALID_FREQ       = 10000
-MARIAN_SAVE_FREQ        = ${MARIAN_VALID_FREQ}
-MARIAN_DISP_FREQ        = ${MARIAN_VALID_FREQ}
-MARIAN_EARLY_STOPPING   = 10
-MARIAN_VALID_MINI_BATCH = 16
-MARIAN_MAXI_BATCH       = 500
-MARIAN_DROPOUT          = 0.1
-MARIAN_MAX_LENGTH	= 500
+MARIAN_VALID_FREQ       ?= 10000
+MARIAN_SAVE_FREQ        ?= ${MARIAN_VALID_FREQ}
+MARIAN_DISP_FREQ        ?= ${MARIAN_VALID_FREQ}
+MARIAN_EARLY_STOPPING   ?= 10
+MARIAN_VALID_MINI_BATCH ?= 16
+MARIAN_MAXI_BATCH       ?= 500
+MARIAN_DROPOUT          ?= 0.1
+MARIAN_MAX_LENGTH	?= 500
+MARIAN_ENC_DEPTH        ?= 6
+MARIAN_DEC_DEPTH        ?= 6
+MARIAN_ATT_HEADS        ?= 8
+MARIAN_DIM_EMB          ?= 512
 
 MARIAN_DECODER_GPU    = -b 12 -n1 -d ${MARIAN_GPUS} \
 			--mini-batch 8 --maxi-batch 32 --maxi-batch-sort src \
@@ -440,7 +458,7 @@ MARIAN_DECODER_GPU    = -b 12 -n1 -d ${MARIAN_GPUS} \
 MARIAN_DECODER_CPU    = -b 12 -n1 --cpu-threads ${HPC_CORES} \
 			--mini-batch 8 --maxi-batch 32 --maxi-batch-sort src \
 			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop
-MARIAN_DECODER_FLAGS = ${MARIAN_DECODER_GPU}
+MARIAN_DECODER_FLAGS  = ${MARIAN_DECODER_GPU}
 
 
 ## TODO: currently marianNMT crashes with workspace > 26000

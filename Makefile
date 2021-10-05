@@ -326,13 +326,15 @@ train-and-eval-job:
 #------------------------------------------------------------------------
 
 .PHONY: data
-data:	${TRAIN_SRC}.clean.${PRE_SRC}.gz ${TRAIN_TRG}.clean.${PRE_TRG}.gz \
-	${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG}
+data:	${TRAIN_SRC}.clean.${PRE_SRC}.gz ${TRAIN_TRG}.clean.${PRE_TRG}.gz
+	${MAKE} ${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG}
 	${MAKE} ${TEST_SRC}.${PRE_SRC} ${TEST_TRG}
 	${MAKE} ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB}
-ifeq (${MODELTYPE},transformer-align)
+ifeq ($(filter align,${subst -, ,${MODELTYPE}}),align)
 	${MAKE} ${TRAIN_ALG}
 endif
+
+# ifeq (${MODELTYPE},transformer-align)
 
 
 traindata: 	${TRAIN_SRC}.clean.${PRE_SRC}.gz ${TRAIN_TRG}.clean.${PRE_TRG}.gz

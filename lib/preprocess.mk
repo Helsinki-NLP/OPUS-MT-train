@@ -13,12 +13,18 @@
 ## - should we increase the length filter when cleaning later? How much?
 ## - should we apply some other cleanup scripts here to get rid of some messy stuff?
 
+
+## should we remove zero-width spaces?
+##   perl -CIOE -pe 's/[\x{2060}\x{200B}\x{feff}]//g'
+
 %.clean.${SRCEXT}.gz: %.${SRCEXT}.${PRE} %.${TRGEXT}.${PRE}
 	cat ${word 1,$^} |\
 	perl -CS -pe 'tr[\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}][]cd;' |\
+	perl -CIOE -pe 's/[\x{2060}\x{200B}\x{feff}]//g' |\
 	perl -CS -pe 's/\&\s*\#\s*160\s*\;/ /g' > $@.1
 	cat ${word 2,$^} |\
 	perl -CS -pe 'tr[\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}][]cd;' |\
+	perl -CIOE -pe 's/[\x{2060}\x{200B}\x{feff}]//g' |\
 	perl -CS -pe 's/\&\s*\#\s*160\s*\;/ /g' > $@.2
 	paste $@.1 $@.2 |\
 	scripts/filter/bitext-match-lang.py -s ${SRC} -t ${TRG} > $@.bitext

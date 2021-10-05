@@ -68,8 +68,8 @@ WORKHOME = ${PWD}/work
 
 
 ifeq (${shell hostname -d 2>/dev/null},mahti.csc.fi)
-#  CSCPROJECT    = project_2002688
-  CSCPROJECT   = project_2003093
+  CSCPROJECT    = project_2002688
+#  CSCPROJECT   = project_2003093
 #  CSCPROJECT   = project_2002982
   WORKHOME      = ${shell realpath ${PWD}/work}
   APPLHOME      = /projappl/project_2003093/
@@ -121,7 +121,8 @@ else ifneq ($(wildcard /wrk/tiedeman/research),)
   LOADGPU      = module load ${GPU_MODULES}
   LOADMODS     = ${LOADGPU}
 else ifeq (${shell hostname --domain 2>/dev/null},bullx)
-  CSCPROJECT   = project_2002688
+#  CSCPROJECT   = project_2002688
+  CSCPROJECT   = project_2000309
 #  CSCPROJECT   = project_2002982
   WORKHOME     = ${shell realpath ${PWD}/work}
   APPLHOME     = /projappl/project_2001194
@@ -180,7 +181,6 @@ MARIAN_VOCAB   = ${MARIAN_HOME}marian-vocab
 
 
 TOKENIZER    = ${MOSESSCRIPTS}/tokenizer
-
 
 
 ## BPE
@@ -285,7 +285,7 @@ ${TOOLSDIR}/jq/jq:
 ${TOOLSDIR}/marian-dev/build/marian: ${PROTOC}
 	mkdir -p ${dir $@}
 	cd ${dir $@} && cmake -DUSE_SENTENCEPIECE=on ${MARIAN_BUILD_OPTIONS} ..
-	${MAKE} -C ${dir $@} -j
+	${MAKE} -C ${dir $@} -j8
 
 ${TOOLSDIR}/protobuf/bin/protoc:
 	cd tools && git clone https://github.com/protocolbuffers/protobuf.git
