@@ -16,6 +16,8 @@ endif
 
 
 ## submit job to gpu queue
+##	echo '#SBATCH --exclude=r18g08' >> $@
+
 
 %.submit:
 	mkdir -p ${WORKDIR}
@@ -24,7 +26,6 @@ endif
 	echo '#SBATCH -o $(subst -,,${LANGPAIRSTR})${@:.submit=}.out.%j' >> $@
 	echo '#SBATCH -e $(subst -,,${LANGPAIRSTR})${@:.submit=}.err.%j' >> $@
 	echo '#SBATCH --mem=${HPC_MEM}' >> $@
-	echo '#SBATCH --exclude=r18g08' >> $@
 ifdef EMAIL
 	echo '#SBATCH --mail-type=END' >> $@
 	echo '#SBATCH --mail-user=${EMAIL}' >> $@

@@ -121,6 +121,7 @@ else ifneq ($(wildcard /wrk/tiedeman/research),)
   LOADGPU      = module load ${GPU_MODULES}
   LOADMODS     = ${LOADGPU}
 else ifeq (${shell hostname --domain 2>/dev/null},bullx)
+#   CSCPROJECT   = project_2003288
 #  CSCPROJECT   = project_2002688
   CSCPROJECT   = project_2000309
 #  CSCPROJECT   = project_2002982

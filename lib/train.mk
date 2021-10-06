@@ -159,6 +159,15 @@ ifeq (${MODELTYPE},transformer-tiny-align)
   MARIAN_EXTRA += --guided-alignment ${TRAIN_ALG} --transformer-decoder-autoreg rnn --dec-cell ssru
 endif
 
+ifeq (${MODELTYPE},transformer-tiny)
+  MARIAN_ENC_DEPTH = 3
+  MARIAN_DEC_DEPTH = 2
+  MARIAN_ATT_HEADS = 8
+  MARIAN_DIM_EMB = 256
+  MARIAN_TRAIN_PREREQS += ${TRAIN_ALG}
+  MARIAN_EXTRA += --transformer-decoder-autoreg rnn --dec-cell ssru
+endif
+
 ifeq (${MODELTYPE},transformer-big-align)
   MARIAN_ENC_DEPTH = 12
   MARIAN_ATT_HEADS = 16

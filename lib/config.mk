@@ -54,9 +54,13 @@ endif
 ##      that would very much dominate all the data
 ## must be a pattern that can be matched by egrep
 ## e.g. en-de|en-fr
+##
+## SKIP_SAME_LANG - set to 1 to skip data with the same language
+##                  on both sides
 ##----------------------------------------------------------------------
 
 SKIP_LANGPAIRS ?= "nothing"
+SKIP_SAME_LANG ?= 0
 
 
 ##----------------------------------------------------------------------
@@ -179,14 +183,15 @@ OPUSREAD_ARGS =
 ## get available data from the OPUS-API
 
 OPUSAPI = http://opus.nlpl.eu/opusapi/
+OPUSAPI_WGET = wget -qq --no-check-certificate -O - ${OPUSAPI}?
 
-get-opus-mono      = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&corpora=True | ${JQ} '.corpora[]' | tr '"' ' '}
-get-opus-bitexts   = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&corpora=True | ${JQ} '.corpora[]' | tr '"' ' '}
-get-bigger-bitexts = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&preprocessing=xml\&version=latest | \
+get-opus-mono      = ${shell ${OPUSAPI_WGET}source=${1}\&corpora=True | ${JQ} '.corpora[]' | tr '"' ' '}
+get-opus-bitexts   = ${shell ${OPUSAPI_WGET}source=${1}\&target=${2}\&corpora=True | ${JQ} '.corpora[]' | tr '"' ' '}
+get-bigger-bitexts = ${shell ${OPUSAPI_WGET}source=${1}\&target=${2}\&preprocessing=xml\&version=latest | \
 	${JQ} -r '.corpora[1:] | .[] | select(.source!="") | select(.target!="") | select(.alignment_pairs>${3}) | .corpus' }
-get-opus-langs     = ${shell wget -qq -O - ${OPUSAPI}?languages=True | ${JQ} '.languages[]' | tr '"' ' '}
-get-opus-version   = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&corpus=${3}\&preprocessing=xml\&version=latest | ${JQ} '.corpora[] | .version' | sed 's/"//g' | head -1}
-get-elra-bitexts   = ${shell wget -qq -O - ${OPUSAPI}?source=${1}\&target=${2}\&corpora=True | \
+get-opus-langs     = ${shell ${OPUSAPI_WGET}languages=True | ${JQ} '.languages[]' | tr '"' ' '}
+get-opus-version   = ${shell ${OPUSAPI_WGET}source=${1}\&target=${2}\&corpus=${3}\&preprocessing=xml\&version=latest | ${JQ} '.corpora[] | .version' | sed 's/"//g' | head -1}
+get-elra-bitexts   = ${shell ${OPUSAPI_WGET}source=${1}\&target=${2}\&corpora=True | \
 	${JQ} '.corpora[]' | tr '"' ' ' | grep '^ *ELR[CA][-_]'}
 
 
@@ -374,7 +379,8 @@ MODELTYPES   = 	transformer \
 		transformer-align \
 		transformer-big-align \
 		transformer-small-align \
-		transformer-tiny-align
+		transformer-tiny-align \
+		transformer-tiny
 MODELTYPE    =  transformer-align
 NR           =  1
 
@@ -413,18 +419,20 @@ endif
 
 ## latest model with the same pre-processing but any data or modeltype
 ## except for models that include the string 'tuned4' (fine-tuned models)
+## also allow models that are of the same type but with/without guided alignment
 ## --> this will be used if the flag CONTINUE_EXISTING is set on
 
-ifdef CONTINUE_EXISTING
+# ifdef CONTINUE_EXISTING
+ifeq (${CONTINUE_EXISTING},1)
   MODEL_LATEST = $(firstword \
 	${shell ls -t ${WORKDIR}/*.${PRE_SRC}-${PRE_TRG}.*.best-perplexity.npz \
-		2>/dev/null | grep -v 'tuned4' })
+		2>/dev/null | grep -v 'tuned4' | \
+		egrep '${MODELTYPE}|${MODELTYPE}-align|${subst -align,,${MODELTYPE}}' })
   MODEL_LATEST_VOCAB     = $(shell echo "${MODEL_LATEST}" | \
 		sed 's|\.${PRE_SRC}-${PRE_TRG}\..*$$|.${PRE_SRC}-${PRE_TRG}.vocab.yml|')
   MODEL_LATEST_OPTIMIZER = $(shell echo "${MODEL_LATEST}" | \
 		sed 's|.best-perplexity.npz|.optimizer.npz|')
 endif
-
 
 
 ## test set translation and scores
@@ -465,11 +473,17 @@ MARIAN_DECODER_FLAGS  = ${MARIAN_DECODER_GPU}
 ifeq (${GPU},p100)
   MARIAN_WORKSPACE = 13000
 else ifeq (${GPU},v100)
+ifeq ($(subst -align,,${MODELTYPE}),transformer-big)
+  MARIAN_WORKSPACE = 20000
+else ifeq ($(subst -align,,${MODELTYPE}),transformer-small)
+  MARIAN_WORKSPACE = 10000
+else ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny)
+  MARIAN_WORKSPACE = 10000
+else
   # MARIAN_WORKSPACE = 30000
   # MARIAN_WORKSPACE = 26000
   MARIAN_WORKSPACE = 24000
-  # MARIAN_WORKSPACE = 18000
-  # MARIAN_WORKSPACE = 16000
+endif
 else
   MARIAN_WORKSPACE = 10000
 endif

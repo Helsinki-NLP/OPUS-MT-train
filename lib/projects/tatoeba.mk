@@ -87,8 +87,9 @@
 ## general parameters for Tatoeba models
 
 ## Tatoeba Challenge Data release number
-# TATOEBA_VERSION   ?= v2020-07-28
-TATOEBA_VERSION   ?= v2021-08-07
+# TATOEBA_VERSION        ?= v2020-07-28
+TATOEBA_VERSION          ?= v2021-08-07
+TATOEBA_VERSION_NOHYPHEN ?= $(subst -,,${TATOEBA_VERSION})
 
 TATOEBA_DATAURL   := https://object.pouta.csc.fi/Tatoeba-Challenge
 TATOEBA_TEST_URL  := ${TATOEBA_DATAURL}-${TATOEBA_VERSION}
@@ -97,6 +98,10 @@ TATOEBA_MONO_URL  := ${TATOEBA_DATAURL}-${TATOEBA_VERSION}
 TATOEBA_WORK      ?= ${PWD}/work-tatoeba
 TATOEBA_DATA      ?= ${TATOEBA_WORK}/data/${PRE}
 TATOEBA_MONO      ?= ${TATOEBA_WORK}/data/mono
+
+## list of language IDs that only appear in the training data
+## (fetched from Tatoeba github)
+TATOEBA_LANGIDS_TRAINONLY = tatoeba/langids-train-only-${TATOEBA_VERSION}.txt
 
 # TATOEBA_RAWGIT         := https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
 TATOEBA_RAWGIT_MASTER    := https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
@@ -127,7 +132,7 @@ WIKIMACROLANGS    ?= $(sort ${shell ${GET_ISO_CODE} ${WIKILANGS}})
 TATOEBA_MODEL_CONTAINER := Tatoeba-MT-models
 
 ## this will be the base name of the model file
-TATOEBA_DATASET       := ${DATASET}TC$(subst -,,${TATOEBA_VERSION})
+TATOEBA_DATASET       := ${DATASET}TC${TATOEBA_VERSION_NOHYPHEN}
 
 TATOEBA_TRAINSET      := Tatoeba-train-${TATOEBA_VERSION}
 TATOEBA_DEVSET        := Tatoeba-dev-${TATOEBA_VERSION}
@@ -160,6 +165,12 @@ ifneq (${words ${TATOEBA_TRGLANGS}},1)
   TARGET_LABELS = $(patsubst %,>>%<<,$(sort ${TATOEBA_TRGLANGS} ${TATOEBA_TRGLANG_GROUP}))
 endif
 endif
+
+## default parameters for some recipes with language groups
+## - modeltype
+## - size balancing
+LANGGROUP_MODELTYPE     ?= transformer
+LANGGROUP_FIT_DATA_SIZE ?= 1000000
 
 
 
@@ -361,6 +372,79 @@ tatoeba-refresh-finished:
 	done
 
 
+
+
+
+###########################################################################################
+# start combinations with a specific source/target language
+###########################################################################################
+
+## similar but for all available languages
+## (not only the ones from the subset)
+## NOTE: no size balancing to 1m as default in langgroup recipes!
+
+tatoeba-src2all:
+	for l in ${TATOEBA_AVAILABLE_TRG}; do \
+	    ${MAKE} tatoeba-${SRC}2$$l-trainjob; \
+	done
+
+tatoeba-src2langgroup:
+	for l in ${sort ${shell langgroup -p -n ${TATOEBA_AVAILABLE_TRG} 2>/dev/null}}; do \
+	    ${MAKE} 	FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} \
+			MIN_TRGLANGS=2 \
+			SKIP_SAME_LANG=1 \
+			MODELTYPE=${LANGGROUP_MODELTYPE} \
+		tatoeba-${SRC}2$$l-trainjob; \
+	done
+
+tatoeba-all2trg:
+	for l in ${TATOEBA_AVAILABLE_SRC}; do \
+	    ${MAKE} tatoeba-$${l}2${TRG}-trainjob; \
+	done
+
+tatoeba-langgroup2trg:
+	for l in ${sort ${shell langgroup -p -n ${TATOEBA_AVAILABLE_SRC} 2>/dev/null}}; do \
+	    ${MAKE} 	FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} \
+			MIN_SRCLANGS=2 \
+			SKIP_SAME_LANG=1 \
+			MODELTYPE=${LANGGROUP_MODELTYPE} \
+	    	tatoeba-$${l}2${TRG}-trainjob; \
+	done
+
+## TODO: do we always want to include the pivot=eng?
+tatoeba-langgroups all-tatoeba-langgroup: 
+	for g in ${OPUS_LANG_GROUPS}; do \
+	  ${MAKE} 	MIN_SRCLANGS=3 \
+			PIVOT=eng \
+			SKIP_SAME_LANG=1 \
+			MODELTYPE=${LANGGROUP_MODELTYPE} \
+			FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} \
+		tatoeba-$${g}2$${g}-trainjob; \
+	done
+
+#			MAX_SRCLANGS=30 \
+
+
+## TODO: do we want to include the pivot=eng?
+tatoeba-cross-langgroups all-tatoeba-cross-langgroups:
+	for s in ${OPUS_LANG_GROUPS}; do \
+	  for t in ${OPUS_LANG_GROUPS}; do \
+	    if [ "$$s" != "$$t" ]; then \
+		${MAKE} MIN_SRCLANGS=2 MIN_TRGLANGS=2 \
+			SKIP_SAME_LANG=1 \
+			FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} \
+			MODELTYPE=${LANGGROUP_MODELTYPE} \
+		tatoeba-$${s}2$${t}-trainjob; \
+	    fi \
+	  done \
+	done
+
+#			MAX_SRCLANGS=30 MAX_TRGLANGS=30 \
+#			PIVOT=eng \
+
+
+
+
 ###########################################################################################
 # start combinations with a specific source/target language
 ###########################################################################################
@@ -372,71 +456,68 @@ tatoeba-refresh-finished:
 # make TRG=deu tatoeba-all2trg-small
 #
 
-
-tatoeba-src2all:
+tatoeba-src2all-subset:
 	for l in ${TATOEBA_AVAILABLE_SUBSET_TRG}; do \
 	    ${MAKE} tatoeba-${SRC}2$$l-trainjob; \
 	done
 
-tatoeba-src2langgroup:
+tatoeba-src2langgroup-subset:
 	for l in ${sort ${shell langgroup -p -n ${TATOEBA_AVAILABLE_SUBSET_TRG} 2>/dev/null}}; do \
 	    ${MAKE} tatoeba-${SRC}2$$l-trainjob-1m; \
 	done
 
-
-tatoeba-all2trg:
+tatoeba-all2trg-subset:
 	for l in ${TATOEBA_AVAILABLE_SUBSET_SRC}; do \
 	    ${MAKE} tatoeba-$${l}2${TRG}-trainjob; \
 	done
 
-tatoeba-langgroup2trg:
+tatoeba-langgroup2trg-subset:
 	for l in ${sort ${shell langgroup -p -n ${TATOEBA_AVAILABLE_SUBSET_SRC} 2>/dev/null}}; do \
 	    ${MAKE} tatoeba-$${l}2${TRG}-trainjob-1m; \
 	done
 
-
 ## all subsets
 
 tatoeba-src2all-subsets:
-	${MAKE} TATOEBA_SUBSET=lowest  tatoeba-src2all
-	${MAKE} TATOEBA_SUBSET=lower   tatoeba-src2all
-	${MAKE} TATOEBA_SUBSET=medium  tatoeba-src2all
-	${MAKE} TATOEBA_SUBSET=higher  tatoeba-src2all
-	${MAKE} TATOEBA_SUBSET=highest tatoeba-src2all
+	${MAKE} TATOEBA_SUBSET=lowest  tatoeba-src2all-subset
+	${MAKE} TATOEBA_SUBSET=lower   tatoeba-src2all-subset
+	${MAKE} TATOEBA_SUBSET=medium  tatoeba-src2all-subset
+	${MAKE} TATOEBA_SUBSET=higher  tatoeba-src2all-subset
+	${MAKE} TATOEBA_SUBSET=highest tatoeba-src2all-subset
 
 tatoeba-all2trg-subsets:
-	${MAKE} TATOEBA_SUBSET=lowest  tatoeba-all2trg
-	${MAKE} TATOEBA_SUBSET=lower   tatoeba-all2trg
-	${MAKE} TATOEBA_SUBSET=medium  tatoeba-all2trg
-	${MAKE} TATOEBA_SUBSET=higher  tatoeba-all2trg
-	${MAKE} TATOEBA_SUBSET=highest tatoeba-all2trg
+	${MAKE} TATOEBA_SUBSET=lowest  tatoeba-all2trg-subset
+	${MAKE} TATOEBA_SUBSET=lower   tatoeba-all2trg-subset
+	${MAKE} TATOEBA_SUBSET=medium  tatoeba-all2trg-subset
+	${MAKE} TATOEBA_SUBSET=higher  tatoeba-all2trg-subset
+	${MAKE} TATOEBA_SUBSET=highest tatoeba-all2trg-subset
 
 
 ## reasonable size (all except lower and lowest)
 
 tatoeba-src2all-reasonable:
-	${MAKE} TATOEBA_SUBSET=medium  tatoeba-src2all
-	${MAKE} TATOEBA_SUBSET=higher  tatoeba-src2all
-	${MAKE} TATOEBA_SUBSET=highest tatoeba-src2all
+	${MAKE} TATOEBA_SUBSET=medium  tatoeba-src2all-subset
+	${MAKE} TATOEBA_SUBSET=higher  tatoeba-src2all-subset
+	${MAKE} TATOEBA_SUBSET=highest tatoeba-src2all-subset
 
 tatoeba-all2trg-reasonable:
-	${MAKE} TATOEBA_SUBSET=medium  tatoeba-all2trg
-	${MAKE} TATOEBA_SUBSET=higher  tatoeba-all2trg
-	${MAKE} TATOEBA_SUBSET=highest tatoeba-all2trg
+	${MAKE} TATOEBA_SUBSET=medium  tatoeba-all2trg-subset
+	${MAKE} TATOEBA_SUBSET=higher  tatoeba-all2trg-subset
+	${MAKE} TATOEBA_SUBSET=highest tatoeba-all2trg-subset
 
 
 ## backoff to multilingual models and language groups
 ## lower / lowest resource languages and zero-shot
 
 tatoeba-src2all-small:
-	${MAKE} TATOEBA_SUBSET=lower     tatoeba-src2langgroup
-	${MAKE} TATOEBA_SUBSET=lowest    tatoeba-src2langgroup
-	${MAKE} TATOEBA_SUBSET=zero-shot tatoeba-src2langgroup
+	${MAKE} TATOEBA_SUBSET=lower     tatoeba-src2langgroup-subset
+	${MAKE} TATOEBA_SUBSET=lowest    tatoeba-src2langgroup-subset
+	${MAKE} TATOEBA_SUBSET=zero-shot tatoeba-src2langgroup-subset
 
 tatoeba-all2trg-small:
-	${MAKE} TATOEBA_SUBSET=lower     tatoeba-langgroup2trg
-	${MAKE} TATOEBA_SUBSET=lowest    tatoeba-langgroup2trg
-	${MAKE} TATOEBA_SUBSET=zero-shot tatoeba-langgroup2trg
+	${MAKE} TATOEBA_SUBSET=lower     tatoeba-langgroup2trg-subset
+	${MAKE} TATOEBA_SUBSET=lowest    tatoeba-langgroup2trg-subset
+	${MAKE} TATOEBA_SUBSET=zero-shot tatoeba-langgroup2trg-subset
 
 
 
@@ -517,59 +598,64 @@ all-tatoeba-langgroups:
 	${MAKE} all-tatoeba-eng2group
 	${MAKE} all-tatoeba-langgroup
 
-
-#### language-group to English
-
-GROUP2ENG_TRAIN   := $(patsubst %,tatoeba-%2eng-trainjob,${OPUS_LANG_GROUPS})
-GROUP2ENG_EVAL    := $(patsubst %,tatoeba-%2eng-eval,${OPUS_LANG_GROUPS})
-GROUP2ENG_EVALALL := $(patsubst %,tatoeba-%2eng-evalall,${OPUS_LANG_GROUPS})
-GROUP2ENG_DIST    := $(patsubst %,tatoeba-%2eng-dist,${OPUS_LANG_GROUPS})
-
-#### English to language group
-
-ENG2GROUP_TRAIN   := $(patsubst %,tatoeba-eng2%-trainjob,${OPUS_LANG_GROUPS})
-ENG2GROUP_EVAL    := $(patsubst %,tatoeba-eng2%-eval,${OPUS_LANG_GROUPS})
-ENG2GROUP_EVALALL := $(patsubst %,tatoeba-eng2%-evalall,${OPUS_LANG_GROUPS})
-ENG2GROUP_DIST    := $(patsubst %,tatoeba-eng2%-dist,${OPUS_LANG_GROUPS})
-
-#### multilingual language-group (bi-directional
-
-LANGGROUP_TRAIN   := $(foreach G,${OPUS_LANG_GROUPS},tatoeba-${G}2${G}-trainjob)
-LANGGROUP_EVAL    := $(patsubst %-train,%-eval,${LANGGROUP_TRAIN})
-LANGGROUP_EVALALL := $(patsubst %-train,%-evalall,${LANGGROUP_TRAIN})
-LANGGROUP_DIST    := $(patsubst %-train,%-dist,${LANGGROUP_TRAIN})
-
-LANGGROUP_FIT_DATA_SIZE=1000000
-
-## start all jobs with 1 million sampled sentence pairs per language pair
-## (OLD: MODELTYPE=transformer)
 all-tatoeba-group2eng: 
-	${MAKE} MIN_SRCLANGS=2 SKIP_LANGPAIRS="eng-eng" \
-		FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} ${GROUP2ENG_TRAIN}
+	${MAKE} TRG=eng tatoeba-langgroup2trg
 
 all-tatoeba-eng2group: 
-	${MAKE} MIN_TRGLANGS=2 SKIP_LANGPAIRS="eng-eng" \
-		FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} ${ENG2GROUP_TRAIN}
+	${MAKE} SRC=eng tatoeba-src2langgroup
 
-all-tatoeba-langgroup: 
-	${MAKE} MIN_SRCLANGS=2 MAX_SRCLANGS=30 PIVOT=eng SKIP_LANGPAIRS="eng-eng" \
-		FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} ${LANGGROUP_TRAIN}
 
-all-tatoeba-cross-langgroups:
-	for s in ${OPUS_LANG_GROUPS}; do \
-	  for t in ${OPUS_LANG_GROUPS}; do \
-	    if [ "$$s" != "$$t" ]; then \
-		${MAKE} MIN_SRCLANGS=2 MIN_TRGLANGS=2 \
-			MAX_SRCLANGS=30 MAX_TRGLANGS=30 \
-			FIT_DATA_SIZE=${LANGGROUP_FIT_DATA_SIZE} \
-		tatoeba-$${s}2$${t}-train; \
-	    fi \
-	  done \
+#---------------------------
+# some special recipes for multilingual models with 4 million data fitting
+#---------------------------
+
+## include back-translations and fit to 4 million training exampels
+all-tatoeba-langgroups-bt-4m: 
+	${MAKE} all-tatoeba-group2eng-bt-4m
+	${MAKE} all-tatoeba-eng2group-bt-4m
+	${MAKE} all-tatoeba-langgroup-bt-4m
+#	${MAKE} all-tatoeba-cross-langgroups-bt-4m
+
+SELECTED_LANGGROUPS = cel bat fiu gem gmw gmq roa sla zle zls zlw
+
+tatoeba-selected-langgroups:
+	${MAKE} OPUS_LANG_GROUPS="${SELECTED_LANGGROUPS}" all-tatoeba-cross-langgroups-bt-4m
+	${MAKE} OPUS_LANG_GROUPS="${SELECTED_LANGGROUPS}" all-tatoeba-langgroup-bt-4m
+	${MAKE} OPUS_LANG_GROUPS="${SELECTED_LANGGROUPS}" all-tatoeba-group2eng-bt-4m
+	${MAKE} OPUS_LANG_GROUPS="${SELECTED_LANGGROUPS}" all-tatoeba-eng2group-bt-4m
+
+tatoeba-gmw2langgroups-bt-4m:
+	${MAKE} SRC=gmw tatoeba-src2langgroup-bt-4m
+	${MAKE} TRG=gmw tatoeba-langgroup2trg-bt-4m
+
+tatoeba-roa2langgroups-bt-4m:
+	${MAKE} SRC=roa tatoeba-src2langgroup-bt-4m
+	${MAKE} TRG=roa tatoeba-langgroup2trg-bt-4m
+
+tatoeba-gmq2langgroups-bt-4m:
+	${MAKE} SRC=gmq tatoeba-src2langgroup-bt-4m
+	${MAKE} TRG=gmq tatoeba-langgroup2trg-bt-4m
+
+tatoeba-zlw2langgroups-bt-4m:
+	${MAKE} SRC=zlw tatoeba-src2langgroup-bt-4m
+	${MAKE} TRG=zlw tatoeba-langgroup2trg-bt-4m
+
+tatoeba-zle2langgroups-bt-4m:
+	${MAKE} SRC=zle tatoeba-src2langgroup-bt-4m
+	${MAKE} TRG=zle tatoeba-langgroup2trg-bt-4m
+
+
+## temporary recipe for evaluating all 4m multilingual models that are done
+tatoeba-eval-4m:
+	for p in `ls work-tatoeba/*/*4m*done | cut -f2 -d/ | sed 's/\-/2/'`; do \
+	  make MODELTYPE=transformer tatoeba-$$p-multieval-bt-4m; \
+	  make MODELTYPE=transformer tatoeba-$$p-eval-testsets-bt-4m; \
 	done
 
-#			PIVOT=eng \
-
-
+tatoeba-dist-4m:
+	for p in `ls work-tatoeba/*/*4m*done | cut -f2 -d/ | sed 's/\-/2/'`; do \
+	  make MODELTYPE=transformer tatoeba-$$p-dist-bt-4m; \
+	done
 
 
 ## make all lang-group models using different data samples
@@ -619,9 +705,6 @@ all-tatoeba-cross-langgroups:
 ## old: just depend on eval and dist targets
 ## --> this would also start training if there is no model
 ## --> do this only if a model exists! (see below)
-
-# tatoeba-eng2group-dist: ${ENG2GROUP_EVAL} ${ENG2GROUP_EVALALL}
-#	${MAKE} ${ENG2GROUP_DIST}
 
 ## new: only start this if there is a model
 all-tatoeba-group2eng-dist:
@@ -762,7 +845,7 @@ tatoeba-%-train:
 	   t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))); \
 	   S="${call find-srclanggroup,${patsubst tatoeba-%-train,%,$@},${PIVOT}}"; \
 	   T="${call find-trglanggroup,${patsubst tatoeba-%-train,%,$@},${PIVOT}}"; \
-	   if [ ! `find ${TATOEBA_WORK}/$$s-$$t -maxdepth 1 -name '${DATASET}.*${MODELTYPE}.model${NR}.done' | wc -l` -gt 0 ]; then \
+	   if [ ! `find ${TATOEBA_WORK}/$$s-$$t -maxdepth 1 -name '${TATOEBA_DATASET}.*${MODELTYPE}.model${NR}.done' | wc -l` -gt 0 ]; then \
 	     if [ `echo $$S | tr ' ' "\n" | wc -l` -ge ${MIN_SRCLANGS} ]; then \
 	       if [ `echo $$T | tr ' ' "\n" | wc -l` -ge ${MIN_TRGLANGS} ]; then \
 	         if [ `echo $$S | tr ' ' "\n" | wc -l` -le ${MAX_SRCLANGS} ]; then \
@@ -779,11 +862,9 @@ tatoeba-%-train:
 	         fi \
 	       fi \
 	     fi \
+	   else \
+	      echo "..... already done! ($$s-$$t/${TATOEBA_DATASET}.*${MODELTYPE}.model${NR}.done)"; \
 	   fi )
-
-test-fiu2eng:
-	echo "${call find-srclanggroup,${patsubst test-%,%,$@},${PIVOT}}"
-	echo "${call find-trglanggroup,${patsubst test-%,%,$@},${PIVOT}}"
 
 
 ## start the training job
@@ -795,7 +876,7 @@ tatoeba-%-trainjob:
 	   t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-trainjob,%,$@))); \
 	   S="${call find-srclanggroup,${patsubst tatoeba-%-trainjob,%,$@},${PIVOT}}"; \
 	   T="${call find-trglanggroup,${patsubst tatoeba-%-trainjob,%,$@},${PIVOT}}"; \
-	   if [ ! `find ${TATOEBA_WORK}/$$s-$$t -maxdepth 1 -name '${DATASET}.*${MODELTYPE}.model${NR}.done' | wc -l` -gt 0 ]; then \
+	   if [ ! `find ${TATOEBA_WORK}/$$s-$$t -maxdepth 1 -name '${TATOEBA_DATASET}.*${MODELTYPE}.model${NR}.done' | wc -l` -gt 0 ]; then \
 	     if [ `echo $$S | tr ' ' "\n" | wc -l` -ge ${MIN_SRCLANGS} ]; then \
 	       if [ `echo $$T | tr ' ' "\n" | wc -l` -ge ${MIN_TRGLANGS} ]; then \
 	         if [ `echo $$S | tr ' ' "\n" | wc -l` -le ${MAX_SRCLANGS} ]; then \
@@ -808,6 +889,8 @@ tatoeba-%-trainjob:
 	         fi \
 	       fi \
 	     fi \
+	   else \
+	      echo "..... already done! ($$s-$$t/${TATOEBA_DATASET}.*${MODELTYPE}.model${NR}.done)"; \
 	   fi )
 
 
@@ -1278,7 +1361,7 @@ tatoeba-sublang-eval: tatoeba-multilingual-eval-tatoeba
 
 ## copy testsets into the multilingual model's test directory
 .PHONY: tatoeba-multilingual-testsets
-tatoeba-multilingual-testsets: ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-testsets.done
+tatoeba-multilingual-testsets: ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba${TATOEBA_VERSION_NOHYPHEN}-testsets.done
 
 # ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-testsets.done-old:
 # 	@for s in ${SRCLANGS}; do \
@@ -1333,7 +1416,8 @@ tatoeba-multilingual-testsets: ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-tests
 #	    if [ ! -e ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.src ]; then \
 #	    fi \
 
-${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-testsets.done:
+${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-testsets.done \
+${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba${TATOEBA_VERSION_NOHYPHEN}-testsets.done:
 	@mkdir -p ${TATOEBA_WORK}/${LANGPAIRSTR}/test
 	@for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
@@ -1603,6 +1687,7 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-languages.%: ${TATOEBA_WORK}/${LANGPAI
 
 ## generic target for tatoeba challenge jobs
 %-tatoeba: ${TATOEBA_SRCLABELFILE} ${TATOEBA_TRGLABELFILE}
+	${MAKE} ${TATOEBA_LANGIDS_TRAINONLY}
 	${MAKE} ${TATOEBA_PARAMS} \
 		LANGPAIRSTR=${LANGPAIRSTR} \
 		SRCLANGS="${shell cat ${word 1,$^}}" \
@@ -1715,10 +1800,10 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.trg: ${TATOEBA_WORK}/${LANG
 
 ## langids that we want to keep from the training data even if they do not exist in the Tatoeba test sets
 ## (skip most lang-IDs because they mostly come from erroneous writing scripts --> errors in the data)
-## the list is based on Tatoeba-Challenge/data/langids-train-only.txt
+## the list is based on ${TATOEBA_LANGIDS_TRAINONLY}
 
-# TRAIN_ONLY_LANGIDS   = ${shell cat tatoeba/langids-train-only.txt ${FIXLANGIDS} | grep -v '^...$$' | tr "\n" ' '}
-TRAIN_ONLY_LANGIDS   = ${shell cat tatoeba/langids-train-only.txt | tr "\n" ' '}
+# TRAIN_ONLY_LANGIDS   = ${shell cat ${TATOEBA_LANGIDS_TRAINONLY} | grep -v '^...$$' | tr "\n" ' '}
+TRAIN_ONLY_LANGIDS   = ${shell cat ${TATOEBA_LANGIDS_TRAINONLY} | tr "\n" ' '}
 KEEP_LANGIDS         = bos_Cyrl cmn cnr cnr_Latn csb diq dnj dty fas fqs ful fur gcf got gug hbs hbs_Cyrl hmn \
 			jak_Latn kam kmr kmr_Latn kom kur_Cyrl kuv_Arab kuv_Latn lld mol mrj msa_Latn mya_Cakm nep ngu \
 			nor nor_Latn oss_Latn pan plt pnb_Guru pob prs qug quw quy quz qvi rmn rmy ruk san swa swc \
@@ -1737,8 +1822,6 @@ FIXLANGIDS = 	| sed 's/zho\(.*\)_HK/yue\1/g;s/zho\(.*\)_CN/cmn\1/g;s/zho\(.*\)_T
 		| sed 's/\_[A-Z][A-Z]//g' \
 		| sed 's/\-[a-z]*//g' \
 		| sed 's/\_Brai//g' \
-		| sed 's/\_Zinh//g' \
-		| sed 's/\_Tibt//g' \
 		| sed 's/jpn_[A-Za-z]*/jpn/g' \
 		| sed 's/kor_[A-Za-z]*/kor/g' \
 		| sed 's/nor_Latn/nor/g' \
@@ -1756,6 +1839,9 @@ FIXLANGIDS = 	| sed 's/zho\(.*\)_HK/yue\1/g;s/zho\(.*\)_CN/cmn\1/g;s/zho\(.*\)_T
 print-skiplangids:
 	@echo ${SKIP_LANGIDS_PATTERN}
 
+tatoeba/langids-train-only-${TATOEBA_VERSION}.txt:
+	mkdir -p ${dir $@}
+	wget -O $@ ${TATOEBA_RAWGIT_MASTER}/data/release/${TATOEBA_VERSION}/langids-train-only.txt
 
 ## monolingual data from Tatoeba challenge (wiki data)
 
