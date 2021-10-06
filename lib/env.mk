@@ -45,16 +45,7 @@ MEM         = 4g
 THREADS     = 1
 WALLTIME    = 72
 
-
-## set variables with HPC prefix
-
-HPC_TIME  ?= ${WALLTIME}:00
-HPC_CORES ?= ${THREADS}
-HPC_MEM   ?= ${MEM}
-
 GPUJOB_HPC_MEM ?= 4g
-
-
 
 # GPU    = k80
 GPU      = p100
@@ -72,18 +63,25 @@ ifeq (${shell hostname -d 2>/dev/null},mahti.csc.fi)
 #  CSCPROJECT   = project_2003093
 #  CSCPROJECT   = project_2002982
   WORKHOME      = ${shell realpath ${PWD}/work}
+  LOCAL_SCRATCH = /scratch/${CSCPROJECT}
   APPLHOME      = /projappl/project_2003093/
   OPUSHOME      = /projappl/nlpl/data/OPUS
   MOSESHOME     = ${APPLHOME}/install/mosesdecoder
   MOSESSCRIPTS  = ${MOSESHOME}/scripts
   EFLOMAL_HOME  = ${APPLHOME}/install/eflomal/
-  MARIAN_HOME   = ${APPLHOME}/install/marian/build/
+  # MARIAN_HOME   = ${APPLHOME}/install/marian/build/
+  MARIAN_HOME   = ${APPLHOME}/install/marian/build-gpu/
   MARIAN        = ${MARIAN_HOME}
   SPM_HOME      = ${MARIAN_HOME}
   CPU_MODULES   = python-env
+  GPU_MODULES   = cuda
   HPC_QUEUE     = medium
   LOADCPU       = module load ${CPU_MODULES}
   SUBMIT_PREFIX = submitcpu
+  GPU           = a100
+  HPC_GPUQUEUE  = gpusmall
+  # HPC_GPUQUEUE  = gpumedium
+  WALLTIME      = 36
   export PATH := ${APPLHOME}/bin:${PATH}
 else ifeq (${shell hostname},dx6-ibs-p2)
   GPU          = pascal
@@ -141,6 +139,14 @@ else ifeq (${shell hostname --domain 2>/dev/null},bullx)
   LOADGPU      = module load ${GPU_MODULES}
   export PATH := ${APPLHOME}/bin:${PATH}
 endif
+
+
+## set variables with HPC prefix
+
+HPC_TIME  ?= ${WALLTIME}:00
+HPC_CORES ?= ${THREADS}
+HPC_MEM   ?= ${MEM}
+
 
 SUBMIT_PREFIX ?= submit
 
