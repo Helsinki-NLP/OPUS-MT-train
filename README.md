@@ -5,7 +5,7 @@ This package includes scripts for training NMT models using MarianNMT and OPUS d
 
 ## Pre-trained models
 
-The subdirectory [models](https://github.com/Helsinki-NLP/Opus-MT-train/tree/master/models) contains information about pre-trained models that can be downloaded from this project. They are distribted with a [CC-BY 4.0 license](https://creativecommons.org/licenses/by/4.0/) license.
+The subdirectory [models](https://github.com/Helsinki-NLP/Opus-MT-train/tree/master/models) contains information about pre-trained models that can be downloaded from this project. They are distribted with a [CC-BY 4.0 license](https://creativecommons.org/licenses/by/4.0/) license. [More pre-trained models](https://github.com/Helsinki-NLP/Tatoeba-Challenge/blob/master/results/tatoeba-results-all.md) trained with the [OPUS-MT training pipeline](https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master/doc/TatoebaChallenge.md) are available from the [Tatoeba translation challenge](https://github.com/Helsinki-NLP/Tatoeba-Challenge) also under a [CC-BY 4.0 license](https://creativecommons.org/licenses/by/4.0/) license.
 
 
 ## Quickstart

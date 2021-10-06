@@ -4,3 +4,4 @@ opustools
 subword-nmt
 sacrebleu
 Cython
+pyyaml

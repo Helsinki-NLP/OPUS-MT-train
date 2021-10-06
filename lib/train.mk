@@ -10,6 +10,7 @@ ifeq (${SUBWORDS},spm)
 
 ## make vocabulary from the source and target language specific
 ## sentence piece models (concatenate and yamlify)
+## TODO: verify that this becomes valid YAML!
 
 ${MODEL_VOCAB}: ${SPMSRCMODEL} ${SPMTRGMODEL}
 ifneq (${MODEL_LATEST_VOCAB},)
@@ -23,13 +24,17 @@ ifeq (${USE_TARGET_LABELS},1)
 	echo "${TARGET_LABELS}" | tr ' ' "\n" >> ${@:.vocab.yml=.src.vocab}
 endif
 	cat ${@:.vocab.yml=.src.vocab} ${@:.vocab.yml=.trg.vocab} | \
-	sort -u | nl -v 0 | sed 's/^ *//'> $@.numbered
-	cut -f1 $@.numbered > $@.ids
-	cut -f2 $@.numbered | sed 's/\\/\\\\/g;s/\"/\\\"/g;s/^\(.*\)$$/"\1"/;s/$$/:/'> $@.tokens
-	paste -d ' ' $@.tokens $@.ids > $@
-	rm -f $@.tokens $@.ids $@.numbered
-endif
+	sort -u | scripts/vocab2yaml.py > $@
 
+## old buggy style ...
+#	cat ${@:.vocab.yml=.src.vocab} ${@:.vocab.yml=.trg.vocab} | \
+#	sort -u | nl -v 0 | sed 's/^ *//'> $@.numbered
+#	cut -f1 $@.numbered > $@.ids
+#	cut -f2 $@.numbered | sed 's/\\/\\\\/g;s/\"/\\\"/g;s/^\(.*\)$$/"\1"/;s/$$/:/'> $@.tokens
+#	paste -d ' ' $@.tokens $@.ids > $@
+#	rm -f $@.tokens $@.ids $@.numbered
+
+endif
 
 else
 
