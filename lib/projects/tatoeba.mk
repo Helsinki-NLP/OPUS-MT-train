@@ -172,6 +172,10 @@ endif
 LANGGROUP_MODELTYPE     ?= transformer
 LANGGROUP_FIT_DATA_SIZE ?= 1000000
 
+## set the default pivot language to eng
+
+TATOEBA_PIVOT = eng
+
 
 
 TATOEBA_PARAMS := DATASET=${TATOEBA_DATASET} \
@@ -195,6 +199,7 @@ TATOEBA_PARAMS := DATASET=${TATOEBA_DATASET} \
 		MODEL_CONTAINER=${TATOEBA_MODEL_CONTAINER} \
 		ALT_MODEL_DIR=tatoeba \
 		SKIP_DATA_DETAILS=1 \
+		DEFAULT_PIVOT_LANG=${TATOEBA_PIVOT} \
 		MIN_BLEU_SCORE=${TATOEBA_MIN_BLEU}
 
 
@@ -799,6 +804,7 @@ find-langgroup = $(filter ${OPUS_LANGS3},\
 find-srclanggroup = $(call find-langgroup,$(firstword ${subst -, ,${subst 2, ,${1}}}),${2})
 find-trglanggroup = $(call find-langgroup,$(lastword ${subst -, ,${subst 2, ,${1}}}),${2})
 
+find-langgroup-pair = $(sort $(call find-srclanggroup,${1}) $(call find-trglanggroup,${1}) ${2})
 
 tatoeba-%-langs:
 	-( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-langs,%,$@))); \
@@ -897,6 +903,21 @@ tatoeba-%-trainjob:
 #	   S="${call find-langgroup,${firstword ${subst 2, ,${patsubst tatoeba-%-train,%,$@}}},${PIVOT}}"; \
 #	   T="${call find-langgroup,${lastword ${subst 2, ,${patsubst tatoeba-%-train,%,$@}}},${PIVOT}}"; \
 
+
+## add pivot languages
+tatoeba-%-pivotlang:
+	@if [ "$(call find-langgroup-pair,$(word 2,$(subst -, ,$@)),${TATOEBA_PIVOT})" != \
+	     "$(call find-langgroup-pair,$(word 2,$(subst -, ,$@)))" ]; then \
+	  ${MAKE} PIVOT=${TATOEBA_PIVOT} \
+		DATASET=${DATASET}+${TATOEBA_PIVOT} \
+		MODELCONFIG=${MODELCONFIG:.mk=+${TATOEBA_PIVOT}.mk} \
+		MODEL_LATEST_VOCAB= \
+		SKIP_LANGPAIRS=${TATOEBA_PIVOT}-${TATOEBA_PIVOT} \
+		BPEMODELNAME=opus+${TATOEBA_PIVOT} \
+	  ${@:-pivotlang=}; \
+	else \
+	  echo "pivot language '${TATOEBA_PIVOT}' is already included in $@!"; \
+	fi
 
 
 ## evaluate with the model-specific test set

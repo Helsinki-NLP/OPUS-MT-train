@@ -267,6 +267,31 @@ endif
 	${@:-bt=}
 
 
+## adding a pivot language to the model
+## --> add pivot language to each side (source and target)
+## --> only start the task if the pivot language adds anything on either side
+## --> make a new fresh vocabulary (don't copy an existing one)
+## --> make a new BPE/sentencepiece model
+## --> make a new config file
+
+DEFAULT_PIVOT_LANG = en
+PIVOT_LANG ?= ${DEFAULT_PIVOT_LANG}
+
+%-pivotlang:
+	if [ "$(sort ${SRCLANGS} ${TRGLANGS} ${PIVOT_LANG})" != "$(sort ${SRCLANGS} ${TRGLANGS})" ]; then \
+	  ${MAKE} DATASET=${DATASET}+${PIVOT_LANG} \
+		MODELCONFIG=${MODELCONFIG:.mk=+${PIVOT_LANG}.mk} \
+		SRCLANGS="$(sort ${SRCLANGS} ${PIVOT_LANG})" \
+		TRGLANGS="$(sort ${TRGLANGS} ${PIVOT_LANG})" \
+		SKIP_LANGPAIRS=${PIVOT_LANG}-${PIVOT_LANG} \
+		MODEL_LATEST_VOCAB= \
+		PIVOT=${PIVOT_LANG} \
+		BPEMODELNAME=opus+${PIVOT_LANG} \
+	  ${@:-pivotlang=}; \
+	fi
+
+
+
 ## add forward translations
 
 FT_MODEL       = ${MODEL_SUBDIR}${DATASET}+ft${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
