@@ -273,13 +273,14 @@ ${MODEL_YML}: ${MODEL_FINAL}
 	@for t in ${TRGLANGS}; do\
 	  echo "   - $$t"                                 >> $@; \
 	done
-#	@for s in ${RAWSRCLANGS}; do\
-#	  echo "   - $$s"                                 >> $@; \
-#	done
-#	@echo "target-languages:"                         >> $@
-#	@for t in ${RAWTRGLANGS}; do\
-#	  echo "   - $$t"                                 >> $@; \
-#	done
+	@echo "raw-source-languages:"                     >> $@
+	@for s in ${RAWSRCLANGS}; do\
+	  echo "   - $$s"                                 >> $@; \
+	done
+	@echo "raw-target-languages:"                     >> $@
+	@for t in ${RAWTRGLANGS}; do\
+	  echo "   - $$t"                                 >> $@; \
+	done
 ifdef USE_TARGET_LABELS
 	@echo "use-target-labels:"                        >> $@
 	@for t in ${LANGUAGELABELSUSED}; do \
@@ -346,8 +347,8 @@ ${MODEL_README}: ${MODEL_FINAL}
 	@echo "* model: ${MODELTYPE}"                       >> $@
 	@echo "* source language(s): ${SRCLANGS}"           >> $@
 	@echo "* target language(s): ${TRGLANGS}"           >> $@
-#	@echo "* source language(s): ${RAWSRCLANGS}"        >> $@
-#	@echo "* target language(s): ${RAWTRGLANGS}"        >> $@
+	@echo "* raw source language(s): ${RAWSRCLANGS}"    >> $@
+	@echo "* raw target language(s): ${RAWTRGLANGS}"    >> $@
 	@echo "* model: ${MODELTYPE}"                       >> $@
 	@echo "* pre-processing: ${PREPROCESS_DESCRIPTION}" >> $@
 ifdef USE_TARGET_LABELS
