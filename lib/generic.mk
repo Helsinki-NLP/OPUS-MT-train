@@ -372,6 +372,12 @@ endif
 	${@:-pivot=}
 
 
+%-big-align:
+	${MAKE} PRE_TRAINED_MODEL=${MODEL_FINAL} \
+		MODELTYPE=transformer-big-align \
+	${@:-big-align=}
+
+
 
 
 ## run a multigpu job (2 or 4 GPUs)

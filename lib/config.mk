@@ -281,8 +281,6 @@ TUNE_GPUJOB_SUBMIT  ?=
 
 
 
-
-
 ## existing projects in WORKHOME
 ALL_LANG_PAIRS := ${shell ls ${WORKHOME} | grep -- '-' | grep -v old}
 ALL_BILINGUAL_MODELS := ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" |  grep -v -- '\+'}
@@ -293,6 +291,8 @@ ALL_MULTILINGUAL_MODELS := ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" | grep
 ## pre-processing and vocabulary
 ##----------------------------------------------------------------------------
 
+## type of subword segmentation (bpe|spm)
+## model size (NOTE: BPESIZE is also used for sentencepiece!)
 SUBWORDS   ?= spm
 BPESIZE    ?= 32000
 SRCBPESIZE ?= ${BPESIZE}
@@ -306,10 +306,12 @@ BPETRGMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.trg.bpe${TRGBPESIZE:000=}k-mode
 SPMSRCMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.src.spm${SRCBPESIZE:000=}k-model
 SPMTRGMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.trg.spm${TRGBPESIZE:000=}k-model
 
+## don't delete BPE/sentencepiece models!
 .PRECIOUS: ${BPESRCMODEL} ${BPETRGMODEL}
 .PRECIOUS: ${SPMSRCMODEL} ${SPMTRGMODEL}
 
-
+## size of the joined vocabulary
+## TODO: heuristically add 1,000 to cover language labels is a bit ad-hoc
 VOCABSIZE  ?= $$((${SRCBPESIZE} + ${TRGBPESIZE} + 1000))
 
 ## for document-level models
@@ -353,7 +355,7 @@ WORKDIR  = ${WORKHOME}/${LANGPAIRSTR}
 MODELDIR = ${WORKHOME}/models/${LANGPAIRSTR}
 SPMDIR   = ${WORKHOME}/SentencePieceModels
 
-## data sets
+## train data sets (word alignment for the guided alignment option)
 TRAIN_BASE = ${WORKDIR}/train/${DATASET}
 TRAIN_SRC  = ${TRAIN_BASE}.src
 TRAIN_TRG  = ${TRAIN_BASE}.trg
@@ -364,7 +366,7 @@ LOCAL_TRAIN_SRC = ${TMPDIR}/${LANGPAIRSTR}/train/${DATASET}.src
 LOCAL_TRAIN_TRG = ${TMPDIR}/${LANGPAIRSTR}/train/${DATASET}.trg
 LOCAL_MONO_DATA = ${TMPDIR}/${LANGSTR}/train/${DATASET}.mono
 
-
+## dev and test data
 DEV_SRC   ?= ${WORKDIR}/val/${DEVSET_NAME}.src
 DEV_TRG   ?= ${WORKDIR}/val/${DEVSET_NAME}.trg
 
@@ -372,8 +374,15 @@ TEST_SRC  ?= ${WORKDIR}/test/${TESTSET_NAME}.src
 TEST_TRG  ?= ${WORKDIR}/test/${TESTSET_NAME}.trg
 
 
+## model basename and optional sub-dir
+
 MODEL_SUBDIR =
 MODEL        =  ${MODEL_SUBDIR}${DATASET}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
+
+
+## supported model types
+## configuration for each type is in lib/train.mk
+
 MODELTYPES   = 	transformer \
 		transformer-big \
 		transformer-align \
