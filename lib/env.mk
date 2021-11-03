@@ -8,26 +8,6 @@
 SHELL := /bin/bash
 
 
-## setup local Perl environment
-## better install local::lib and put this into your .bashrc:
-##
-## eval "$(perl -I$HOME/perl5/lib/perl5 -Mlocal::lib)"
-
-export PATH                := ${HOME}/perl5/bin:${PATH}
-export PERL5LIB            := ${HOME}/perl5/lib/perl5:${PERL5LIB}}
-export PERL_LOCAL_LIB_ROOT := ${HOME}/perl5:${PERL_LOCAL_LIB_ROOT}}
-export PERL_MB_OPT         := --install_base "${HOME}/perl5"
-export PERL_MM_OPT         := INSTALL_BASE=${HOME}/perl5
-
-
-## modules to be loaded in sbatch scripts
-
-CPU_MODULES = gcc/6.2.0 mkl
-GPU_MODULES = cuda-env/8 mkl
-INSTALL_MODULES = cmake perl/5.30.0
-# GPU_MODULES = python-env/3.5.3-ml cuda-env/8 mkl
-
-
 # job-specific settings (overwrite if necessary)
 # HPC_EXTRA: additional SBATCH commands
 
@@ -36,9 +16,6 @@ HPC_NODES   = 1
 HPC_DISK    = 500
 HPC_QUEUE   = serial
 HPC_GPUQUEUE = gpu
-# HPC_MODULES = nlpl-opus python-env/3.4.1 efmaral moses
-# HPC_MODULES = nlpl-opus moses cuda-env marian python-3.5.3-ml
-HPC_MODULES = ${GPU_MODULES}
 HPC_EXTRA   = 
 
 MEM         = 4g
@@ -47,8 +24,7 @@ WALLTIME    = 72
 
 GPUJOB_HPC_MEM ?= 4g
 
-# GPU    = k80
-GPU      = p100
+GPU      = v100
 DEVICE   = cuda
 LOADCPU  = echo "nothing to load"
 LOADGPU  = echo "nothing to load"
@@ -57,88 +33,23 @@ LOADMODS = echo "nothing to load"
 WORKHOME = ${PWD}/work
 
 
+## anything that needs to be done to load
+## the build environment for specific software
+
+LOAD_BUILD_ENV        = echo "nothing to load"
+LOAD_MARIAN_BUILD_ENV = echo "nothing to load"
+
 
 ifeq (${shell hostname -d 2>/dev/null},mahti.csc.fi)
-  CSCPROJECT    = project_2002688
-#  CSCPROJECT   = project_2003093
-#  CSCPROJECT   = project_2002982
-  WORKHOME      = ${shell realpath ${PWD}/work}
-  LOCAL_SCRATCH = /scratch/${CSCPROJECT}
-  APPLHOME      = /projappl/project_2003093/
-  OPUSHOME      = /projappl/nlpl/data/OPUS
-  MOSESHOME     = ${APPLHOME}/install/mosesdecoder
-  MOSESSCRIPTS  = ${MOSESHOME}/scripts
-  EFLOMAL_HOME  = ${APPLHOME}/install/eflomal/
-  # MARIAN_HOME   = ${APPLHOME}/install/marian/build/
-  MARIAN_HOME   = ${APPLHOME}/install/marian/build-gpu/
-  MARIAN        = ${MARIAN_HOME}
-  SPM_HOME      = ${MARIAN_HOME}
-  CPU_MODULES   = python-env
-  GPU_MODULES   = cuda
-  HPC_QUEUE     = medium
-  LOADCPU       = module load ${CPU_MODULES}
-  SUBMIT_PREFIX = submitcpu
-  GPU           = a100
-  HPC_GPUQUEUE  = gpusmall
-  # HPC_GPUQUEUE  = gpumedium
-  WALLTIME      = 36
-  export PATH := ${APPLHOME}/bin:${PATH}
+  include lib/env/mahti.mk
 else ifeq (${shell hostname},dx6-ibs-p2)
-  GPU          = pascal
-  APPLHOME     = /opt/tools
-  WORKHOME     = ${shell realpath ${PWD}/work}
-#  OPUSHOME     = tiedeman@taito.csc.fi:/proj/nlpl/data/OPUS/
-#  MOSESHOME    = ${APPLHOME}/mosesdecoder
-#  MOSESSCRIPTS = ${MOSESHOME}/scripts
-#  MARIAN_HOME  = ${APPLHOME}/marian/build/
-#  MARIAN       = ${APPLHOME}/marian/build
-#  SUBWORD_HOME = ${APPLHOME}/subword-nmt/subword_nmt
+  include lib/env/dx6.mk
 else ifeq (${shell hostname},dx7-nkiel-4gpu)
-  GPU          = pascal
-  APPLHOME     = /opt/tools
-  WORKHOME     = ${shell realpath ${PWD}/work}
-  MARIAN_BUILD_OPTIONS += -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-9.2
-#			-DPROTOBUF_LIBRARY=/usr/lib/x86_64-linux-gnu/libprotobuf.so.9 \
-#	   		-DPROTOBUF_INCLUDE_DIR=/usr/include/google/protobuf \
-#			-DPROTOBUF_PROTOC_EXECUTABLE=${PWD}/tools/protobuf/src/protoc
-#  OPUSHOME     = tiedeman@taito.csc.fi:/proj/nlpl/data/OPUS/
-#  MOSESHOME    = ${APPLHOME}/mosesdecoder
-#  MOSESSCRIPTS = ${MOSESHOME}/scripts
-#  MARIAN_HOME  = ${APPLHOME}/marian/build/
-#  MARIAN       = ${APPLHOME}/marian/build
-#  SUBWORD_HOME = ${APPLHOME}/subword-nmt/subword_nmt
+  include lib/env/dx7.mk
 else ifneq ($(wildcard /wrk/tiedeman/research),)
-  APPLHOME     = /proj/memad/tools
-  WORKHOME     = /wrk/tiedeman/research/Opus-MT/work
-  OPUSHOME     = /proj/nlpl/data/OPUS
-  MOSESHOME    = /proj/nlpl/software/moses/4.0-65c75ff/moses
-  MOSESSCRIPTS = ${MOSESHOME}/scripts
-  MARIAN_HOME  = ${HOME}/appl_taito/tools/marian/build-gpu/
-  MARIAN       = ${HOME}/appl_taito/tools/marian/build-gpu
-  LOADCPU      = module load ${CPU_MODULES}
-  LOADGPU      = module load ${GPU_MODULES}
-  LOADMODS     = ${LOADGPU}
+  include lib/env/taito.mk
 else ifeq (${shell hostname --domain 2>/dev/null},bullx)
-#   CSCPROJECT   = project_2003288
-  CSCPROJECT   = project_2002688
-#  CSCPROJECT   = project_2000309
-#  CSCPROJECT   = project_2002982
-  WORKHOME     = ${shell realpath ${PWD}/work}
-  APPLHOME     = /projappl/project_2001194
-  OPUSHOME     = /projappl/nlpl/data/OPUS
-  MOSESHOME    = ${APPLHOME}/mosesdecoder
-  MOSESSCRIPTS = ${MOSESHOME}/scripts
-  EFLOMAL_HOME = ${APPLHOME}/eflomal/
-  MARIAN_HOME  = ${APPLHOME}/marian/build/
-  MARIAN       = ${APPLHOME}/marian/build
-  SPM_HOME     = ${MARIAN_HOME}
-  GPU          = v100
-  GPU_MODULES  = python-env 
-  CPU_MODULES  = python-env
-  HPC_QUEUE    = small
-  LOADCPU      = module load ${CPU_MODULES}
-  LOADGPU      = module load ${GPU_MODULES}
-  export PATH := ${APPLHOME}/bin:${PATH}
+  include lib/env/puhti.mk
 endif
 
 
@@ -223,14 +134,9 @@ MULTEVALHOME = ${APPLHOME}/multeval
 
 
 
-## install pre-requisites
-## TODO:
-## * terashuf (https://github.com/alexandres/terashuf.git)
-## * OpusTools-perl (https://github.com/Helsinki-NLP/OpusTools-perl)
-## * marian-nmt
+## install prerequisites
 
-
-PREREQ_TOOLS := $(lastword ${ISO639}) ${ATOOLS} ${PIGZ} ${TERASHUF} ${JQ} ${MARIAN} ${EFLOMAL}
+PREREQ_TOOLS := $(lastword ${ISO639}) ${ATOOLS} ${PIGZ} ${TERASHUF} ${JQ} ${MARIAN} ${EFLOMAL} ${TMX2MOSES}
 PREREQ_PERL  := ISO::639::3 ISO::639::5 OPUS::Tools XML::Parser
 
 PIP  := ${shell which pip3  2>/dev/null || echo pip}
@@ -246,11 +152,21 @@ else
 endif
 
 
+
+## setup local Perl environment
+## better install local::lib and put this into your .bashrc:
+##
+## eval "$(perl -I$HOME/perl5/lib/perl5 -Mlocal::lib)"
+
+export PATH                := ${HOME}/perl5/bin:${PATH}
+export PERL5LIB            := ${HOME}/perl5/lib/perl5:${PERL5LIB}}
+export PERL_LOCAL_LIB_ROOT := ${HOME}/perl5:${PERL_LOCAL_LIB_ROOT}}
+export PERL_MB_OPT         := --install_base "${HOME}/perl5"
+export PERL_MM_OPT         := INSTALL_BASE=${HOME}/perl5
+
+
 PHONY: install-prerequisites install-prereq install-requirements
 install-prerequisites install-prereq install-requirements:
-	if [ `hostname --domain` = "bullx" ]; then \
-	  module load ${INSTALL_MODULES}; \
-	fi
 	${PIP} install --user -r requirements.txt
 	${MAKE} install-perl-modules
 	${MAKE} ${PREREQ_TOOLS}
@@ -276,6 +192,8 @@ ${TOOLSDIR}/pigz/pigz:
 	${MAKE} -C ${dir $@}
 
 ${TOOLSDIR}/terashuf/terashuf:
+	mkdir -p ${TOOLSDIR}
+	cd ${TOOLSDIR} && git clone https://github.com/alexandres/terashuf.git
 	${MAKE} -C ${dir $@}
 
 ${TOOLSDIR}/jq/jq:
@@ -290,16 +208,19 @@ ${TOOLSDIR}/jq/jq:
 ##   file:///opt/intel/documentation_2020/en/mkl/ps2020/get_started.htm
 
 ${TOOLSDIR}/marian-dev/build/marian: ${PROTOC}
+	mkdir -p ${TOOLSDIR}
+	cd ${TOOLSDIR} && git clone https://github.com/marian-nmt/marian-dev.git
 	mkdir -p ${dir $@}
-	cd ${dir $@} && cmake -DUSE_SENTENCEPIECE=on ${MARIAN_BUILD_OPTIONS} ..
+	cd ${dir $@} && ${LOAD_MARIAN_BUILD_ENV} && cmake -DUSE_SENTENCEPIECE=on ${MARIAN_BUILD_OPTIONS} ..
 	${MAKE} -C ${dir $@} -j8
 
 ${TOOLSDIR}/protobuf/bin/protoc:
-	cd tools && git clone https://github.com/protocolbuffers/protobuf.git
-	cd tools/protobuf && git submodule update --init --recursive
-	cd tools/protobuf && ./autogen.sh
-	cd tools/protobuf && ./configure --prefix=${TOOLSDIR}/protobuf
-	${MAKE} -C tools/protobuf
+	mkdir -p ${TOOLSDIR}
+	cd ${TOOLSDIR} && git clone https://github.com/protocolbuffers/protobuf.git
+	cd ${TOOLSDIR}/protobuf && git submodule update --init --recursive
+	cd ${TOOLSDIR}/protobuf && ./autogen.sh
+	cd ${TOOLSDIR}/protobuf && ./configure --prefix=${TOOLSDIR}/protobuf
+	${MAKE} -C ${TOOLSDIR}/protobuf
 
 ## for Mac users: use gcc to compile eflomal
 ##
@@ -318,3 +239,10 @@ ${TOOLSDIR}/eflomal/eflomal:
 	${MAKE} -C ${dir $@} all
 	cd ${dir $@} && python3 setup.py install --user
 #	python3 setup.py install --install-dir ${HOME}/.local
+
+
+${TOOLSDIR}/OpusTools-perl/scripts/convert/tmx2moses:
+	mkdir -p ${TOOLSDIR}
+	cd ${TOOLSDIR} && https://github.com/Helsinki-NLP/OpusTools-perl
+	cd ${TOOLSDIR}/OpusTools-perl && perl Makefile.PL
+	cd ${TOOLSDIR}/OpusTools-perl && ${MAKE} install
