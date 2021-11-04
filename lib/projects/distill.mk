@@ -74,6 +74,37 @@ afreng-bt-tiny:
 
 
 
+afreng:
+	make 	TATOEBA_VERSION=v2020-07-28 \
+		SRCLANGS=afr TRGLANGS=eng \
+	all-job-tatoeba
+
+
+afreng-small:
+	make 	TATOEBA_VERSION=v2020-07-28 \
+		BT_CONTINUE_EXISTING=0 \
+		SRCLANGS=afr TRGLANGS=eng \
+		MODELTYPE=transformer-small-align \
+		MARIAN_WORKSPACE=10000 \
+	all-job-tatoeba
+
+afreng-tiny:
+	make 	TATOEBA_VERSION=v2020-07-28 \
+		BT_CONTINUE_EXISTING=0 \
+		SRCLANGS=afr TRGLANGS=eng \
+		MODELTYPE=transformer-tiny-align \
+		MARIAN_WORKSPACE=10000 \
+	all-job-tatoeba
+
+afreng-small-eval:
+	make 	TATOEBA_VERSION=v2020-07-28 \
+		BT_CONTINUE_EXISTING=0 \
+		SRCLANGS=afr TRGLANGS=eng \
+		MODELTYPE=transformer-small-align \
+		MARIAN_WORKSPACE=10000 \
+	eval-tatoeba
+
+
 
 
 

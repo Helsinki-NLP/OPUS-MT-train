@@ -6,35 +6,26 @@
 #------------------------------------------------------------------------
 
 
+
+## extract vocabulary from sentence piece model
+
+${WORKDIR}/${MODEL}.src.vocab: ${SPMSRCMODEL}
+	cut -f1 < $<.vocab > $@
+ifeq (${USE_TARGET_LABELS},1)
+	echo "${TARGET_LABELS}" | tr ' ' "\n" >> $@
+endif
+
+${WORKDIR}/${MODEL}.trg.vocab: ${SPMTRGMODEL}
+	cut -f1 < $<.vocab > $@
+
+
 ifeq (${SUBWORDS},spm)
 
 ## make vocabulary from the source and target language specific
 ## sentence piece models (concatenate and yamlify)
-## TODO: verify that this becomes valid YAML!
 
-${MODEL_VOCAB}: ${SPMSRCMODEL} ${SPMTRGMODEL}
-ifneq (${MODEL_LATEST_VOCAB},)
-ifneq (${MODEL_LATEST_VOCAB},${MODEL_VOCAB})
-	cp ${MODEL_LATEST_VOCAB} ${MODEL_VOCAB}
-endif
-else
-	cut -f1 < ${word 1,$^}.vocab > ${@:.vocab.yml=.src.vocab}
-	cut -f1 < ${word 2,$^}.vocab > ${@:.vocab.yml=.trg.vocab}
-ifeq (${USE_TARGET_LABELS},1)
-	echo "${TARGET_LABELS}" | tr ' ' "\n" >> ${@:.vocab.yml=.src.vocab}
-endif
-	cat ${@:.vocab.yml=.src.vocab} ${@:.vocab.yml=.trg.vocab} | \
-	sort -u | scripts/vocab2yaml.py > $@
-
-## old buggy style ...
-#	cat ${@:.vocab.yml=.src.vocab} ${@:.vocab.yml=.trg.vocab} | \
-#	sort -u | nl -v 0 | sed 's/^ *//'> $@.numbered
-#	cut -f1 $@.numbered > $@.ids
-#	cut -f2 $@.numbered | sed 's/\\/\\\\/g;s/\"/\\\"/g;s/^\(.*\)$$/"\1"/;s/$$/:/'> $@.tokens
-#	paste -d ' ' $@.tokens $@.ids > $@
-#	rm -f $@.tokens $@.ids $@.numbered
-
-endif
+${WORKDIR}/${MODEL}.vocab.yml: ${WORKDIR}/${MODEL}.src.vocab ${WORKDIR}/${MODEL}.trg.vocab
+	cat $^ | sort -u | scripts/vocab2yaml.py > $@
 
 else
 
@@ -42,12 +33,12 @@ else
 ## - no new vocabulary is created if the file already exists!
 ## - need to delete the file if you want to create a new one!
 
-${MODEL_VOCAB}:	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
-		${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz
-ifeq ($(wildcard ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB}),)
-ifneq (${MODEL_LATEST_VOCAB},)
-ifneq (${MODEL_LATEST_VOCAB},${MODEL_VOCAB})
-	cp ${MODEL_LATEST_VOCAB} ${MODEL_VOCAB}
+${WORKDIR}/${MODEL}.vocab.yml:	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
+				${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz
+ifeq ($(wildcard $@),)
+ifneq ($(wildcard ${MODEL_LATEST_VOCAB}),)
+ifneq (${MODEL_LATEST_VOCAB},$@)
+	cp ${MODEL_LATEST_VOCAB} $@
 endif
 else
 	mkdir -p ${dir $@}
@@ -59,35 +50,12 @@ else
 	@echo "WARNING! Delete the file if you want to start from scratch!"
 	touch $@
 endif
-
 endif
-
-
-
-## if USE_SPM_VOCAB is set:
-## get separate source and target language vocabularies
-## from the two individual sentence piece models
-
-ifeq ($(USE_SPM_VOCAB),1)
-${MODEL_SRCVOCAB}: ${SPMSRCMODEL}
-	cut -f1 < $<.vocab > $@
-ifeq (${USE_TARGET_LABELS},1)
-	echo "${TARGET_LABELS}" | tr ' ' "\n" >> $@
-endif
-
-${MODEL_TRGVOCAB}: ${SPMTRGMODEL}
-	cut -f1  < $<.vocab > $@
-endif
-
-
 
 
 print-latest:
-ifneq (${wildcard ${MODEL_LATEST}},)
-ifeq (${wildcard ${MODEL_START}},)
-	@echo "cp ${MODEL_LATEST} ${MODEL_START}"
-endif
-endif
+	@echo "latest model: ${MODEL_LATEST}"
+	@echo "start model:  ${MODEL_START}"
 
 
 
@@ -100,15 +68,12 @@ endif
 MARIAN_MODELS_DONE   = 	${patsubst %,${WORKDIR}/${MODEL}.%.model${NR}.done,${MODELTYPES}}
 
 MARIAN_TRAIN_PREREQS = 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
-			${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz
+			${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz \
+			$(sort ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB})
 
 
 ## define validation and early-stopping parameters
 ## as well as pre-requisites for training the model
-##
-## NEW: take away dependency on ${MODEL_VOCAB}
-## (will be created by marian if it does not exist)
-## TODO: should we create the dependency again?
 
 ifndef SKIP_VALIDATION
   MARIAN_TRAIN_PREREQS += ${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG}
@@ -137,9 +102,15 @@ else
 endif
 
 
+# start weights with a pre-trained model
+
+ifneq (${wildcard ${PRE_TRAINED_MODEL}},)
+  MARIAN_EXTRA += --pretrained-model ${PRE_TRAINED_MODEL}
+endif
+
 
 ## dependencies and extra parameters
-## for models with guided alignment
+## for different models and guided alignment
 
 ifeq (${MODELTYPE},transformer-align)
   MARIAN_TRAIN_PREREQS += ${TRAIN_ALG}
@@ -176,7 +147,6 @@ endif
 ifeq (${MODELTYPE},transformer-big-align)
   MARIAN_ENC_DEPTH = 12
   MARIAN_ATT_HEADS = 16
-  MARIAN_DIM_EMB = 1024
   MARIAN_TRAIN_PREREQS += ${TRAIN_ALG}
   MARIAN_EXTRA += --guided-alignment ${TRAIN_ALG}
   GPUJOB_HPC_MEM = 16g
@@ -185,10 +155,10 @@ endif
 ifeq (${MODELTYPE},transformer-big)
   MARIAN_ENC_DEPTH = 12
   MARIAN_ATT_HEADS = 16
-  MARIAN_DIM_EMB = 1024
   GPUJOB_HPC_MEM = 16g
 endif
 
+#  MARIAN_DIM_EMB = 1024
 
 
 ## finally: recipe for training transformer model
@@ -200,19 +170,13 @@ ${MARIAN_MODELS_DONE}: ${MARIAN_TRAIN_PREREQS}
 ## (check lib/config.mk to see how the latest model is found)
 ##--------------------------------------------------------------------
 ifeq (${wildcard ${MODEL_START}},)
-ifneq (${MODEL_LATEST},)
-ifneq (${MODEL_LATEST_VOCAB},)
-ifneq (${MODEL_LATEST_VOCAB},${MODEL_VOCAB})
-	cp ${MODEL_LATEST_VOCAB} ${MODEL_VOCAB}
-endif
+ifneq (${wildcard ${MODEL_LATEST}},)
 ifneq (${MODEL_LATEST},${MODEL_START})
 	cp ${MODEL_LATEST} ${MODEL_START}
 endif
 endif
 endif
-endif
 ##--------------------------------------------------------------------
-	${MAKE} ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB}
 	${LOADMODS} && ${MARIAN_TRAIN} ${MARIAN_EXTRA} \
 	${MARIAN_STOP_CRITERIA} \
         --model $(@:.done=.npz) \

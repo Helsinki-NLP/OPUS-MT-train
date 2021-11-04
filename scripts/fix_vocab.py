@@ -10,7 +10,7 @@ filename = sys.argv[1]
 
 try:
     input = open(filename, 'r')
-    yaml.load(input)
+    yaml.safe_load(input)
 except:
     print('YAML file is broken - try to fix it!')
     print(f'copy {filename} to {filename}.bak')
