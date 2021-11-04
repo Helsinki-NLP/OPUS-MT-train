@@ -378,3 +378,22 @@ train-and-start-bt-jobs: ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
 	${MAKE} local-dist
 	${MAKE} -C backtranslate MODELHOME=${MODELDIR} translate-all-wikis-jobs
 
+
+ALL_RELEASED_MODELS = ${wildcard models-tatoeba/*/*.zip}
+ALL_VOCABS_FIXED = ${patsubst %.zip,%.fixed-vocab,${ALL_RELEASED_MODELS}}
+
+fix-released-vocabs: ${ALL_VOCABS_FIXED}
+
+%.fixed-vocab: %.zip
+	@( v=`unzip -l $<  | grep 'vocab.yml$$' | sed 's/^.* //'`; \
+	  if [ "$$v" != "" ]; then \
+	    unzip $< $$v; \
+	    python3 scripts/fix_vocab.py $$v; \
+	    if [ -e $$v.bak ]; then \
+	      echo "update $$v in $<"; \
+	      zip $< $$v $$v.bak; \
+	    else \
+	      echo "vocab $$v is fine in $<"; \
+	    fi; \
+	    rm -f $$v $$v.bak; \
+	  fi )
