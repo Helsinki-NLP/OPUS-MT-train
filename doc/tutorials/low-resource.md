@@ -303,7 +303,7 @@ For the other direction, the additional back-translation loop does not seem to w
 ## Multilingual models
 
 Another common approach to improve low-resource translation is to rely on transfer learning and multilingual models.
-The basic steps are the same, only some variables need to be adjusted. Most importantly, you need to set several source and target languages to be covered by the model. All combinations of thos languages will be considered. Furthermore, it might be useful to activate over and under-sampling of data to have more equal proportions of data for each language pair. This is done by setting a value to `FIT_DATA_SIZE` (number of training examples, i.e. aligned sentence pairs). Here would be the example for training a mode between English and French to a number of celtic languages (including Breton):
+The basic steps are the same, only some variables need to be adjusted. Most importantly, you need to set several source and target languages to be covered by the model. All combinations of those languages will be considered. Furthermore, it might be useful to activate over and under-sampling of data to have more equal proportions of data for each language pair. This is done by setting a value to `FIT_DATA_SIZE` (number of training examples, i.e. aligned sentence pairs). Here would be the example for training a mode between English and French to a number of celtic languages (including Breton):
 
 ```
 make SRCLANGS="en fr" TRGLANGS="ga cy br gd kw gv" FIT_DATA_SIZE=500000 config
