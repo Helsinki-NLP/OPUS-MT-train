@@ -73,7 +73,7 @@ Note that the data splits are done on-the-fly from shuffled data sets and this m
 
 ## Generate back-translations
 
-Back-translation requires a moel in the opposite direction. First thing to do is to reverse the data. This can be done without generating them from scratch:
+Back-translation requires a model in the opposite direction. First thing to do is to reverse the data. This can be done without generating them from scratch:
 
 ```
 make SRCLANGS=en TRGLANGS=br reverse-data
@@ -141,7 +141,7 @@ backtranslate/br-en/latest/wiki.aa.br-en.en.gz
 
 Another way of augmenting training data is to translate existing bitexts on one side of the bitext to create more data for the language pair we are interested in. For example, for the case of English-Breton translation we can translate the French part of French-Breton bitexts to English using an existing French-English translation model. The latter is a high-resource language pair and decent transaltions can be expected. All this is supported by the recipes in `pivoting`.
 
-Forst of all, you can check what kind of bitexts are available for a pivot language like French:
+First of all, you can check what kind of bitexts are available for a pivot language like French:
 
 ```
 make -C pivoting SRC=en TRG=br PIVOT=fr print-all-data
