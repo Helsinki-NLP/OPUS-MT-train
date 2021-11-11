@@ -132,6 +132,8 @@ ifeq (${words ${TRGLANGS}},1)
 	-if [ -e ${SPMSRCMODEL} ]; then \
 	  ln -s ${SPMSRCMODEL} ${REV_WORKDIR}/train/${notdir ${SPMTRGMODEL}}; \
 	  ln -s ${SPMTRGMODEL} ${REV_WORKDIR}/train/${notdir ${SPMSRCMODEL}}; \
+	  ln -s ${SPMSRCMODEL}.vocab ${REV_WORKDIR}/train/${notdir ${SPMTRGMODEL}}.vocab; \
+	  ln -s ${SPMTRGMODEL}.vocab ${REV_WORKDIR}/train/${notdir ${SPMSRCMODEL}}.vocab; \
 	fi
 	if [ -e ${BPESRCMODEL} ]; then \
 	  ln -s ${BPESRCMODEL} ${REV_WORKDIR}/train/${notdir ${BPETRGMODEL}}; \

@@ -2,10 +2,13 @@
 
 
 #------------------------------------------------------------------------
-# vocabulary
+# shared vocabulary:
+#   - for SentencePiece models: take vocabulary from the spm-model
+#   - otherwise: create vocab from training data
+#   - always re-use existing vocabulary files (never overwrite!)
+#   - copy an existing vocab file if MODEL_LATEST_VOCAB exists
+#     (this is for continuing training with other pre-trained models)
 #------------------------------------------------------------------------
-
-
 
 ## extract vocabulary from sentence piece model
 
@@ -25,7 +28,18 @@ ifeq (${SUBWORDS},spm)
 ## sentence piece models (concatenate and yamlify)
 
 ${WORKDIR}/${MODEL}.vocab.yml: ${WORKDIR}/${MODEL}.src.vocab ${WORKDIR}/${MODEL}.trg.vocab
+ifeq ($(wildcard $@),)
+ifneq ($(wildcard ${MODEL_LATEST_VOCAB}),)
+ifneq (${MODEL_LATEST_VOCAB},$@)
+	cp ${MODEL_LATEST_VOCAB} $@
+endif
+else
 	cat $^ | sort -u | scripts/vocab2yaml.py > $@
+endif
+else
+	@echo "$@ already exists! We will re-use it ..."
+	touch $@
+endif
 
 else
 
@@ -42,7 +56,7 @@ ifneq (${MODEL_LATEST_VOCAB},$@)
 endif
 else
 	mkdir -p ${dir $@}
-	${LOADMODS} && ${ZCAT} $^ | ${MARIAN_VOCAB} --max-size ${VOCABSIZE} > $@
+	${LOAD_ENV} && ${ZCAT} $^ | ${MARIAN_VOCAB} --max-size ${VOCABSIZE} > $@
 endif
 else
 	@echo "$@ already exists!"
@@ -53,15 +67,22 @@ endif
 endif
 
 
-print-latest:
-	@echo "latest model: ${MODEL_LATEST}"
-	@echo "start model:  ${MODEL_START}"
-
-
-
 #------------------------------------------------------------------------
 # training MarianNMT models
+#   - different kind of model types require different settings
+#   - add word alignment to pre-requisites if necessary
+#   - continue training from MODEL_LATEST (if it exists)
+#   - initialise model with parameters from PRE_TRAINED_MODEL (if set)
 #------------------------------------------------------------------------
+
+
+## print the model that will be used to initalise training
+## this needs to be compatible in architecture!
+
+print-model-names:
+	@echo "initial parameters from: ${PRE_TRAINED_MODEL}"
+	@echo "       start with model: ${MODEL_LATEST}"
+	@echo "         write model to: ${MODEL_START}"
 
 
 ## possible model variants
@@ -161,6 +182,7 @@ endif
 #  MARIAN_DIM_EMB = 1024
 
 
+
 ## finally: recipe for training transformer model
 
 ${MARIAN_MODELS_DONE}: ${MARIAN_TRAIN_PREREQS}
@@ -177,7 +199,7 @@ endif
 endif
 endif
 ##--------------------------------------------------------------------
-	${LOADMODS} && ${MARIAN_TRAIN} ${MARIAN_EXTRA} \
+	${LOAD_ENV} && ${MARIAN_TRAIN} ${MARIAN_EXTRA} \
 	${MARIAN_STOP_CRITERIA} \
         --model $(@:.done=.npz) \
         --train-sets ${word 1,$^} ${word 2,$^} ${MARIAN_TRAIN_WEIGHTS} \
@@ -208,6 +230,11 @@ endif
 	--tempdir ${TMPDIR} \
         --exponential-smoothing
 	touch $@
+
+## TODO: --fp16 seems to have changed from previous versions:
+## --> cannot continue training with newer version
+# old: --precision float16 float32 float32 --cost-scaling 7 2000 2 0.05 10 1
+# new: --precision float16 float32 --cost-scaling 0 1000 2 0.05 10 1e-5f
 
 
 

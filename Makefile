@@ -379,21 +379,56 @@ train-and-start-bt-jobs: ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
 	${MAKE} -C backtranslate MODELHOME=${MODELDIR} translate-all-wikis-jobs
 
 
-ALL_RELEASED_MODELS = ${wildcard models-tatoeba/*/*.zip}
-ALL_VOCABS_FIXED = ${patsubst %.zip,%.fixed-vocab,${ALL_RELEASED_MODELS}}
 
-fix-released-vocabs: ${ALL_VOCABS_FIXED}
 
-%.fixed-vocab: %.zip
-	@( v=`unzip -l $<  | grep 'vocab.yml$$' | sed 's/^.* //'`; \
-	  if [ "$$v" != "" ]; then \
-	    unzip $< $$v; \
-	    python3 scripts/fix_vocab.py $$v; \
-	    if [ -e $$v.bak ]; then \
-	      echo "update $$v in $<"; \
-	      zip $< $$v $$v.bak; \
-	    else \
-	      echo "vocab $$v is fine in $<"; \
-	    fi; \
-	    rm -f $$v $$v.bak; \
-	  fi )
+
+
+## OBSOLETE
+
+
+# ALL_RELEASED_MODELS = ${wildcard models-tatoeba/*/*.zip}
+# ALL_VOCABS_FIXED = ${patsubst %.zip,%.fixed-vocab,${ALL_RELEASED_MODELS}}
+
+# fix-released-vocabs: ${ALL_VOCABS_FIXED}
+
+# %.fixed-vocab: %.zip
+# 	@( v=`unzip -l $<  | grep 'vocab.yml$$' | sed 's/^.* //'`; \
+# 	  if [ "$$v" != "" ]; then \
+# 	    unzip $< $$v; \
+# 	    python3 scripts/fix_vocab.py $$v; \
+# 	    if [ -e $$v.bak ]; then \
+# 	      echo "update $$v in $<"; \
+# 	      zip $< $$v $$v.bak; \
+# 	    else \
+# 	      echo "vocab $$v is fine in $<"; \
+# 	    fi; \
+# 	    rm -f $$v $$v.bak; \
+# 	  fi )
+
+
+# ALL_VOCABS_REFIXED = ${patsubst %.zip,%.refixed-vocab,${ALL_RELEASED_MODELS}}
+
+# refix-released-vocabs: ${ALL_VOCABS_REFIXED}
+
+# %.refixed-vocab: %.zip
+# 	@echo "checking $<"
+# 	@( v=`unzip -l $<  | grep 'vocab.yml.bak$$' | sed 's/^.* //'`; \
+# 	  if [ "$$v" != "" ]; then \
+# 	    unzip -o $< $$v; \
+# 	    if [ `grep -v '^"' $$v | wc -l` -gt 0 ]; then \
+# 		echo "$</$$v has items that do not start with quotes!"; \
+# 		o=`echo $$v | sed 's/.bak//'`; \
+# 		unzip -o $< $$o; \
+# 	    	if [ `diff $$o $$v | wc -l` -gt 0 ]; then \
+# 		  mv $$o $$o.bak2; \
+# 		  mv $$v $$o; \
+# 		  zip $< $$o $$o.bak2; \
+# 		  rm -f $$o $$.bak2; \
+# 		else \
+# 		  echo "vocabs are the same"; \
+# 		fi \
+# 	    else \
+# 		echo "$$v fix was fine"; \
+# 	    fi; \
+# 	    rm -f $$v; \
+# 	  fi )

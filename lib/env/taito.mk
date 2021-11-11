@@ -15,9 +15,8 @@ MOSESHOME    = /proj/nlpl/software/moses/4.0-65c75ff/moses
 MOSESSCRIPTS = ${MOSESHOME}/scripts
 MARIAN_HOME  = ${HOME}/appl_taito/tools/marian/build-gpu/
 MARIAN       = ${HOME}/appl_taito/tools/marian/build-gpu
-LOADCPU      = module load ${CPU_MODULES}
-LOADGPU      = module load ${GPU_MODULES}
-LOADMODS     = ${LOADGPU}
+LOAD_CPU_ENV = module load ${CPU_MODULES}
+LOAD_GPU_ENV = module load ${GPU_MODULES}
 GPU          = p100
 
 

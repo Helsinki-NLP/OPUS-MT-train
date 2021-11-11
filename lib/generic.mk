@@ -394,7 +394,7 @@ endif
 
 ## run on CPUs (translate-cpu, eval-cpu, translate-ensemble-cpu, ...)
 %-cpu:
-	${MAKE} LOADMODS='${LOADCPU}' \
+	${MAKE} LOAD_ENV='${LOAD_CPU_ENV}' \
 		MARIAN_DECODER_FLAGS="${MARIAN_DECODER_CPU}" \
 	${@:-cpu=}
 

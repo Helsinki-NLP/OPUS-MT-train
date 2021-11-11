@@ -4,9 +4,10 @@
 #
 
 
-CSCPROJECT    = project_2002688
-#  CSCPROJECT   = project_2003093
-#  CSCPROJECT   = project_2002982
+CSCPROJECT   = project_2003288
+# CSCPROJECT   = project_2002688
+# CSCPROJECT   = project_2003093
+# CSCPROJECT   = project_2002982
 WORKHOME      = ${shell realpath ${PWD}/work}
 LOCAL_SCRATCH = /scratch/${CSCPROJECT}
 APPLHOME      = /projappl/project_2003093/
@@ -26,10 +27,10 @@ WALLTIME      = 36
 export PATH := ${APPLHOME}/bin:${PATH}
 
 
-CPU_MODULES   = gcc/10.3.0 openblas/0.3.14-omp openmpi python-env
+CPU_MODULES   = gcc/10.3.0 cuda/11.4.2 cudnn/8.0.4.30-11.0-linux-x64 openblas/0.3.14-omp openmpi/4.0.5-cuda python-env
 GPU_MODULES   = gcc/10.3.0 cuda/11.4.2 cudnn/8.0.4.30-11.0-linux-x64 openblas/0.3.14-omp openmpi/4.0.5-cuda python-env
-LOADCPU       = module load ${CPU_MODULES}
-LOADGPU       = module load ${GPU_MODULES}
+LOAD_CPU_ENV  = module load ${CPU_MODULES}
+LOAD_GPU_ENV  = module load ${GPU_MODULES}
 
 
 ## setup for compiling marian-nmt

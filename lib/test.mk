@@ -40,7 +40,7 @@ ENSEMBLE = ${wildcard ${WORKDIR}/${MODEL}.${MODELTYPE}.model*.npz.best-perplexit
 ${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.ensemble.${SRC}.${TRG}: ${TEST_SRC}.${PRE_SRC} ${ENSEMBLE}
 	mkdir -p ${dir $@}
 	grep . $< > $@.input
-	${LOADMODS} && ${MARIAN_DECODER} -i $@.input \
+	${LOAD_ENV} && ${MARIAN_DECODER} -i $@.input \
 		--models ${ENSEMBLE} \
 		--vocabs ${WORKDIR}/${MODEL}.vocab.yml \
 			${WORKDIR}/${MODEL}.vocab.yml \
@@ -63,7 +63,7 @@ endif
 ${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}: ${TEST_SRC}.${PRE_SRC} ${MODEL_FINAL}
 	mkdir -p ${dir $@}
 	grep . $< > $@.input
-	${LOADMODS} && ${MARIAN_DECODER} -i $@.input \
+	${LOAD_ENV} && ${MARIAN_DECODER} -i $@.input \
 		-c ${word 2,$^}.decoder.yml \
 		-d ${MARIAN_GPUS} \
 		${MARIAN_DECODER_FLAGS} > $@.output

@@ -24,11 +24,10 @@ WALLTIME    = 72
 
 GPUJOB_HPC_MEM ?= 4g
 
-GPU      = v100
-DEVICE   = cuda
-LOADCPU  = echo "nothing to load"
-LOADGPU  = echo "nothing to load"
-LOADMODS = echo "nothing to load"
+GPU          = v100
+DEVICE       = cuda
+LOAD_CPU_ENV = echo "nothing to load"
+LOAD_GPU_ENV = echo "nothing to load"
 
 WORKHOME = ${PWD}/work
 
@@ -126,6 +125,24 @@ UNIQ    := ${SORT} -u
 
 
 
+## check that we have a GPU available
+## TODO: this assumes that we have nvidia-smi on the system
+
+NVIDIA_SMI := ${shell which nvidia-smi 2>/dev/null}
+ifneq ($(wildcard ${NVIDIA_SMI}),)
+ifeq (${shell nvidia-smi | grep failed | wc -l},1)
+  MARIAN_BUILD_OPTIONS += -DCOMPILE_CUDA=off
+  LOAD_ENV = ${LOAD_CPU_ENV}
+else
+  LOAD_ENV = ${LOAD_GPU_ENV}
+endif
+else
+  MARIAN_BUILD_OPTIONS += -DCOMPILE_CUDA=off
+  LOAD_ENV = ${LOAD_CPU_ENV}
+endif
+
+
+
 
 
 # TODO: delete those?
@@ -141,16 +158,6 @@ PREREQ_PERL  := ISO::639::3 ISO::639::5 OPUS::Tools XML::Parser
 
 PIP  := ${shell which pip3  2>/dev/null || echo pip}
 CPAN := ${shell which cpanm 2>/dev/null || echo cpan}
-
-NVIDIA_SMI := ${shell which nvidia-smi 2>/dev/null}
-ifneq ($(wildcard ${NVIDIA_SMI}),)
-ifeq (${shell nvidia-smi | grep failed | wc -l},1)
-  MARIAN_BUILD_OPTIONS += -DCOMPILE_CUDA=off
-endif
-else
-  MARIAN_BUILD_OPTIONS += -DCOMPILE_CUDA=off
-endif
-
 
 
 ## setup local Perl environment
