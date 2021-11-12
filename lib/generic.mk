@@ -373,10 +373,13 @@ endif
 
 
 %-big-align:
-	${MAKE} PRE_TRAINED_MODEL=${MODEL_FINAL} \
-		MODELTYPE=transformer-big-align \
-	${@:-big-align=}
-
+ifneq (${wildcard ${MODEL_FINAL}},)
+	${MAKE} PRE_TRAINED_MODEL=${MODEL_FINAL} MODELTYPE=transformer-big-align ${@:-big-align=}
+else ifneq (${wildcard ${MODEL_START}},)
+	${MAKE} PRE_TRAINED_MODEL=${MODEL_START} MODELTYPE=transformer-big-align ${@:-big-align=}
+else
+	${MAKE} MODELTYPE=transformer-big-align ${@:-big-align=}
+endif
 
 
 
