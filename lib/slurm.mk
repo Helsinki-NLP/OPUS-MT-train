@@ -18,13 +18,14 @@ endif
 ## submit job to gpu queue
 ##	echo '#SBATCH --exclude=r18g08' >> $@
 
+SLURM_JOBNAME ?= $(subst -,,${LANGPAIRSTR})
 
 %.submit:
 	mkdir -p ${WORKDIR}
 	echo '#!/bin/bash -l' > $@
-	echo '#SBATCH -J "$(subst -,,${LANGPAIRSTR})${@:.submit=}"' >>$@
-	echo '#SBATCH -o $(subst -,,${LANGPAIRSTR})${@:.submit=}.out.%j' >> $@
-	echo '#SBATCH -e $(subst -,,${LANGPAIRSTR})${@:.submit=}.err.%j' >> $@
+	echo '#SBATCH -J "$(SLURM_JOBNAME)${@:.submit=}"' >>$@
+	echo '#SBATCH -o $(SLURM_JOBNAME)${@:.submit=}.out.%j' >> $@
+	echo '#SBATCH -e $(SLURM_JOBNAME)${@:.submit=}.err.%j' >> $@
 	echo '#SBATCH --mem=${HPC_MEM}' >> $@
 ifdef EMAIL
 	echo '#SBATCH --mail-type=END' >> $@
@@ -65,9 +66,9 @@ endif
 %.submitcpu:
 	mkdir -p ${WORKDIR}
 	echo '#!/bin/bash -l' > $@
-	echo '#SBATCH -J "$(subst -,,${LANGPAIRSTR})${@:.submitcpu=}"' >>$@
-	echo '#SBATCH -o $(subst -,,${LANGPAIRSTR})${@:.submitcpu=}.out.%j' >> $@
-	echo '#SBATCH -e $(subst -,,${LANGPAIRSTR})${@:.submitcpu=}.err.%j' >> $@
+	echo '#SBATCH -J "$(SLURM_JOBNAME)${@:.submitcpu=}"' >>$@
+	echo '#SBATCH -o $(SLURM_JOBNAME)${@:.submitcpu=}.out.%j' >> $@
+	echo '#SBATCH -e $(SLURM_JOBNAME)${@:.submitcpu=}.err.%j' >> $@
 	echo '#SBATCH --mem=${HPC_MEM}' >> $@
 ifdef EMAIL
 	echo '#SBATCH --mail-type=END' >> $@

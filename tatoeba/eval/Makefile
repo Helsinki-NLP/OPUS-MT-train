@@ -57,17 +57,21 @@ ${MODEL_EVALZIPS}:
 
 .PHONY: eval-model
 eval-model: ${MODEL_SCORES}
-	cd ${MODEL_DIR} && zip ${MODEL_EVALZIP} *.eval *.compare
-	rm -f ${MODEL_DIR}/*.eval
-	rm -f ${MODEL_DIR}/*.compare
-	rmdir ${MODEL_DIR}
+	if [ -d ${MODEL_DIR} ]; then \
+	  cd ${MODEL_DIR} && zip ${MODEL_EVALZIP} *.eval *.compare; \
+	  rm -f ${MODEL_DIR}/*.eval; \
+	  rm -f ${MODEL_DIR}/*.compare; \
+	  rm -f ${MODEL_DIR}.done; \
+	  rmdir ${MODEL_DIR}; \
+	fi
 
 
 ## temporary directory with all benchmark results
-${MODEL_DIR}:
+${MODEL_DIR}.done:
 	${MAKE} fetch
 	${MAKE} eval-langpairs
 	${MAKE} cleanup
+	touch $@
 
 ## cleanup some additional workfiles
 .PHONY: cleanup
@@ -76,6 +80,7 @@ cleanup:
 	rm -f ${WORK_DIR}/model/*
 	rmdir ${WORK_DIR}/model
 	rmdir ${WORK_DIR}
+	rmdir ${WORK_HOME}/${MODEL_LANGPAIR}
 
 #-------------------------------------------------
 # fetch model and get supported languages
@@ -89,10 +94,23 @@ ${WORK_DIR}/model/decoder.yml:
 	mkdir -p ${dir $@}
 	wget -q -O ${dir $@}model.zip ${MODEL_URL}
 	unzip -d ${dir $@} ${dir $@}model.zip
+## fix an old problem with the pre-process script
+	mv ${dir $@}preprocess.sh ${dir $@}preprocess-old.sh
+	sed 's#perl -C -pe.*$$#perl -C -pe  "s/(?!\\n)\\p{C}/ /g;" |#' \
+		< ${dir $@}preprocess-old.sh > ${dir $@}preprocess.sh
+	chmod +x ${dir $@}preprocess.sh
+
 
 ## get supported source and target languages
-SRCLANGS = ${shell grep 'source language(s)' ${WORK_DIR}/model/README.md 2>/dev/null | cut -f2 -d: | xargs}
-TRGLANGS = ${shell grep 'target language(s)' ${WORK_DIR}/model/README.md 2>/dev/null | cut -f2 -d: | xargs}
+MODELINFO = ${WORK_DIR}/model/README.md
+ifneq (${wildcard ${MODELINFO}},)
+  SRCLANGS = ${shell grep 'source language(s)' ${MODELINFO} | cut -f2 -d: | xargs}
+  TRGLANGS = ${shell grep 'valid language labels' ${MODELINFO} | cut -f2 -d: | tr '<>' '  ' | xargs}
+ifeq (${words ${TRGLANGS}},0)
+  TRGLANGS = ${shell grep 'target language(s)' ${MODELINFO} | cut -f2 -d: | xargs}
+endif
+endif
+
 
 ## more than one target language
 ## --> need target language labels
@@ -111,7 +129,7 @@ MODEL_LANGPAIRS = ${MODEL_LANGPAIR} \
 ALL_LANGPAIRS = $(notdir ${wildcard ${TESTSET_HOME}/*})
 LANGPAIRS     = ${sort $(filter ${ALL_LANGPAIRS},${MODEL_LANGPAIRS})}
 LANGPAIR      = ${firstword ${LANGPAIRS}}
-LANGPAIRSTR   = ${LANGPAIRS}
+LANGPAIRSTR   = ${LANGPAIR}
 SRC           = ${firstword ${subst -, ,${LANGPAIR}}}
 TRG           = ${lastword ${subst -, ,${LANGPAIR}}}
 TESTSET_DIR   = ${TESTSET_HOME}/${LANGPAIR}
@@ -169,10 +187,14 @@ endif
 output: ${WORK_DIR}/${TESTSET}.${LANGPAIR}.output
 
 ${WORK_DIR}/${TESTSET}.${LANGPAIR}.output: ${WORK_DIR}/${TESTSET}.${LANGPAIR}.input
-	${LOAD_ENV} && ${MARIAN_DECODER} -i $< \
+	if [ -e $< ]; then \
+	  if [ -s $< ]; then \
+	    ${LOAD_ENV} && ${MARIAN_DECODER} -i $< \
 		-c ${WORK_DIR}/model/decoder.yml \
 		${MARIAN_DECODER_FLAGS} |\
-	sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' > $@
+	    sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' > $@; \
+	  fi \
+	fi
 
 
 #-------------------------------------------------
@@ -182,23 +204,33 @@ ${WORK_DIR}/${TESTSET}.${LANGPAIR}.output: ${WORK_DIR}/${TESTSET}.${LANGPAIR}.in
 .PHONY: eval
 eval: ${MODEL_DIR}/${TESTSET}.${LANGPAIR}.eval
 
+## adjust tokenisation to non-space-separated languages
+## TODO: is it correct to simply use 'zh' even for jpn or should we use 'intl'?
+ifneq ($(filter cmn jpn yue zho,${TRG}),)
+  SACREBLEU_PARAMS = --tokenize zh
+endif
+
 ${MODEL_DIR}/${TESTSET}.${LANGPAIR}.eval: 
 	${MAKE} ${WORK_DIR}/${TESTSET}.${LANGPAIR}.output
-	mkdir -p ${dir $@}
-	cat ${WORK_DIR}/${TESTSET}.${LANGPAIR}.output | \
-	sacrebleu ${TESTSET_DIR}/${TESTSET}.${TRG} > $@
-	cat ${WORK_DIR}/${TESTSET}.${LANGPAIR}.output | \
-	sacrebleu --metrics=chrf --width=3 ${TESTSET_DIR}/${TESTSET}.${TRG} >> $@
-	paste -d "\n" \
-		${TESTSET_DIR}/${TESTSET}.${SRC} \
-		${TESTSET_DIR}/${TESTSET}.${TRG} \
-		${WORK_DIR}/${TESTSET}.${LANGPAIR}.output |\
-	sed 	-e "s/&apos;/'/g" \
-		-e 's/&quot;/"/g' \
-		-e 's/&lt;/</g' \
-		-e 's/&gt;/>/g' \
-		-e 's/&amp;/&/g' |\
-	sed 'n;n;G;' > ${@:.eval=.compare}
+	if [ -e ${WORK_DIR}/${TESTSET}.${LANGPAIR}.output ]; then \
+	  if [ -s ${WORK_DIR}/${TESTSET}.${LANGPAIR}.output ]; then \
+		mkdir -p ${dir $@}; \
+		cat ${WORK_DIR}/${TESTSET}.${LANGPAIR}.output | \
+		sacrebleu ${SACREBLEU_PARAMS} ${TESTSET_DIR}/${TESTSET}.${TRG} > $@; \
+		cat ${WORK_DIR}/${TESTSET}.${LANGPAIR}.output | \
+		sacrebleu ${SACREBLEU_PARAMS} --metrics=chrf --width=3 ${TESTSET_DIR}/${TESTSET}.${TRG} >> $@; \
+		paste -d "\n" \
+			${TESTSET_DIR}/${TESTSET}.${SRC} \
+			${TESTSET_DIR}/${TESTSET}.${TRG} \
+			${WORK_DIR}/${TESTSET}.${LANGPAIR}.output |\
+		sed 	-e "s/&apos;/'/g" \
+			-e 's/&quot;/"/g' \
+			-e 's/&lt;/</g' \
+			-e 's/&gt;/>/g' \
+			-e 's/&amp;/&/g' |\
+		sed 'n;n;G;' > ${@:.eval=.compare}; \
+	  fi \
+	fi
 
 
 #-------------------------------------------------
@@ -209,22 +241,25 @@ ${MODEL_DIR}/${TESTSET}.${LANGPAIR}.eval:
 scores: ${MODEL_SCORES}
 
 ${MODEL_SCORES}:
-	${MAKE} ${MODEL_DIR}
-	grep -H BLEU ${MODEL_DIR}/*eval | sort                   > $@.bleu
-	grep -H chrF ${MODEL_DIR}/*eval | sort                   > $@.chrf
-	cut -f1 -d: $@.bleu | rev | cut -f2 -d. | rev            > $@.langs
-	cut -f1 -d: $@.bleu | rev | cut -f1 -d/ | cut -f3- -d. | rev  > $@.testsets
-	cat $@.chrf | rev | cut -f1 -d' ' | rev                  > $@.chrf-scores
-	cut -f2 -d= $@.bleu | cut -f2 -d' '                      > $@.bleu-scores
-	cut -f1 -d: $@.bleu | rev | cut -f2,3 -d/ | \
-	rev | sed 's#^#${MODEL_STORAGE}/#' | sed 's/$$/.zip/'    > $@.urls
-	cut -f1 -d: $@.bleu | sed 's/.eval$$/.compare/' | \
-	xargs wc -l |  grep -v '[0-9] total' | \
-	perl -pe '$$_/=4;print "\n"' | tail -n +2                > $@.nrlines
-	cat $@.bleu | rev | cut -f1 -d' ' | rev | cut -f1 -d')'  > $@.nrwords
-	paste 	$@.langs $@.testsets \
+	${MAKE} ${MODEL_DIR}.done
+	if [ -d ${MODEL_DIR} ]; then \
+	  grep -H BLEU ${MODEL_DIR}/*eval | sort                   > $@.bleu; \
+	  grep -H chrF ${MODEL_DIR}/*eval | sort                   > $@.chrf; \
+	  cut -f1 -d: $@.bleu | rev | cut -f2 -d. | rev            > $@.langs; \
+	  cut -f1 -d: $@.bleu | rev | cut -f1 -d/ | cut -f3- -d. | rev  > $@.testsets; \
+	  cat $@.chrf | rev | cut -f1 -d' ' | rev                  > $@.chrf-scores; \
+	  cut -f2 -d= $@.bleu | cut -f2 -d' '                      > $@.bleu-scores; \
+	  cut -f1 -d: $@.bleu | rev | cut -f2,3 -d/ | \
+	  rev | sed 's#^#${MODEL_STORAGE}/#' | sed 's/$$/.zip/'    > $@.urls; \
+	  cut -f1 -d: $@.bleu | sed 's/.eval$$/.compare/' | \
+	  xargs wc -l |  grep -v '[0-9] total' | \
+	  perl -pe '$$_/=4;print "\n"' | tail -n +2                > $@.nrlines; \
+	  cat $@.bleu | rev | cut -f1 -d' ' | rev | cut -f1 -d')'  > $@.nrwords; \
+	  paste $@.langs $@.testsets \
 		$@.chrf-scores $@.bleu-scores \
-		$@.urls $@.nrlines $@.nrwords                    > $@
-	rm -f 	$@.bleu $@.chrf $@.langs $@.testsets \
+		$@.urls $@.nrlines $@.nrwords                    > $@; \
+	  rm -f $@.bleu $@.chrf $@.langs $@.testsets \
 		$@.chrf-scores $@.bleu-scores \
-		$@.urls $@.nrlines $@.nrwords
+		$@.urls $@.nrlines $@.nrwords; \
+	fi
+
