@@ -7,7 +7,6 @@
 
 SHELL := /bin/bash
 
-
 # job-specific settings (overwrite if necessary)
 # HPC_EXTRA: additional SBATCH commands
 
@@ -40,15 +39,15 @@ LOAD_MARIAN_BUILD_ENV = echo "nothing to load"
 
 
 ifeq (${shell hostname -d 2>/dev/null},mahti.csc.fi)
-  include lib/env/mahti.mk
+  include ${REPOHOME}lib/env/mahti.mk
 else ifeq (${shell hostname},dx6-ibs-p2)
-  include lib/env/dx6.mk
+  include ${REPOHOME}lib/env/dx6.mk
 else ifeq (${shell hostname},dx7-nkiel-4gpu)
-  include lib/env/dx7.mk
+  include ${REPOHOME}lib/env/dx7.mk
 else ifneq ($(wildcard /wrk/tiedeman/research),)
-  include lib/env/taito.mk
+  include ${REPOHOME}lib/env/taito.mk
 else ifeq (${shell hostname --domain 2>/dev/null},bullx)
-  include lib/env/puhti.mk
+  include ${REPOHOME}lib/env/puhti.mk
 endif
 
 

@@ -5,24 +5,24 @@
 #
 
 
-include lib/projects/celtic.mk
-include lib/projects/finland.mk
-include lib/projects/fiskmo.mk
-include lib/projects/memad.mk
-include lib/projects/multilingual.mk
-include lib/projects/opus.mk
-include lib/projects/romance.mk
-include lib/projects/russian.mk
-include lib/projects/sami.mk
-include lib/projects/finno-ugric.mk
-include lib/projects/wikimedia.mk
-include lib/projects/wikimatrix.mk
+include ${REPOHOME}lib/projects/celtic.mk
+include ${REPOHOME}lib/projects/finland.mk
+include ${REPOHOME}lib/projects/fiskmo.mk
+include ${REPOHOME}lib/projects/memad.mk
+include ${REPOHOME}lib/projects/multilingual.mk
+include ${REPOHOME}lib/projects/opus.mk
+include ${REPOHOME}lib/projects/romance.mk
+include ${REPOHOME}lib/projects/russian.mk
+include ${REPOHOME}lib/projects/sami.mk
+include ${REPOHOME}lib/projects/finno-ugric.mk
+include ${REPOHOME}lib/projects/wikimedia.mk
+include ${REPOHOME}lib/projects/wikimatrix.mk
 
-include lib/projects/doclevel.mk
-include lib/projects/simplify.mk
+include ${REPOHOME}lib/projects/doclevel.mk
+include ${REPOHOME}lib/projects/simplify.mk
 
-include lib/projects/tatoeba.mk
+include ${REPOHOME}lib/projects/tatoeba.mk
 
-include lib/projects/americasnlp2021.mk
+include ${REPOHOME}lib/projects/americasnlp2021.mk
 
-include lib/projects/distill.mk
+include ${REPOHOME}lib/projects/distill.mk

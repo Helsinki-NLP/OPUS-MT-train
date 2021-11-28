@@ -282,7 +282,7 @@ TUNE_GPUJOB_SUBMIT  ?=
 
 
 ## existing projects in WORKHOME
-ALL_LANG_PAIRS := ${shell ls ${WORKHOME} | grep -- '-' | grep -v old}
+ALL_LANG_PAIRS := ${shell ls ${WORKHOME} 2>/dev/null | grep -- '-' | grep -v old}
 ALL_BILINGUAL_MODELS := ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" |  grep -v -- '\+'}
 ALL_MULTILINGUAL_MODELS := ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" | grep -- '\+'}
 
@@ -470,10 +470,10 @@ MARIAN_ATT_HEADS        ?= 8
 MARIAN_DIM_EMB          ?= 512
 
 MARIAN_DECODER_GPU    = -b 12 -n1 -d ${MARIAN_GPUS} \
-			--mini-batch 8 --maxi-batch 32 --maxi-batch-sort src \
+			--mini-batch 100 --maxi-batch 200 --maxi-batch-sort src \
 			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop
 MARIAN_DECODER_CPU    = -b 12 -n1 --cpu-threads ${HPC_CORES} \
-			--mini-batch 8 --maxi-batch 32 --maxi-batch-sort src \
+			--mini-batch 8 --maxi-batch 100 --maxi-batch-sort src \
 			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop
 MARIAN_DECODER_FLAGS  = ${MARIAN_DECODER_GPU}
 

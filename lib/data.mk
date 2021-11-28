@@ -710,8 +710,8 @@ endif
 
 
 
-include lib/preprocess.mk
-include lib/bpe.mk
-include lib/sentencepiece.mk
+include ${REPOHOME}lib/preprocess.mk
+include ${REPOHOME}lib/bpe.mk
+include ${REPOHOME}lib/sentencepiece.mk
 
 
