@@ -524,10 +524,10 @@ endif
 
 ## decoder flags (CPU and GPU variants)
 
-MARIAN_DECODER_GPU    = -b 12 -n1 -d ${MARIAN_GPUS} --quiet-translation -w ${MARIAN_WORKSPACE} \
-			--mini-batch 768 --maxi-batch 1000 --maxi-batch-sort src \
+MARIAN_DECODER_GPU    = -b 4 -n1 -d ${MARIAN_GPUS} --quiet-translation -w ${MARIAN_WORKSPACE} \
+			--mini-batch 768 --maxi-batch 2048 --maxi-batch-sort src \
 			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop --fp16
-MARIAN_DECODER_CPU    = -b 12 -n1 --cpu-threads ${HPC_CORES} --quiet-translation \
+MARIAN_DECODER_CPU    = -b 4 -n1 --cpu-threads ${HPC_CORES} --quiet-translation \
 			--mini-batch ${HPC_CORES} --maxi-batch 100 --maxi-batch-sort src \
 			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop --fp16
 MARIAN_DECODER_FLAGS  = ${MARIAN_DECODER_GPU}

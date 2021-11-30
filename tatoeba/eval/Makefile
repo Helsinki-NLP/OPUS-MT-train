@@ -26,6 +26,7 @@ MODEL_URL      = ${MODEL_STORAGE}/${MODEL_DIST}
 
 ## directory with all test sets (submodule OPUS-MT-testsets)
 TESTSET_HOME   := ${REPOHOME}OPUS-MT-testsets/testsets
+TESTSET_INDEX  := ${REPOHOME}OPUS-MT-testsets/index.txt
 
 ## work directory (for the temporary models)
 WORK_HOME      = ${PWD}
@@ -52,7 +53,14 @@ first: $(firstword ${MODEL_EVALZIPS})
 
 
 ## zip-files with all evaluation files
-${MODEL_EVALZIPS}:
+## if the zip file already exists: unpack first
+## to avoid re-doing things
+## TODO: should also fetch from ObjectStorage if it exists there!
+${MODEL_EVALZIPS}: ${TESTSET_INDEX}
+	if [ -e $@ ]; then \
+	  mkdir -p ${@:.eval.zip=}; \
+	  unzip -d ${@:.eval.zip=} $@; \
+	fi
 	${MAKE} MODEL_DIST=${patsubst ${MODEL_HOME}/%.eval.zip,%.zip,$@} eval-model
 
 .PHONY: eval-model
@@ -104,13 +112,12 @@ ${WORK_DIR}/model/decoder.yml:
 ## get supported source and target languages
 MODELINFO = ${WORK_DIR}/model/README.md
 ifneq (${wildcard ${MODELINFO}},)
-  SRCLANGS = ${shell grep 'source language(s)' ${MODELINFO} | cut -f2 -d: | xargs}
-  TRGLANGS = ${shell grep 'valid language labels' ${MODELINFO} | cut -f2 -d: | tr '<>' '  ' | xargs}
+  SRCLANGS = ${shell grep '\* source language(s)' ${MODELINFO} | cut -f2 -d: | xargs}
+  TRGLANGS = ${shell grep '\* valid language labels' ${MODELINFO} | cut -f2 -d: | tr '<>' '  ' | xargs}
 ifeq (${words ${TRGLANGS}},0)
-  TRGLANGS = ${shell grep 'target language(s)' ${MODELINFO} | cut -f2 -d: | xargs}
+  TRGLANGS = ${shell grep '\* target language(s)' ${MODELINFO} | cut -f2 -d: | xargs}
 endif
 endif
-
 
 ## more than one target language
 ## --> need target language labels
@@ -126,7 +133,7 @@ MODEL_LANGPAIRS = ${MODEL_LANGPAIR} \
 	${shell for s in ${SRCLANGS}; do for t in ${TRGLANGS}; do echo "$$s-$$t"; done done}
 
 ## get language pairs for which we have test sets
-ALL_LANGPAIRS = $(notdir ${wildcard ${TESTSET_HOME}/*})
+ALL_LANGPAIRS := $(notdir ${wildcard ${TESTSET_HOME}/*})
 LANGPAIRS     = ${sort $(filter ${ALL_LANGPAIRS},${MODEL_LANGPAIRS})}
 LANGPAIR      = ${firstword ${LANGPAIRS}}
 LANGPAIRSTR   = ${LANGPAIR}
@@ -240,7 +247,7 @@ ${MODEL_DIR}/${TESTSET}.${LANGPAIR}.eval:
 .PHONY: scores
 scores: ${MODEL_SCORES}
 
-${MODEL_SCORES}:
+${MODEL_SCORES}: ${TESTSET_INDEX}
 	${MAKE} ${MODEL_DIR}.done
 	if [ -d ${MODEL_DIR} ]; then \
 	  grep -H BLEU ${MODEL_DIR}/*eval | sort                   > $@.bleu; \

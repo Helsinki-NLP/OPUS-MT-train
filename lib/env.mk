@@ -10,16 +10,16 @@ SHELL := /bin/bash
 # job-specific settings (overwrite if necessary)
 # HPC_EXTRA: additional SBATCH commands
 
-NR_GPUS     = 1
-HPC_NODES   = 1
-HPC_DISK    = 500
-HPC_QUEUE   = serial
+NR_GPUS      = 1
+HPC_NODES    = 1
+HPC_DISK     = 500
+HPC_QUEUE    = serial
 HPC_GPUQUEUE = gpu
-HPC_EXTRA   = 
 
-MEM         = 4g
-THREADS     = 1
-WALLTIME    = 72
+
+MEM          = 4g
+THREADS      = 1
+WALLTIME     = 72
 
 GPUJOB_HPC_MEM ?= 4g
 
@@ -27,6 +27,10 @@ GPU          = v100
 DEVICE       = cuda
 LOAD_CPU_ENV = echo "nothing to load"
 LOAD_GPU_ENV = echo "nothing to load"
+
+## default SLURM option to allocate GPU resources
+HPC_GPU_ALLOCATION = --gres=gpu:${GPU}:${NR_GPUS}
+
 
 WORKHOME = ${PWD}/work
 

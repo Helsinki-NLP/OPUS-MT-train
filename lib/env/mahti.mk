@@ -33,6 +33,10 @@ LOAD_CPU_ENV  = module load ${CPU_MODULES}
 LOAD_GPU_ENV  = module load ${GPU_MODULES}
 
 
+## extra SLURM directives (up to 5 variables)
+HPC_EXTRA1 = \#SBATCH --account=${CSCPROJECT}
+
+
 ## setup for compiling marian-nmt
 
 MARIAN_BUILD_MODULES  = gcc/10.3.0 cuda/11.4.2 cudnn/8.0.4.30-11.0-linux-x64 cmake/3.18.4 openblas/0.3.14-omp openmpi/4.0.5-cuda python-env

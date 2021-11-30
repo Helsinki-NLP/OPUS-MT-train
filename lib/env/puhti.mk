@@ -27,12 +27,20 @@ export PATH := ${APPLHOME}/bin:${PATH}
 
 CPU_MODULES = gcc/8.3.0 cuda/10.1.168 cudnn/7.6.1.34-10.1 intel-mkl/2019.0.4 python-env 
 GPU_MODULES = gcc/8.3.0 cuda/10.1.168 cudnn/7.6.1.34-10.1 intel-mkl/2019.0.4 python-env 
-LOAD_CPU_ENV = module load ${CPU_MODULES}
-LOAD_GPU_ENV = module load ${GPU_MODULES}
+LOAD_CPU_ENV = module load ${CPU_MODULES} && module list
+LOAD_GPU_ENV = module load ${GPU_MODULES} && module list
+
+ifdef HPC_DISK
+  HPC_GPU_ALLOCATION = --gres=gpu:${GPU}:${NR_GPUS},nvme:${HPC_DISK}
+  HPC_CPU_EXTRA1     = \#SBATCH --gres=nvme:${HPC_DISK}
+endif
+
+## extra SLURM directives (up to 3 numbered variables)
+HPC_EXTRA1 = \#SBATCH --account=${CSCPROJECT}
 
 
 BUILD_MODULES  = cmake perl/5.30.0
-LOAD_BUILD_ENV = module load ${BUILD_MODULES}
+LOAD_BUILD_ENV = module load ${BUILD_MODULES} && module list
 
 MARIAN_BUILD_MODULES  = gcc/8.3.0 cuda/10.1.168 cudnn/7.6.1.34-10.1 intel-mkl/2019.0.4 cmake/3.18.2
 LOAD_MARIAN_BUILD_ENV = module purge && module load ${MARIAN_BUILD_MODULES}
