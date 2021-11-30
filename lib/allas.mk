@@ -57,7 +57,7 @@ fetch-data:
 	if [ "$(firstword $(subst -, ,$(subst /, ,$@)))" == "work" ]; then \
 	  b=OPUS-MT-train_$(subst /,-,$(dir $@))${WHOAMI}; \
 	  cd $(dir $@); \
-	  a-put -b $$b --nc --follow-links --override $(notdir $<); \
+	  a-put -t ${TMPDIR} -b $$b --nc --follow-links --override $(notdir $<); \
 	  if [ "`swift list $$b | grep '$(notdir $<).tar$$'`" == "$(notdir $<).tar" ]; then \
 	    rm -fr $(notdir $<); \
 	    touch $(notdir $@); \
@@ -68,6 +68,7 @@ fetch-data:
 	  fi \
 	fi
 
+# -t /scratch/project_2001194
 
 ## fetch work data from allas (now with wget instead of a-get)
 ## advantage of wget: don't need to login

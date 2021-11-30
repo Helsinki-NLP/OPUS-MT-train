@@ -18,13 +18,14 @@ endif
 ## submit job to gpu queue
 ##	echo '#SBATCH --exclude=r18g08' >> $@
 
+SLURM_JOBNAME ?= $(subst -,,${LANGPAIRSTR})
 
 %.submit:
 	mkdir -p ${WORKDIR}
 	echo '#!/bin/bash -l' > $@
-	echo '#SBATCH -J "$(subst -,,${LANGPAIRSTR})${@:.submit=}"' >>$@
-	echo '#SBATCH -o $(subst -,,${LANGPAIRSTR})${@:.submit=}.out.%j' >> $@
-	echo '#SBATCH -e $(subst -,,${LANGPAIRSTR})${@:.submit=}.err.%j' >> $@
+	echo '#SBATCH -J "$(SLURM_JOBNAME)${@:.submit=}"' >>$@
+	echo '#SBATCH -o $(SLURM_JOBNAME)${@:.submit=}.out.%j' >> $@
+	echo '#SBATCH -e $(SLURM_JOBNAME)${@:.submit=}.err.%j' >> $@
 	echo '#SBATCH --mem=${HPC_MEM}' >> $@
 ifdef EMAIL
 	echo '#SBATCH --mail-type=END' >> $@
@@ -33,21 +34,16 @@ endif
 	echo '#SBATCH -n 1' >> $@
 	echo '#SBATCH -N 1' >> $@
 	echo '#SBATCH -p ${HPC_GPUQUEUE}' >> $@
-ifeq (${shell hostname -d 2>/dev/null},mahti.csc.fi)
-	echo '#SBATCH --account=${CSCPROJECT}' >> $@
-endif
-ifeq (${shell hostname --domain 2>/dev/null},bullx)
-	echo '#SBATCH --account=${CSCPROJECT}' >> $@
-	echo '#SBATCH --gres=gpu:${GPU}:${NR_GPUS},nvme:${HPC_DISK}' >> $@
-else
-	echo '#SBATCH --gres=gpu:${GPU}:${NR_GPUS}' >> $@
-endif
+	echo '#SBATCH ${HPC_GPU_ALLOCATION}' >> $@
 	echo '#SBATCH -t ${HPC_TIME}:00' >> $@
-	echo 'module use -a /proj/nlpl/modules' >> $@
-	for m in ${GPU_MODULES}; do \
-	  echo "module load $$m" >> $@; \
-	done
-	echo 'module list' >> $@
+	echo '${HPC_EXTRA}' >> $@
+	echo '${HPC_EXTRA1}' >> $@
+	echo '${HPC_EXTRA2}' >> $@
+	echo '${HPC_EXTRA3}' >> $@
+	echo '${HPC_GPU_EXTRA1}' >> $@
+	echo '${HPC_GPU_EXTRA2}' >> $@
+	echo '${HPC_GPU_EXTRA3}' >> $@
+	echo '${LOAD_GPU_ENV}'           >> $@
 	echo 'cd $${SLURM_SUBMIT_DIR:-.}' >> $@
 	echo 'pwd' >> $@
 	echo 'echo "Starting at `date`"' >> $@
@@ -65,31 +61,26 @@ endif
 %.submitcpu:
 	mkdir -p ${WORKDIR}
 	echo '#!/bin/bash -l' > $@
-	echo '#SBATCH -J "$(subst -,,${LANGPAIRSTR})${@:.submitcpu=}"' >>$@
-	echo '#SBATCH -o $(subst -,,${LANGPAIRSTR})${@:.submitcpu=}.out.%j' >> $@
-	echo '#SBATCH -e $(subst -,,${LANGPAIRSTR})${@:.submitcpu=}.err.%j' >> $@
-	echo '#SBATCH --mem=${HPC_MEM}' >> $@
+	echo '#SBATCH -J "$(SLURM_JOBNAME)${@:.submitcpu=}"'      >>$@
+	echo '#SBATCH -o $(SLURM_JOBNAME)${@:.submitcpu=}.out.%j' >> $@
+	echo '#SBATCH -e $(SLURM_JOBNAME)${@:.submitcpu=}.err.%j' >> $@
+	echo '#SBATCH --mem=${HPC_MEM}'                           >> $@
 ifdef EMAIL
-	echo '#SBATCH --mail-type=END' >> $@
-	echo '#SBATCH --mail-user=${EMAIL}' >> $@
-endif
-ifeq (${shell hostname -d 2>/dev/null},mahti.csc.fi)
-	echo '#SBATCH --account=${CSCPROJECT}' >> $@
-endif
-ifeq (${shell hostname --domain 2>/dev/null},bullx)
-	echo '#SBATCH --account=${CSCPROJECT}' >> $@
-	echo '#SBATCH --gres=nvme:${HPC_DISK}' >> $@
+	echo '#SBATCH --mail-type=END'                            >> $@
+	echo '#SBATCH --mail-user=${EMAIL}'                       >> $@
 endif
 	echo '#SBATCH -n ${HPC_CORES}' >> $@
 	echo '#SBATCH -N ${HPC_NODES}' >> $@
 	echo '#SBATCH -p ${HPC_QUEUE}' >> $@
 	echo '#SBATCH -t ${HPC_TIME}:00' >> $@
 	echo '${HPC_EXTRA}' >> $@
-	echo 'module use -a /proj/nlpl/modules' >> $@
-	for m in ${CPU_MODULES}; do \
-	  echo "module load $$m" >> $@; \
-	done
-	echo 'module list' >> $@
+	echo '${HPC_EXTRA1}' >> $@
+	echo '${HPC_EXTRA2}' >> $@
+	echo '${HPC_EXTRA3}' >> $@
+	echo '${HPC_CPU_EXTRA1}' >> $@
+	echo '${HPC_CPU_EXTRA2}' >> $@
+	echo '${HPC_CPU_EXTRA3}' >> $@
+	echo '${LOAD_GPU_ENV}'           >> $@
 	echo 'cd $${SLURM_SUBMIT_DIR:-.}' >> $@
 	echo 'pwd' >> $@
 	echo 'echo "Starting at `date`"' >> $@
