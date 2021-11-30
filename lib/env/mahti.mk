@@ -21,9 +21,17 @@ SPM_HOME      = ${MARIAN_HOME}
 HPC_QUEUE     = medium
 SUBMIT_PREFIX = submitcpu
 GPU           = a100
-HPC_GPUQUEUE  = gpusmall
-# HPC_GPUQUEUE  = gpumedium
 WALLTIME      = 36
+
+## select queue depending on the number of GPUs allocated
+ifeq (${NR_GPUS},1)
+ HPC_GPUQUEUE  = gpusmall
+else ifeq (${NR_GPUS},2)
+ HPC_GPUQUEUE  = gpusmall
+else
+ HPC_GPUQUEUE  = gpumedium
+endif 
+
 export PATH := ${APPLHOME}/bin:${PATH}
 
 

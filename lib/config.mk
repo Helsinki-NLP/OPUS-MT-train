@@ -239,10 +239,6 @@ SMALLER_BITEXTS  := ${call get-bigger-bitexts,${SRC},${TRG},${DEVMINSIZE}}
 DEVSET ?= ${firstword 	${filter ${POTENTIAL_DEVSETS},${BIGGER_BITEXTS}} \
 			${filter ${POTENTIAL_DEVSETS},${SMALLER_BITEXTS}}}
 
-## why would we need foreach?
-#DEVSET ?= ${firstword 	${foreach c,${POTENTIAL_DEVSETS},${filter ${c},${BIGGER_BITEXTS}}} \
-# 			${foreach c,${POTENTIAL_DEVSETS},${filter ${c},${SMALLER_BITEXTS}}}}
-
 
 
 ## increase dev/test sets for Tatoeba (very short sentences!)
@@ -395,6 +391,7 @@ MODELTYPES   = 	transformer \
 		transformer-big \
 		transformer-align \
 		transformer-big-align \
+		transformer-bigger-align \
 		transformer-small-align \
 		transformer-tiny-align \
 		transformer-tiny

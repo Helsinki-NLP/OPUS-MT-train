@@ -381,6 +381,8 @@ else
 	${MAKE} MODELTYPE=transformer-big-align ${@:-big-align=}
 endif
 
+%-bigger-align:
+	${MAKE} MODELTYPE=transformer-bigger-align ${@:-bigger-align=}
 
 
 ## run a multigpu job (2 or 4 GPUs)

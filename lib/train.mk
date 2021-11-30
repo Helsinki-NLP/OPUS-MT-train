@@ -181,6 +181,15 @@ endif
 
 #  MARIAN_DIM_EMB = 1024
 
+ifeq (${MODELTYPE},transformer-bigger-align)
+  MARIAN_ENC_DEPTH = 12
+  MARIAN_ATT_HEADS = 16
+  GPUJOB_HPC_MEM = 16g
+  MARIAN_DIM_EMB = 1024
+  MARIAN_TRAIN_PREREQS += ${TRAIN_ALG}
+  MARIAN_EXTRA += --guided-alignment ${TRAIN_ALG}
+endif
+
 
 
 ## finally: recipe for training transformer model
@@ -198,6 +207,10 @@ ifneq (${MODEL_LATEST},${MODEL_START})
 endif
 endif
 endif
+##--------------------------------------------------------------------
+## remove yaml-file for parameters to avoid incompatibilities
+## TODO: do we need this
+	rm -f ${@:.done=.yml}
 ##--------------------------------------------------------------------
 	${LOAD_ENV} && ${MARIAN_TRAIN} ${MARIAN_EXTRA} \
 	${MARIAN_STOP_CRITERIA} \
@@ -222,13 +235,13 @@ endif
 	--label-smoothing 0.1 \
         --learn-rate 0.0003 --lr-warmup 16000 --lr-decay-inv-sqrt 16000 --lr-report \
         --optimizer-params 0.9 0.98 1e-09 --clip-norm 5 \
+        --sync-sgd \
+        --exponential-smoothing
         ${MARIAN_TIE_EMBEDDINGS} \
 	--devices ${MARIAN_GPUS} \
-        --sync-sgd \
 	--seed ${SEED} \
-	--sqlite \
 	--tempdir ${TMPDIR} \
-        --exponential-smoothing
+	--sqlite
 	touch $@
 
 
