@@ -40,13 +40,6 @@ else
 endif
 
 
-## OLD: set to first and last lang
-## --> this makes the evaluation look like it is one lang-pair
-##
-# SRC ?= ${firstword ${SRCLANGS}}
-# TRG ?= ${lastword ${TRGLANGS}}
-
-
 ##----------------------------------------------------------------------
 ## SKIP_LANGPAIRS can be used to skip certain language pairs
 ## in data preparation for multilingual models
@@ -111,7 +104,7 @@ MAX_OVER_SAMPLING ?= 50
 ## bitext has equal number of lines in source and target
 ## ---> this only prints a warning if not
 ##----------------------------------------------------------------------
-# CHECK_TRAINDATA_SIZE
+# CHECK_TRAINDATA_SIZE = 1
 
 
 # sorted languages and langpair used to match resources in OPUS
@@ -126,8 +119,8 @@ LANGPAIRSTR = ${LANGSRCSTR}-${LANGTRGSTR}
 
 
 ## for monolingual things
-LANGS ?= ${SRCLANGS}
-LANGID ?= ${firstword ${LANGS}}
+LANGS   ?= ${SRCLANGS}
+LANGID  ?= ${firstword ${LANGS}}
 LANGSTR ?= ${subst ${SPACE},+,$(LANGS)}
 
 
@@ -232,6 +225,7 @@ OPUSLANGS := ${call get-opus-langs}
 ##   - BIGGER_BITEXTS lists all bitext with more than DEVSMALLSIZE sentence pairs
 ##   - SMALLER_BITEXTS lists potentially smaller bitexts but at least DEVMINSIZE big
 ##   - DEVSET is the first of the potential devset that exists with sufficient size
+## TODO: what do we do if there is no devset?
 
 POTENTIAL_DEVSETS = Tatoeba GlobalVoices infopankki JW300 bible-uedin
 BIGGER_BITEXTS   := ${call get-bigger-bitexts,${SRC},${TRG},${DEVSMALLSIZE}}
@@ -278,8 +272,8 @@ TUNE_GPUJOB_SUBMIT  ?=
 
 
 ## existing projects in WORKHOME
-ALL_LANG_PAIRS := ${shell ls ${WORKHOME} 2>/dev/null | grep -- '-' | grep -v old}
-ALL_BILINGUAL_MODELS := ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" |  grep -v -- '\+'}
+ALL_LANG_PAIRS          := ${shell ls ${WORKHOME} 2>/dev/null | grep -- '-' | grep -v old}
+ALL_BILINGUAL_MODELS    := ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" |  grep -v -- '\+'}
 ALL_MULTILINGUAL_MODELS := ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" | grep -- '\+'}
 
 
@@ -388,15 +382,20 @@ MODEL        =  ${MODEL_SUBDIR}${DATASET}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
 ## configuration for each type is in lib/train.mk
 
 MODELTYPES   = 	transformer \
-		transformer-big \
 		transformer-align \
+		transformer-base \
+		transformer-base-align \
+		transformer-big \
 		transformer-big-align \
-		transformer-bigger-align \
 		transformer-small-align \
-		transformer-tiny-align \
-		transformer-tiny
+		transformer-tiny \
+		transformer-tiny-align
+
+## default model type
+
 MODELTYPE    =  transformer-align
 NR           =  1
+
 
 MODEL_BASENAME   = ${MODEL}.${MODELTYPE}.model${NR}
 MODEL_VALIDLOG   = ${MODEL}.${MODELTYPE}.valid${NR}.log
@@ -435,7 +434,6 @@ endif
 ## also allow models that are of the same type but with/without guided alignment
 ## --> this will be used if the flag CONTINUE_EXISTING is set on
 
-# ifdef CONTINUE_EXISTING
 ifeq (${CONTINUE_EXISTING},1)
   MODEL_LATEST = $(firstword \
 	${shell ls -t 	${WORKDIR}/*.${PRE_SRC}-${PRE_TRG}.*.model[0-9].npz \
@@ -447,9 +445,6 @@ ifeq (${CONTINUE_EXISTING},1)
   MODEL_LATEST_OPTIMIZER = $(shell echo "${MODEL_LATEST}" | \
 		sed 's|.best-perplexity.npz|.optimizer.npz|')
 endif
-
-## old:
-#	${shell ls -t ${WORKDIR}/*.${PRE_SRC}-${PRE_TRG}.*.best-perplexity.npz \
 
 
 
@@ -480,12 +475,23 @@ MARIAN_DIM_EMB          ?= 512
 
 
 
-## TODO: currently marianNMT crashes with workspace > 26000
+## TODO: currently marianNMT crashes with workspace > 26000 (does it?)
 ## TODO: move this to individual env settings?
+##       problem: we need to know MODELTYPE before we can set this
 ifeq (${GPU},p100)
   MARIAN_WORKSPACE = 13000
+
 else ifeq (${GPU},a100)
+ifeq ($(subst -align,,${MODELTYPE}),transformer-big)
+  MARIAN_WORKSPACE = 20000
+else ifeq ($(subst -align,,${MODELTYPE}),transformer-small)
+  MARIAN_WORKSPACE = 10000
+else ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny)
+  MARIAN_WORKSPACE = 10000
+else
   MARIAN_WORKSPACE = 30000
+endif
+
 else ifeq (${GPU},v100)
 ifeq ($(subst -align,,${MODELTYPE}),transformer-big)
   MARIAN_WORKSPACE = 20000
@@ -494,36 +500,23 @@ else ifeq ($(subst -align,,${MODELTYPE}),transformer-small)
 else ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny)
   MARIAN_WORKSPACE = 10000
 else
-  # MARIAN_WORKSPACE = 30000
-  # MARIAN_WORKSPACE = 26000
   MARIAN_WORKSPACE = 24000
 endif
+
 else
   MARIAN_WORKSPACE = 10000
 endif
 
-## check whether we have GPUs available
-## if not: use CPU mode for decoding
-ifneq ($(wildcard ${NVIDIA_SMI}),)
-ifeq (${shell nvidia-smi | grep failed | wc -l},1)
-  MARIAN_DECODER_FLAGS = ${MARIAN_DECODER_CPU}
-  MARIAN_EXTRA = --cpu-threads ${HPC_CORES}
-endif
-else
-  MARIAN_DECODER_FLAGS = ${MARIAN_DECODER_CPU}
-  MARIAN_EXTRA = --cpu-threads ${HPC_CORES}
-endif
+
 
 ## weights associated with training examples
 ifneq ("$(wildcard ${TRAIN_WEIGHTS})","")
 	MARIAN_TRAIN_WEIGHTS = --data-weighting ${TRAIN_WEIGHTS}
 endif
 
-### training a model with Marian NMT
-##
+
 ## NR allows to train several models for proper ensembling
 ## (with shared vocab)
-##
 ## DANGER: if several models are started at the same time
 ## then there is some racing issue with creating the vocab!
 
@@ -536,14 +529,18 @@ endif
 
 ## decoder flags (CPU and GPU variants)
 
-MARIAN_DECODER_GPU    = -b 4 -n1 -d ${MARIAN_GPUS} --quiet-translation -w ${MARIAN_WORKSPACE} \
+ifeq ($(GPU_AVAILABLE),1)
+  MARIAN_DECODER_FLAGS = -b 4 -n1 -d ${MARIAN_GPUS} --fp16 \
+			--quiet-translation -w ${MARIAN_WORKSPACE} \
 			--mini-batch 768 --maxi-batch 2048 --maxi-batch-sort src \
-			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop --fp16
-MARIAN_DECODER_CPU    = -b 4 -n1 --cpu-threads ${HPC_CORES} --quiet-translation \
+			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop
+else
+  MARIAN_DECODER_FLAGS = -b 4 -n1 --cpu-threads ${HPC_CORES} --fp16 \
+			--quiet-translation \
 			--mini-batch ${HPC_CORES} --maxi-batch 100 --maxi-batch-sort src \
-			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop --fp16
-MARIAN_DECODER_FLAGS  = ${MARIAN_DECODER_GPU}
-
+			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop
+  MARIAN_EXTRA = --cpu-threads ${HPC_CORES}
+endif
 
 
 ## make some data size-specific configuration parameters
@@ -575,7 +572,7 @@ ${WORKDIR}/${MODELCONFIG}:
 	fi; \
 	if [ $$s -gt ${LARGEST_TRAINSIZE} ]; then \
 	  echo "# ${LANGPAIRSTR} training data bigger than ${LARGEST_TRAINSIZE}" > $@; \
-	  echo "GPUJOB_HPC_MEM = 8g"       >> $@; \
+	  echo "GPUJOB_HPC_MEM = 8g"        >> $@; \
 	  echo "GPUJOB_SUBMIT  = -multigpu" >> $@; \
 	  echo "BPESIZE    = ${BPESIZE}"    >> $@; \
 	  echo "DEVSIZE    = ${DEVSIZE}"    >> $@; \

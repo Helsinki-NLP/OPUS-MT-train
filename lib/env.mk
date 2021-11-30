@@ -41,6 +41,7 @@ WORKHOME = ${PWD}/work
 LOAD_BUILD_ENV        = echo "nothing to load"
 LOAD_MARIAN_BUILD_ENV = echo "nothing to load"
 
+## load system-specific environments
 
 ifeq (${shell hostname -d 2>/dev/null},mahti.csc.fi)
   include ${REPOHOME}lib/env/mahti.mk
@@ -137,6 +138,7 @@ ifeq (${shell nvidia-smi | grep failed | wc -l},1)
   MARIAN_BUILD_OPTIONS += -DCOMPILE_CUDA=off
   LOAD_ENV = ${LOAD_CPU_ENV}
 else
+  GPU_AVAILABLE = 1
   LOAD_ENV = ${LOAD_GPU_ENV}
 endif
 else

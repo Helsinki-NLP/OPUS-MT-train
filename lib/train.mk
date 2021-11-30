@@ -2,7 +2,7 @@
 
 
 #------------------------------------------------------------------------
-# shared vocabulary:
+# vocabulary files:
 #   - for SentencePiece models: take vocabulary from the spm-model
 #   - otherwise: create vocab from training data
 #   - always re-use existing vocabulary files (never overwrite!)
@@ -101,11 +101,11 @@ ifndef SKIP_VALIDATION
   MARIAN_STOP_CRITERIA = --early-stopping ${MARIAN_EARLY_STOPPING} \
         --valid-freq ${MARIAN_VALID_FREQ} \
         --valid-sets ${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG} \
-        --valid-metrics perplexity \
+        --valid-metrics perplexity ce-mean-words bleu-detok \
         --valid-mini-batch ${MARIAN_VALID_MINI_BATCH} \
+	--valid-max-length 100 \
 	--valid-log ${WORKDIR}/${MODEL}.${MODELTYPE}.valid${NR}.log \
-        --beam-size 12 --normalize 1 --allow-unk \
-	--overwrite --keep-best
+        --beam-size 6 --normalize 1 --allow-unk
   MODEL_FINAL = ${WORKDIR}/${MODEL_BASENAME}.npz.best-perplexity.npz
 else
   MODEL_FINAL = ${WORKDIR}/${MODEL_BASENAME}.npz
@@ -115,6 +115,8 @@ endif
 ## tie all embeddings if we have a common vocab
 ## for target and source language
 ## otherwise: only tie target embeddings
+## TODO: if we use pre-defined tasks than tied-embeddings-all is set to true
+##       How can we unset it if it should not be used?
 
 ifeq ($(USE_SPM_VOCAB),1)
   MARIAN_TIE_EMBEDDINGS = --tied-embeddings
@@ -130,69 +132,108 @@ ifneq (${wildcard ${PRE_TRAINED_MODEL}},)
 endif
 
 
+##------------------------------------------------
+## transformer models (not using pre-defined tasks)
+##
 ## dependencies and extra parameters
 ## for different models and guided alignment
+##------------------------------------------------
 
-ifeq (${MODELTYPE},transformer-align)
+
+## if substring '-align' is part of the MODELTYPE:
+## add parameters and dependencies for guided alignment
+ifneq ($(subst -align,,${MODELTYPE}),${MODELTYPE})
   MARIAN_TRAIN_PREREQS += ${TRAIN_ALG}
   MARIAN_EXTRA += --guided-alignment ${TRAIN_ALG}
 endif
 
-ifeq (${MODELTYPE},transformer-small-align)
-  MARIAN_ENC_DEPTH = 6
-  MARIAN_DEC_DEPTH = 2
-  MARIAN_ATT_HEADS = 8
-  MARIAN_DIM_EMB = 512
-  MARIAN_TRAIN_PREREQS += ${TRAIN_ALG}
-  MARIAN_EXTRA += --guided-alignment ${TRAIN_ALG} --transformer-decoder-autoreg rnn --dec-cell ssru
-endif
-
-ifeq (${MODELTYPE},transformer-tiny-align)
+ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny)
   MARIAN_ENC_DEPTH = 3
   MARIAN_DEC_DEPTH = 2
   MARIAN_ATT_HEADS = 8
   MARIAN_DIM_EMB = 256
   MARIAN_TRAIN_PREREQS += ${TRAIN_ALG}
-  MARIAN_EXTRA += --guided-alignment ${TRAIN_ALG} --transformer-decoder-autoreg rnn --dec-cell ssru
+  MARIAN_EXTRA += --transformer-decoder-autoreg rnn \
+		--dec-cell ssru \
+		--fp16
 endif
 
-ifeq (${MODELTYPE},transformer-tiny)
+ifeq ($(subst -align,,${MODELTYPE}),transformer-small)
   MARIAN_ENC_DEPTH = 3
   MARIAN_DEC_DEPTH = 2
   MARIAN_ATT_HEADS = 8
   MARIAN_DIM_EMB = 256
   MARIAN_TRAIN_PREREQS += ${TRAIN_ALG}
-  MARIAN_EXTRA += --transformer-decoder-autoreg rnn --dec-cell ssru
+  MARIAN_EXTRA += --transformer-decoder-autoreg rnn \
+		--dec-cell ssru \
+		--fp16
 endif
 
-ifeq (${MODELTYPE},transformer-big-align)
-  MARIAN_ENC_DEPTH = 12
-  MARIAN_ATT_HEADS = 16
-  MARIAN_TRAIN_PREREQS += ${TRAIN_ALG}
-  MARIAN_EXTRA += --guided-alignment ${TRAIN_ALG}
+##------------------------------------------------
+## transformer-base
+## transformer-big
+##
+## look at task aliases:
+## https://github.com/marian-nmt/marian-dev/blob/master/src/common/aliases.cpp
+##------------------------------------------------
+
+ifeq ($(subst -align,,${MODELTYPE}),transformer-base)
+  MARIAN_TRAINING_PARAMETER = --task transformer-base
+endif
+
+ifeq ($(subst -align,,${MODELTYPE}),transformer-big)
+  MARIAN_TRAINING_PARAMETER = \
+	--task transformer-big \
+	--optimizer-delay 2
   GPUJOB_HPC_MEM = 16g
 endif
 
-ifeq (${MODELTYPE},transformer-big)
-  MARIAN_ENC_DEPTH = 12
-  MARIAN_ATT_HEADS = 16
-  GPUJOB_HPC_MEM = 16g
-endif
-
-#  MARIAN_DIM_EMB = 1024
-
-ifeq (${MODELTYPE},transformer-bigger-align)
-  MARIAN_ENC_DEPTH = 12
-  MARIAN_ATT_HEADS = 16
-  GPUJOB_HPC_MEM = 16g
-  MARIAN_DIM_EMB = 1024
-  MARIAN_TRAIN_PREREQS += ${TRAIN_ALG}
-  MARIAN_EXTRA += --guided-alignment ${TRAIN_ALG}
-endif
 
 
+##------------------------------------------------
+## set training parameters
+## (unless they are already set above)
+##------------------------------------------------
 
-## finally: recipe for training transformer model
+MARIAN_TRAINING_PARAMETER ?= \
+	--type transformer \
+        --max-length ${MARIAN_MAX_LENGTH} \
+	--maxi-batch ${MARIAN_MAXI_BATCH} \
+        --mini-batch-fit \
+	--max-length-factor 3 \
+        --enc-depth ${MARIAN_ENC_DEPTH} \
+	--dec-depth ${MARIAN_DEC_DEPTH} \
+	--dim-emb ${MARIAN_DIM_EMB} \
+        ${MARIAN_TIE_EMBEDDINGS} \
+        --transformer-heads ${MARIAN_ATT_HEADS} \
+        --transformer-dropout ${MARIAN_DROPOUT} \
+        --transformer-postprocess-emb d \
+        --transformer-postprocess dan \
+	--label-smoothing 0.1 \
+        --learn-rate 0.0003 \
+	--lr-warmup 16000 \
+	--lr-decay-inv-sqrt 16000 \
+	--lr-report \
+        --optimizer-params 0.9 0.98 1e-09 \
+	--clip-norm 5 \
+        --sync-sgd \
+        --exponential-smoothing
+
+## TODO: --fp16 seems to have changed from previous versions:
+## --> cannot continue training with newer version
+# old: --precision float16 float32 float32 --cost-scaling 7 2000 2 0.05 10 1
+# new: --precision float16 float32 --cost-scaling 0 1000 2 0.05 10 1e-5f
+#
+## --> leave it out for the time being?
+## --> or: only add it of we don't continue training with existing models?
+##     (it seems that it can take the info from the internal config info)
+
+
+
+
+##------------------------------------------------
+## finally: recipe for training the model
+##------------------------------------------------
 
 ${MARIAN_MODELS_DONE}: ${MARIAN_TRAIN_PREREQS}
 	mkdir -p ${dir $@}
@@ -212,67 +253,27 @@ endif
 ## TODO: do we need this
 	rm -f ${@:.done=.yml}
 ##--------------------------------------------------------------------
-	${LOAD_ENV} && ${MARIAN_TRAIN} ${MARIAN_EXTRA} \
-	${MARIAN_STOP_CRITERIA} \
-        --model $(@:.done=.npz) \
-        --train-sets ${word 1,$^} ${word 2,$^} ${MARIAN_TRAIN_WEIGHTS} \
-        --max-length ${MARIAN_MAX_LENGTH} \
-        --vocabs ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB} \
-        --mini-batch-fit \
-	-w ${MARIAN_WORKSPACE} \
-	--maxi-batch ${MARIAN_MAXI_BATCH} \
-	--save-freq ${MARIAN_SAVE_FREQ} \
-	--disp-freq ${MARIAN_DISP_FREQ} \
-        --log $(@:.model${NR}.done=.train${NR}.log) \
-	--type transformer \
-        --enc-depth ${MARIAN_ENC_DEPTH} \
-	--dec-depth ${MARIAN_DEC_DEPTH} \
-	--dim-emb ${MARIAN_DIM_EMB} \
-        --transformer-heads ${MARIAN_ATT_HEADS} \
-        --transformer-postprocess-emb d \
-        --transformer-postprocess dan \
-        --transformer-dropout ${MARIAN_DROPOUT} \
-	--label-smoothing 0.1 \
-        --learn-rate 0.0003 --lr-warmup 16000 --lr-decay-inv-sqrt 16000 --lr-report \
-        --optimizer-params 0.9 0.98 1e-09 --clip-norm 5 \
-        --sync-sgd \
-        --exponential-smoothing
-        ${MARIAN_TIE_EMBEDDINGS} \
-	--devices ${MARIAN_GPUS} \
-	--seed ${SEED} \
-	--tempdir ${TMPDIR} \
-	--sqlite
+## TODO: LOAD_ENV - do we need to do that each time we call marian?
+##       shouldn't that be rather the standard environdment that we
+##       load anyway before calling make? It is already set in the
+##       SLURM scripts ...
+##--------------------------------------------------------------------
+	${LOAD_ENV} && ${MARIAN_TRAIN} \
+		${MARIAN_TRAINING_PARAMETER} \
+		${MARIAN_EXTRA} \
+		${MARIAN_STOP_CRITERIA} \
+		--workspace ${MARIAN_WORKSPACE} \
+		--model $(@:.done=.npz) \
+		--train-sets ${word 1,$^} ${word 2,$^} ${MARIAN_TRAIN_WEIGHTS} \
+		--vocabs ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB} \
+		--save-freq ${MARIAN_SAVE_FREQ} \
+		--disp-freq ${MARIAN_DISP_FREQ} \
+		--log $(@:.model${NR}.done=.train${NR}.log) \
+		--devices ${MARIAN_GPUS} \
+		--seed ${SEED} \
+		--tempdir ${TMPDIR} \
+		--overwrite \
+		--keep-best \
+		--sqlite
 	touch $@
 
-
-## TODO: --fp16 seems to have changed from previous versions:
-## --> cannot continue training with newer version
-# old: --precision float16 float32 float32 --cost-scaling 7 2000 2 0.05 10 1
-# new: --precision float16 float32 --cost-scaling 0 1000 2 0.05 10 1e-5f
-#
-## --> leave it out for the time being?
-## --> or: only add it of we don't continue training with existing models?
-##     (it seems that it can take the info from the internal config info)
-
-
-
-
-
-
-
-## TODO: do we need the following recipes?
-
-## resume training on an existing model
-resume:
-	if [ -e ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.npz.best-perplexity.npz ]; then \
-	  cp ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.npz.best-perplexity.npz \
-	     ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.npz; \
-	fi
-	sleep 1
-	rm -f ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
-	${MAKE} train
-
-is-done:
-	@if [ -e ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done ]; then \
-	  echo "............. ${LANGPAIRSTR}/${MODEL}.${MODELTYPE}.model${NR}.done"; \
-	fi

@@ -183,8 +183,6 @@ all: ${WORKDIR}/${MODELCONFIG}
 	${MAKE} compare
 	${MAKE} eval-testsets
 
-
-
 #---------------------------------------------------------------------
 # run everything including backtranslation of wiki-data
 #

@@ -372,17 +372,18 @@ endif
 	${@:-pivot=}
 
 
-%-big-align:
-ifneq (${wildcard ${MODEL_FINAL}},)
-	${MAKE} PRE_TRAINED_MODEL=${MODEL_FINAL} MODELTYPE=transformer-big-align ${@:-big-align=}
-else ifneq (${wildcard ${MODEL_START}},)
-	${MAKE} PRE_TRAINED_MODEL=${MODEL_START} MODELTYPE=transformer-big-align ${@:-big-align=}
-else
-	${MAKE} MODELTYPE=transformer-big-align ${@:-big-align=}
-endif
+# %-big-align:
+# ifneq (${wildcard ${MODEL_FINAL}},)
+# 	${MAKE} PRE_TRAINED_MODEL=${MODEL_FINAL} MODELTYPE=transformer-big-align ${@:-big-align=}
+# else ifneq (${wildcard ${MODEL_START}},)
+# 	${MAKE} PRE_TRAINED_MODEL=${MODEL_START} MODELTYPE=transformer-big-align ${@:-big-align=}
+# else
+# 	${MAKE} MODELTYPE=transformer-big-align ${@:-big-align=}
+# endif
 
-%-bigger-align:
-	${MAKE} MODELTYPE=transformer-bigger-align ${@:-bigger-align=}
+%-big-align:
+	${MAKE} MODELTYPE=transformer-big-align ${@:-big-align=}
+
 
 
 ## run a multigpu job (2 or 4 GPUs)
@@ -395,13 +396,6 @@ endif
 
 %-gpu23:
 	${MAKE} NR_GPUS=2 MARIAN_GPUS='2 3' ${@:-gpu23=}
-
-
-## run on CPUs (translate-cpu, eval-cpu, translate-ensemble-cpu, ...)
-%-cpu:
-	${MAKE} LOAD_ENV='${LOAD_CPU_ENV}' \
-		MARIAN_DECODER_FLAGS="${MARIAN_DECODER_CPU}" \
-	${@:-cpu=}
 
 
 ## document level models

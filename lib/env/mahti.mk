@@ -9,7 +9,6 @@ CSCPROJECT   = project_2003288
 # CSCPROJECT   = project_2003093
 # CSCPROJECT   = project_2002982
 WORKHOME      = ${shell realpath ${PWD}/work}
-LOCAL_SCRATCH = /scratch/${CSCPROJECT}
 APPLHOME      = /projappl/project_2003093/
 OPUSHOME      = /projappl/nlpl/data/OPUS
 MOSESHOME     = ${APPLHOME}/install/mosesdecoder
@@ -22,6 +21,10 @@ HPC_QUEUE     = medium
 SUBMIT_PREFIX = submitcpu
 GPU           = a100
 WALLTIME      = 36
+
+## default local scratch if not set otherwise
+LOCAL_SCRATCH ?= /scratch/${CSCPROJECT}
+
 
 ## select queue depending on the number of GPUs allocated
 ifeq (${NR_GPUS},1)
@@ -40,6 +43,9 @@ GPU_MODULES   = gcc/10.3.0 cuda/11.4.2 cudnn/8.0.4.30-11.0-linux-x64 openblas/0.
 LOAD_CPU_ENV  = module load ${CPU_MODULES}
 LOAD_GPU_ENV  = module load ${GPU_MODULES}
 
+ifdef HPC_DISK
+  HPC_GPU_ALLOCATION = --gres=gpu:${GPU}:${NR_GPUS},nvme:${HPC_DISK}
+endif
 
 ## extra SLURM directives (up to 5 variables)
 HPC_EXTRA1 = \#SBATCH --account=${CSCPROJECT}
