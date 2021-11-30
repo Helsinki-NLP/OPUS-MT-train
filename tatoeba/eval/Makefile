@@ -79,7 +79,7 @@ ${MODEL_DIR}.done:
 	${MAKE} fetch
 	${MAKE} eval-langpairs
 	${MAKE} cleanup
-	touch $@
+	-touch $@
 
 ## cleanup some additional workfiles
 .PHONY: cleanup
@@ -119,13 +119,6 @@ ifeq (${words ${TRGLANGS}},0)
 endif
 endif
 
-## more than one target language
-## --> need target language labels
-ifneq (${words ${TRGLANGS}},1)
-  USE_TARGET_LABELS = 1
-else
-  USE_TARGET_LABELS = 0
-endif
 
 
 ## all language pairs that the model supports
@@ -165,24 +158,39 @@ eval-testsets:
 .PHONY: input
 input: ${WORK_DIR}/${TESTSET}.${LANGPAIR}.input
 
+
+## more than one target language
+## --> need target language labels
+ifneq (${words ${TRGLANGS}},1)
+  USE_TARGET_LABELS = 1
+else
+  USE_TARGET_LABELS = 0
+endif
+
+## double-check whether the preprocessing script
+## requires both language IDs or not
+ifeq (${shell grep 'source-langid target-langid' ${WORK_DIR}/model/preprocess.sh 2>/dev/null | wc -l},1)
+  USE_BOTH_LANGIDS = 1
+endif
+
+## take care of different calls to the pre-processing script
+ifeq (${USE_BOTH_LANGIDS},1)
+  PREPROCESS = ${WORK_DIR}/model/preprocess.sh ${SRC} ${TRG} ${WORK_DIR}/model/source.spm
+else
+  PREPROCESS = ${WORK_DIR}/model/preprocess.sh ${SRC} ${WORK_DIR}/model/source.spm
+endif
+
+
 ${WORK_DIR}/${TESTSET}.${LANGPAIR}.input: ${TESTSET_DIR}/${TESTSET}.${SRC}
-## check whether we need to specify the target language with labels
+	${PREPROCESS} < $< > $@
+## check whether we need to replace the target language labels
 ifeq (${USE_TARGET_LABELS},1)
-	${WORK_DIR}/model/preprocess.sh \
-		${SRC} ${TRG} \
-		${WORK_DIR}/model/source.spm \
-	< $< > $@
-## replace default label if language labels are given
 ifneq (${wildcard ${TESTSET_DIR}/${TESTSET}.${TRG}.labels},)
 	cut -f2- -d' ' $@ > $@.tmp1
 	sed 's/^/>>/;s/$$/<</' < ${TESTSET_DIR}/${TESTSET}.${TRG}.labels > $@.tmp2
 	paste -d' ' $@.tmp2 $@.tmp1 > $@
 	rm -f $@.tmp2 $@.tmp1
 endif
-else
-	${WORK_DIR}/model/preprocess.sh ${SRC} \
-		${WORK_DIR}/model/source.spm \
-	< $< > $@
 endif
 
 
