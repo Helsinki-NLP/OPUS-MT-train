@@ -221,7 +221,7 @@ endif
         --transformer-dropout ${MARIAN_DROPOUT} \
 	--label-smoothing 0.1 \
         --learn-rate 0.0003 --lr-warmup 16000 --lr-decay-inv-sqrt 16000 --lr-report \
-        --optimizer-params 0.9 0.98 1e-09 --clip-norm 5 --fp16 \
+        --optimizer-params 0.9 0.98 1e-09 --clip-norm 5 \
         ${MARIAN_TIE_EMBEDDINGS} \
 	--devices ${MARIAN_GPUS} \
         --sync-sgd \
@@ -231,12 +231,15 @@ endif
         --exponential-smoothing
 	touch $@
 
+
 ## TODO: --fp16 seems to have changed from previous versions:
 ## --> cannot continue training with newer version
 # old: --precision float16 float32 float32 --cost-scaling 7 2000 2 0.05 10 1
 # new: --precision float16 float32 --cost-scaling 0 1000 2 0.05 10 1e-5f
-
-
+#
+## --> leave it out for the time being?
+## --> or: only add it of we don't continue training with existing models?
+##     (it seems that it can take the info from the internal config info)
 
 
 

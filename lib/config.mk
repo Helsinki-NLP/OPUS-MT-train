@@ -361,6 +361,14 @@ TRAIN_SRC  = ${TRAIN_BASE}.src
 TRAIN_TRG  = ${TRAIN_BASE}.trg
 TRAIN_ALG  = ${TRAIN_BASE}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}.src-trg.alg.gz
 
+## data sets that are pre-processed and ready to be used
+TRAINDATA_SRC = ${TRAIN_SRC}.clean.${PRE_SRC}.gz 
+TRAINDATA_TRG = ${TRAIN_TRG}.clean.${PRE_TRG}.gz
+DEVDATA_SRC   = ${DEV_SRC}.${PRE_SRC} 
+DEVDATA_TRG   = ${DEV_TRG}.${PRE_TRG}
+TESTDATA_SRC  = ${TEST_SRC}.${PRE_SRC} 
+TESTDATA_TRG  = ${TEST_TRG}
+
 ## training data in local space
 LOCAL_TRAIN_SRC = ${TMPDIR}/${LANGPAIRSTR}/train/${DATASET}.src
 LOCAL_TRAIN_TRG = ${TMPDIR}/${LANGPAIRSTR}/train/${DATASET}.trg
@@ -425,7 +433,6 @@ endif
 
 
 
-
 ## latest model with the same pre-processing but any data or modeltype
 ## except for models that include the string 'tuned4' (fine-tuned models)
 ## also allow models that are of the same type but with/without guided alignment
@@ -434,7 +441,8 @@ endif
 # ifdef CONTINUE_EXISTING
 ifeq (${CONTINUE_EXISTING},1)
   MODEL_LATEST = $(firstword \
-	${shell ls -t ${WORKDIR}/*.${PRE_SRC}-${PRE_TRG}.*.best-perplexity.npz \
+	${shell ls -t 	${WORKDIR}/*.${PRE_SRC}-${PRE_TRG}.*.model[0-9].npz \
+			${WORKDIR}/*.${PRE_SRC}-${PRE_TRG}.*.best-perplexity.npz \
 		2>/dev/null | grep -v 'tuned4' | \
 		egrep '${MODELTYPE}|${MODELTYPE}-align|${subst -align,,${MODELTYPE}}' })
   MODEL_LATEST_VOCAB     = $(shell echo "${MODEL_LATEST}" | \
@@ -442,6 +450,10 @@ ifeq (${CONTINUE_EXISTING},1)
   MODEL_LATEST_OPTIMIZER = $(shell echo "${MODEL_LATEST}" | \
 		sed 's|.best-perplexity.npz|.optimizer.npz|')
 endif
+
+## old:
+#	${shell ls -t ${WORKDIR}/*.${PRE_SRC}-${PRE_TRG}.*.best-perplexity.npz \
+
 
 
 ## test set translation and scores
@@ -472,8 +484,11 @@ MARIAN_DIM_EMB          ?= 512
 
 
 ## TODO: currently marianNMT crashes with workspace > 26000
+## TODO: move this to individual env settings?
 ifeq (${GPU},p100)
   MARIAN_WORKSPACE = 13000
+else ifeq (${GPU},a100)
+  MARIAN_WORKSPACE = 30000
 else ifeq (${GPU},v100)
 ifeq ($(subst -align,,${MODELTYPE}),transformer-big)
   MARIAN_WORKSPACE = 20000

@@ -188,7 +188,7 @@ all: ${WORKDIR}/${MODELCONFIG}
 #---------------------------------------------------------------------
 # run everything including backtranslation of wiki-data
 #
-## TODO: need to refrehs backtranslate/index.html from time to time!
+## TODO: need to refresh backtranslate/index.html from time to time!
 ## ---> necessary for fetching latest wikidump with the correct link
 #---------------------------------------------------------------------
 
@@ -205,7 +205,7 @@ all-and-backtranslate: ${WORKDIR}/${MODELCONFIG}
 	      ${MAKE} -C backtranslate \
 		SRC=$$s TRG=$$t \
 		MODELHOME=${MODELDIR} \
-		MAX_SENTENCES=${shell zcat ${TRAIN_SRC}.clean.${PRE_SRC}.gz | head -1000000 | wc -l} \
+		MAX_SENTENCES=${shell zcat ${TRAINDATA_SRC} | head -1000000 | wc -l} \
 		all; \
 	    fi \
 	  done \
@@ -224,7 +224,7 @@ all-and-backtranslate-allwikis: ${WORKDIR}/${MODELCONFIG}
 	      ${MAKE} -C backtranslate SRC=$$s TRG=$$t all-wikitext; \
 	      ${MAKE} -C backtranslate \
 		SRC=$$s TRG=$$t \
-		MAX_SENTENCES=${shell zcat ${TRAIN_SRC}.clean.${PRE_SRC}.gz | head -1000000 | wc -l} \
+		MAX_SENTENCES=${shell zcat ${TRAINDATA_SRC} | head -1000000 | wc -l} \
 		MODELHOME=${MODELDIR} \
 		translate-all-wikis; \
 	    fi \
@@ -244,7 +244,7 @@ all-and-backtranslate-allwikiparts: ${WORKDIR}/${MODELCONFIG}
 	      ${MAKE} -C backtranslate SRC=$$s TRG=$$t all-wikitext; \
 	      ${MAKE} -C backtranslate \
 		SRC=$$s TRG=$$t \
-		MAX_SENTENCES=${shell zcat ${TRAIN_SRC}.clean.${PRE_SRC}.gz | head -1000000 | wc -l} \
+		MAX_SENTENCES=${shell zcat ${TRAINDATA_SRC} | head -1000000 | wc -l} \
 		MODELHOME=${MODELDIR} \
 		translate-all-wikiparts; \
 	    fi \
@@ -293,7 +293,7 @@ job1-step1:
 
 job1-step2:
 	${MAKE} SRCLANGS="${TRGLANGS}" TRGLANGS="${SRCLANGS}" \
-		MAX_SENTENCES=${shell zcat ${TRAIN_SRC}.clean.${PRE_SRC}.gz | head -1000000 | wc -l} \
+		MAX_SENTENCES=${shell zcat ${TRAINDATA_SRC} | head -1000000 | wc -l} \
 		all-and-backtranslate-allwikis
 	${MAKE} SRCLANGS="${TRGLANGS}" TRGLANGS="${SRCLANGS}" \
 		HPC_CORES=1 HPC_MEM=${GPUJOB_HPC_MEM} job1-step3.submit${GPUJOB_SUBMIT}
@@ -326,20 +326,17 @@ train-and-eval-job:
 #------------------------------------------------------------------------
 
 .PHONY: data
-data:	${TRAIN_SRC}.clean.${PRE_SRC}.gz ${TRAIN_TRG}.clean.${PRE_TRG}.gz
-	${MAKE} ${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG}
-	${MAKE} ${TEST_SRC}.${PRE_SRC} ${TEST_TRG}
+data:	${TRAINDATA_SRC} ${TRAINDATA_TRG}
+	${MAKE} ${DEVDATA_SRC} ${DEVDATA_TRG}
+	${MAKE} ${TESTDATA_SRC} ${TESTDATA_TRG}
 	${MAKE} ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB}
 ifeq ($(filter align,${subst -, ,${MODELTYPE}}),align)
 	${MAKE} ${TRAIN_ALG}
 endif
 
-# ifeq (${MODELTYPE},transformer-align)
-
-
-traindata: 	${TRAIN_SRC}.clean.${PRE_SRC}.gz ${TRAIN_TRG}.clean.${PRE_TRG}.gz
-testdata:	${TEST_SRC}.${PRE_SRC} ${TEST_TRG}
-devdata:	${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG}
+traindata: 	${TRAINDATA_SRC} ${TRAINDATA_TRG}
+testdata:	${TESTDATA_SRC} ${TESTDATA_TRG}
+devdata:	${DEVDATA_SRC} ${DEVDATA_TRG}
 devdata-raw:	${DEV_SRC} ${DEV_TRG}
 
 wordalign:	${TRAIN_ALG}

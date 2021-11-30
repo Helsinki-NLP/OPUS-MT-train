@@ -95,6 +95,9 @@ endif
 ## data sets (train/dev/test)
 ##-------------------------------------------------------------
 
+## data sets to be included in the train/dev/test sets
+## with some basic pre-processing (see lib/preprocess.mk)
+
 CLEAN_TRAIN_SRC    = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.clean.${SRCEXT}.gz,${TRAINSET}} \
 			${BACKTRANS_SRC} ${FORWARDTRANS_SRC} ${PIVOTING_SRC}
 CLEAN_TRAIN_TRG    = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_TRAIN_SRC}}
@@ -206,6 +209,7 @@ mono-data: ${LOCAL_MONO_DATA}.${PRE}
 
 
 ## word alignment used for guided alignment
+## (always remove intermediate files)
 
 .INTERMEDIATE: ${LOCAL_TRAIN_SRC}.algtmp ${LOCAL_TRAIN_TRG}.algtmp 
 
@@ -380,6 +384,7 @@ endif
 
 ## add to the training data
 
+.PHONY: add-to-local-train-data
 add-to-local-train-data: ${CLEAN_TRAIN_SRC} ${CLEAN_TRAIN_TRG}
 ifdef CHECK_TRAINDATA_SIZE
 	@if [ `${ZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} | wc -l` != `${ZCAT} ${wildcard ${CLEAN_TRAIN_TRG}} | wc -l` ]; then \
@@ -454,6 +459,7 @@ endif
 # development data
 ####################
 
+.PHONY: show-devdata
 show-devdata:
 	@echo "${CLEAN_DEV_SRC}" 
 	@echo "${CLEAN_DEV_TRG}"
@@ -462,6 +468,7 @@ show-devdata:
 	@echo "${DEV_SRC}.${PRE_SRC}"
 	@echo "${DEV_TRG}.${PRE_TRG}"
 
+.PHONY: raw-devdata
 raw-devdata: ${DEV_SRC} ${DEV_TRG}
 
 
@@ -563,7 +570,7 @@ endif
 ${DEV_TRG}: ${DEV_SRC}
 	@echo "done!"
 
-
+.PHONY: add-to-dev-data
 add-to-dev-data: ${CLEAN_DEV_SRC} ${CLEAN_DEV_TRG}
 	@echo "add to devset: ${CLEAN_DEV_SRC}"
 	@mkdir -p ${dir ${DEV_SRC}}
@@ -648,6 +655,7 @@ endif
 ${TEST_TRG}: ${TEST_SRC}
 	@echo "done!"
 
+.PHONY: add-to-test-data
 add-to-test-data: ${CLEAN_TEST_SRC}
 	@echo "add to testset: ${CLEAN_TEST_SRC}"
 	@echo "* ${LANGPAIR}: ${TESTSET}" >> ${dir ${TEST_SRC}}README.md
@@ -680,6 +688,7 @@ ${LOCAL_MONO_DATA}.raw:
 	done
 
 ## TODO: if it does not exist in local file system then use opus-tools to fetch!
+.PHONY: add-to-local-mono-data
 add-to-local-mono-data:
 	for c in ${MONOSET}; do \
 	  if [ -e ${OPUSHOME}/$$c/latest/mono/${LANGID}.txt.gz ]; then \

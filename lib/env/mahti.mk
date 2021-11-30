@@ -27,8 +27,8 @@ WALLTIME      = 36
 export PATH := ${APPLHOME}/bin:${PATH}
 
 
-CPU_MODULES   = gcc/10.3.0 cuda/11.4.2 cudnn/8.0.4.30-11.0-linux-x64 openblas/0.3.14-omp openmpi/4.0.5-cuda python-env
-GPU_MODULES   = gcc/10.3.0 cuda/11.4.2 cudnn/8.0.4.30-11.0-linux-x64 openblas/0.3.14-omp openmpi/4.0.5-cuda python-env
+CPU_MODULES   = gcc/10.3.0 cuda/11.4.2 cudnn/8.0.4.30-11.0-linux-x64 openblas/0.3.14-omp openmpi/4.0.5-cuda
+GPU_MODULES   = gcc/10.3.0 cuda/11.4.2 cudnn/8.0.4.30-11.0-linux-x64 openblas/0.3.14-omp openmpi/4.0.5-cuda
 LOAD_CPU_ENV  = module load ${CPU_MODULES}
 LOAD_GPU_ENV  = module load ${GPU_MODULES}
 
@@ -39,7 +39,7 @@ HPC_EXTRA1 = \#SBATCH --account=${CSCPROJECT}
 
 ## setup for compiling marian-nmt
 
-MARIAN_BUILD_MODULES  = gcc/10.3.0 cuda/11.4.2 cudnn/8.0.4.30-11.0-linux-x64 cmake/3.18.4 openblas/0.3.14-omp openmpi/4.0.5-cuda python-env
+MARIAN_BUILD_MODULES  = gcc/10.3.0 cuda/11.4.2 cudnn/8.0.4.30-11.0-linux-x64 cmake/3.18.4 openblas/0.3.14-omp openmpi/4.0.5-cuda
 LOAD_MARIAN_BUILD_ENV = module purge && module load ${MARIAN_BUILD_MODULES}
 MARIAN_BUILD_OPTIONS  = -DTcmalloc_INCLUDE_DIR=/appl/spack/v016/install-tree/gcc-10.3.0/gperftools-2.7-ibnifm/include \
 			-DTcmalloc_LIBRARY=/appl/spack/v016/install-tree/gcc-10.3.0/gperftools-2.7-ibnifm/lib/libtcmalloc.so \
