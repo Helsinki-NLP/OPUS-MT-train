@@ -314,7 +314,7 @@ ${TRANSLATED_LATEST_TRG}: ${ORIGINAL_DATATRG} ${TRANSLATED_LATEST_SRC}
 ifneq (${PIVOT_MODEL_ZIP},)
 	mkdir -p ${dir $@}
 	${MAKE} ${OUTPUT_DIR}/${PIVOT_MODEL_NAME}/decoder.yml
-	${LOADMODS} && cd ${OUTPUT_DIR}/${PIVOT_MODEL_NAME} && ${MARIAN_DECODER} \
+	${LOAD_ENV} && cd ${OUTPUT_DIR}/${PIVOT_MODEL_NAME} && ${MARIAN_DECODER} \
 		-i ${PWD}/$< \
 		-c decoder.yml \
 		-d ${MARIAN_GPUS} \

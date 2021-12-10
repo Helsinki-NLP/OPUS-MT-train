@@ -525,7 +525,7 @@ ${TUNED_MODEL}.done: ${TRAIN_SRC}.pre.gz ${TRAIN_TRG}.pre.gz ${DEV_SRC}.pre.gz $
 	  cp ${LANGPAIRSTR}/${BASEMODELNAME}/*.npz ${@:done=npz}; \
 	  cp ${LANGPAIRSTR}/${BASEMODELNAME}/*.vocab.yml ${TUNED_MODEL_VOCAB}; \
 	fi
-	${LOADMODS} && ${MARIAN_TRAIN} ${MARIAN_EXTRA} \
+	${LOAD_ENV} && ${MARIAN_TRAIN} ${MARIAN_EXTRA} \
         --model $(@:.done=.npz) \
 	--type transformer \
         --train-sets ${word 1,$^} ${word 2,$^} ${MARIAN_TRAIN_WEIGHTS} \
@@ -568,7 +568,7 @@ translate: ${TEST_SRC}.${BASEMODELNAME}.${TRG}.gz
 ## translate test set
 ${TEST_SRC}.${BASEMODELNAME}.${TRG}.gz: ${TEST_SRC}.pre.gz ${TUNED_MODEL}.npz.best-perplexity.npz
 	mkdir -p ${dir $@}
-	${LOADMODS} && ${MARIAN_DECODER} \
+	${LOAD_ENV} && ${MARIAN_DECODER} \
 		-i $< \
 		-c ${word 2,$^}.decoder.yml \
 		-d ${MARIAN_GPUS} \
@@ -584,7 +584,7 @@ translate-baseline: ${TEST_SRC}.${BASEMODELNAME}.baseline.${TRG}.gz
 ${TEST_SRC}.${BASEMODELNAME}.baseline.${TRG}.gz: ${TEST_SRC}.pre.gz ${LANGPAIRSTR}/${BASEMODELNAME}/decoder.yml
 	mkdir -p ${dir $@}
 	cd ${LANGPAIRSTR}/${BASEMODELNAME}; \
-	${LOADMODS} && ${MARIAN_DECODER} \
+	${LOAD_ENV} && ${MARIAN_DECODER} \
 		-i ${PWD}/$< \
 		-c decoder.yml \
 		-d ${MARIAN_GPUS} \

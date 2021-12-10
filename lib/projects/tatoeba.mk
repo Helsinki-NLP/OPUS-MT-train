@@ -2004,6 +2004,7 @@ TATOEBA_TMPDATADIR = data/release/${TATOEBA_VERSION}/${LANGPAIR}
 	@if [ -e $(@:.${SRCEXT}.gz=.${SRCEXT}.labels) ]; then \
 	  for s in `cat $(@:.${SRCEXT}.gz=.${SRCEXT}.labels)`; do \
 	    for t in `cat $(@:.${SRCEXT}.gz=.${TRGEXT}.labels)`; do \
+	      if [[ "$$s-$$t" != "${LANGPAIR}" ]] && [[ "$$t-$$s" != "${LANGPAIR}" ]]; then \
 	      if [ "$$s" \< "$$t" ]; then \
 	        echo "extract $$s-$$t data"; \
 	        for d in dev test train; do \
@@ -2015,8 +2016,10 @@ TATOEBA_TMPDATADIR = data/release/${TATOEBA_VERSION}/${LANGPAIR}
 		    scripts/filter/filter-korean.sh ${SRC} ${TRG} $$d > ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t; \
 	            if [ -s ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t ]; then \
 	              echo "........ make ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t.clean.*.gz"; \
-	              cut -f1 ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t | ${GZIP} -c > ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t.clean.$$s.gz; \
-	              cut -f2 ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t | ${GZIP} -c > ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t.clean.$$t.gz; \
+	              cut -f1 ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t | \
+	              ${GZIP} -c > ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t.clean.$$s.gz; \
+	              cut -f2 ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t | \
+                      ${GZIP} -c > ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t.clean.$$t.gz; \
 	            fi; \
 	            rm -f ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t; \
 		  fi \
@@ -2028,16 +2031,19 @@ TATOEBA_TMPDATADIR = data/release/${TATOEBA_VERSION}/${LANGPAIR}
 	            paste ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.id \
 		          ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${TRGEXT} \
 		          ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SRCEXT} |\
-	            grep -P "$$s\t$$t\t" | cut -f3,4 |\
+	            grep -P "$$t\t$$s\t" | cut -f3,4 |\
 		    scripts/filter/filter-korean.sh ${TRG} ${SRC} $$d > ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$t-$$s; \
 	            if [ -s ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$t-$$s ]; then \
 	              echo "........ make ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$t-$$s.clean.*.gz"; \
-	              cut -f1 ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$t-$$s | ${GZIP} -c > ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$t-$$s.clean.$$t.gz; \
-	              cut -f2 ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$t-$$s | ${GZIP} -c > ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$t-$$s.clean.$$s.gz; \
+	              cut -f1 ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$t-$$s | \
+                      ${GZIP} -c > ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$t-$$s.clean.$$t.gz; \
+	              cut -f2 ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$t-$$s | \
+                      ${GZIP} -c > ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$t-$$s.clean.$$s.gz; \
 	            fi; \
 	            rm -f ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$t-$$s; \
 		  fi \
 	        done \
+	      fi \
 	      fi \
 	    done \
 	  done \
@@ -2544,7 +2550,7 @@ tatoeba-dist-all:
 
 
 fixlabels.sh:
-	for l in `find ${TATOEBA_WORK}-old/ -maxdepth 1 -mindepth 1 -type d -printf '%f '`; do \
+	@for l in `find ${TATOEBA_WORK}-old/ -maxdepth 1 -mindepth 1 -type d -printf '%f '`; do \
 	  s=`echo $$l | cut -f1 -d'-'`; \
 	  t=`echo $$l | cut -f2 -d'-'`; \
 	  if [ -d ${HOME}/research/Tatoeba-Challenge/data/$$s-$$t ] || \
