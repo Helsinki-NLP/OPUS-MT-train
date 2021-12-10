@@ -87,7 +87,7 @@ translate: ${TEST_TRANS}
 ${TEST_TRANS}: ${TEST_PRE} ${WORKDIR}/model/decoder.yml
 	mkdir -p ${dir $@}
 	cd ${dir ${word 2,$^}}; \
-	${LOADMODS} && ${MARIAN_DECODER} -i $< \
+	${LOAD_ENV} && ${MARIAN_DECODER} -i $< \
 		-c decoder.yml \
 		-d ${MARIAN_GPUS} \
 		${MARIAN_DECODER_FLAGS} |\
