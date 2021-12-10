@@ -43,7 +43,7 @@ GPU_MODULES   = gcc/10.3.0 cuda/11.4.2 cudnn/8.0.4.30-11.0-linux-x64 openblas/0.
 LOAD_CPU_ENV  = module load ${CPU_MODULES}
 LOAD_GPU_ENV  = module load ${GPU_MODULES}
 
-ifdef HPC_DISK
+ifneq (${HPC_DISK},)
   HPC_GPU_ALLOCATION = --gres=gpu:${GPU}:${NR_GPUS},nvme:${HPC_DISK}
 endif
 

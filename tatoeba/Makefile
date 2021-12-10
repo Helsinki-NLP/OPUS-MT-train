@@ -83,6 +83,16 @@
 #---------------------------------------------------------------------
 
 
+SHELL    := bash
+PWD      := ${shell pwd}
+REPOHOME := ${PWD}/../
+
+include ${REPOHOME}lib/env.mk
+include ${REPOHOME}lib/config.mk
+include ${REPOHOME}lib/tasks.mk
+include ${REPOHOME}lib/projects.mk
+
+
 
 ## general parameters for Tatoeba models
 
@@ -203,19 +213,12 @@ TATOEBA_PARAMS := DATASET=${TATOEBA_DATASET} \
 		DEFAULT_PIVOT_LANG=${TATOEBA_PIVOT} \
 		MIN_BLEU_SCORE=${TATOEBA_MIN_BLEU}
 
-MARIAN_SHUFFLE=data
-MARIAN_DATA_STORAGE=--sqlite
-HPC_DISK=500
-
 ## unless we have multilingual models:
 ## no need to shuffle data again, just shuffle batches
 ## no need to store data in sqlite databases
 ifeq (${words ${SRCLANGS}},1)
 ifeq (${words ${TRGLANGS}},1)
-#   TATOEBA_PARAMS += MARIAN_SHUFFLE=batches MARIAN_DATA_STORAGE= HPC_DISK=
-  MARIAN_SHUFFLE=batches
-  MARIAN_DATA_STORAGE=
-  HPC_DISK=
+  TATOEBA_PARAMS += MARIAN_SHUFFLE=batches MARIAN_DATA_STORAGE= HPC_DISK=
 endif
 endif
 
@@ -1842,6 +1845,7 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.trg: ${TATOEBA_WORK}/${LANG
 ## langids that we want to keep from the training data even if they do not exist in the Tatoeba test sets
 ## (skip most lang-IDs because they mostly come from erroneous writing scripts --> errors in the data)
 ## the list is based on ${TATOEBA_LANGIDS_TRAINONLY}
+## special codes: see https://en.wikipedia.org/wiki/ISO_15924
 
 # TRAIN_ONLY_LANGIDS   = ${shell cat ${TATOEBA_LANGIDS_TRAINONLY} | grep -v '^...$$' | tr "\n" ' '}
 TRAIN_ONLY_LANGIDS   = ${shell cat ${TATOEBA_LANGIDS_TRAINONLY} | tr "\n" ' '}

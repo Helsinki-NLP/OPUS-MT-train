@@ -5,11 +5,13 @@
 #
 
 PWD      := ${shell pwd}
-TOOLSDIR := ${PWD}/../tools
+REPOHOME := ${PWD}/../
+TOOLSDIR := ${REPOHOME}tools
 
-include ../lib/env.mk
-include ../lib/config.mk
-include ../lib/slurm.mk
+include ${REPOHOME}lib/env.mk
+include ${REPOHOME}lib/config.mk
+include ${REPOHOME}lib/slurm.mk
+
 
 SRC ?= af
 TRG ?= en

@@ -7,7 +7,9 @@
 #
 
 PWD      := ${shell pwd}
-TOOLSDIR := ${PWD}/../tools
+REPOHOME := ${PWD}/../
+TOOLSDIR := ${REPOHOME}tools
+
 
 ## language (SRC->TRG) pair we need
 SRC = fi
@@ -27,10 +29,10 @@ INCLUDE = OpenSubtitles
 ORIGINAL_LANGPAIR = ${firstword ${sort ${PIVOT} ${TRG}}}-${lastword ${sort ${PIVOT} ${TRG}}}
 PIVOT_LANGPAIR    = ${PIVOT}-${SRC}
 
-include ../lib/env.mk
-include ../lib/config.mk
-include ../lib/slurm.mk
-include ../lib/dist.mk
+include ${REPOHOME}lib/env.mk
+include ${REPOHOME}lib/config.mk
+include ${REPOHOME}lib/slurm.mk
+include ${REPOHOME}lib/dist.mk
 
 include lib/models.mk
 

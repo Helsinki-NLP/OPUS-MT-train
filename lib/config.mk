@@ -1,7 +1,32 @@
 # -*-makefile-*-
 #
-# model configurations
+# model and environment configurations
 #
+
+
+
+## some pre-defined language sets
+include ${REPOHOME}lib/langsets.mk
+
+
+## supported model types
+## configuration for each type is in lib/train.mk
+
+MODELTYPES   = 	transformer \
+		transformer-align \
+		transformer-base \
+		transformer-base-align \
+		transformer-big \
+		transformer-big-align \
+		transformer-small-align \
+		transformer-tiny \
+		transformer-tiny-align
+
+## default model type
+
+MODELTYPE    =  transformer-align
+NR           =  1
+
 
 
 ## name of the model-specific configuration file
@@ -9,7 +34,7 @@ MODELCONFIG ?= config.mk
 
 
 ## various ways of setting the model languages
-
+##
 ## (1) explicitly set source and target languages, for example:
 ##     SRCLANGS="da no sv" TRGLANGS="fi da"
 ##
@@ -377,26 +402,6 @@ TEST_TRG  ?= ${WORKDIR}/test/${TESTSET_NAME}.trg
 MODEL_SUBDIR =
 MODEL        =  ${MODEL_SUBDIR}${DATASET}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
 
-
-## supported model types
-## configuration for each type is in lib/train.mk
-
-MODELTYPES   = 	transformer \
-		transformer-align \
-		transformer-base \
-		transformer-base-align \
-		transformer-big \
-		transformer-big-align \
-		transformer-small-align \
-		transformer-tiny \
-		transformer-tiny-align
-
-## default model type
-
-MODELTYPE    =  transformer-align
-NR           =  1
-
-
 MODEL_BASENAME   = ${MODEL}.${MODELTYPE}.model${NR}
 MODEL_VALIDLOG   = ${MODEL}.${MODELTYPE}.valid${NR}.log
 MODEL_TRAINLOG   = ${MODEL}.${MODELTYPE}.train${NR}.log
@@ -472,7 +477,20 @@ MARIAN_ENC_DEPTH        ?= 6
 MARIAN_DEC_DEPTH        ?= 6
 MARIAN_ATT_HEADS        ?= 8
 MARIAN_DIM_EMB          ?= 512
+MARIAN_CLIP_NORM        ?= 5
 
+## default = shuffle data and batches 
+## (set to batches or none to change this)
+MARIAN_SHUFFLE          ?= data
+
+## default: use sqlite database to store data
+## remove this to use regular temp data
+## set to --shuffle-in-ram to keep all shuffled data in RAM
+MARIAN_DATA_STORAGE     ?= --sqlite
+
+## set to global for lower memory usage in multiprocess training
+## TODO: does this parameter really work?
+MARIAN_SHARDING         ?= local
 
 
 ## TODO: currently marianNMT crashes with workspace > 26000 (does it?)
@@ -483,30 +501,34 @@ ifeq (${GPU},p100)
 
 else ifeq (${GPU},a100)
 ifeq ($(subst -align,,${MODELTYPE}),transformer-big)
-  MARIAN_WORKSPACE = 20000
+  MARIAN_WORKSPACE = 15000
 else ifeq ($(subst -align,,${MODELTYPE}),transformer-small)
   MARIAN_WORKSPACE = 10000
 else ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny)
   MARIAN_WORKSPACE = 10000
 else
-  MARIAN_WORKSPACE = 30000
+  MARIAN_WORKSPACE = 25000
 endif
 
 else ifeq (${GPU},v100)
 ifeq ($(subst -align,,${MODELTYPE}),transformer-big)
-  MARIAN_WORKSPACE = 20000
+  MARIAN_WORKSPACE = 15000
 else ifeq ($(subst -align,,${MODELTYPE}),transformer-small)
   MARIAN_WORKSPACE = 10000
 else ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny)
   MARIAN_WORKSPACE = 10000
 else
-  MARIAN_WORKSPACE = 24000
+  MARIAN_WORKSPACE = 25000
 endif
 
 else
   MARIAN_WORKSPACE = 10000
 endif
 
+
+## TODO: do we need to reduce workspace for decoding?
+# MARIAN_DECODER_WORKSPACE = $$((${MARIAN_WORKSPACE} / 2))
+MARIAN_DECODER_WORKSPACE = 10000
 
 
 ## weights associated with training examples
@@ -531,7 +553,7 @@ endif
 
 ifeq ($(GPU_AVAILABLE),1)
   MARIAN_DECODER_FLAGS = -b 4 -n1 -d ${MARIAN_GPUS} --fp16 \
-			--quiet-translation -w ${MARIAN_WORKSPACE} \
+			--quiet-translation -w ${MARIAN_DECODER_WORKSPACE} \
 			--mini-batch 768 --maxi-batch 2048 --maxi-batch-sort src \
 			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop
 else
@@ -541,6 +563,16 @@ else
 			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop
   MARIAN_EXTRA = --cpu-threads ${HPC_CORES}
 endif
+
+
+# load model-specific configuration parameters
+# if they exist in the work directory
+
+ifneq ($(wildcard ${WORKDIR}/${MODELCONFIG}),)
+  include ${WORKDIR}/${MODELCONFIG}
+endif
+
+
 
 
 ## make some data size-specific configuration parameters
@@ -662,6 +694,8 @@ endif
 
 
 
+
+
 ################################################################
 ### DEPRECATED? ################################################
 ################################################################
@@ -692,6 +726,5 @@ opus-langpairs.txt:
 	tr ' ' "\n" < $@.all |\
 	sed 's/ //g' | sort -u | tr "\n" ' ' > $@
 	rm -f $@.all
-
 
 

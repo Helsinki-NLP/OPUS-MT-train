@@ -95,13 +95,14 @@ MARIAN_TRAIN_PREREQS = 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 
 ## define validation and early-stopping parameters
 ## as well as pre-requisites for training the model
+## TODO: do we want to add valid-metrics "ce-mean-words" and "bleu-detok"?
 
 ifndef SKIP_VALIDATION
   MARIAN_TRAIN_PREREQS += ${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG}
   MARIAN_STOP_CRITERIA = --early-stopping ${MARIAN_EARLY_STOPPING} \
         --valid-freq ${MARIAN_VALID_FREQ} \
         --valid-sets ${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG} \
-        --valid-metrics perplexity ce-mean-words bleu-detok \
+        --valid-metrics perplexity \
         --valid-mini-batch ${MARIAN_VALID_MINI_BATCH} \
 	--valid-max-length 100 \
 	--valid-log ${WORKDIR}/${MODEL}.${MODELTYPE}.valid${NR}.log \
@@ -152,21 +153,39 @@ ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny)
   MARIAN_DEC_DEPTH = 2
   MARIAN_ATT_HEADS = 8
   MARIAN_DIM_EMB = 256
-  MARIAN_TRAIN_PREREQS += ${TRAIN_ALG}
   MARIAN_EXTRA += --transformer-decoder-autoreg rnn \
-		--dec-cell ssru \
-		--fp16
+		--dec-cell ssru # --fp16
 endif
+
+## difference to student model in bergamot (tiny11):
+# --transformer-dim-ffn 1536 --enc-depth 6 --transformer-ffn-activation relu
+# 32000 vocab in total (tied source and target)
+#    --mini-batch-fit -w 9000 --mini-batch 1000 --maxi-batch 1000 --devices $GPUS --sync-sgd --optimizer-delay 2 \
+#    --learn-rate 0.0003 --lr-report --lr-warmup 16000 --lr-decay-inv-sqrt 32000 \
+#    --cost-type ce-mean-words \
+#    --optimizer-params 0.9 0.98 1e-09 --clip-norm 0
+
+ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny11)
+  MARIAN_ENC_DEPTH = 6
+  MARIAN_DEC_DEPTH = 2
+  MARIAN_ATT_HEADS = 8
+  MARIAN_DIM_EMB = 256
+  MARIAN_CLIP_NORM = 0
+  MARIAN_EXTRA += --transformer-dim-ffn 1536 \
+		--transformer-decoder-autoreg rnn \
+		--dec-cell ssru --optimizer-delay 2
+  # --fp16
+endif
+
 
 ifeq ($(subst -align,,${MODELTYPE}),transformer-small)
   MARIAN_ENC_DEPTH = 3
   MARIAN_DEC_DEPTH = 2
   MARIAN_ATT_HEADS = 8
   MARIAN_DIM_EMB = 256
-  MARIAN_TRAIN_PREREQS += ${TRAIN_ALG}
   MARIAN_EXTRA += --transformer-decoder-autoreg rnn \
-		--dec-cell ssru \
-		--fp16
+		--dec-cell ssru 
+  # --fp16
 endif
 
 ##------------------------------------------------
@@ -178,13 +197,12 @@ endif
 ##------------------------------------------------
 
 ifeq ($(subst -align,,${MODELTYPE}),transformer-base)
-  MARIAN_TRAINING_PARAMETER = --task transformer-base
+  MARIAN_TRAINING_PARAMETER = --task transformer-base # --fp16
 endif
 
 ifeq ($(subst -align,,${MODELTYPE}),transformer-big)
-  MARIAN_TRAINING_PARAMETER = \
-	--task transformer-big \
-	--optimizer-delay 2
+  MARIAN_TRAINING_PARAMETER = --task transformer-big \
+				--optimizer-delay 2 # --fp16
   GPUJOB_HPC_MEM = 16g
 endif
 
@@ -215,7 +233,7 @@ MARIAN_TRAINING_PARAMETER ?= \
 	--lr-decay-inv-sqrt 16000 \
 	--lr-report \
         --optimizer-params 0.9 0.98 1e-09 \
-	--clip-norm 5 \
+	--clip-norm ${MARIAN_CLIP_NORM} \
         --sync-sgd \
         --exponential-smoothing
 
@@ -262,6 +280,7 @@ endif
 		${MARIAN_TRAINING_PARAMETER} \
 		${MARIAN_EXTRA} \
 		${MARIAN_STOP_CRITERIA} \
+		${MARIAN_DATA_STORAGE} \
 		--workspace ${MARIAN_WORKSPACE} \
 		--model $(@:.done=.npz) \
 		--train-sets ${word 1,$^} ${word 2,$^} ${MARIAN_TRAIN_WEIGHTS} \
@@ -272,8 +291,9 @@ endif
 		--devices ${MARIAN_GPUS} \
 		--seed ${SEED} \
 		--tempdir ${TMPDIR} \
+		--shuffle ${MARIAN_SHUFFLE} \
+		--sharding ${MARIAN_SHARDING} \
 		--overwrite \
-		--keep-best \
-		--sqlite
+		--keep-best
 	touch $@
 

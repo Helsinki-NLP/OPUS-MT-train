@@ -6,6 +6,7 @@
 #
 
 SHELL := /bin/bash
+PWD   ?= ${shell pwd}
 
 # job-specific settings (overwrite if necessary)
 # HPC_EXTRA: additional SBATCH commands
@@ -154,8 +155,6 @@ endif
 MULTEVALHOME = ${APPLHOME}/multeval
 
 
-
-
 ## install prerequisites
 
 PREREQ_TOOLS := $(lastword ${ISO639}) ${ATOOLS} ${PIGZ} ${TERASHUF} ${JQ} ${MARIAN} ${EFLOMAL} ${TMX2MOSES}
@@ -177,8 +176,8 @@ export PERL_MB_OPT         := --install_base "${HOME}/perl5"
 export PERL_MM_OPT         := INSTALL_BASE=${HOME}/perl5
 
 
-PHONY: install-prerequisites install-prereq install-requirements
-install-prerequisites install-prereq install-requirements:
+PHONY: install install-prerequisites install-prereq install-requirements
+install install-prerequisites install-prereq install-requirements:
 	${PIP} install --user -r requirements.txt
 	${MAKE} install-perl-modules
 	${MAKE} ${PREREQ_TOOLS}
