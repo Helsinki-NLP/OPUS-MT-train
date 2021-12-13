@@ -556,19 +556,24 @@ endif
 
 ## decoder flags (CPU and GPU variants)
 
+MARIAN_BEAM_SIZE = 4
+MARIAN_MINI_BATCH = 768
+MARIAN_MAXI_BATCH = 2048
+
 ifeq ($(GPU_AVAILABLE),1)
-  MARIAN_DECODER_FLAGS = -b 4 -n1 -d ${MARIAN_GPUS} \
+  MARIAN_DECODER_FLAGS = -b ${MARIAN_BEAM_SIZE} -n1 -d ${MARIAN_GPUS} \
 			--quiet-translation -w ${MARIAN_DECODER_WORKSPACE} \
-			--mini-batch 768 --maxi-batch 2048 --maxi-batch-sort src \
+			--mini-batch ${MARIAN_MINI_BATCH} --maxi-batch ${MARIAN_MAXI_BATCH} --maxi-batch-sort src \
 			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop
 # --fp16
 else
-  MARIAN_DECODER_FLAGS = -b 4 -n1 --cpu-threads ${HPC_CORES} \
+  MARIAN_DECODER_FLAGS = -b ${MARIAN_BEAM_SIZE} -n1 --cpu-threads ${HPC_CORES} \
 			--quiet-translation \
 			--mini-batch ${HPC_CORES} --maxi-batch 100 --maxi-batch-sort src \
 			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop
   MARIAN_EXTRA = --cpu-threads ${HPC_CORES}
 endif
+
 
 
 # load model-specific configuration parameters

@@ -16,6 +16,17 @@ include ${REPOHOME}lib/slurm.mk
 SRC = fin
 TRG = eng
 
+
+## change decoder settings
+## TODO: do we need this?
+
+MARIAN_BEAM_SIZE=1
+MARIAN_MINI_BATCH=100
+MARIAN_MAXI_BATCH=100
+MARIAN_MAX_LENGTH=200
+MARIAN_WORKSPACE=12000
+
+
 TATOEBA_VERSION          ?= v2021-08-07
 TATOEBA_VERSION_NOHYPHEN ?= $(subst -,,${TATOEBA_VERSION})
 
@@ -80,13 +91,13 @@ BITEXT_LATEST_README = ${OUTPUT_DIR}/latest/README.md
 
 
 ## all parts of the bitext
-PARTS                 = ${suffix ${basename ${wildcard ${BITEXT_PRE:${PART}.gz=}??.gz}}}
+PARTS                 = $(subst .,,${suffix ${basename ${wildcard ${BITEXT_PRE:${PART}.gz=}??.gz}}})
 ALL_BITEXT_LATEST_SRC = ${patsubst %,${OUTPUT_DIR}/latest/Tatoeba-train.%.${LANGPAIR}.${SRC}.gz,${PARTS}}
 ALL_BITEXT_LATEST_TRG = ${patsubst %,${OUTPUT_DIR}/latest/Tatoeba-train.%.${LANGPAIR}.${TRG}.gz,${PARTS}}
 
 
 ## don't delete translated text even if the process crashes
-.PRECIOUS: ${BITEXT_TRG}
+.PRECIOUS: ${BITEXT_BASE}.${TRG}.%.gz
 
 .PHONY: all
 all: translate
@@ -101,7 +112,11 @@ translate: ${BITEXT_LATEST_README} ${BITEXT_LATEST_TRG}
 ## translate all parts
 .PHONY: translate-all-parts
 translate-all-parts: ${ALL_BITEXT_LATEST_TRG}
-	${MAKE} ${ALL_BITEXT_LATEST_TRG}
+	${MAKE} ${ALL_BITEXT_LATEST_SRC}
+
+.PHONY: source-all-parts
+source-all-parts: ${ALL_BITEXT_LATEST_SRC}
+
 
 .PHONY: print-modelinfo
 print-modelinfo:
@@ -110,7 +125,6 @@ print-modelinfo:
 	@echo ${MODELINFO}
 	@echo "multi-target model: ${MULTI_TARGET_MODEL}"
 	@echo "target language label: ${TARGET_LANG_LABEL}"
-
 
 ## fetch the latest model
 
@@ -168,8 +182,8 @@ endif
 ## merge SentencePiece segments in the source text
 ## (Why? because we filter out some data from the original wiki text, see above)
 
-${BITEXT_SRC}: ${BITEXT_PRE}
-ifneq (${MODELZIP},)
+${BITEXT_BASE}.${SRC}.%.gz: ${BITEXT_BASE}.${SRC}.spm.%.gz
+ifneq ($(wildcard ${patsubst ${BITEXT_BASE}.${SRC}.%.gz,${BITEXT_BASE}.${TRG}.%.gz,$@}),)
 	mkdir -p ${dir $@}
 	${GZCAT} $< |\
 	sed 's/ //g;s/▁/ /g' | \
@@ -185,11 +199,11 @@ endif
 ## --> this allows multiple translation iterations
 ##     without duplicating the data we want to use in MT training
 
-${BITEXT_LATEST_SRC}: ${BITEXT_SRC}
+${OUTPUT_DIR}/latest/Tatoeba-train.%.${LANGPAIR}.${SRC}.gz: ${BITEXT_BASE}.${SRC}.%.gz
 	mkdir -p ${dir $@}
 	cp $< $@
 
-${BITEXT_LATEST_TRG}: ${BITEXT_TRG}
+${OUTPUT_DIR}/latest/Tatoeba-train.%.${LANGPAIR}.${TRG}.gz: ${BITEXT_BASE}.${TRG}.%.gz
 	mkdir -p ${dir $@}
 	cp $< $@
 
@@ -204,16 +218,15 @@ ${BITEXT_BASE}.${TRG}.%.gz: ${BITEXT_BASE}.${SRC}.spm.%.gz
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
 	${MAKE} ${LANGPAIR}/${MODELNAME}/decoder.yml
-	${LOAD_ENV} && cd ${LANGPAIR}/${MODELNAME} && ${MARIAN_DECODER} \
-		-i ${PWD}/$< \
+	${LOAD_ENV} && cd ${LANGPAIR}/${MODELNAME} && \
+	${MARIAN_DECODER} \
 		-c decoder.yml \
+		-i ${PWD}/$< \
 		-d ${MARIAN_GPUS} \
 		${MARIAN_DECODER_FLAGS} |\
 	sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' |\
 	gzip -c > ${PWD}/$@
 endif
-
-
 
 
 
@@ -232,7 +245,7 @@ check-latest:
 	fi
 
 check-translated:
-	@for S in `ls ${LANGPAIR}/*.${SRC}.gz`; do \
+	@for S in `ls ${LANGPAIR}/*.${SRC}.spm.gz`; do \
 	    T=`echo $$S | sed 's/.${SRC}.gz/.${TRG}.gz/'`; \
 	    a=`${GZCAT} $$S | wc -l`; \
 	    b=`${GZCAT} $$T | wc -l`; \
