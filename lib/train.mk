@@ -171,10 +171,11 @@ ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny11)
   MARIAN_ATT_HEADS = 8
   MARIAN_DIM_EMB = 256
   MARIAN_CLIP_NORM = 0
-  MARIAN_EXTRA += --transformer-dim-ffn 1536 \
-		--transformer-decoder-autoreg rnn \
-		--dec-cell ssru --optimizer-delay 2
-  # --fp16
+  MARIAN_EXTRA += --transformer-decoder-autoreg rnn \
+		--dec-cell ssru --optimizer-delay 2 \
+		 --transformer-dim-ffn 1536
+# --dim-vocabs ${SRCBPESIZE} ${TRGBPESIZE}
+# --fp16
 endif
 
 

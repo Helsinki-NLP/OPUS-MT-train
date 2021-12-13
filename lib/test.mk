@@ -40,9 +40,7 @@ ${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.ensemble.${SRC}.${TRG}: ${
 	grep . $< > $@.input
 	${LOAD_ENV} && ${MARIAN_DECODER} -i $@.input \
 		--models ${ENSEMBLE} \
-		--vocabs ${WORKDIR}/${MODEL}.vocab.yml \
-			${WORKDIR}/${MODEL}.vocab.yml \
-			${WORKDIR}/${MODEL}.vocab.yml \
+		--vocabs ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB} \
 		${MARIAN_DECODER_FLAGS} > $@.output
 ifeq (${PRE_TRG},spm${TRGBPESIZE:000=}k)
 	sed 's/ //g;s/▁/ /g' < $@.output | sed 's/^ *//;s/ *$$//' > $@

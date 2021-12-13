@@ -20,7 +20,8 @@ MODELTYPES   = 	transformer \
 		transformer-big-align \
 		transformer-small-align \
 		transformer-tiny \
-		transformer-tiny-align
+		transformer-tiny-align \
+		transformer-tiny11-align
 
 ## default model type
 
@@ -506,8 +507,10 @@ else ifeq ($(subst -align,,${MODELTYPE}),transformer-small)
   MARIAN_WORKSPACE = 10000
 else ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny)
   MARIAN_WORKSPACE = 10000
+else ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny11)
+  MARIAN_WORKSPACE = 10000
 else
-  MARIAN_WORKSPACE = 25000
+  MARIAN_WORKSPACE = 24000
 endif
 
 else ifeq (${GPU},v100)
@@ -517,8 +520,10 @@ else ifeq ($(subst -align,,${MODELTYPE}),transformer-small)
   MARIAN_WORKSPACE = 10000
 else ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny)
   MARIAN_WORKSPACE = 10000
+else ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny11)
+  MARIAN_WORKSPACE = 10000
 else
-  MARIAN_WORKSPACE = 25000
+  MARIAN_WORKSPACE = 24000
 endif
 
 else
@@ -552,12 +557,13 @@ endif
 ## decoder flags (CPU and GPU variants)
 
 ifeq ($(GPU_AVAILABLE),1)
-  MARIAN_DECODER_FLAGS = -b 4 -n1 -d ${MARIAN_GPUS} --fp16 \
+  MARIAN_DECODER_FLAGS = -b 4 -n1 -d ${MARIAN_GPUS} \
 			--quiet-translation -w ${MARIAN_DECODER_WORKSPACE} \
 			--mini-batch 768 --maxi-batch 2048 --maxi-batch-sort src \
 			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop
+# --fp16
 else
-  MARIAN_DECODER_FLAGS = -b 4 -n1 --cpu-threads ${HPC_CORES} --fp16 \
+  MARIAN_DECODER_FLAGS = -b 4 -n1 --cpu-threads ${HPC_CORES} \
 			--quiet-translation \
 			--mini-batch ${HPC_CORES} --maxi-batch 100 --maxi-batch-sort src \
 			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop
