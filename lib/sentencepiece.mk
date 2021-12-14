@@ -32,6 +32,12 @@ GENERATE_SPM_VOC = 0
 SPM_INPUT_SIZE    = 2000000
 SPM_SHUFFLE_INPUT = 0
 
+ifneq (${DATA_IS_SHUFFLED},1)
+  SPM_PREPROCESS = grep . | ${SHUFFLE}
+else
+  SPM_PREPROCESS = grep .
+endif
+
 ## we keep the dependency on LOCAL_TRAIN_SRC
 ## to make multi-threaded make calls behave properly
 ## --> otherwise there can be multiple threads writing to the same file!
@@ -47,9 +53,9 @@ ifneq (${wildcard ${SPMSRCMODEL}},)
 else
 	mkdir -p ${dir $@}
 ifeq (${USE_TARGET_LABELS},1)
-	cut -f2- -d ' ' ${LOCAL_TRAIN_SRC} | grep . | ${SHUFFLE} > ${LOCAL_TRAIN_SRC}.text
+	cut -f2- -d ' ' ${LOCAL_TRAIN_SRC} | ${SPM_PREPROCESS} | head -${SPM_INPUT_SIZE} > ${LOCAL_TRAIN_SRC}.text
 else
-	grep . ${LOCAL_TRAIN_SRC} | ${SHUFFLE} > ${LOCAL_TRAIN_SRC}.text
+	cat ${LOCAL_TRAIN_SRC} | ${SPM_PREPROCESS} | head -${SPM_INPUT_SIZE} > ${LOCAL_TRAIN_SRC}.text
 endif
 	${MAKE} ${LOCAL_TRAIN_SRC}.charfreq
 	if [ `cat ${LOCAL_TRAIN_SRC}.charfreq | wc -l` -gt 1000 ]; then \
@@ -82,7 +88,7 @@ ifneq (${wildcard ${SPMTRGMODEL}},)
 	touch -r $@ $<
 else
 	mkdir -p ${dir $@}
-	grep . ${LOCAL_TRAIN_TRG} | ${SHUFFLE} > ${LOCAL_TRAIN_TRG}.text
+	cat ${LOCAL_TRAIN_TRG} | ${SPM_PREPROCESS} | head -${SPM_INPUT_SIZE} > ${LOCAL_TRAIN_TRG}.text
 	${MAKE} ${LOCAL_TRAIN_TRG}.charfreq
 	if [ `cat ${LOCAL_TRAIN_TRG}.charfreq | wc -l` -gt 1000 ]; then \
 	  ${SPM_TRAIN} ${SPMEXTRA} \
@@ -163,7 +169,7 @@ endif
 ${SPMMODEL}: ${LOCAL_MONO_DATA}.${PRE}
 ifeq ($(wildcard ${SPMMODEL}),)
 	mkdir -p ${dir $@}
-	grep . $< | ${SHUFFLE} > $<.text
+	cat $< | ${SPM_PREPROCESS} | head -${SPM_INPUT_SIZE} > $<.text
 	${MAKE} ${LOCAL_MONO_DATA}.${PRE}.charfreq
 	if [ `cat ${LOCAL_MONO_DATA}.${PRE}.charfreq | wc -l` -gt 1000 ]; then \
 	  ${SPM_TRAIN} ${SPMEXTRA} \

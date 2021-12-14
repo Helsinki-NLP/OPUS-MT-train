@@ -57,11 +57,18 @@ else ifeq (${shell hostname --domain 2>/dev/null},bullx)
 endif
 
 
+## default settings for CPU cores
+
+CPU_CORES ?= ${THREADS}
+CORES     ?= ${CPU_CORES}
+
 ## set variables with HPC prefix
 
 HPC_TIME  ?= ${WALLTIME}:00
-HPC_CORES ?= ${THREADS}
+HPC_CORES ?= ${CPU_CORES}
 HPC_MEM   ?= ${MEM}
+
+
 
 
 SUBMIT_PREFIX ?= submit
@@ -246,6 +253,8 @@ ${TOOLSDIR}/protobuf/bin/protoc:
 ## cd tools/efmoral
 ## sudo env python3 setup.py install
 
+.PHONY: install-eflomal
+install-eflomal:
 ${TOOLSDIR}/eflomal/eflomal:
 	${MAKE} -C ${dir $@} all
 	cd ${dir $@} && python3 setup.py install --user

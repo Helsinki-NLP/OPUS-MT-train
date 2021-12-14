@@ -86,9 +86,12 @@ SKIP_SAME_LANG ?= 0
 ## set SHUFFLE_DATA if you want to shuffle data for 
 ## each language pair to be added to the training data
 ## --> especially useful in connection with FIT_DATA_SIZE
+## set DATA_IS_SHUFFLED=1 if the training data is already shuffled
+## --> useful to avoid shuffling when training sentence piece model
 ##----------------------------------------------------------------------
 
 # SHUFFLE_DATA = 1
+# DATA_IS_SHUFFLED = 1
 
 ## devtest data is shuffled by default
 SHUFFLE_DEVDATA = 1
@@ -316,11 +319,12 @@ TRGBPESIZE ?= ${BPESIZE}
 
 BPEMODELNAME ?= opus
 
-BPESRCMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.src.bpe${SRCBPESIZE:000=}k-model
-BPETRGMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.trg.bpe${TRGBPESIZE:000=}k-model
+BPESRCMODEL   ?= ${WORKDIR}/train/${BPEMODELNAME}.src.bpe${SRCBPESIZE:000=}k-model
+BPETRGMODEL   ?= ${WORKDIR}/train/${BPEMODELNAME}.trg.bpe${TRGBPESIZE:000=}k-model
 
-SPMSRCMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.src.spm${SRCBPESIZE:000=}k-model
-SPMTRGMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.trg.spm${TRGBPESIZE:000=}k-model
+SPM_MODEL     ?= ${WORKDIR}/train/${BPEMODELNAME}.spm${SRCBPESIZE:000=}k-model
+SPMSRCMODEL   ?= ${WORKDIR}/train/${BPEMODELNAME}.src.spm${SRCBPESIZE:000=}k-model
+SPMTRGMODEL   ?= ${WORKDIR}/train/${BPEMODELNAME}.trg.spm${TRGBPESIZE:000=}k-model
 
 ## don't delete BPE/sentencepiece models!
 .PRECIOUS: ${BPESRCMODEL} ${BPETRGMODEL}

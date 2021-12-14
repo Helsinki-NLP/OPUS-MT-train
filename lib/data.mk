@@ -57,6 +57,7 @@ endif
 
 BACKTRANS_HOME    = backtranslate
 FORWARDTRANS_HOME = ${BACKTRANS_HOME}
+# FORWARDTRANS_HOME = ${BACKTRANS_HOME}
 
 ifneq (${wildcard ${BACKTRANS_HOME}/${TRG}-${SRC}/latest},)
   BACKTRANS_DIR = ${BACKTRANS_HOME}/${TRG}-${SRC}/latest
@@ -64,7 +65,7 @@ else
   BACKTRANS_DIR = ${BACKTRANS_HOME}/${TRG}-${SRC}
 endif
 
-ifneq (${wildcard ${BACKTRANS_HOME}/${SRC}-${TRG}/latest},)
+ifneq (${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest},)
   FORWARDTRANS_DIR = ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest
 else
   FORWARDTRANS_DIR = ${FORWARDTRANS_HOME}/${SRC}-${TRG}
@@ -90,6 +91,10 @@ ifeq (${USE_PIVOTING},1)
   PIVOTING_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${PIVOTING_SRC}}
 endif
 
+print-ft-data:
+	@echo ${FORWARDTRANS_SRC}
+	@echo ${FORWARDTRANS_TRG}
+	@echo ${FORWARDTRANS_DIR}
 
 ##-------------------------------------------------------------
 ## data sets (train/dev/test)
@@ -230,6 +235,11 @@ MAX_WORDALIGN_SIZE = 5000000
 # MAX_WORDALIGN_SIZE = 10000000
 # MAX_WORDALIGN_SIZE = 25000000
 
+## nr of simultaneous word alignment jobs
+## (assuming that each of them occupies up to 6 cores
+NR_ALIGN_JOBS ?=  $$(( ${CPU_CORES} / 6 + 1 ))
+
+
 ${TRAIN_ALG}: 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 		${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz
 	${MAKE} ${LOCAL_TRAIN_SRC}.algtmp ${LOCAL_TRAIN_TRG}.algtmp
@@ -238,27 +248,43 @@ ${TRAIN_ALG}: 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 	  mkdir -p $(LOCAL_TRAIN_TRG).algtmp.d; \
 	  split -l ${MAX_WORDALIGN_SIZE} $(LOCAL_TRAIN_SRC).algtmp $(LOCAL_TRAIN_SRC).algtmp.d/; \
 	  split -l ${MAX_WORDALIGN_SIZE} $(LOCAL_TRAIN_TRG).algtmp $(LOCAL_TRAIN_TRG).algtmp.d/; \
-	  for s in `ls $(LOCAL_TRAIN_SRC).algtmp.d`; do \
-	    echo "align part $$s"; \
-	    ${WORDALIGN} --overwrite \
-		-s $(LOCAL_TRAIN_SRC).algtmp.d/$$s \
-		-t $(LOCAL_TRAIN_TRG).algtmp.d/$$s \
-		-f $(LOCAL_TRAIN_SRC).algtmp.d/$$s.fwd \
-		-r $(LOCAL_TRAIN_TRG).algtmp.d/$$s.rev; \
-	  done; \
-	  echo "merge and symmetrize"; \
-	  cat $(LOCAL_TRAIN_SRC).algtmp.d/*.fwd > $(LOCAL_TRAIN_SRC).fwd; \
-	  cat $(LOCAL_TRAIN_TRG).algtmp.d/*.rev > $(LOCAL_TRAIN_TRG).rev; \
-	  ${ATOOLS} -c grow-diag-final -i $(LOCAL_TRAIN_SRC).fwd -j $(LOCAL_TRAIN_TRG).rev |\
-	  ${GZIP} -c > $@; \
-	  rm -f ${LOCAL_TRAIN_SRC}.algtmp.d/*; \
-	  rm -f ${LOCAL_TRAIN_TRG}.algtmp.d/*; \
+	  a=`ls $(LOCAL_TRAIN_SRC).algtmp.d/* | sed 's#$$#.alg#' | xargs`; \
+	  if [ "$$a" != "" ]; then \
+	    ${MAKE} -j ${NR_ALIGN_JOBS} $$a; \
+	    cat $(LOCAL_TRAIN_SRC).algtmp.d/*.alg | ${GZIP} -c > $@; \
+	    rm -f ${LOCAL_TRAIN_SRC}.algtmp.d/*; \
+	    rm -f ${LOCAL_TRAIN_TRG}.algtmp.d/*; \
+	  fi; \
 	  rmdir ${LOCAL_TRAIN_SRC}.algtmp.d; \
 	  rmdir ${LOCAL_TRAIN_TRG}.algtmp.d; \
-	  rm -f $(LOCAL_TRAIN_SRC).fwd $(LOCAL_TRAIN_TRG).rev; \
 	fi
 	rm -f ${LOCAL_TRAIN_SRC}.algtmp ${LOCAL_TRAIN_TRG}.algtmp
 
+
+## old: do this sequenctially
+## new: do this in parallel via make (see above)
+## disadvantage: may require more memory!
+
+#	  for s in `ls $(LOCAL_TRAIN_SRC).algtmp.d`; do \
+#	    echo "align part $$s"; \
+#	    ${WORDALIGN} --overwrite \
+#		-s $(LOCAL_TRAIN_SRC).algtmp.d/$$s \
+#		-t $(LOCAL_TRAIN_TRG).algtmp.d/$$s \
+#		-f $(LOCAL_TRAIN_SRC).algtmp.d/$$s.fwd \
+#		-r $(LOCAL_TRAIN_TRG).algtmp.d/$$s.rev; \
+#	  done;
+
+
+$(LOCAL_TRAIN_SRC).algtmp.d/%.alg: $(LOCAL_TRAIN_SRC).algtmp.d/% $(LOCAL_TRAIN_TRG).algtmp.d/%
+	echo "align part ${notdir $<}"
+	${WORDALIGN} --overwrite \
+		-s $(word 1,$^) \
+		-t $(word 2,$^) \
+		-f $(word 1,$^).fwd \
+		-r $(word 2,$^).rev
+	echo "merge and symmetrize part ${notdir $<}"
+	${ATOOLS} -c grow-diag-final -i $(word 1,$^).fwd -j $(word 2,$^).rev > $@
+	rm -f $(word 2,$^).fwd $(word 2,$^).rev
 
 
 
@@ -367,7 +393,7 @@ ${LOCAL_TRAIN_TRG}: ${LOCAL_TRAIN_SRC}
 ## cut the data sets immediately if we don't have 
 ## to shuffle first! This saves a lot of time!
 
-ifndef SHUFFLE_DATA
+ifneq (${SHUFFLE_DATA},1)
 ifdef FIT_DATA_SIZE
   CUT_DATA_SETS = | head -${FIT_DATA_SIZE}
 endif
@@ -423,7 +449,7 @@ endif
 #    --> shuffle data for each langpair
 #    --> do this when FIT_DATA_SIZE is set!
 ######################################
-ifdef SHUFFLE_DATA
+ifneq (${SHUFFLE_DATA},1)
 	@echo "shuffle training data"
 	@paste ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg |\
 		${SHUFFLE} > ${LOCAL_TRAIN_SRC}.shuffled
