@@ -79,8 +79,8 @@ endif
 
 %.eval: % ${TEST_TRG}
 	paste ${TEST_SRC}.${PRE_SRC} ${TEST_TRG} | grep $$'.\t' | cut -f2 > $@.ref
-	cat $< | sacrebleu ${SACREBLEU_PARAMS} $@.ref > $@
-	cat $< | sacrebleu ${SACREBLEU_PARAMS} --metrics=chrf --width=3 $@.ref >> $@
+	cat $< | sacrebleu -f text ${SACREBLEU_PARAMS} $@.ref > $@
+	cat $< | sacrebleu -f text ${SACREBLEU_PARAMS} --metrics=chrf --width=3 $@.ref >> $@
 	rm -f $@.ref
 
 

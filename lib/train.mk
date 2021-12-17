@@ -180,12 +180,11 @@ endif
 
 
 ifeq ($(subst -align,,${MODELTYPE}),transformer-small)
-  MARIAN_ENC_DEPTH = 3
+  MARIAN_ENC_DEPTH = 6
   MARIAN_DEC_DEPTH = 2
   MARIAN_ATT_HEADS = 8
-  MARIAN_DIM_EMB = 256
-  MARIAN_EXTRA += --transformer-decoder-autoreg rnn \
-		--dec-cell ssru 
+  MARIAN_DIM_EMB = 512
+  MARIAN_EXTRA += --transformer-decoder-autoreg rnn --dec-cell ssru
   # --fp16
 endif
 

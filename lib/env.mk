@@ -13,7 +13,7 @@ PWD   ?= ${shell pwd}
 
 NR_GPUS      = 1
 HPC_NODES    = 1
-HPC_DISK     = 500
+# HPC_DISK   = 500
 HPC_QUEUE    = serial
 HPC_GPUQUEUE = gpu
 
@@ -81,8 +81,8 @@ TMPDIR ?= /tmp
 
 ## tools and their locations
 
-SCRIPTDIR      ?= ${PWD}/scripts
-TOOLSDIR       ?= ${PWD}/tools
+SCRIPTDIR      ?= ${REPOHOME}scripts
+TOOLSDIR       ?= ${REPOHOME}tools
 
 ISO639         ?= ${shell which iso639    2>/dev/null || echo 'perl ${TOOLSDIR}/LanguageCodes/ISO-639-3/bin/iso639'}
 PIGZ           ?= ${shell which pigz      2>/dev/null || echo ${TOOLSDIR}/pigz/pigz}

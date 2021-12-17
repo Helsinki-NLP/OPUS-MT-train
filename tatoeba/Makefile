@@ -87,27 +87,68 @@ SHELL    := bash
 PWD      := ${shell pwd}
 REPOHOME := ${PWD}/../
 
-include ${REPOHOME}lib/env.mk
-include ${REPOHOME}lib/config.mk
-include ${REPOHOME}lib/tasks.mk
-include ${REPOHOME}lib/projects.mk
-
-
-
-## general parameters for Tatoeba models
 
 ## Tatoeba Challenge Data release number
 # TATOEBA_VERSION        ?= v2020-07-28
 TATOEBA_VERSION          ?= v2021-08-07
 TATOEBA_VERSION_NOHYPHEN ?= $(subst -,,${TATOEBA_VERSION})
 
+
+## this will be the base name of the model file
+TATOEBA_DATASET    := opusTC${TATOEBA_VERSION_NOHYPHEN}
+
+TATOEBA_TRAINSET   := Tatoeba-train-${TATOEBA_VERSION}
+TATOEBA_DEVSET     := Tatoeba-dev-${TATOEBA_VERSION}
+TATOEBA_TESTSET    := Tatoeba-test-${TATOEBA_VERSION}
+
+DATASET             = ${TATOEBA_DATASET}
+TRAINSET            = ${TATOEBA_TRAINSET}
+DEVSET              = ${TATOEBA_DEVSET}
+TESTSET             = ${TATOEBA_TESTSET}
+DEVSET_NAME         = ${TATOEBA_DEVSET}
+TESTSET_NAME        = ${TATOEBA_TESTSET}
+TRAINSET_NAME       = ${TATOEBA_TRAINSET}
+
+SMALLEST_TRAINSIZE  = 1000
+USE_REST_DEVDATA    = 0
+DATA_IS_SHUFFLED    = 1
+DEVSIZE             = 5000
+TESTSIZE            = 10000
+DEVMINSIZE          = 200
+
+BACKTRANS_HOME      = ${PWD}/back-translate
+FORWARDTRANS_HOME   = ${PWD}/forward-translate
+MODELSHOME          = ${PWD}/models
+RELEASEDIR          = ${PWD}/models
+
+MODELS_URL          = https://object.pouta.csc.fi/${TATOEBA_MODEL_CONTAINER}
+MODEL_CONTAINER     = ${TATOEBA_MODEL_CONTAINER}
+
+SKIP_DATA_DETAILS   = 1
+DEFAULT_PIVOT_LANG  = eng
+MIN_BLEU_SCORE      = 10
+TATOEBA_PIVOT      ?= ${DEFAULT_PIVOT_LANG}
+
+## overwrite the standard langpair string
+## basically take ${SRC}-${TRG}
+## backoff to first langs in SRCLANGS and TRGLANGS
+LANGPAIRSTR := ${firstword ${SRC} ${SRCLANGS}}-${firstword ${TRG} ${TRGLANGS}}
+
+
+include ${REPOHOME}lib/env.mk
+include ${REPOHOME}lib/config.mk
+include ${REPOHOME}lib/tasks.mk
+
+
+
+## general parameters for Tatoeba models
+
 TATOEBA_DATAURL   := https://object.pouta.csc.fi/Tatoeba-Challenge
 TATOEBA_TEST_URL  := ${TATOEBA_DATAURL}-${TATOEBA_VERSION}
 TATOEBA_TRAIN_URL := ${TATOEBA_DATAURL}-${TATOEBA_VERSION}
 TATOEBA_MONO_URL  := ${TATOEBA_DATAURL}-${TATOEBA_VERSION}
-TATOEBA_WORK      ?= ${PWD}/work-tatoeba
-TATOEBA_DATA      ?= ${TATOEBA_WORK}/data/${PRE}
-TATOEBA_MONO      ?= ${TATOEBA_WORK}/data/mono
+TATOEBA_DATA      ?= ${WORKHOME}/data/${PRE}
+TATOEBA_MONO      ?= ${WORKHOME}/data/mono
 
 ## list of language IDs that only appear in the training data
 ## (fetched from Tatoeba github)
@@ -141,35 +182,21 @@ WIKIMACROLANGS    ?= $(sort ${shell ${GET_ISO_CODE} ${WIKILANGS}})
 ## ObjectStorage container name for Tatoeba models
 TATOEBA_MODEL_CONTAINER := Tatoeba-MT-models
 
-## this will be the base name of the model file
-TATOEBA_DATASET       := ${DATASET}TC${TATOEBA_VERSION_NOHYPHEN}
-
-TATOEBA_TRAINSET      := Tatoeba-train-${TATOEBA_VERSION}
-TATOEBA_DEVSET        := Tatoeba-dev-${TATOEBA_VERSION}
-TATOEBA_TESTSET       := Tatoeba-test-${TATOEBA_VERSION}
-TATOEBA_DEVSET_NAME   := ${TATOEBA_DEVSET}
-TATOEBA_TESTSET_NAME  := ${TATOEBA_TESTSET}
-TATOEBA_TRAINSET_NAME := ${TATOEBA_TRAINSET}
-TATOEBA_RELEASEDIR    := ${PWD}/models-tatoeba
-TATOEBA_MODELSHOME    := ${PWD}/models-tatoeba
-TATOEBA_BTHOME        := ${PWD}/bt-tatoeba
-TATOEBA_FTHOME        := ${PWD}/ft-tatoeba
-TATOEBA_MIN_BLEU      := 10
 
 ## file with the source and target languages in the current model
 
-TATOEBA_SRCLABELFILE = ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.src
-TATOEBA_TRGLABELFILE = ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.trg
+TATOEBA_SRCLABELFILE = ${WORKHOME}/${LANGPAIRSTR}/${DATASET}-langlabels.src
+TATOEBA_TRGLABELFILE = ${WORKHOME}/${LANGPAIRSTR}/${DATASET}-langlabels.trg
 
 ## get source and target languages from the label files
 
 ifneq (${wildcard ${TATOEBA_SRCLABELFILE}},)
-  TATOEBA_SRCLANGS = ${shell cat ${TATOEBA_SRCLABELFILE}}
+  SRCLANGS := ${shell cat ${TATOEBA_SRCLABELFILE}}
 endif
 ifneq (${wildcard ${TATOEBA_TRGLABELFILE}},)
-  TATOEBA_TRGLANGS = ${shell cat ${TATOEBA_TRGLABELFILE}}
+  TRGLANGS := ${shell cat ${TATOEBA_TRGLABELFILE}}
 endif
-# ifndef USE_TARGET_LABELS
+
 ifdef TATOEBA_TRGLANGS
 ifneq (${words ${TATOEBA_TRGLANGS}},1)
   USE_TARGET_LABELS = 1
@@ -177,53 +204,40 @@ ifneq (${words ${TATOEBA_TRGLANGS}},1)
 endif
 endif
 
+ifeq (${SRCLANGS},)
+  SRCLANGS = ${SRC}
+endif
+ifeq (${TRGLANGS},)
+  TRGLANGS = ${TRG}
+endif
+
+
+
 ## default parameters for some recipes with language groups
 ## - modeltype
 ## - size balancing
 LANGGROUP_MODELTYPE     ?= transformer
 LANGGROUP_FIT_DATA_SIZE ?= 1000000
 
-## set the default pivot language to eng
-
-TATOEBA_PIVOT = eng
 
 
+## NEW (2012-12-15): use default (always shuffle training data)
+#
+# DATA_IS_SHUFFLED    = 1
+# MARIAN_SHUFFLE      = data
+# MARIAN_DATA_STORAGE = --sqlite
+# HPC_DISK            = 500
 
-TATOEBA_PARAMS := DATASET=${TATOEBA_DATASET} \
-		TATOEBA_DATASET=${TATOEBA_DATASET} \
-		TRAINSET=${TATOEBA_TRAINSET} \
-		DEVSET=${TATOEBA_DEVSET} \
-		TESTSET=${TATOEBA_TESTSET} \
-		DEVSET_NAME=${TATOEBA_DEVSET_NAME} \
-		TESTSET_NAME=${TATOEBA_TESTSET_NAME} \
-		TRAINSET_NAME=${TATOEBA_TRAINSET_NAME} \
-		SMALLEST_TRAINSIZE=1000 \
-		USE_REST_DEVDATA=0 \
-		DATA_IS_SHUFFLED=1 \
-		HELDOUTSIZE=0 \
-		DEVSIZE=5000 \
-		TESTSIZE=10000 \
-		DEVMINSIZE=200 \
-		WORKHOME=${TATOEBA_WORK} \
-		BACKTRANS_HOME=${TATOEBA_BTHOME} \
-		FORWARDTRANS_HOME=${TATOEBA_FTHOME} \
-		MODELSHOME=${TATOEBA_MODELSHOME} \
-		RELEASEDIR=${TATOEBA_RELEASEDIR} \
-                MODELS_URL=https://object.pouta.csc.fi/${TATOEBA_MODEL_CONTAINER} \
-		MODEL_CONTAINER=${TATOEBA_MODEL_CONTAINER} \
-		ALT_MODEL_DIR=tatoeba \
-		SKIP_DATA_DETAILS=1 \
-		DEFAULT_PIVOT_LANG=${TATOEBA_PIVOT} \
-		MIN_BLEU_SCORE=${TATOEBA_MIN_BLEU}
-
-## unless we have multilingual models:
-## no need to shuffle data again, just shuffle batches
-## no need to store data in sqlite databases
-ifeq (${words ${SRCLANGS}},1)
-ifeq (${words ${TRGLANGS}},1)
-  TATOEBA_PARAMS += MARIAN_SHUFFLE=batches MARIAN_DATA_STORAGE= HPC_DISK=
-endif
-endif
+# ## unless we have multilingual models:
+# ## no need to shuffle data again, just shuffle batches
+# ## no need to store data in sqlite databases
+# ifeq (${words ${SRCLANGS}},1)
+# ifeq (${words ${TRGLANGS}},1)
+#   MARIAN_SHUFFLE      = batches
+#   MARIAN_DATA_STORAGE =
+#   HPC_DISK            =
+# endif
+# endif
 
 
 
@@ -245,22 +259,37 @@ OPUS_LANG_GRANDPARENTS := ${sort ${shell langgroup -p -n ${OPUS_LANG_PARENTS} 2>
 OPUS_LANG_GROUPS       := ${sort ${OPUS_LANG_PARENTS} ${OPUS_LANG_GRANDPARENTS}}
 
 
-.PHONY: tatoeba
-tatoeba:
-	${MAKE} tatoeba-prepare
-	${MAKE} all-tatoeba
+.PHONY: all
+all: 
+	${MAKE} prepare
+	${MAKE} train
+	${MAKE} eval
+	${MAKE} compare
+	${MAKE} eval-testsets
+
+## prepare data (config, train.dev.test data, labels)
+.PHONY: prepare tatoeba-prepare
+prepare tatoeba-prepare: ${TATOEBA_LANGIDS_TRAINONLY}
+	${MAKE} fetch-datasets
+	${MAKE} langlabel-files
+	${MAKE} local-config
+	${MAKE} data
+
+.PHONY: trainonly_langids
+trainonly_langids: ${TATOEBA_LANGIDS_TRAINONLY}
+
 
 ## start unidirectional training job
 ## - make data first, then submit a job
-.PHONY: tatoeba-job
-tatoeba-job:
+.PHONY: tatoeba-job job slurmjob
+job slurmjob tatoeba-job:
 	rm -f train-and-eval.submit
 	${MAKE} tatoeba-prepare
 	${MAKE} all-job-tatoeba
 
 ## start jobs in both translation directions
-.PHONY: tatoeba-bidirectional-job
-tatoeba-bidirectional-job:
+.PHONY: tatoeba-bidirectional-job bidirectional-job
+bidirectional-job tatoeba-bidirectional-job:
 	${MAKE} tatoeba-prepare
 	${MAKE} all-job-tatoeba
 ifneq (${SRCLANGS},${TRGLANGS})
@@ -270,43 +299,30 @@ ifneq (${SRCLANGS},${TRGLANGS})
 endif
 
 
-## prepare data (config, train.dev.test data, labels)
-.PHONY: tatoeba-prepare
-tatoeba-prepare: # ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}.gz
-	${MAKE} local-config-tatoeba
-	${MAKE} data-tatoeba
 
-## train a model
-.PHONY: tatoeba-train
-tatoeba-train:
-	${MAKE} train-tatoeba
-
-## evaluate a model
-.PHONY: tatoeba-eval
-tatoeba-eval:
-	${MAKE} compare-tatoeba
+## for compatibility: recipes with tatoeba prefix
+.PHONY: tatoeba-data tatoeba-train tatoeba-eval tatoeba-compare
+tatoeba-data: data
+tatoeba-train: train
+tatoeba-eval: eval
+tatoeba-compare: compare
 
 ## fetch the essential data and get labels for language variants
 ## (this is done by the data targets above as well)
 .PHONY: tatoeba-data tatoeba-labels
-# tatoeba-data: ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}.gz
-tatoeba-data: data-tatoeba
-tatoeba-labels: ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.src \
-		${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.trg
-
-#		${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${LANGPAIRSTR}.clean.${SRCEXT}.labels \
-#		${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${LANGPAIRSTR}.clean.${TRGEXT}.labels
+tatoeba-labels: ${WORKHOME}/${LANGPAIRSTR}/${DATASET}-langlabels.src \
+		${WORKHOME}/${LANGPAIRSTR}/${DATASET}-langlabels.trg
 
 
 ## restart all language pairs of models that have not yet converged
 ## TODO: takes only the first model found in the directory
 tatoeba-continue-unfinished:
-	for d in `find ${TATOEBA_WORK}/  -maxdepth 1 -type d -name '???-???' -printf " %f"`; do \
-	  if [ `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.valid1.log' | grep -v tuned | wc -l` -gt 0 ]; then \
-	    if [ ! `find ${TATOEBA_WORK}/$$d -maxdepth 1  -name '*.done' | grep -v tuned | wc -l` -gt 0 ]; then \
+	for d in `find ${WORKHOME}/  -maxdepth 1 -type d -name '???-???' -printf " %f"`; do \
+	  if [ `find ${WORKHOME}/$$d -maxdepth 1 -name '*.valid1.log' | grep -v tuned | wc -l` -gt 0 ]; then \
+	    if [ ! `find ${WORKHOME}/$$d -maxdepth 1  -name '*.done' | grep -v tuned | wc -l` -gt 0 ]; then \
 	      p=`echo $$d | sed 's/-/2/'`; \
-	      m=`ls ${TATOEBA_WORK}/$$d/*.valid1.log | head -1 | cut -f3 -d/ | cut -f3 -d.`; \
-	      t=`ls ${TATOEBA_WORK}/$$d/*.valid1.log | head -1 | cut -f3 -d/ | cut -f1 -d.`; \
+	      m=`ls ${WORKHOME}/$$d/*.valid1.log | head -1 | cut -f3 -d/ | cut -f3 -d.`; \
+	      t=`ls ${WORKHOME}/$$d/*.valid1.log | head -1 | cut -f3 -d/ | cut -f1 -d.`; \
 	      ${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-train; \
 	    fi \
 	  fi \
@@ -316,14 +332,14 @@ tatoeba-continue-unfinished:
 ## unless they are converged already
 ## TODO: takes only the first model found in the directory
 tatoeba-continue-unreleased:
-	find ${TATOEBA_WORK}/       -maxdepth 1 -type d -name '???-???' -printf "%f\n" | sort > $@.tt1
+	find ${WORKHOME}/       -maxdepth 1 -type d -name '???-???' -printf "%f\n" | sort > $@.tt1
 	find ${TATOEBA_MODELSHOME}/ -maxdepth 1 -type d -name '???-???' -printf "%f\n" | sort > $@.tt2
 	for d in `diff $@.tt1 $@.tt2 | grep '<' | cut -f2 -d' '`; do \
-	  if [ `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.valid1.log' | grep -v tuned | wc -l` -gt 0 ]; then \
-	    if [ ! `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.done' | grep -v tuned | wc -l` -gt 0 ]; then \
+	  if [ `find ${WORKHOME}/$$d -maxdepth 1 -name '*.valid1.log' | grep -v tuned | wc -l` -gt 0 ]; then \
+	    if [ ! `find ${WORKHOME}/$$d -maxdepth 1 -name '*.done' | grep -v tuned | wc -l` -gt 0 ]; then \
 	      p=`echo $$d | sed 's/-/2/'`; \
-	      m=`ls ${TATOEBA_WORK}/$$d/*.valid1.log | head -1 | cut -f3 -d/ | cut -f3 -d.`; \
-	      t=`ls ${TATOEBA_WORK}/$$d/*.valid1.log | head -1 | cut -f3 -d/ | cut -f1 -d.`; \
+	      m=`ls ${WORKHOME}/$$d/*.valid1.log | head -1 | cut -f3 -d/ | cut -f3 -d.`; \
+	      t=`ls ${WORKHOME}/$$d/*.valid1.log | head -1 | cut -f3 -d/ | cut -f1 -d.`; \
 	      ${MAKE} DATASET=$$t MODELTYPE=$$m tatoeba-$$p-train; \
 	    fi \
 	  fi \
@@ -334,8 +350,8 @@ tatoeba-continue-unreleased:
 ## release all language pairs
 ## (including lang-group models)
 tatoeba-release-all:
-	for d in `find ${TATOEBA_WORK}/ -maxdepth 1 -type d -name '???-???' -printf " %f"`; do \
-	  for f in `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.valid1.log' -printf " %f" | grep -v tuned`; do \
+	for d in `find ${WORKHOME}/ -maxdepth 1 -type d -name '???-???' -printf " %f"`; do \
+	  for f in `find ${WORKHOME}/$$d -maxdepth 1 -name '*.valid1.log' -printf " %f" | grep -v tuned`; do \
 	    p=`echo $$d | sed 's/-/2/'`; \
 	    m=`echo $$f | cut -f3 -d.`; \
 	    t=`echo $$f | cut -f1 -d.`; \
@@ -346,8 +362,8 @@ tatoeba-release-all:
 
 ## release all models that have converged
 tatoeba-release-finished:
-	for d in `find ${TATOEBA_WORK}/ -maxdepth 1 -type d -name '???-???' -printf " %f"`; do \
-	  for f in `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.done' -printf " %f" | grep -v tuned`; do \
+	for d in `find ${WORKHOME}/ -maxdepth 1 -type d -name '???-???' -printf " %f"`; do \
+	  for f in `find ${WORKHOME}/$$d -maxdepth 1 -name '*.done' -printf " %f" | grep -v tuned`; do \
 	      p=`echo $$d | sed 's/-/2/'`; \
 	      m=`echo $$f | cut -f3 -d.`; \
 	      t=`echo $$f | cut -f1 -d.`; \
@@ -359,10 +375,10 @@ tatoeba-release-finished:
 
 ## release all models that are not yet released
 tatoeba-release-unreleased:
-	find ${TATOEBA_WORK}/       -maxdepth 1 -type d -name '???-???' -printf "%f\n" | sort > $@.tt1
+	find ${WORKHOME}/       -maxdepth 1 -type d -name '???-???' -printf "%f\n" | sort > $@.tt1
 	find ${TATOEBA_MODELSHOME}/ -maxdepth 1 -type d -name '???-???' -printf "%f\n" | sort > $@.tt2
 	for d in `diff $@.tt1 $@.tt2 | grep '<' | cut -f2 -d' '`; do \
-	  for f in `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.valid1.log' -printf " %f" | grep -v tuned`; do \
+	  for f in `find ${WORKHOME}/$$d -maxdepth 1 -name '*.valid1.log' -printf " %f" | grep -v tuned`; do \
 	      p=`echo $$d | sed 's/-/2/'`; \
 	      m=`echo $$f | cut -f3 -d.`; \
 	      t=`echo $$f | cut -f1 -d.`; \
@@ -373,10 +389,10 @@ tatoeba-release-unreleased:
 	rm -f $@.tt1 $@.tt2
 
 tatoeba-release-unreleased-test:
-	find ${TATOEBA_WORK}/       -maxdepth 1 -type d -name '???-???' -printf "%f\n" | sort > $@.tt1
+	find ${WORKHOME}/       -maxdepth 1 -type d -name '???-???' -printf "%f\n" | sort > $@.tt1
 	find ${TATOEBA_MODELSHOME}/ -maxdepth 1 -type d -name '???-???' -printf "%f\n" | sort > $@.tt2
 	for d in `diff $@.tt1 $@.tt2 | grep '<' | cut -f2 -d' '`; do \
-	  for f in `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.valid1.log' -printf " %f" | grep -v tuned`; do \
+	  for f in `find ${WORKHOME}/$$d -maxdepth 1 -name '*.valid1.log' -printf " %f" | grep -v tuned`; do \
 	      p=`echo $$d | sed 's/-/2/'`; \
 	      m=`echo $$f | cut -f3 -d.`; \
 	      t=`echo $$f | cut -f1 -d.`; \
@@ -390,8 +406,8 @@ tatoeba-release-unreleased-test:
 ## ---> be aware of the danger of overwriting existing files
 ## ---> backups are stored in models-backup
 tatoeba-refresh-finished:
-	for d in `find ${TATOEBA_WORK}/ -maxdepth 1 -type d -name '???-???' -printf " %f"`; do \
-	  for f in `find ${TATOEBA_WORK}/$$d -maxdepth 1 -name '*.done' -printf "%A@\t%f\n" | sort -nr | cut -f2 | grep -v tuned | head -1`; do \
+	for d in `find ${WORKHOME}/ -maxdepth 1 -type d -name '???-???' -printf " %f"`; do \
+	  for f in `find ${WORKHOME}/$$d -maxdepth 1 -name '*.done' -printf "%A@\t%f\n" | sort -nr | cut -f2 | grep -v tuned | head -1`; do \
 	      p=`echo $$d | sed 's/-/2/'`; \
 	      m=`echo $$f | cut -f3 -d.`; \
 	      t=`echo $$f | cut -f1 -d.`; \
@@ -557,7 +573,7 @@ tatoeba-all2trg-small:
 
 tatoeba-wiki2eng:
 	for l in ${WIKIMACROLANGS}; do \
-	  if [ ! `find ${TATOEBA_WORK}/$$l-eng -name '*.done' 2>/dev/null | wc -l` -gt 0 ]; then \
+	  if [ ! `find ${WORKHOME}/$$l-eng -name '*.done' 2>/dev/null | wc -l` -gt 0 ]; then \
 	    ${MAKE} SRCLANGS=$$l TRGLANGS=eng tatoeba-job; \
 	  fi \
 	done
@@ -565,7 +581,7 @@ tatoeba-wiki2eng:
 ## macro-languages that we missed before
 tatoeba-wiki2eng-macro:
 	for l in $(filter-out ${WIKILANGS},${WIKIMACROLANGS}); do \
-	  if [ ! `find ${TATOEBA_WORK}/$$l-eng -name '*.done' 2>/dev/null | wc -l` -gt 0 ]; then \
+	  if [ ! `find ${WORKHOME}/$$l-eng -name '*.done' 2>/dev/null | wc -l` -gt 0 ]; then \
 	    ${MAKE} SRCLANGS=$$l TRGLANGS=eng tatoeba-job; \
 	  fi \
 	done
@@ -575,11 +591,11 @@ tatoeba-print-missing-wiki:
 
 tatoeba-wiki2eng-parent:
 	for l in ${WIKIMACROLANGS}; do \
-	  if [ ! `find ${TATOEBA_WORK}/$$l-eng -name '*.done' 2>/dev/null | wc -l` -gt 0 ]; then \
+	  if [ ! `find ${WORKHOME}/$$l-eng -name '*.done' 2>/dev/null | wc -l` -gt 0 ]; then \
 	    echo "check $$l-eng"; \
-	    if [ `find ${TATOEBA_WORK}/$$l-eng/train -name '${TATOEBA_DATASET}.src.clean.spm*.gz' 2>/dev/null | wc -l` -gt 0 ]; then \
+	    if [ `find ${WORKHOME}/$$l-eng/train -name '${TATOEBA_DATASET}.src.clean.spm*.gz' 2>/dev/null | wc -l` -gt 0 ]; then \
 	      echo "check data size of $$l-eng"; \
-	      if [ `find ${TATOEBA_WORK}/$$l-eng/train -name '${TATOEBA_DATASET}.src.clean.spm*.gz' 2>/dev/null | xargs zcat | head -100000 | wc -l` -lt 100000 ]; then \
+	      if [ `find ${WORKHOME}/$$l-eng/train -name '${TATOEBA_DATASET}.src.clean.spm*.gz' 2>/dev/null | xargs zcat | head -100000 | wc -l` -lt 100000 ]; then \
 		p=`langgroup -p $$l`; \
 		echo "${MAKE} SRCLANGS=$$p TRGLANGS=eng tatoeba-$${p}2eng-train-1m"; \
 	      fi \
@@ -591,14 +607,14 @@ tatoeba-wiki2eng-done:
 	for l in ${WIKIMACROLANGS}; do \
 	  if [ `find ${TATOEBA_MODELSHOME}/$$l-eng -name '*.zip' 2>/dev/null | wc -l` -gt 0 ]; then \
 	    echo "model available for $$l-eng"; \
-	  elif [ `find ${TATOEBA_WORK}/$$l-eng -name '*.done' 2>/dev/null | wc -l` -gt 0 ]; then \
+	  elif [ `find ${WORKHOME}/$$l-eng -name '*.done' 2>/dev/null | wc -l` -gt 0 ]; then \
 	    echo -n "model aivailbale for $$l-eng but not released"; \
-	    if [ `find ${TATOEBA_WORK}/$$l-eng -name '*.eval' 2>/dev/null | wc -l` -gt 0 ]; then \
+	    if [ `find ${WORKHOME}/$$l-eng -name '*.eval' 2>/dev/null | wc -l` -gt 0 ]; then \
 	      echo -n ", BLEU = "; \
-	      grep BLEU ${TATOEBA_WORK}/$$l-eng/*eval | head -1 | cut -f3 -d' '; \
-	    elif [ ! -e ${TATOEBA_WORK}/$$l-eng/test/${TATOEBA_TESTSET}.src ]; then \
+	      grep BLEU ${WORKHOME}/$$l-eng/*eval | head -1 | cut -f3 -d' '; \
+	    elif [ ! -e ${WORKHOME}/$$l-eng/test/${TATOEBA_TESTSET}.src ]; then \
 	      echo ", missing eval file"; \
-	      echo "make TATOEBA_WORK=${TATOEBA_WORK}-tmp SRCLANGS=$$l TRGLANGS=eng data-tatoeba"; \
+	      echo "make WORKHOME=${WORKHOME}-tmp SRCLANGS=$$l TRGLANGS=eng data-tatoeba"; \
 	    else \
 	      echo ", run 'make tatoeba-$${l}2eng-evalall'"; \
 	    fi \
@@ -675,13 +691,13 @@ tatoeba-zle2langgroups-bt-4m:
 
 ## temporary recipe for evaluating all 4m multilingual models that are done
 tatoeba-eval-4m:
-	for p in `ls work-tatoeba/*/*4m*done | cut -f2 -d/ | sed 's/\-/2/'`; do \
+	for p in `ls ${WORKHOME}/*/*4m*done | cut -f2 -d/ | sed 's/\-/2/'`; do \
 	  make MODELTYPE=transformer tatoeba-$$p-multieval-bt-4m; \
 	  make MODELTYPE=transformer tatoeba-$$p-eval-testsets-bt-4m; \
 	done
 
 tatoeba-dist-4m:
-	for p in `ls work-tatoeba/*/*4m*done | cut -f2 -d/ | sed 's/\-/2/'`; do \
+	for p in `ls ${WORKHOME}/*/*4m*done | cut -f2 -d/ | sed 's/\-/2/'`; do \
 	  make MODELTYPE=transformer tatoeba-$$p-dist-bt-4m; \
 	done
 
@@ -737,7 +753,7 @@ tatoeba-dist-4m:
 ## new: only start this if there is a model
 all-tatoeba-group2eng-dist:
 	for g in ${OPUS_LANG_GROUPS}; do \
-	  if [ `find ${TATOEBA_WORK}/$$g-eng -name '*.npz' | wc -l` -gt 0 ]; then \
+	  if [ `find ${WORKHOME}/$$g-eng -name '*.npz' | wc -l` -gt 0 ]; then \
 	    ${MAKE} MODELTYPE=transformer tatoeba-$${g}2eng-eval; \
 	    ${MAKE} MODELTYPE=transformer tatoeba-$${g}2eng-evalall; \
 	    ${MAKE} MODELTYPE=transformer tatoeba-$${g}2eng-dist; \
@@ -746,7 +762,7 @@ all-tatoeba-group2eng-dist:
 
 all-tatoeba-eng2group-dist:
 	for g in ${OPUS_LANG_GROUPS}; do \
-	  if [ `find ${TATOEBA_WORK}/eng-$$g -name '*.npz' | wc -l` -gt 0 ]; then \
+	  if [ `find ${WORKHOME}/eng-$$g -name '*.npz' | wc -l` -gt 0 ]; then \
 	    ${MAKE} MODELTYPE=transformer tatoeba-eng2$${g}-eval; \
 	    ${MAKE} MODELTYPE=transformer tatoeba-eng2$${g}-evalall; \
 	    ${MAKE} MODELTYPE=transformer tatoeba-eng2$${g}-dist; \
@@ -755,7 +771,7 @@ all-tatoeba-eng2group-dist:
 
 all-tatoeba-langgroup-dist:
 	for g in ${OPUS_LANG_GROUPS}; do \
-	  if [ `find ${TATOEBA_WORK}/$$g-$$g -name '*.npz' | wc -l` -gt 0 ]; then \
+	  if [ `find ${WORKHOME}/$$g-$$g -name '*.npz' | wc -l` -gt 0 ]; then \
 	    ${MAKE} MODELTYPE=transformer PIVOT=eng tatoeba-$${g}2$${g}-eval; \
 	    ${MAKE} MODELTYPE=transformer PIVOT=eng tatoeba-$${g}2$${g}-evalall; \
 	    ${MAKE} MODELTYPE=transformer PIVOT=eng tatoeba-$${g}2$${g}-dist; \
@@ -874,7 +890,7 @@ tatoeba-%-train:
 	   t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-train,%,$@))); \
 	   S="${call find-srclanggroup,${patsubst tatoeba-%-train,%,$@},${PIVOT}}"; \
 	   T="${call find-trglanggroup,${patsubst tatoeba-%-train,%,$@},${PIVOT}}"; \
-	   if [ ! `find ${TATOEBA_WORK}/$$s-$$t -maxdepth 1 -name '${TATOEBA_DATASET}.*${MODELTYPE}.model${NR}.done' | wc -l` -gt 0 ]; then \
+	   if [ ! `find ${WORKHOME}/$$s-$$t -maxdepth 1 -name '${TATOEBA_DATASET}.*${MODELTYPE}.model${NR}.done' | wc -l` -gt 0 ]; then \
 	     if [ `echo $$S | tr ' ' "\n" | wc -l` -ge ${MIN_SRCLANGS} ]; then \
 	       if [ `echo $$T | tr ' ' "\n" | wc -l` -ge ${MIN_TRGLANGS} ]; then \
 	         if [ `echo $$S | tr ' ' "\n" | wc -l` -le ${MAX_SRCLANGS} ]; then \
@@ -905,7 +921,7 @@ tatoeba-%-trainjob:
 	   t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-trainjob,%,$@))); \
 	   S="${call find-srclanggroup,${patsubst tatoeba-%-trainjob,%,$@},${PIVOT}}"; \
 	   T="${call find-trglanggroup,${patsubst tatoeba-%-trainjob,%,$@},${PIVOT}}"; \
-	   if [ ! `find ${TATOEBA_WORK}/$$s-$$t -maxdepth 1 -name '${TATOEBA_DATASET}.*${MODELTYPE}.model${NR}.done' | wc -l` -gt 0 ]; then \
+	   if [ ! `find ${WORKHOME}/$$s-$$t -maxdepth 1 -name '${TATOEBA_DATASET}.*${MODELTYPE}.model${NR}.done' | wc -l` -gt 0 ]; then \
 	     if [ `echo $$S | tr ' ' "\n" | wc -l` -ge ${MIN_SRCLANGS} ]; then \
 	       if [ `echo $$T | tr ' ' "\n" | wc -l` -ge ${MIN_TRGLANGS} ]; then \
 	         if [ `echo $$S | tr ' ' "\n" | wc -l` -le ${MAX_SRCLANGS} ]; then \
@@ -947,8 +963,8 @@ tatoeba-%-pivotlang:
 tatoeba-%-eval:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-eval,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-eval,%,$@))); \
-	  if [ -e ${TATOEBA_WORK}/$$s-$$t ]; then \
-	    if [ `find ${TATOEBA_WORK}/$$s-$$t/ -name '*.npz' | wc -l` -gt 0 ]; then \
+	  if [ -e ${WORKHOME}/$$s-$$t ]; then \
+	    if [ `find ${WORKHOME}/$$s-$$t/ -name '*.npz' | wc -l` -gt 0 ]; then \
 	      ${MAKE} LANGPAIRSTR=$$s-$$t \
 		SRCLANGS="${call find-srclanggroup,${patsubst tatoeba-%-eval,%,$@},${PIVOT}}" \
 		TRGLANGS="${call find-trglanggroup,${patsubst tatoeba-%-eval,%,$@},${PIVOT}}" \
@@ -965,8 +981,8 @@ tatoeba-%-multieval:
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-multieval,%,$@))); \
 	  S="${call find-srclanggroup,${patsubst tatoeba-%-multieval,%,$@},${PIVOT}}"; \
 	  T="${call find-trglanggroup,${patsubst tatoeba-%-multieval,%,$@},${PIVOT}}"; \
-	  if [ -e ${TATOEBA_WORK}/$$s-$$t ]; then \
-	    if [ `find ${TATOEBA_WORK}/$$s-$$t/ -name '*.npz' | wc -l` -gt 0 ]; then \
+	  if [ -e ${WORKHOME}/$$s-$$t ]; then \
+	    if [ `find ${WORKHOME}/$$s-$$t/ -name '*.npz' | wc -l` -gt 0 ]; then \
 	      ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" \
 		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
 		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
@@ -982,8 +998,8 @@ tatoeba-%-multieval:
 tatoeba-%-eval-testsets:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-eval-testsets,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-eval-testsets,%,$@))); \
-	  if [ -e ${TATOEBA_WORK}/$$s-$$t ]; then \
-	    if [ `find ${TATOEBA_WORK}/$$s-$$t/ -name '*.npz' | wc -l` -gt 0 ]; then \
+	  if [ -e ${WORKHOME}/$$s-$$t ]; then \
+	    if [ `find ${WORKHOME}/$$s-$$t/ -name '*.npz' | wc -l` -gt 0 ]; then \
 	      ${MAKE} LANGPAIRSTR=$$s-$$t \
 		SRCLANGS="${call find-srclanggroup,${patsubst tatoeba-%-eval-testsets,%,$@},${PIVOT}}" \
 		TRGLANGS="${call find-trglanggroup,${patsubst tatoeba-%-eval-testsets,%,$@},${PIVOT}}" \
@@ -997,8 +1013,8 @@ tatoeba-%-eval-testsets:
 tatoeba-%-testsets:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-testsets,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-testsets,%,$@))); \
-	  if [ -e ${TATOEBA_WORK}/$$s-$$t ]; then \
-	    if [ `find ${TATOEBA_WORK}/$$s-$$t/ -name '*.npz' | wc -l` -gt 0 ]; then \
+	  if [ -e ${WORKHOME}/$$s-$$t ]; then \
+	    if [ `find ${WORKHOME}/$$s-$$t/ -name '*.npz' | wc -l` -gt 0 ]; then \
 	      ${MAKE} LANGPAIRSTR=$$s-$$t \
 		SRCLANGS="${call find-srclanggroup,${patsubst tatoeba-%-testsets,%,$@},${PIVOT}}" \
 		TRGLANGS="${call find-trglanggroup,${patsubst tatoeba-%-testsets,%,$@},${PIVOT}}" \
@@ -1029,7 +1045,7 @@ tatoeba-%-release:
 tatoeba-%-dist:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-dist,%,$@))); \
-	  if [ -e ${TATOEBA_WORK}/$$s-$$t ]; then \
+	  if [ -e ${WORKHOME}/$$s-$$t ]; then \
 	    ${MAKE} LANGPAIRSTR=$$s-$$t \
 		SRCLANGS="${call find-srclanggroup,${patsubst tatoeba-%-dist,%,$@},${PIVOT}}" \
 		TRGLANGS="${call find-trglanggroup,${patsubst tatoeba-%-dist,%,$@},${PIVOT}}" \
@@ -1051,7 +1067,7 @@ tatoeba-%-refresh: tatoeba-%-refresh-release-yml tatoeba-%-refresh-release-readm
 tatoeba-%-refresh-release-readme:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-refresh-release-readme,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-refresh-release-readme,%,$@))); \
-	  if [ -e ${TATOEBA_WORK}/$$s-$$t ]; then \
+	  if [ -e ${WORKHOME}/$$s-$$t ]; then \
 	    ${MAKE} LANGPAIRSTR=$$s-$$t \
 		SRCLANGS="${call find-srclanggroup,${patsubst tatoeba-%-refresh-release-readme,%,$@},${PIVOT}}" \
 		TRGLANGS="${call find-trglanggroup,${patsubst tatoeba-%-refresh-release-readme,%,$@},${PIVOT}}" \
@@ -1064,7 +1080,7 @@ tatoeba-%-refresh-release-readme:
 tatoeba-%-refresh-release-yml:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-refresh-release-yml,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-refresh-release-yml,%,$@))); \
-	  if [ -e ${TATOEBA_WORK}/$$s-$$t ]; then \
+	  if [ -e ${WORKHOME}/$$s-$$t ]; then \
 	    ${MAKE} LANGPAIRSTR=$$s-$$t \
 		SRCLANGS="${call find-srclanggroup,${patsubst tatoeba-%-refresh-release-yml,%,$@},${PIVOT}}" \
 		TRGLANGS="${call find-trglanggroup,${patsubst tatoeba-%-refresh-release-yml,%,$@},${PIVOT}}" \
@@ -1075,7 +1091,7 @@ tatoeba-%-refresh-release-yml:
 tatoeba-%-refresh-release: tatoeba-%-refresh-release-yml tatoeba-%-refresh-release-readme
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-refresh-release,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-refresh-release,%,$@))); \
-	  if [ -e ${TATOEBA_WORK}/$$s-$$t ]; then \
+	  if [ -e ${WORKHOME}/$$s-$$t ]; then \
 	    ${MAKE} LANGPAIRSTR=$$s-$$t \
 		SRCLANGS="${call find-srclanggroup,${patsubst tatoeba-%-refresh-release,%,$@},${PIVOT}}" \
 		TRGLANGS="${call find-trglanggroup,${patsubst tatoeba-%-refresh-release,%,$@},${PIVOT}}" \
@@ -1186,7 +1202,7 @@ tatoeba-langtunedist:
 tatoeba-%-langtune:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-langtune,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-langtune,%,$@))); \
-	  if [ -d ${TATOEBA_WORK}/$$s-$$t ]; then \
+	  if [ -d ${WORKHOME}/$$s-$$t ]; then \
 	    ${MAKE} LANGPAIRSTR=$$s-$$t ${TATOEBA_LANGTUNE_PARAMS} tatoeba; \
 	  fi )
 
@@ -1196,7 +1212,7 @@ tatoeba-%-langtune:
 tatoeba-%-langtunejob:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-langtunejob,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-langtunejob,%,$@))); \
-	  if [ -d ${TATOEBA_WORK}/$$s-$$t ]; then \
+	  if [ -d ${WORKHOME}/$$s-$$t ]; then \
 	    ${MAKE} LANGPAIRSTR=$$s-$$t ${TATOEBA_LANGTUNE_PARAMS} tatoeba-job; \
 	  fi )
 
@@ -1274,10 +1290,10 @@ tatoeba-distsubset-%: tatoeba-%.md
 	for l in `grep '\[' $< | cut -f2 -d '[' | cut -f1 -d ']'`; do \
 	  s=`echo $$l | cut -f1 -d '-'`; \
 	  t=`echo $$l | cut -f2 -d '-'`; \
-	  if [ -d ${TATOEBA_WORK}/$$s-$$t ]; then \
+	  if [ -d ${WORKHOME}/$$s-$$t ]; then \
 	    ${MAKE} SRCLANGS=$$s TRGLANGS=$$t MIN_BLEU_SCORE=10 release-tatoeba; \
 	  fi; \
-	  if [ -d ${TATOEBA_WORK}/$$t-$$s ]; then \
+	  if [ -d ${WORKHOME}/$$t-$$s ]; then \
 	    ${MAKE} SRCLANGS=$$t TRGLANGS=$$s MIN_BLEU_SCORE=10 release-tatoeba; \
 	  fi; \
 	done
@@ -1288,14 +1304,14 @@ tatoeba-evalsubset-%: tatoeba-%.md
 	for l in `grep '\[' $< | cut -f2 -d '[' | cut -f1 -d ']'`; do \
 	  s=`echo $$l | cut -f1 -d '-'`; \
 	  t=`echo $$l | cut -f2 -d '-'`; \
-	  if [ -d ${TATOEBA_WORK}/$$s-$$t ]; then \
-	    if  [ `find ${TATOEBA_WORK}/$$s-$$t -name '*.best-perplexity.npz' | wc -l` -gt 0 ]; then \
+	  if [ -d ${WORKHOME}/$$s-$$t ]; then \
+	    if  [ `find ${WORKHOME}/$$s-$$t -name '*.best-perplexity.npz' | wc -l` -gt 0 ]; then \
 	      ${MAKE} SRCLANGS=$$s TRGLANGS=$$t compare-tatoeba; \
 	      ${MAKE} SRCLANGS=$$s TRGLANGS=$$t eval-testsets-tatoeba; \
 	    fi \
 	  fi; \
-	  if [ -d ${TATOEBA_WORK}/$$t-$$s ]; then \
-	    if  [ `find ${TATOEBA_WORK}/$$t-$$s -name '*.best-perplexity.npz' | wc -l` -gt 0 ]; then \
+	  if [ -d ${WORKHOME}/$$t-$$s ]; then \
+	    if  [ `find ${WORKHOME}/$$t-$$s -name '*.best-perplexity.npz' | wc -l` -gt 0 ]; then \
 	      ${MAKE} SRCLANGS=$$t TRGLANGS=$$s compare-tatoeba; \
 	      ${MAKE} SRCLANGS=$$t TRGLANGS=$$s eval-testsets-tatoeba; \
 	    fi \
@@ -1378,11 +1394,11 @@ tatoeba-trainsize-%.txt: tatoeba-%.md
 
 .PHONY: tatoeba-multilingual-eval
 tatoeba-multilingual-eval:
-	-${MAKE} ${TATOEBA_PARAMS} tatoeba-multilingual-testsets
+	-${MAKE} tatoeba-multilingual-testsets
 ifneq (${words ${SRCLANGS} ${TRGLANGS}},2)
 	for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
-	    if [ -e ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.src ]; then \
+	    if [ -e ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.src ]; then \
 	      ${MAKE} SRC=$$s TRG=$$t \
 		TATOEBA_TESTSET=${TATOEBA_TESTSET}.$$s-$$t \
 		TATOEBA_TESTSET_NAME=${TATOEBA_TESTSET}.$$s-$$t \
@@ -1406,156 +1422,108 @@ tatoeba-sublang-eval: tatoeba-multilingual-eval-tatoeba
 
 
 
-## copy testsets into the multilingual model's test directory
-.PHONY: tatoeba-multilingual-testsets
-tatoeba-multilingual-testsets: ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba${TATOEBA_VERSION_NOHYPHEN}-testsets.done
-
-# ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-testsets.done-old:
-# 	@for s in ${SRCLANGS}; do \
-# 	  for t in ${TRGLANGS}; do \
-# 	    if [ ! -e ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.src ]; then \
-# 	      wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt \
-# 			${TATOEBA_RAWGIT}/data/test/$$s-$$t/test.txt; \
-# 	      if [ -s ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt ]; then \
-# 	        echo "make ${TATOEBA_TESTSET}.$$s-$$t"; \
-# 		if [ "${USE_TARGET_LABELS}" == "1" ]; then \
-# 	          cut -f2,3 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt | \
-# 		  sed 's/^\([^ ]*\)	/>>\1<< /' \
-# 		  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.src; \
-# 		else \
-# 		  cut -f3 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt \
-# 		  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.src; \
-# 		fi; \
-# 	        cut -f4 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt \
-# 		> ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.trg; \
-# 	      else \
-# 	        wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt \
-# 			${TATOEBA_RAWGIT}/data/test/$$t-$$s/test.txt; \
-# 	        if [ -s ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt ]; then \
-# 	          echo "make ${TATOEBA_TESTSET}.$$s-$$t"; \
-# 		  if [ "${USE_TARGET_LABELS}" == "1" ]; then \
-# 	            cut -f1,4 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt | \
-# 		    sed 's/^\([^ ]*\)	/>>\1<< /' \
-# 		    > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.src; \
-# 		  else \
-# 		    cut -f4 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt \
-# 		    > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.src; \
-# 		  fi; \
-# 	          cut -f3 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt \
-# 		  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.trg; \
-# 		fi \
-# 	      fi; \
-# 	      rm -f ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt; \
-# 	    fi \
-# 	  done \
-# 	done
-# 	if [ -d ${dir $@} ]; then \
-# 	  touch $@; \
-# 	fi
-
-
-## a rather complex recipe to create testsets for individual language pairs
-## in multilingual models
+## an overly complex recipe to create testsets for individual language pairs
 ## - extract test sets for all (macro-)language combinations
 ## - extract potential sub-language pairs from combinations involving macro-languages
+## - store those testsets in the multilingual model's test directory
+.PHONY: tatoeba-multilingual-testsets
+tatoeba-multilingual-testsets: ${WORKHOME}/${LANGPAIRSTR}/test/Tatoeba${TATOEBA_VERSION_NOHYPHEN}-testsets.done
 
+MULTILING_TESTSETS_DONE = ${WORKHOME}/${LANGPAIRSTR}/test/Tatoeba-testsets.done \
+		${WORKHOME}/${LANGPAIRSTR}/test/Tatoeba${TATOEBA_VERSION_NOHYPHEN}-testsets.done
 
-#	    if [ ! -e ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.src ]; then \
-#	    fi \
-
-${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-testsets.done \
-${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba${TATOEBA_VERSION_NOHYPHEN}-testsets.done:
-	@mkdir -p ${TATOEBA_WORK}/${LANGPAIRSTR}/test
+${MULTILING_TESTSETS_DONE}:
+	@mkdir -p ${WORKHOME}/${LANGPAIRSTR}/test
 	@for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
-	      wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp \
+	      wget -q -O ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp \
 			${TATOEBA_RAWGIT_RELEASE}/data/test/$$s-$$t/test.txt; \
-	      if [ -s ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp ]; then \
-		cat ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp $(FIXLANGIDS) \
-			> ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt; \
+	      if [ -s ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp ]; then \
+		cat ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp $(FIXLANGIDS) \
+			> ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt; \
 		if [ "$$s-$$t" != ${LANGPAIRSTR} ]; then \
 	          echo "make ${TATOEBA_TESTSET}.$$s-$$t"; \
 		  if [ "${USE_TARGET_LABELS}" == "1" ]; then \
-	            cut -f2,3 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt | \
+	            cut -f2,3 ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt | \
 		    sed 's/^\([^ ]*\)	/>>\1<< /' \
-		    > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.src; \
+		    > ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.src; \
 		  else \
-		    cut -f3 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt \
-		    > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.src; \
+		    cut -f3 ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt \
+		    > ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.src; \
 		  fi; \
-	          cut -f4 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt \
-		  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.trg; \
+	          cut -f4 ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt \
+		  > ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.trg; \
 		fi; \
-		S=`cut -f1 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
+		S=`cut -f1 ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
 			sort -u | tr "\n" ' ' | sed 's/ *$$//'`; \
-		T=`cut -f2 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
+		T=`cut -f2 ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
 			sort -u | tr "\n" ' ' | sed 's/ *$$//'`; \
 		if [ `echo "$$S $$T" | tr ' ' "\n" | wc -l` -gt 2 ]; then \
 		  echo "extracting test sets for individual sub-language pairs!"; \
 		  for a in $$S; do \
 		    for b in $$T; do \
 		      if [ "$$a-$$b" != ${LANGPAIRSTR} ]; then \
-		        if [ ! -e ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$a-$$b.src ]; then \
+		        if [ ! -e ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$a-$$b.src ]; then \
 	                  echo "make ${TATOEBA_TESTSET}.$$a-$$b"; \
 		          if [ "${USE_TARGET_LABELS}" == "1" ]; then \
-		            grep "$$a	$$b	" < ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
+		            grep "$$a	$$b	" < ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
 			    cut -f2,3 | sed 's/^\([^ ]*\)	/>>\1<< /' \
-			    > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$a-$$b.src; \
+			    > ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$a-$$b.src; \
 		          else \
-		            grep "$$a	$$b	" < ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
+		            grep "$$a	$$b	" < ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
 			    cut -f3 | sed 's/^\([^ ]*\)	/>>\1<< /' \
-			    > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$a-$$b.src; \
+			    > ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$a-$$b.src; \
 		          fi; \
-		          grep "$$a	$$b	" < ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
+		          grep "$$a	$$b	" < ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
 		          cut -f4 | sed 's/^\([^ ]*\)	/>>\1<< /' \
-			  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$a-$$b.trg; \
+			  > ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$a-$$b.trg; \
 		        fi \
 	              fi \
 		    done \
 		  done \
 		fi; \
 	      else \
-	        wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp \
+	        wget -q -O ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp \
 			${TATOEBA_RAWGIT_RELEASE}/data/test/$$t-$$s/test.txt; \
-	        if [ -s ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp ]; then \
-		  cat ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp $(FIXLANGIDS) \
-			> ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt; \
+	        if [ -s ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp ]; then \
+		  cat ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp $(FIXLANGIDS) \
+			> ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt; \
 		  if [ "$$s-$$t" != ${LANGPAIRSTR} ]; then \
 	            echo "make ${TATOEBA_TESTSET}.$$s-$$t"; \
 		    if [ "${USE_TARGET_LABELS}" == "1" ]; then \
-	              cut -f1,4 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt | \
+	              cut -f1,4 ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt | \
 		      sed 's/^\([^ ]*\)	/>>\1<< /' \
-		      > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.src; \
+		      > ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.src; \
 		    else \
-		      cut -f4 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt \
-		      > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.src; \
+		      cut -f4 ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt \
+		      > ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.src; \
 		    fi; \
-	            cut -f3 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt \
-		    > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.trg; \
+	            cut -f3 ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt \
+		    > ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.trg; \
 		  fi; \
-		  S=`cut -f2 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
+		  S=`cut -f2 ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
 			sort -u | tr "\n" ' ' | sed 's/ *$$//'`; \
-		  T=`cut -f1 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
+		  T=`cut -f1 ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
 			sort -u | tr "\n" ' ' | sed 's/ *$$//'`; \
 		  if [ `echo "$$S $$T" | tr ' ' "\n" | wc -l` -gt 2 ]; then \
 		    echo "extracting test sets for individual sub-language pairs!"; \
 		    for a in $$S; do \
 		      for b in $$T; do \
 		        if [ "$$a-$$b" != ${LANGPAIRSTR} ]; then \
-		          if [ ! -e ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$a-$$b.src ]; then \
+		          if [ ! -e ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$a-$$b.src ]; then \
 	                    echo "make ${TATOEBA_TESTSET}.$$a-$$b"; \
 		            if [ "${USE_TARGET_LABELS}" == "1" ]; then \
-		              grep "$$b	$$a	" < ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
+		              grep "$$b	$$a	" < ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
 			      cut -f1,4 | sed 's/^\([^ ]*\)	/>>\1<< /' \
-			      > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$a-$$b.src; \
+			      > ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$a-$$b.src; \
 		            else \
-		              grep "$$b	$$a	" < ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
+		              grep "$$b	$$a	" < ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
 			      cut -f4 | sed 's/^\([^ ]*\)	/>>\1<< /' \
-			      > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$a-$$b.src; \
+			      > ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$a-$$b.src; \
 		            fi; \
-		            grep "$$b	$$a	" < ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
+		            grep "$$b	$$a	" < ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
 		            cut -f3 | sed 's/^\([^ ]*\)	/>>\1<< /' \
-			    > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$a-$$b.trg; \
+			    > ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$a-$$b.trg; \
 		          fi \
 		        fi \
 		      done \
@@ -1563,8 +1531,8 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba${TATOEBA_VERSION_NOHYPHEN}-testsets.
 		  fi; \
 		fi \
 	      fi; \
-	      rm -f ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp; \
-	      rm -f ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt; \
+	      rm -f ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp; \
+	      rm -f ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt; \
 	  done \
 	done
 	if [ -d ${dir $@} ]; then \
@@ -1572,146 +1540,14 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba${TATOEBA_VERSION_NOHYPHEN}-testsets.
 	fi
 
 
-
-
-
-# ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-testsets-with-subsets.done:
-# 	@for s in ${SRCLANGS}; do \
-# 	  for t in ${TRGLANGS}; do \
-# 	      wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp \
-# 			${TATOEBA_RAWGIT}/data/test/$$s-$$t/test.txt; \
-# 	      if [ -s ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp ]; then \
-# 	        echo "make ${TATOEBA_TESTSET}.$$s-$$t"; \
-# 		cat ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp $(FIXLANGIDS) \
-# 		> ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt; \
-# 		if [ "${USE_TARGET_LABELS}" == "1" ]; then \
-# 	          cut -f2,3 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt | \
-# 		  sed 's/^\([^ ]*\)	/>>\1<< /' \
-# 		  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.src; \
-# 		else \
-# 		  cut -f3 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt \
-# 		  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.src; \
-# 		fi; \
-# 	        cut -f4 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt \
-# 		> ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.trg; \
-# 		S=`cut -f1 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
-# 			sort -u | tr "\n" ' ' | sed 's/ *$$//'`; \
-# 		T=`cut -f2 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
-# 			sort -u | tr "\n" ' ' | sed 's/ *$$//'`; \
-# 		echo "languages found: $$S $$T"; \
-# 		if [ `echo "$$S $$T" | tr ' ' "\n" | wc -l` -gt 2 ]; then \
-# 		  echo "extracting test sets for individual sub-language pairs!"; \
-# 		  for a in $$S; do \
-# 		    for b in $$T; do \
-# 	              echo "make ${TATOEBA_TESTSET}.$$s-$$t.$$a-$$b"; \
-# 		      if [ "${USE_TARGET_LABELS}" == "1" ]; then \
-# 		        grep "$$a	$$b	" < ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
-# 			cut -f2,3 | sed 's/^\([^ ]*\)	/>>\1<< /' \
-# 			> ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.$$a-$$b.src; \
-# 		      else \
-# 		        grep "$$a	$$b	" < ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
-# 			cut -f3 | sed 's/^\([^ ]*\)	/>>\1<< /' \
-# 			> ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.$$a-$$b.src; \
-# 		      fi; \
-# 		      grep "$$a	$$b	" < ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
-# 		      cut -f4 | sed 's/^\([^ ]*\)	/>>\1<< /' \
-# 			> ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.$$a-$$b.trg; \
-# 		    done \
-# 		  done \
-# 		fi; \
-# 	      else \
-# 	        wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp \
-# 			${TATOEBA_RAWGIT}/data/test/$$t-$$s/test.txt; \
-# 	        if [ -s ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp ]; then \
-# 	          echo "make ${TATOEBA_TESTSET}.$$s-$$t"; \
-# 		  cat ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp $(FIXLANGIDS) \
-# 		  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt; \
-# 		  if [ "${USE_TARGET_LABELS}" == "1" ]; then \
-# 	            cut -f1,4 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt | \
-# 		    sed 's/^\([^ ]*\)	/>>\1<< /' \
-# 		    > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.src; \
-# 		  else \
-# 		    cut -f4 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt \
-# 		    > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.src; \
-# 		  fi; \
-# 	          cut -f3 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt \
-# 		  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.trg; \
-# 		  S=`cut -f2 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
-# 			sort -u | tr "\n" ' ' | sed 's/ *$$//'`; \
-# 		  T=`cut -f1 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
-# 			sort -u | tr "\n" ' ' | sed 's/ *$$//'`; \
-# 		  echo "languages found: $$S $$T"; \
-# 		  if [ `echo "$$S $$T" | tr ' ' "\n" | wc -l` -gt 2 ]; then \
-# 		    echo "extracting test sets for individual sub-language pairs!"; \
-# 		    for a in $$S; do \
-# 		      for b in $$T; do \
-# 	                echo "make ${TATOEBA_TESTSET}.$$s-$$t.$$a-$$b"; \
-# 		        if [ "${USE_TARGET_LABELS}" == "1" ]; then \
-# 		          grep "$$b	$$a	" < ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
-# 			  cut -f1,4 | sed 's/^\([^ ]*\)	/>>\1<< /' \
-# 			  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.$$a-$$b.src; \
-# 		        else \
-# 		          grep "$$b	$$a	" < ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
-# 			  cut -f4 | sed 's/^\([^ ]*\)	/>>\1<< /' \
-# 			  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.$$a-$$b.src; \
-# 		        fi; \
-# 		        grep "$$b	$$a	" < ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt |\
-# 		        cut -f3 | sed 's/^\([^ ]*\)	/>>\1<< /' \
-# 			  > ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.$$a-$$b.trg; \
-# 		      done \
-# 		    done \
-# 		  fi; \
-# 		fi \
-# 	      fi; \
-# 	      rm -f ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp; \
-# 	      rm -f ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt; \
-# 	  done \
-# 	done
-# 	if [ -d ${dir $@} ]; then \
-# 	  touch $@; \
-# 	fi
-
-
-
-
-
-
 ## TODO:
 ## get test sets for sublanguages in sets of macro-languages
 
-${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-testsets-langpairs.done:
+${WORKHOME}/${LANGPAIRSTR}/test/Tatoeba-testsets-langpairs.done:
 	@for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
 	  done \
 	done
-
-
-
-
-##----------------------------------------------------------------------------
-## TODO: we need some procedures to run evaluations
-##       for already released models
-##       the code below fails because of various dependencies etc ...
-##----------------------------------------------------------------------------
-
-RELEASED_TATOEBA_MODEL = fiu-cpp/opus-2021-02-18.zip
-RELEASED_TATOEBA_SRC2TRG = $(subst -,2,$(subst /,,$(dir ${RELEASED_TATOEBA_MODEL})))
-RELEASED_TATOEBA_MODEL_URL = https://object.pouta.csc.fi/${TATOEBA_MODEL_CONTAINER}/${RELEASED_TATOEBA_MODEL}
-EVAL_TATOEBA_WORKHOME  = ${PWD}/work-eval
-EVAL_TATOEBA_WORKDIR   = ${EVAL_TATOEBA_WORKHOME}/$(dir ${RELEASED_TATOEBA_MODEL})
-
-evaluate-released-tatoeba-model:
-	mkdir -p ${EVAL_TATOEBA_WORKDIR}
-	wget -O ${EVAL_TATOEBA_WORKHOME}/${RELEASED_TATOEBA_MODEL} ${RELEASED_TATOEBA_MODEL_URL}
-	cd ${EVAL_TATOEBA_WORKDIR} && unzip -o $(notdir ${RELEASED_TATOEBA_MODEL})
-	${MAKE} TATOEBA_WORK=${EVAL_TATOEBA_WORKHOME} \
-		DECODER_CONFIG=${EVAL_TATOEBA_WORKDIR}decoder.yml \
-		MODEL_FINAL=`grep .npz ${EVAL_TATOEBA_WORKDIR}decoder.yml | sed 's/^ *- *//'` \
-		SPMSRCMODEL=${EVAL_TATOEBA_WORKDIR}source.spm \
-		SPMTRGMODEL=${EVAL_TATOEBA_WORKDIR}target.spm \
-	tatoeba-${RELEASED_TATOEBA_SRC2TRG}-testsets
-
-##----------------------------------------------------------------------------
 
 
 
@@ -1720,13 +1556,15 @@ evaluate-released-tatoeba-model:
 ## generic targets for tatoba models
 ###############################################################################
 
-.PHONY: tatoeba-langlabel-files
-tatoeba-langlabel-files: 	${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.src \
-				${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.trg \
-				${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-languages.src \
-				${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-languages.trg
+# ${TATOEBA_SRCLABELFILE} ${TATOEBA_TRGLABELFILE}
 
-${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-languages.%: ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.%
+.PHONY: tatoeba-langlabel-files langlabel-files
+tatoeba-langlabel-files langlabel-files: ${WORKHOME}/${LANGPAIRSTR}/${DATASET}-langlabels.src \
+					${WORKHOME}/${LANGPAIRSTR}/${DATASET}-langlabels.trg \
+					${WORKHOME}/${LANGPAIRSTR}/${DATASET}-languages.src \
+					${WORKHOME}/${LANGPAIRSTR}/${DATASET}-languages.trg
+
+${WORKHOME}/${LANGPAIRSTR}/${DATASET}-languages.%: ${WORKHOME}/${LANGPAIRSTR}/${DATASET}-langlabels.%
 	mkdir -p ${dir $@}
 	cat $< | tr ' ' "\n" | cut -f1 -d'_' | cut -f1 -d'-' | \
 	sed 's/ *$$//;s/^ *//' | tr "\n" ' '  > $@
@@ -1735,8 +1573,7 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-languages.%: ${TATOEBA_WORK}/${LANGPAI
 ## generic target for tatoeba challenge jobs
 %-tatoeba: ${TATOEBA_SRCLABELFILE} ${TATOEBA_TRGLABELFILE}
 	${MAKE} ${TATOEBA_LANGIDS_TRAINONLY}
-	${MAKE} ${TATOEBA_PARAMS} \
-		LANGPAIRSTR=${LANGPAIRSTR} \
+	${MAKE} LANGPAIRSTR=${LANGPAIRSTR} \
 		SRCLANGS="${shell cat ${word 1,$^}}" \
 		TRGLANGS="${shell cat ${word 2,$^}}" \
 		SRC=${SRC} TRG=${TRG} \
@@ -1744,8 +1581,8 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-languages.%: ${TATOEBA_WORK}/${LANGPAI
 	${@:-tatoeba=}
 
 
-%-bttatoeba: 	${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.src \
-		${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.trg
+%-bttatoeba: 	${WORKHOME}/${LANGPAIRSTR}/${DATASET}-langlabels.src \
+		${WORKHOME}/${LANGPAIRSTR}/${DATASET}-langlabels.trg
 	for s in ${shell cat ${word 1,$^}}; do \
 	  for t in ${shell cat ${word 2,$^}}; do \
 	    echo "${MAKE} -C backtranslate \
@@ -1767,10 +1604,10 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-languages.%: ${TATOEBA_WORK}/${LANGPAI
 ## fetch data for all language combinations
 ## TODO: should we check whether we are supposed to skip some language pairs?
 
-.PHONY: fetch-tatoeba-datasets
-fetch-tatoeba-datasets:
-	-for s in ${SRCLANGS}; do \
-	  for t in ${TRGLANGS}; do \
+.PHONY: fetch-tatoeba-datasets fetch-datasets
+fetch-datasets fetch-tatoeba-datasets:
+	-for s in ${sort ${SRC} ${SRCLANGS}}; do \
+	  for t in ${sort ${TRG} ${TRGLANGS}}; do \
 	    if [ "$$s" \< "$$t" ]; then \
 	      ${MAKE} SRCLANGS=$$s TRGLANGS=$$t \
 		${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$s-$$t.clean.$$s.gz; \
@@ -1786,7 +1623,7 @@ fetch-tatoeba-datasets:
 ## (each language pair may include several language variants)
 ## --> this is necessary to set the languages that are present in a model
 
-${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.src:
+${WORKHOME}/${LANGPAIRSTR}/${DATASET}-langlabels.src:
 	${MAKE} fetch-tatoeba-datasets
 	mkdir -p ${dir $@}
 	for s in ${SRCLANGS}; do \
@@ -1821,7 +1658,7 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.src:
 	fi
 
 
-${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.trg: ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.src
+${WORKHOME}/${LANGPAIRSTR}/${DATASET}-langlabels.trg: ${WORKHOME}/${LANGPAIRSTR}/${DATASET}-langlabels.src
 	if [ ! -e $@ ]; then rm $<; ${MAKE} $<; fi
 	echo "done"
 
@@ -1923,6 +1760,7 @@ ${TATOEBA_MONO}/%.labels:
 	rm -fr $@.d
 
 
+##-------------------------------------------------------------------------------------------
 ## convert Tatoeba Challenge data into the format we need
 ## - move the data into the right location with the suitable name
 ## - create devset if not given (part of training data)
@@ -1930,172 +1768,143 @@ ${TATOEBA_MONO}/%.labels:
 ##   (if there is more than one language pair in the collection)
 ## 
 ## TODO: should we do some filtering like bitext-match, OPUS-filter ...
+##-------------------------------------------------------------------------------------------
 
-TATOEBA_TMPDATADIR = data/release/${TATOEBA_VERSION}/${LANGPAIR}
+## relative directory within the data distributions of Tatoeba MT data files
+TATOEBADATA = data/release/${TATOEBA_VERSION}/${LANGPAIR}
 
+## fetch and convert the data and check whether we should extract
+## sub-language pairs from the collection
 %/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}.gz:
-	@mkdir -p $@.d
-	-wget -q -O $@.d/train.tar ${TATOEBA_TRAIN_URL}/${LANGPAIR}.tar
-	-tar -C $@.d -xf $@.d/train.tar
-	@rm -f $@.d/train.tar
-	@if [ -e $@.d/${TATOEBA_TMPDATADIR}/test.src ]; then \
-	  echo "........ move test files to ${dir $@}${TATOEBA_TESTSET}.${LANGPAIR}.clean.*"; \
-	  mv $@.d/${TATOEBA_TMPDATADIR}/test.src ${dir $@}${TATOEBA_TESTSET}.${LANGPAIR}.clean.${SRCEXT}; \
-	  mv $@.d/${TATOEBA_TMPDATADIR}/test.trg ${dir $@}${TATOEBA_TESTSET}.${LANGPAIR}.clean.${TRGEXT}; \
-	  cat $@.d/${TATOEBA_TMPDATADIR}/test.id $(FIXLANGIDS) > ${dir $@}${TATOEBA_TESTSET}.${LANGPAIR}.clean.id; \
-	fi
-	@if [ -e $@.d/${TATOEBA_TMPDATADIR}/dev.src ] && \
-	    [ `cat $@.d/${TATOEBA_TMPDATADIR}/dev.src | wc -l` -gt 50 ]; then \
-	  echo "........ move dev files to ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.*"; \
-	  mv $@.d/${TATOEBA_TMPDATADIR}/dev.src ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.${SRCEXT}; \
-	  mv $@.d/${TATOEBA_TMPDATADIR}/dev.trg ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.${TRGEXT}; \
-	  cat $@.d/${TATOEBA_TMPDATADIR}/dev.id $(FIXLANGIDS) > ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.id; \
-	  if [ -e $@.d/${TATOEBA_TMPDATADIR}/train.src.gz ]; then \
-	    echo "........ move train files to ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.*"; \
-	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.src.gz > ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}; \
-	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.trg.gz > ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${TRGEXT}; \
-	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.id.gz | cut -f2,3 $(FIXLANGIDS) > ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.id; \
-	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.id.gz | cut -f1 > ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.domain; \
-	  fi; \
-	else \
-	  if [ -e $@.d/${TATOEBA_TMPDATADIR}/train.src.gz ]; then \
-	    echo "........ too little devdata available - get top 1000 from training data!"; \
-	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.src.gz | head -1000 > ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.${SRCEXT}; \
-	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.trg.gz | head -1000 > ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.${TRGEXT}; \
-	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.id.gz  | head -1000 | cut -f2,3 $(FIXLANGIDS) > ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.id; \
-	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.id.gz  | head -1000 | cut -f1 > ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.domain; \
-	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.src.gz | tail -n +1001 > ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}; \
-	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.trg.gz | tail -n +1001 > ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${TRGEXT}; \
-	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.id.gz  | tail -n +1001 | cut -f2,3 $(FIXLANGIDS) > ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.id; \
-	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.id.gz  | tail -n +1001 | cut -f1 > ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.domain; \
-	  fi; \
-	  if [ -e $@.d/${TATOEBA_TMPDATADIR}/dev.src ]; then \
-	    echo "........ add dev files to ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.*"; \
-	    cat $@.d/${TATOEBA_TMPDATADIR}/dev.src >> ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.${SRCEXT}; \
-	    cat $@.d/${TATOEBA_TMPDATADIR}/dev.trg >> ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.${TRGEXT}; \
-	    cat $@.d/${TATOEBA_TMPDATADIR}/dev.id $(FIXLANGIDS) >> ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.id; \
-	  fi \
-	fi
-## make sure that training data file exists even if it is empty
-	@if [ -e ${dir $@}${TATOEBA_TESTSET}.${LANGPAIR}.clean.${SRCEXT} ]; then \
-	  touch ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}; \
-	  touch ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${TRGEXT}; \
-	fi
-#######################################
-# save all lang labels that appear in the data
-#######################################
-	@cut -f1 ${dir $@}Tatoeba-*.${LANGPAIR}.clean.id | sort -u | \
-		grep -v '${SKIP_LANGIDS_PATTERN}' | \
-		tr "\n" ' ' | sed 's/^ *//;s/ *$$//' > $(@:.${SRCEXT}.gz=.${SORTSRCEXT}.labels)
-	@cut -f2 ${dir $@}Tatoeba-*.${LANGPAIR}.clean.id | sort -u | \
-		grep -v '${SKIP_LANGIDS_PATTERN}' | \
-		tr "\n" ' ' | sed 's/^ *//;s/ *$$//' > $(@:.${SRCEXT}.gz=.${SORTTRGEXT}.labels)
-	@cat ${dir $@}Tatoeba-*.${LANGPAIR}.clean.domain | sort -u |\
-		tr "\n" ' ' | sed 's/^ *//;s/ *$$//' > $(@:.${SRCEXT}.gz=.domains)
-#######################################
-# cleanup temporary data
-#######################################
-	@if [ -d $@.d/data ]; then \
-	  rm -f $@.d/${TATOEBA_TMPDATADIR}/*; \
-	  rmdir $@.d/${TATOEBA_TMPDATADIR}; \
-	  rmdir $@.d/data/release/${TATOEBA_VERSION}; \
-	  rmdir $@.d/data/release; \
-	  rmdir $@.d/data; \
-	fi
-	@rm -f $@.d/train.tar
-	@rmdir $@.d
-#######################################
-# make data sets for individual 
-# language pairs from the Tatoeba data
-#######################################
-	@if [ -e $(@:.${SRCEXT}.gz=.${SRCEXT}.labels) ]; then \
-	  for s in `cat $(@:.${SRCEXT}.gz=.${SRCEXT}.labels)`; do \
-	    for t in `cat $(@:.${SRCEXT}.gz=.${TRGEXT}.labels)`; do \
+	${MAKE} $@.d/source.labels $@.d/target.labels
+	@if [ `cat $@.d/source.labels $@.d/target.labels | wc -w` -gt 2 ]; then \
+	  echo ".... found sublanguages in the data"; \
+	  b="$@.d/${TATOEBADATA}"; \
+	  for s in `cat $@.d/source.labels`; do \
+	    for t in `cat $@.d/target.labels`; do \
 	      if [ "$$s" \< "$$t" ]; then \
-	        echo "extract $$s-$$t data"; \
+	        echo ".... extract $$s-$$t data"; \
 	        for d in dev test train; do \
-		  if [ -e ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.id ]; then \
-	            paste ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.id \
-		          ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SRCEXT} \
-		          ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${TRGEXT} |\
-	            grep -P "$$s\t$$t\t" | cut -f3,4 |\
-		    scripts/filter/filter-korean.sh ${SRC} ${TRG} $$d > ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t; \
-	            if [ -s ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t ]; then \
-	              echo "........ make ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t.clean.*.gz"; \
-	              cut -f1 ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t | ${GZIP} -c > ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t.clean.$$s.gz; \
-	              cut -f2 ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t | ${GZIP} -c > ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t.clean.$$t.gz; \
-	            fi; \
-	            rm -f ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t; \
-		  fi \
-	        done \
-	      else \
-	        echo "extract $$t-$$s data"; \
-	        for d in dev test train; do \
-		  if [ -e ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.id ]; then \
-	            paste ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.id \
-		          ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${TRGEXT} \
-		          ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SRCEXT} |\
-	            grep -P "$$s\t$$t\t" | cut -f3,4 |\
-		    scripts/filter/filter-korean.sh ${TRG} ${SRC} $$d > ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$t-$$s; \
-	            if [ -s ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$t-$$s ]; then \
-	              echo "........ make ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$t-$$s.clean.*.gz"; \
-	              cut -f1 ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$t-$$s | ${GZIP} -c > ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$t-$$s.clean.$$t.gz; \
-	              cut -f2 ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$t-$$s | ${GZIP} -c > ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$t-$$s.clean.$$s.gz; \
-	            fi; \
-	            rm -f ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$t-$$s; \
-		  fi \
-	        done \
+	          paste <(gzip -cd $$b/$$d.id.gz) <(gzip -cd $$b/$$d.src.gz) <(gzip -cd $$b/$$d.trg.gz) | \
+			grep -P "^$$s\t$$t\t" > $@.d/$$d; \
+	          if [ -s $@.d/$$d ]; then \
+	            cut -f1,2 $@.d/$$d | ${GZIP} -c > ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t.clean.id.gz; \
+	            cut -f3 $@.d/$$d | ${GZIP} -c > ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t.clean.$$s.gz; \
+	            cut -f4 $@.d/$$d | ${GZIP} -c > ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t.clean.$$t.gz; \
+	          fi \
+	        done; \
+	        if [ -e ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.$$s-$$t.clean.id.gz ]; then \
+	          paste <(gzip -cd $$b/$$d.id.gz) <(gzip -cd $$b/$$d.domain.gz) | grep -P "^$$s\t$$t\t" | cut -f3 | \
+	          ${GZIP} -c > ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.$$s-$$t.clean.domain.gz; \
+	          ${ZCAT} ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.$$s-$$t.clean.domain.gz |\
+	          sort -u > ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.$$s-$$t.clean.domains; \
+	          echo "$$s" >> ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.$$s-$$t.clean.$$s.labels; \
+	          echo "$$t" >> ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.$$s-$$t.clean.$$t.labels; \
+	        fi \
 	      fi \
 	    done \
 	  done \
 	fi
-#######################################
-# Finally, compress the big files with
-# all the different language variants.
-# If the code is the same as one of the
-# variants then remove the file instead.
-#######################################
-	@for d in dev test train; do \
-	  if [ -e ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SRCEXT} ]; then \
-	    if [ ! -e ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SRCEXT}.gz ]; then \
-	      echo "........... compress ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SRCEXT}"; \
-	      ${GZIP} ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SRCEXT}; \
-	    else \
-	      rm -f ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SRCEXT}; \
-	    fi \
-	  fi; \
-	  if [ -e ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${TRGEXT} ]; then \
-	    if [ ! -e ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${TRGEXT}.gz ]; then \
-	      echo "........... compress ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${TRGEXT}"; \
-	      ${GZIP} ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${TRGEXT}; \
-	    else \
-	      rm -f ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${TRGEXT}; \
-	    fi \
-	  fi; \
-	  if [ -e ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.domain ]; then \
-	    if [ ! -e ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.domain.gz ]; then \
-	      ${GZIP} ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.domain; \
-	    else \
-	      rm -f ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.domain; \
-	    fi \
-	  fi; \
-	  rm -f ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.id; \
-	done
+	@if [ ! -e ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SRCEXT}.gz ]; then \
+	  echo ".... move data files"; \
+	  b="$@.d/${TATOEBADATA}"; \
+	  for d in dev test train; do \
+	    mv $$b/$$d.src.gz ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SORTSRCEXT}.gz; \
+	    mv $$b/$$d.trg.gz ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SORTTRGEXT}.gz; \
+	    mv $$b/$$d.id.gz ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.id.gz; \
+	  done; \
+	  ${ZCAT} $$b/train.domain.gz | sort -u | tr "\n" ' ' | sed 's/ *$$//' \
+		> ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${LANGPAIR}.clean.domains; \
+	  mv $$b/train.domain.gz ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${LANGPAIR}.clean.domain.gz; \
+	  mv $@.d/source.labels ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SORTSRCEXT}.labels; \
+	  mv $@.d/target.labels ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SORTTRGEXT}.labels; \
+	fi
+	@echo ".... cleanup of temporary files"
+	@rm -fr $@.d
 
 
+## fetch data
+%.gz.d/data.fetched:
+	@echo ".... fetch data (${LANGPAIR}.tar)"
+	@mkdir -p ${dir $@}
+	-wget -q -O ${dir $@}train.tar ${TATOEBA_TRAIN_URL}/${LANGPAIR}.tar
+	-tar -C ${dir $@} -xf ${dir $@}train.tar
+	@rm -f ${dir $@}train.tar
+	@touch $@
+
+
+## make dev data (extract additional examples from the training data if neccessary)
+%.gz.d/devdata.created: %.gz.d/data.fetched
+	@if [ -e ${dir $@}/${TATOEBADATA}/dev.src ]; then \
+	  if [ `cat ${dir $@}/${TATOEBADATA}/dev.src | wc -l` -gt 50 ]; then \
+	    touch $@; \
+	  else \
+	    mv ${dir $@}/${TATOEBADATA}/dev.src $@.dev.src; \
+	    mv ${dir $@}/${TATOEBADATA}/dev.trg $@.dev.trg; \
+	    mv ${dir $@}/${TATOEBADATA}/dev.id  $@.dev.id; \
+	  fi \
+	fi
+	@if [ ! -e $@ ]; then \
+	  if [ -e ${dir $@}/${TATOEBADATA}/train.src.gz ]; then \
+	    echo "........ too little devdata available - get top 1000 from training data!"; \
+	    ${GZCAT} $@.d/${TATOEBADATA}/train.src.gz | head -1000                >> $@.dev.src; \
+	    ${GZCAT} $@.d/${TATOEBADATA}/train.trg.gz | head -1000                >> $@.dev.trg; \
+	    ${GZCAT} $@.d/${TATOEBADATA}/train.id.gz  | head -1000 | cut -f2,3    >> $@.dev.id; \
+	    ${GZCAT} $@.d/${TATOEBADATA}/train.src.gz | tail -n +1001 | ${GZIP} -f > $@.src.gz; \
+	    ${GZCAT} $@.d/${TATOEBADATA}/train.trg.gz | tail -n +1001 | ${GZIP} -f > $@.trg.gz; \
+	    ${GZCAT} $@.d/${TATOEBADATA}/train.id.gz  | tail -n +1001 | ${GZIP} -f > $@.id.gz; \
+	    mv $@.src.gz $@.d/${TATOEBADATA}/train.src.gz; \
+	    mv $@.trg.gz $@.d/${TATOEBADATA}/train.trg.gz; \
+	    mv $@.id.gz  $@.d/${TATOEBADATA}/train.id.gz; \
+	  fi; \
+	  mv $@.dev.src ${dir $@}/${TATOEBADATA}/dev.src; \
+	  mv $@.dev.trg ${dir $@}/${TATOEBADATA}/dev.trg; \
+	  mv $@.dev.id  ${dir $@}/${TATOEBADATA}/dev.id; \
+	  touch $@; \
+	fi
+
+## fix language IDs and make sure that dev/test/train exist
+%.gz.d/data.fixed: %.gz.d/devdata.created
+	@echo ".... fix language codes"
+	@if [ -e ${dir $@}/${TATOEBADATA}/train.id.gz ]; then \
+	  ${GZCAT} ${dir $@}${TATOEBADATA}/train.id.gz | cut -f2,3 $(FIXLANGIDS) | ${GZIP} -c > ${dir $@}train.id.gz; \
+	  ${GZCAT} ${dir $@}${TATOEBADATA}/train.id.gz | cut -f1 | ${GZIP} -c > ${dir $@}train.domain.gz; \
+	  mv ${dir $@}train.id.gz ${dir $@}train.domain.gz ${dir $@}${TATOEBADATA}/; \
+	else \
+	  touch ${dir $@}${TATOEBADATA}/train.src ${dir $@}${TATOEBADATA}/train.trg; \
+	  touch ${dir $@}${TATOEBADATA}/train.id ${dir $@}${TATOEBADATA}/train.domain; \
+	  ${GZIP} -cd ${dir $@}${TATOEBADATA}/train.*; \
+	fi
+	@touch ${dir $@}/${TATOEBADATA}/test.id ${dir $@}/${TATOEBADATA}/test.src ${dir $@}/${TATOEBADATA}/test.trg
+	@touch ${dir $@}/${TATOEBADATA}/dev.id ${dir $@}/${TATOEBADATA}/dev.src ${dir $@}/${TATOEBADATA}/dev.trg
+	@cat ${dir $@}${TATOEBADATA}/dev.id  $(FIXLANGIDS) > ${dir $@}dev.id
+	@cat ${dir $@}${TATOEBADATA}/test.id $(FIXLANGIDS) > ${dir $@}test.id
+	@mv ${dir $@}dev.id ${dir $@}test.id ${dir $@}${TATOEBADATA}/
+	@${GZIP} -f ${dir $@}${TATOEBADATA}/dev.* ${dir $@}${TATOEBADATA}/test.*
+
+
+## get source language labels
+%.gz.d/source.labels: %.gz.d/data.fixed
+	@${ZCAT} ${dir $@}${TATOEBADATA}/*.id.gz | cut -f1 | sort -u | \
+	grep -v '${SKIP_LANGIDS_PATTERN}' | tr "\n" ' ' | sed 's/^ *//;s/ *$$//' > $@
+
+## get target language labels
+%.gz.d/target.labels: %.gz.d/data.fixed
+	@${ZCAT} ${dir $@}${TATOEBADATA}/*.id.gz | cut -f2 | sort -u | \
+	grep -v '${SKIP_LANGIDS_PATTERN}' | tr "\n" ' ' | sed 's/^ *//;s/ *$$//' > $@
 
 
 ## all the following data sets are created in the target of the
 #@ source language training data
 
 %/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${TRGEXT}.gz: %/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}.gz
-	echo "done!"
+	@echo "done!"
 
 %/${TATOEBA_DEVSET}.${LANGPAIR}.clean.${SRCEXT}.gz %/${TATOEBA_DEVSET}.${LANGPAIR}.clean.${TRGEXT}.gz: %/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${TRGEXT}.gz
-	echo "done!"
+	@echo "done!"
 
 %/${TATOEBA_TESTSET}.${LANGPAIR}.clean.${SRCEXT}.gz %/${TATOEBA_TESTSET}.${LANGPAIR}.clean.${TRGEXT}.gz: %/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${TRGEXT}.gz
-	echo "done!"
+	@echo "done!"
 
 
 
@@ -2103,7 +1912,7 @@ TATOEBA_TMPDATADIR = data/release/${TATOEBA_VERSION}/${LANGPAIR}
 
 test-tune-data: 
 	make SRCEXT=bre TRGEXT=eng LANGPAIR=bre-eng \
-	 ${TATOEBA_WORK}-test/data/simple/Tatoeba-OpenSubtitles-train.bre-eng.clean.bre.gz
+	 ${WORKHOME}-test/data/simple/Tatoeba-OpenSubtitles-train.bre-eng.clean.bre.gz
 
 
 ## TODO: should we split into train/dev/test
@@ -2128,338 +1937,6 @@ testsets/${LANGPAIR}/${TATOEBA_TESTSET}.${LANGPAIR}.%: ${TATOEBA_DATA}/${TATOEBA
 
 
 
-# ###############################################################################
-# ## generate result tables
-# ###############################################################################
-
-# TATOEBA_READMES = $(wildcard ${TATOEBA_MODELSHOME}/*/README.md)
-
-# # RESULT_MDTABLE_HEADER = | Model | Language Pair | Test Set | chrF2 | BLEU | BP | Reference Length |\n|:---|----|----|----:|---:|----:|---:|\n
-# # ADD_MDHEADER = perl -pe '@a=split;print "\n${RESULT_MDTABLE_HEADER}" if ($$b ne $$a[1]);$$b=$$a[1];'
-
-# results/tatoeba-results-al%.md: tatoeba-results-al%
-# 	mkdir -p ${dir $@}
-# 	echo "# Tatoeba translation results" >$@
-# 	echo "" >>$@
-# 	echo "Note that some links to the actual models below are broken"                  >> $@
-# 	echo "because the models are not yet released or their performance is too poor"    >> $@
-# 	echo "to be useful for anything."                                                  >> $@
-# 	echo ""                                                                            >> $@
-# 	echo '| Model | Test Set | chrF2 | BLEU | BP | Reference Length |' >> $@
-# 	echo '|:--|---|--:|--:|--:|--:|'                                                   >> $@
-# 	grep -v '^model' $< | grep -v -- '----' | grep . | sort -k2,2 -k3,3 -k4,4nr |\
-# 	perl -pe '@a=split;print "| lang = $$a[1] | | | |\n" if ($$b ne $$a[1]);$$b=$$a[1];' |\
-# 	cut -f1,3- |\
-# 	perl -pe '/^(\S*)\/(\S*)\t/;if (-d "${TATOEBA_MODELSHOME}/$$1"){s/^(\S*)\/(\S*)\t/[$$1\/$$2](..\/models\/$$1)\t/;}' |\
-# 	sed 's/	/ | /g;s/^/| /;s/$$/ |/;s/${TATOEBA_TESTSET}/tatoeba/' |\
-# 	sed 's/\(news[^ ]*\)-...... /\1 /;s/\(news[^ ]*\)-.... /\1 /;'                     >> $@
-
-# # sed 's#^\([^ 	]*\)/\([^ 	]*\)#[\1/\2](../models/\1)#' |\
-
-
-# results/tatoeba-models-all.md: tatoeba-models-all
-# 	mkdir -p ${dir $@}
-# 	echo "# Tatoeba translation models" >$@
-# 	echo "" >>$@
-# 	echo "The scores refer to results on ${TATOEBA_TESTSET} data"                            >> $@
-# 	echo "For multilingual models, it is a mix of all language pairs"                  >> $@
-# 	echo ""                                                                            >> $@
-# 	echo '| Model | chrF2 | BLEU | BP | Reference Length |'                            >> $@
-# 	echo '|:--|--:|--:|--:|--:|'                                                       >> $@
-# 	cut -f1,4- $< | \
-# 	perl -pe '/^(\S*)\/(\S*)\t/;if (-d "${TATOEBA_MODELSHOME}/$$1"){s/^(\S*)\/(\S*)\t/[$$1\/$$2](..\/models\/$$1)\t/;}' |\
-# 	sed 's/	/ | /g;s/^/| /;s/$$/ |/'                                                   >> $@
-
-
-# ## update files in the workdir
-# ## (to be included in the git repository)
-
-# ${TATOEBA_WORK}/tatoeba-results%: tatoeba-results%
-# 	mkdir -p ${dir $@}
-# 	-cat $@ > $@.old
-# 	cp $< $@.new
-# 	cat $@.old $@.new | sort | uniq > $@
-# 	rm -f $@.old $@.new
-
-# ${TATOEBA_WORK}/tatoeba-models-all: tatoeba-models-all
-# 	mkdir -p ${dir $@}
-# 	-cat $@ > $@.old
-# 	cp $< $@.new
-# 	cat $@.old $@.new | sort | uniq > $@
-# 	rm -f $@.old $@.new
-
-# ## get all results for all models and test sets
-# tatoeba-results-all: ${TATOEBA_READMES}
-# 	find ${TATOEBA_WORK} -name '*.eval' | sort | xargs grep chrF2 > $@.1
-# 	find ${TATOEBA_WORK} -name '*.eval' | sort | xargs grep BLEU  > $@.2
-# 	cut -f3 -d '/' $@.1 | sed 's/^.*\.\([^\.]*\)\.\([^\.]*\)\.eval:.*$$/\1-\2/' > $@.langpair
-# 	cut -f3 -d '/' $@.1 | sed 's/\.\([^\.]*\)\.spm.*$$//;s/${TATOEBA_TESTSET}[^	]*/${TATOEBA_TESTSET}/' > $@.testset
-# 	cut -f3 -d '/' $@.1 | sed 's/^.*\.\([^\.]*\)\.spm.*$$/\1/' > $@.dataset
-# 	cut -f2 -d '/' $@.1 | sed 's/^.*\.\([^\.]*\)\.spm.*$$/\1/' > $@.modeldir
-# 	cut -f2 -d '=' $@.1 | cut -f2 -d ' ' > $@.chrF2
-# 	cut -f2 -d '=' $@.2 | cut -f2 -d ' ' > $@.bleu
-# 	cut -f3 -d '=' $@.2 | cut -f2 -d ' ' > $@.bp
-# 	cut -f6 -d '=' $@.2 | cut -f2 -d ' ' | cut -f1 -d')' > $@.reflen
-# 	paste -d'/' $@.modeldir $@.dataset > $@.model
-# 	paste $@.model $@.langpair $@.testset $@.chrF2 $@.bleu $@.bp $@.reflen > $@
-# 	rm -f $@.model $@.langpair $@.testset $@.chrF2 $@.bleu $@.bp $@.reflen
-# 	rm -f $@.modeldir $@.dataset $@.1 $@.2
-
-# tatoeba-models-all: ${TATOEBA_READMES}
-# 	find ${TATOEBA_WORK} -name '${TATOEBA_TESTSET}.opus*.eval' | sort | xargs grep chrF2 > $@.1
-# 	find ${TATOEBA_WORK} -name '${TATOEBA_TESTSET}.opus*.eval' | sort | xargs grep BLEU  > $@.2
-# 	cut -f3 -d '/' $@.1 | sed 's/^.*\.\([^\.]*\)\.\([^\.]*\)\.eval:.*$$/\1-\2/' > $@.langpair
-# 	cut -f3 -d '/' $@.1 | sed 's/\.\([^\.]*\)\.spm.*$$//;s/${TATOEBA_TESTSET}[^	]*/${TATOEBA_TESTSET}/' > $@.testset
-# 	cut -f3 -d '/' $@.1 | sed 's/^.*\.\([^\.]*\)\.spm.*$$/\1/' > $@.dataset
-# 	cut -f2 -d '/' $@.1 | sed 's/^.*\.\([^\.]*\)\.spm.*$$/\1/' > $@.modeldir
-# 	cut -f2 -d '=' $@.1 | cut -f2 -d ' ' > $@.chrF2
-# 	cut -f2 -d '=' $@.2 | cut -f2 -d ' ' > $@.bleu
-# 	cut -f3 -d '=' $@.2 | cut -f2 -d ' ' > $@.bp
-# 	cut -f6 -d '=' $@.2 | cut -f2 -d ' ' | cut -f1 -d')' > $@.reflen
-# 	paste -d'/' $@.modeldir $@.dataset > $@.model
-# 	paste $@.model $@.langpair $@.testset $@.chrF2 $@.bleu $@.bp $@.reflen > $@
-# 	rm -f $@.model $@.langpair $@.testset $@.chrF2 $@.bleu $@.bp $@.reflen
-# 	rm -f $@.modeldir $@.dataset $@.1 $@.2
-
-# ${TATOEBA_MODELSHOME}/released-models.txt: ${TATOEBA_READMES}
-# 	-cat $@ > $@.old
-# 	find ${TATOEBA_MODELSHOME}/ -name '*.eval.txt' | sort | xargs grep chrF2 > $@.1
-# 	find ${TATOEBA_MODELSHOME}/ -name '*.eval.txt' | sort | xargs grep BLEU > $@.2
-# 	cut -f3 -d '/' $@.1 | sed 's/\.eval.txt.*$$/.zip/' > $@.zip
-# 	cut -f2 -d '/' $@.1 > $@.iso639-3
-# 	paste -d '/' $@.iso639-3 $@.zip | sed 's#^#${TATOEBA_DATAURL}/#' > $@.url
-# 	cut -f2 -d '/' $@.1 | xargs iso639 -2 -k -p | tr ' ' "\n" > $@.iso639-1
-# 	cut -f2 -d '=' $@.1 | cut -f2 -d ' ' > $@.chrF2
-# 	cut -f2 -d '=' $@.2 | cut -f2 -d ' ' > $@.bleu
-# 	cut -f3 -d '=' $@.2 | cut -f2 -d ' ' > $@.bp
-# 	cut -f6 -d '=' $@.2 | cut -f2 -d ' ' | cut -f1 -d')' > $@.reflen
-# 	cut -f2 -d '/' $@.1 | sed 's/^\([^ \-]*\)$$/\1-\1/g' | tr '-' ' ' | \
-# 	xargs iso639 -k | sed 's/$$/ /' |\
-# 	sed -e 's/\" \"\([^\"]*\)\" /\t\1\n/g' | sed 's/^\"//g' > $@.langs
-# 	paste $@.url $@.iso639-3 $@.iso639-1 $@.chrF2 $@.bleu $@.bp $@.reflen $@.langs > $@
-# 	rm -f $@.url $@.iso639-3 $@.iso639-1 $@.chrF2 $@.bleu $@.bp $@.reflen $@.1 $@.2 $@.langs $@.zip
-# 	cat $@.old $@.new | sort | uniq > $@
-# 	rm -f $@.old $@.new
-
-# ${TATOEBA_MODELSHOME}/released-model-results.txt: ${TATOEBA_READMES}
-# 	-cat $@ > $@.old
-# 	find ${TATOEBA_MODELSHOME}/ -name 'README.md' | sort | \
-# 	xargs egrep -h '^(# |\| ${TATOEBA_TESTSET}|\* download:)' |\
-# 	tr "\t" " " | tr "\n" "\t" | sed "s/# /\n# /g" |\
-# 	perl -e 'while (<>){s/^.*\((.*)\)/\1/;@_=split(/\t/);$$m=shift(@_);for (@_){print "$$_\t$$m\n";}}' |\
-# 	grep -v '.multi.' |\
-# 	sed -e 's/${TATOEBA_TESTSET}.\S*\(...\....\) /\1/' |\
-# 	grep '^|' |\
-# 	sed -e 's/ *| */\t/g' | cut -f2,3,4,6 > $@.new
-# 	cat $@.old $@.new | sort -k1,1 -k3,3nr -k2,2nr -k4,4 | uniq > $@
-# 	rm -f $@.old $@.new
-
-# ## new: also consider the opposite translation direction!
-# tatoeba-results-all-subset-%: tatoeba-%.md tatoeba-results-all-sorted-langpair
-# 	( l="${shell grep '\[' $< | cut -f2 -d '[' | cut -f1 -d ']' | sort -u  | tr "\n" '|' | sed 's/|$$//;s/\-/\\\-/g'}"; \
-# 	  r="${shell grep '\[' $< | cut -f2 -d '[' | cut -f1 -d ']' | sort -u  | sed 's/\(...\)-\(...\)/\2-\1/' | tr "\n" '|' | sed 's/|$$//;s/\-/\\\-/g'}"; \
-# 	  grep -P "$$l|$$r" ${word 2,$^} |\
-# 	  perl -pe '@a=split;print "\n${RESULT_TABLE_HEADER}" if ($$b ne $$a[1]);$$b=$$a[1];' > $@ )
-
-# tatoeba-results-all-langgroup: tatoeba-results-all
-# 	grep -P "${subst ${SPACE},-eng|,${OPUS_LANG_GROUPS}}-eng" $< >> $@
-# 	grep -P "eng-${subst ${SPACE},|eng-,${OPUS_LANG_GROUPS}}" $< >> $@
-# 	grep -P "`echo '${OPUS_LANG_GROUPS}' | sed 's/\([^ ][^ ]*\)/\1-\1/g;s/ /\|/g'`" $< >> $@
-
-
-# RESULT_TABLE_HEADER=model\tlanguage-pair\ttestset\tchrF2\tBLEU\tBP\treference-length\n--------------------------------------------------------------------------\n
-
-# tatoeba-results-all-sorted-langpair: tatoeba-results-all
-# 	sort -k2,2 -k3,3 -k4,4nr < $< |\
-# 	perl -pe '@a=split;print "\n${RESULT_TABLE_HEADER}" if ($$b ne $$a[1]);$$b=$$a[1];' \
-# 	> $@
-
-# tatoeba-results-all-sorted-chrf2: tatoeba-results-all
-# 	sort -k3,3 -k4,4nr < $< > $@
-
-# tatoeba-results-all-sorted-bleu: tatoeba-results-all
-# 	sort -k3,3 -k5,5nr < $< > $@
-
-
-
-
-# #############
-# ## OLD ones
-# #############
-
-
-# results/tatoeba-results-langgroup.md: tatoeba-results-langgroup
-# 	mkdir -p ${dir $@}
-# 	echo "# Tatoeba translation results"                                             > $@
-# 	echo ""                                                                         >> $@
-# 	echo "Multilingual models for language groups according to ISO639-5."           >> $@
-# 	echo ""                                                                         >> $@
-# 	echo "Note that some links to the actual models below are broken"               >> $@
-# 	echo "because the models are not yet released or their performance is too poor" >> $@
-# 	echo "to be useful for anything."                                               >> $@
-# 	echo ""                                                                         >> $@
-# 	echo "| Source | Target | Model | Test Set      | chrF2 | BLEU |"               >> $@
-# 	echo "|--------|--------|------:|---------------|------:|-----:|"               >> $@
-# 	grep multi $< | cut -f1 | xargs iso639 -p | tr '"' "\n" | \
-# 		grep [a-z] | \
-# 		sed 's/based\-/based | /' |\
-# 		sed 's/languages\-/languages | /' |\
-# 		sed 's/English\-/English | /;s/^/| /;s/$$/ /'  > $@.langpair
-# 	grep multi $< |\
-# 	sed 's#^\([^ 	]*\)#[\1](../models/\1)#' |\
-# 	sed 's/	/ | /g;s/^/| /;s/$$/ |/'                       > $@.rest
-# 	paste $@.langpair $@.rest -d ' '                                                >> $@
-# 	echo ""                                                                         >> $@
-# 	echo "## Performance on individual language pairs"                              >> $@
-# 	echo ""                                                                         >> $@
-# 	echo "Note that some of the test sets are way too small to be reliable!"        >> $@
-# 	echo ""                                                                         >> $@
-# 	echo "| Source | Target | Model | Test Set      | chrF2 | BLEU |"               >> $@
-# 	echo "|--------|--------|------:|---------------|------:|-----:|"               >> $@
-# 	grep -v multi $< | cut -f1 | xargs iso639 -p | tr '"' "\n" | \
-# 		grep [a-z] | \
-# 		sed 's/based\-/based | /' |\
-# 		sed 's/languages\-/languages | /' |\
-# 		sed 's/English\-/English | /;s/^/| /;s/$$/ /'  > $@.langpair
-# 	grep -v multi $< |\
-# 	sed 's#^\([^ 	]*\)#[\1](../models/\1)#' |\
-# 	sed 's/	/ | /g;s/^/| /;s/$$/ |/'                       > $@.rest
-# 	paste $@.langpair $@.rest -d ' '                                                >> $@
-# 	rm -f $@.langpair $@.rest
-
-
-# results/tatoeba-results-%.md: tatoeba-results-% tatoeba-results-BLEU-sorted-model
-# 	mkdir -p ${dir $@}
-# 	echo "# Tatoeba translation results" >$@
-# 	echo "" >>$@
-# 	echo "Note that some links to the actual models below are broken"               >>$@
-# 	echo "because the models are not yet released or their performance is too poor" >> $@
-# 	echo "to be useful for anything."                                               >> $@
-# 	echo "" >>$@
-# 	echo "| Model                 | Test Set   | chrF2      | BLEU     |"           >> $@
-# 	echo "|----------------------:|------------|-----------:|---------:|"           >> $@
-# 	( p=`grep -P 'ref_len = 1?[0-9]?[0-9]\)' tatoeba-results-BLEU-sorted-model | cut -f2 | sort -u | tr "\n" '|' | sed 's/|$$//'`; \
-# 	  grep -v -P "\t($$p)\t" $< |\
-# 	  sed 's#^\([^ 	]*\)#[\1](../models/\1)#' |\
-# 	  sed 's/	/ | /g;s/^/| /;s/$$/ |/'                                        >> $@ )
-
-
-
-# results/tatoeba-results-chrF2%.md: tatoeba-results-chrF2% tatoeba-results-BLEU-sorted-model
-# 	mkdir -p ${dir $@}
-# 	echo "# Tatoeba translation results" >$@
-# 	echo "" >>$@
-# 	echo "| Model            | Test Set   | chrF2      |"               >> $@
-# 	echo "|-----------------:|------------|-----------:|"                    >> $@
-# 	( p=`grep -P 'ref_len = 1?[0-9]?[0-9]\)' tatoeba-results-BLEU-sorted-model | cut -f2 | sort -u | tr "\n" '|' | sed 's/|$$//'`; \
-# 	  grep -v -P "\t($$p)\t" $< |\
-# 	  sed 's/	/ | /g;s/^/| /;s/$$/ |/'                                 >> $@ )
-
-# results/tatoeba-results-BLEU%.md: tatoeba-results-BLEU% tatoeba-results-BLEU-sorted-model
-# 	mkdir -p ${dir $@}
-# 	echo "# Tatoeba translation results" >$@
-# 	echo "" >>$@
-# 	echo "| Model            | Test Set   | BLEU       | Details  |"    >> $@
-# 	echo "|-----------------:|------------|-----------:|---------:|"         >> $@
-# 	( p=`grep -P 'ref_len = 1?[0-9]?[0-9]\)' tatoeba-results-BLEU-sorted-model | cut -f2 | sort -u | tr "\n" '|' | sed 's/|$$//'`; \
-# 	  grep -v -P "\t($$p)\t" $< |\
-# 	  sed 's/	/ | /g;s/^/| /;s/$$/ |/'                                 >> $@ )
-
-# tatoeba-results-sorted:
-# 	grep chrF2 ${TATOEBA_WORK}/*/${TATOEBA_TESTSET}.*eval | \
-# 	sed 's/chrF2.*1.4.2//' | cut -f2- -d'/' | \
-# 	sed 's/Tatoeba.*\(transformer-align\.\|transformer\.\)/\./' | \
-# 	sed "s#/.#\t#" | \
-# 	sed 's#.eval: = #\t#' > $@.1
-# 	grep BLEU ${TATOEBA_WORK}/*/${TATOEBA_TESTSET}.*eval | \
-# 	cut -f3 -d' ' > $@.2
-# 	paste $@.1 $@.2 | sort -k3,3nr > $@
-# 	rm -f $@.1 $@.2
-
-# ## results with chrF and BLEU scores sorted by language pair
-# tatoeba-results-sorted-langpair:
-# 	grep chrF2 ${TATOEBA_WORK}/*/${TATOEBA_TESTSET}.*eval | \
-# 	sed 's/chrF2.*1.4.2//' | cut -f2- -d'/' | \
-# 	sed 's/Tatoeba.*\(transformer-align\.\|transformer\.\)/\./' | \
-# 	sed "s#/.#\t#" | \
-# 	sed 's#.eval: = #\t#' > $@.1
-# 	grep BLEU ${TATOEBA_WORK}/*/${TATOEBA_TESTSET}.*eval | \
-# 	cut -f3 -d' ' > $@.2
-# 	paste $@.1 $@.2 | sort -k2,2 -k3,3nr > $@
-# 	rm -f $@.1 $@.2
-
-# tatoeba-results-sorted-model:
-# 	grep chrF2 ${TATOEBA_WORK}/*/${TATOEBA_TESTSET}.*eval | \
-# 	sed 's/chrF2.*1.4.2//' | cut -f2- -d'/' | \
-# 	sed 's/Tatoeba.*\(transformer-align\.\|transformer\.\)/\./' | \
-# 	sed "s#/.#\t#" | \
-# 	sed 's#.eval: = #\t#' > $@.1
-# 	grep BLEU ${TATOEBA_WORK}/*/${TATOEBA_TESTSET}.*eval | \
-# 	cut -f3 -d' ' > $@.2
-# 	paste $@.1 $@.2 | sort -k1,1 -k3,3nr > $@
-# 	rm -f $@.1 $@.2
-
-# tatoeba-results-BLEU-sorted:
-# 	grep BLEU ${TATOEBA_WORK}/*/${TATOEBA_TESTSET}.*eval | \
-# 	sed 's/BLEU.*1.4.2//' | cut -f2- -d'/' |sort -k3,3nr | \
-# 	sed 's/Tatoeba.*\(transformer-align\.\|transformer\.\)/\./' | \
-# 	sed "s#/.#\t#" | \
-# 	sed 's#.eval: = #\t#' | sed 's/\([0-9]\) /\1	/' | grep -v eval > $@
-
-# tatoeba-results-BLEU-sorted-model:
-# 	grep BLEU ${TATOEBA_WORK}/*/${TATOEBA_TESTSET}.*eval | \
-# 	sed 's/BLEU.*1.4.2//' | cut -f2- -d'/' | \
-# 	sed 's/Tatoeba.*\(transformer-align\.\|transformer\.\)/\./' | \
-# 	sed "s#/.#\t#" | \
-# 	sed 's#.eval: = #\t#'  | sed 's/\([0-9]\) /\1	/' | \
-# 	grep -v eval | sort -k1,1 -k3,3nr > $@
-
-# tatoeba-results-BLEU-sorted-langpair:
-# 	grep BLEU ${TATOEBA_WORK}/*/${TATOEBA_TESTSET}.*eval | \
-# 	sed 's/BLEU.*1.4.2//' | cut -f2- -d'/' | \
-# 	sed 's/Tatoeba.*\(transformer-align\.\|transformer\.\)/\./' | \
-# 	sed "s#/.#\t#" | \
-# 	sed 's#.eval: = #\t#'  | sed 's/\([0-9]\) /\1	/' | \
-# 	grep -v eval | sort -k2,2 -k3,3nr > $@
-
-# tatoeba-results-chrF2-sorted:
-# 	grep chrF2 ${TATOEBA_WORK}/*/${TATOEBA_TESTSET}.*eval | \
-# 	sed 's/chrF2.*1.4.2//' | cut -f2- -d'/' |sort -k3,3nr | \
-# 	sed 's/Tatoeba.*\(transformer-align\.\|transformer\.\)/\./' | \
-# 	sed "s#/.#\t#" | \
-# 	sed 's#.eval: = #\t#' > $@
-
-# tatoeba-results-chrF2-sorted-model:
-# 	grep chrF2 ${TATOEBA_WORK}/*/${TATOEBA_TESTSET}.*eval | \
-# 	sed 's/chrF.*1.4.2//' | cut -f2- -d'/' | \
-# 	sed 's/Tatoeba.*\(transformer-align\.\|transformer\.\)/\./' | \
-# 	sed "s#/.#\t#" | \
-# 	sed 's#.eval: = #\t#' | sort -k1,1 -k3,3nr > $@
-
-# tatoeba-results-chrF2-sorted-langpair:
-# 	grep chrF2 ${TATOEBA_WORK}/*/${TATOEBA_TESTSET}.*eval | \
-# 	sed 's/chrF2.*1.4.2//' | cut -f2- -d'/' | \
-# 	sed 's/Tatoeba.*\(transformer-align\.\|transformer\.\)/\./' | \
-# 	sed "s#/.#\t#" | \
-# 	sed 's#.eval: = #\t#' | sort -k2,2 -k3,3nr > $@
-
-# ## scores per subset
-# tatoeba-results-subset-%: tatoeba-%.md tatoeba-results-sorted-langpair
-# 	( l="${shell grep '\[' $< | cut -f2 -d '[' | cut -f1 -d ']' | sort -u  | tr "\n" '|' | tr '-' '.' | sed 's/|$$//;s/\./\\\./g'}"; \
-# 	  grep -P "$$l" ${word 2,$^} > $@ )
-
-# tatoeba-results-langgroup: tatoeba-results-sorted-model
-# 	grep -P "${subst ${SPACE},-eng|,${OPUS_LANG_GROUPS}}-eng" $< >> $@
-# 	grep -P "eng-${subst ${SPACE},|eng-,${OPUS_LANG_GROUPS}}" $< >> $@
-# 	grep -P "`echo '${OPUS_LANG_GROUPS}' | sed 's/\([^ ][^ ]*\)/\1-\1/g;s/ /\|/g'`" $< >> $@
-
-
-
-
-
-
-
-
 
 
 
@@ -2468,7 +1945,34 @@ testsets/${LANGPAIR}/${TATOEBA_TESTSET}.${LANGPAIR}.%: ${TATOEBA_DATA}/${TATOEBA
 ###############################################################################
 
 
-WRONGFILES = ${patsubst %.eval,%,${wildcard ${TATOEBA_WORK}/*/${TATOEBA_TESTSET}.opus*.eval}}
+##----------------------------------------------------------------------------
+## TODO: we need some procedures to run evaluations
+##       for already released models
+##       the code below fails because of various dependencies etc ...
+## --> moved evaluation to sub-dir eval!!!
+##----------------------------------------------------------------------------
+
+RELEASED_TATOEBA_MODEL = fiu-cpp/opus-2021-02-18.zip
+RELEASED_TATOEBA_SRC2TRG = $(subst -,2,$(subst /,,$(dir ${RELEASED_TATOEBA_MODEL})))
+RELEASED_TATOEBA_MODEL_URL = https://object.pouta.csc.fi/${TATOEBA_MODEL_CONTAINER}/${RELEASED_TATOEBA_MODEL}
+EVAL_WORKHOMEHOME  = ${PWD}/work-eval
+EVAL_WORKHOMEDIR   = ${EVAL_WORKHOMEHOME}/$(dir ${RELEASED_TATOEBA_MODEL})
+
+evaluate-released-tatoeba-model:
+	mkdir -p ${EVAL_WORKHOMEDIR}
+	wget -O ${EVAL_WORKHOMEHOME}/${RELEASED_TATOEBA_MODEL} ${RELEASED_TATOEBA_MODEL_URL}
+	cd ${EVAL_WORKHOMEDIR} && unzip -o $(notdir ${RELEASED_TATOEBA_MODEL})
+	${MAKE} WORKHOME=${EVAL_WORKHOMEHOME} \
+		DECODER_CONFIG=${EVAL_WORKHOMEDIR}decoder.yml \
+		MODEL_FINAL=`grep .npz ${EVAL_WORKHOMEDIR}decoder.yml | sed 's/^ *- *//'` \
+		SPMSRCMODEL=${EVAL_WORKHOMEDIR}source.spm \
+		SPMTRGMODEL=${EVAL_WORKHOMEDIR}target.spm \
+	tatoeba-${RELEASED_TATOEBA_SRC2TRG}-testsets
+
+##----------------------------------------------------------------------------
+
+
+WRONGFILES = ${patsubst %.eval,%,${wildcard ${WORKHOME}/*/${TATOEBA_TESTSET}.opus*.eval}}
 
 move-wrong:
 	for f in ${WRONGFILES}; do \
@@ -2487,16 +1991,16 @@ move-wrong:
 
 remove-old-groupeval:
 	for g in ${OPUS_LANG_GROUPS}; do \
-	  rm -f ${TATOEBA_WORK}/$$g-eng/${TATOEBA_TESTSET}.${TATOEBA_DATASET}.spm32k-spm32k1.transformer.???.eng*; \
-	  rm -f ${TATOEBA_WORK}/eng-$$g/${TATOEBA_TESTSET}.${TATOEBA_DATASET}.spm32k-spm32k1.transformer.eng.???; \
-	  rm -f ${TATOEBA_WORK}/eng-$$g/${TATOEBA_TESTSET}.${TATOEBA_DATASET}.spm32k-spm32k1.transformer.eng.???.*; \
+	  rm -f ${WORKHOME}/$$g-eng/${TATOEBA_TESTSET}.${TATOEBA_DATASET}.spm32k-spm32k1.transformer.???.eng*; \
+	  rm -f ${WORKHOME}/eng-$$g/${TATOEBA_TESTSET}.${TATOEBA_DATASET}.spm32k-spm32k1.transformer.eng.???; \
+	  rm -f ${WORKHOME}/eng-$$g/${TATOEBA_TESTSET}.${TATOEBA_DATASET}.spm32k-spm32k1.transformer.eng.???.*; \
 	done
 
 
 remove-old-group:
 	for g in ${OPUS_LANG_GROUPS}; do \
-	  if [ -e ${TATOEBA_WORK}/$$g-eng ]; then mv ${TATOEBA_WORK}/$$g-eng ${TATOEBA_WORK}/$$g-eng-old3; fi; \
-	  if [ -e ${TATOEBA_WORK}/eng-$$g ]; then mv ${TATOEBA_WORK}/eng-$$g ${TATOEBA_WORK}/eng-$$g-old3; fi; \
+	  if [ -e ${WORKHOME}/$$g-eng ]; then mv ${WORKHOME}/$$g-eng ${WORKHOME}/$$g-eng-old3; fi; \
+	  if [ -e ${WORKHOME}/eng-$$g ]; then mv ${WORKHOME}/eng-$$g ${WORKHOME}/eng-$$g-old3; fi; \
 	done
 
 
@@ -2505,22 +2009,22 @@ remove-old-group:
 ## resume training for all bilingual models that are not yet converged
 .PHONY: tatoeba-resume-all tatoeba-continue-all
 tatoeba-resume-all tatoeba-continue-all:
-	for l in `find ${TATOEBA_WORK}/ -maxdepth 1 -mindepth 1 -type d -printf '%f '`; do \
+	for l in `find ${WORKHOME}/ -maxdepth 1 -mindepth 1 -type d -printf '%f '`; do \
 	  s=`echo $$l | cut -f1 -d'-'`; \
 	  t=`echo $$l | cut -f2 -d'-'`; \
 	  if [ -d ${HOME}/research/Tatoeba-Challenge/data/$$s-$$t ] || \
 	     [ -d ${HOME}/research/Tatoeba-Challenge/data/$$t-$$s ]; then \
-	      if [ -d ${TATOEBA_WORK}/$$l ]; then \
-		if [ ! `find ${TATOEBA_WORK}/$$l/ -maxdepth 1 -name '*.done' | wc -l` -gt 0 ]; then \
-		  if [ `find ${TATOEBA_WORK}/$$l/ -maxdepth 1 -name '*.npz' | wc -l` -gt 0 ]; then \
-		    echo "resume ${TATOEBA_WORK}/$$l"; \
+	      if [ -d ${WORKHOME}/$$l ]; then \
+		if [ ! `find ${WORKHOME}/$$l/ -maxdepth 1 -name '*.done' | wc -l` -gt 0 ]; then \
+		  if [ `find ${WORKHOME}/$$l/ -maxdepth 1 -name '*.npz' | wc -l` -gt 0 ]; then \
+		    echo "resume ${WORKHOME}/$$l"; \
 		    make SRCLANGS=$$s TRGLANGS=$$t all-job-tatoeba; \
 		  else \
-		    echo "resume ${TATOEBA_WORK}/$$l"; \
+		    echo "resume ${WORKHOME}/$$l"; \
 		    make SRCLANGS=$$s TRGLANGS=$$t tatoeba-job; \
 		  fi \
 		else \
-		  echo "done ${TATOEBA_WORK}/$$l"; \
+		  echo "done ${WORKHOME}/$$l"; \
 		fi \
 	      fi \
 	  fi \
@@ -2530,18 +2034,18 @@ tatoeba-resume-all tatoeba-continue-all:
 ## make release package for all bilingual models that are converged
 .PHONY: tatoeba-dist-all
 tatoeba-dist-all:
-	for l in `find ${TATOEBA_WORK}/ -maxdepth 1 -mindepth 1 -type d -printf '%f '`; do \
+	for l in `find ${WORKHOME}/ -maxdepth 1 -mindepth 1 -type d -printf '%f '`; do \
 	  s=`echo $$l | cut -f1 -d'-'`; \
 	  t=`echo $$l | cut -f2 -d'-'`; \
 	  if [ -d ${HOME}/research/Tatoeba-Challenge/data/$$s-$$t ] || \
 	     [ -d ${HOME}/research/Tatoeba-Challenge/data/$$t-$$s ]; then \
-	      if [ -d ${TATOEBA_WORK}/$$l ]; then \
-		if [ `find ${TATOEBA_WORK}/$$l/ -maxdepth 1 -name '*transformer-align.model1.done' | wc -l` -gt 0 ]; then \
-		  echo "make release for ${TATOEBA_WORK}/$$l"; \
+	      if [ -d ${WORKHOME}/$$l ]; then \
+		if [ `find ${WORKHOME}/$$l/ -maxdepth 1 -name '*transformer-align.model1.done' | wc -l` -gt 0 ]; then \
+		  echo "make release for ${WORKHOME}/$$l"; \
 		  make SRCLANGS=$$s TRGLANGS=$$t MODELTYPE=transformer-align release-tatoeba; \
 		fi; \
-		if [ `find ${TATOEBA_WORK}/$$l/ -maxdepth 1 -name '*transformer.model1.done' | wc -l` -gt 0 ]; then \
-		  echo "make release for ${TATOEBA_WORK}/$$l"; \
+		if [ `find ${WORKHOME}/$$l/ -maxdepth 1 -name '*transformer.model1.done' | wc -l` -gt 0 ]; then \
+		  echo "make release for ${WORKHOME}/$$l"; \
 		  make SRCLANGS=$$s TRGLANGS=$$t MODELTYPE=transformer release-tatoeba; \
 		fi; \
 	      fi \
@@ -2551,23 +2055,23 @@ tatoeba-dist-all:
 
 
 fixlabels.sh:
-	for l in `find ${TATOEBA_WORK}-old/ -maxdepth 1 -mindepth 1 -type d -printf '%f '`; do \
+	for l in `find ${WORKHOME}-old/ -maxdepth 1 -mindepth 1 -type d -printf '%f '`; do \
 	  s=`echo $$l | cut -f1 -d'-'`; \
 	  t=`echo $$l | cut -f2 -d'-'`; \
 	  if [ -d ${HOME}/research/Tatoeba-Challenge/data/$$s-$$t ] || \
 	     [ -d ${HOME}/research/Tatoeba-Challenge/data/$$t-$$s ]; then \
-	    if [ -d ${TATOEBA_WORK}/$$l ]; then \
-	      echo "# ${TATOEBA_WORK}/$$l exists --- skip it!" >> $@; \
-	      echo "mv ${TATOEBA_WORK}-old/$$l ${TATOEBA_WORK}-double/$$l" >> $@; \
+	    if [ -d ${WORKHOME}/$$l ]; then \
+	      echo "# ${WORKHOME}/$$l exists --- skip it!" >> $@; \
+	      echo "mv ${WORKHOME}-old/$$l ${WORKHOME}-double/$$l" >> $@; \
 	    else \
 	      ${MAKE} SRCLANGS=$$s TRGLANGS=$$t tatoeba-labels; \
-	      o=`grep '*' ${TATOEBA_WORK}-old/$$l/train/README.md | cut -f1 -d: | grep '-' | sed 's/\* //g' | cut -f1 -d- | sort -u | tr "\n" ' '`; \
-	      O=`grep '*' ${TATOEBA_WORK}-old/$$l/train/README.md | cut -f1 -d: | grep '-' | sed 's/\* //g' | cut -f2 -d- | sort -u | tr "\n" ' '`; \
-	      n=`cat ${TATOEBA_WORK}/data/simple/${TATOEBA_TRAINSET}.$$l.clean.$$s.labels | tr ' ' "\n" | sort | grep . | tr "\n" ' '`; \
-	      N=`cat ${TATOEBA_WORK}/data/simple/${TATOEBA_TRAINSET}.$$l.clean.$$t.labels | tr ' ' "\n" | sort | grep . | tr "\n" ' '`; \
+	      o=`grep '*' ${WORKHOME}-old/$$l/train/README.md | cut -f1 -d: | grep '-' | sed 's/\* //g' | cut -f1 -d- | sort -u | tr "\n" ' '`; \
+	      O=`grep '*' ${WORKHOME}-old/$$l/train/README.md | cut -f1 -d: | grep '-' | sed 's/\* //g' | cut -f2 -d- | sort -u | tr "\n" ' '`; \
+	      n=`cat ${WORKHOME}/data/simple/${TATOEBA_TRAINSET}.$$l.clean.$$s.labels | tr ' ' "\n" | sort | grep . | tr "\n" ' '`; \
+	      N=`cat ${WORKHOME}/data/simple/${TATOEBA_TRAINSET}.$$l.clean.$$t.labels | tr ' ' "\n" | sort | grep . | tr "\n" ' '`; \
 	      if [ "$$o" != "$$n" ] || [ "$$O" != "$$N" ] ; then \
 	        echo "# labels in $$l are different ($$o / $$O - $$n / $$N)" >> $@; \
-	        if [ -d ${TATOEBA_WORK}-old/$$l ]; then \
+	        if [ -d ${WORKHOME}-old/$$l ]; then \
 		  if [ "$$n" != " " ] && [ "$$n" != "" ]; then \
 		    if [ "$$N" != " " ] && [ "$$N" != "" ]; then \
 	              echo "# re-run $$l from scratch!" >> $@; \
@@ -2576,8 +2080,8 @@ fixlabels.sh:
 		  fi \
 	        fi; \
 	      else \
-	        if [ -d ${TATOEBA_WORK}-old/$$l ]; then \
-	          echo "mv ${TATOEBA_WORK}-old/$$l ${TATOEBA_WORK}/$$l" >> $@; \
+	        if [ -d ${WORKHOME}-old/$$l ]; then \
+	          echo "mv ${WORKHOME}-old/$$l ${WORKHOME}/$$l" >> $@; \
 	        fi; \
 	      fi; \
 	    fi \
@@ -2586,27 +2090,27 @@ fixlabels.sh:
 
 
 tatoeba-missing-test:
-	for d in `find ${TATOEBA_WORK}/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/`; do \
-	  if [ ! -e ${TATOEBA_WORK}/$$d/test/${TATOEBA_TESTSET}.src ]; then \
-	    if [ `find ${TATOEBA_WORK}/$$d/train -name '*-model' | wc -l` -gt 0 ]; then \
+	for d in `find ${WORKHOME}/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/`; do \
+	  if [ ! -e ${WORKHOME}/$$d/test/${TATOEBA_TESTSET}.src ]; then \
+	    if [ `find ${WORKHOME}/$$d/train -name '*-model' | wc -l` -gt 0 ]; then \
 	      p=`echo $$d | sed 's/-/2/'`; \
 	      echo "missing eval file for $$d"; \
-	      mkdir -p ${TATOEBA_WORK}-tmp/$$d/train; \
-	      rsync -av ${TATOEBA_WORK}/$$d/train/*model* ${TATOEBA_WORK}-tmp/$$d/train/; \
-	      make FIT_DATA_SIZE=1000 LANGGROUP_FIT_DATA_SIZE=1000 TATOEBA_WORK=${TATOEBA_WORK}-tmp tatoeba-$$p-data; \
-	      cp ${TATOEBA_WORK}-tmp/$$d/test/${TATOEBA_TESTSET}.* ${TATOEBA_WORK}/$$d/test/; \
-	      rm -fr ${TATOEBA_WORK}-tmp/$$d; \
+	      mkdir -p ${WORKHOME}-tmp/$$d/train; \
+	      rsync -av ${WORKHOME}/$$d/train/*model* ${WORKHOME}-tmp/$$d/train/; \
+	      make FIT_DATA_SIZE=1000 LANGGROUP_FIT_DATA_SIZE=1000 WORKHOME=${WORKHOME}-tmp tatoeba-$$p-data; \
+	      cp ${WORKHOME}-tmp/$$d/test/${TATOEBA_TESTSET}.* ${WORKHOME}/$$d/test/; \
+	      rm -fr ${WORKHOME}-tmp/$$d; \
 	    fi \
 	  fi \
 	done
 
 
 tatoeba-touch-test:
-	for d in `find ${TATOEBA_WORK}/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/`; do \
-	  if [ -e ${TATOEBA_WORK}/$$d/test/${TATOEBA_TESTSET}.src ]; then \
-	    if [ -e ${TATOEBA_WORK}/$$d/val/${TATOEBA_DEVSET}.src ]; then \
-	      touch -r ${TATOEBA_WORK}/$$d/val/${TATOEBA_DEVSET}.src ${TATOEBA_WORK}/$$d/test/${TATOEBA_TESTSET}.src*; \
-	      touch -r ${TATOEBA_WORK}/$$d/val/${TATOEBA_DEVSET}.src ${TATOEBA_WORK}/$$d/test/${TATOEBA_TESTSET}.trg*; \
+	for d in `find ${WORKHOME}/ -maxdepth 1 -type d -name '???-???' | cut -f2 -d/`; do \
+	  if [ -e ${WORKHOME}/$$d/test/${TATOEBA_TESTSET}.src ]; then \
+	    if [ -e ${WORKHOME}/$$d/val/${TATOEBA_DEVSET}.src ]; then \
+	      touch -r ${WORKHOME}/$$d/val/${TATOEBA_DEVSET}.src ${WORKHOME}/$$d/test/${TATOEBA_TESTSET}.src*; \
+	      touch -r ${WORKHOME}/$$d/val/${TATOEBA_DEVSET}.src ${WORKHOME}/$$d/test/${TATOEBA_TESTSET}.trg*; \
 	    fi \
 	  fi \
 	done

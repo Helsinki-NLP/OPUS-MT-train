@@ -88,9 +88,12 @@ SKIP_SAME_LANG ?= 0
 ## --> especially useful in connection with FIT_DATA_SIZE
 ## set DATA_IS_SHUFFLED=1 if the training data is already shuffled
 ## --> useful to avoid shuffling when training sentence piece model
+## NEW (2021-12-16): SHUFFLE_DATA is now set by default
+## --> can now also avoid sqlite and data shuffling inside MarianNMT
+## --> is that a problem (would MarianNMT use different random shuffles / epoch?)
 ##----------------------------------------------------------------------
 
-# SHUFFLE_DATA = 1
+SHUFFLE_DATA = 1
 # DATA_IS_SHUFFLED = 1
 
 ## devtest data is shuffled by default
@@ -142,9 +145,9 @@ SORTSRC     = ${firstword ${SORTLANGS}}
 SORTTRG     = ${lastword ${SORTLANGS}}
 LANGPAIR    = ${SORTSRC}-${SORTTRG}
 SPACE       = $(empty) $(empty)
-LANGSRCSTR  = ${subst ${SPACE},+,$(SRCLANGS)}
-LANGTRGSTR  = ${subst ${SPACE},+,$(TRGLANGS)}
-LANGPAIRSTR = ${LANGSRCSTR}-${LANGTRGSTR}
+LANGSRCSTR  ?= ${subst ${SPACE},+,$(SRCLANGS)}
+LANGTRGSTR  ?= ${subst ${SPACE},+,$(TRGLANGS)}
+LANGPAIRSTR ?= ${LANGSRCSTR}-${LANGTRGSTR}
 
 
 ## for monolingual things
@@ -179,17 +182,17 @@ endif
 ## NEW default size = 2500 (keep more for training for small languages)
 ## NOTE: size will be increased to 5000 for Tatoeba
 
-DEVSIZE     = 2500
-TESTSIZE    = 2500
+DEVSIZE     ?= 2500
+TESTSIZE    ?= 2500
 
 ## set some additional thresholds for 
 ## the size of test and dev data
 ## DEVMINSIZE is the absolute minimum we require
 ## to run any training procedures
 
-DEVSMALLSIZE  = 1000
-TESTSMALLSIZE = 1000
-DEVMINSIZE    = 250
+DEVSMALLSIZE  ?= 1000
+TESTSMALLSIZE ?= 1000
+DEVMINSIZE    ?= 250
 
 
 ## set additional argument options for opus_read (if it is used)
@@ -486,12 +489,14 @@ MARIAN_CLIP_NORM        ?= 5
 
 ## default = shuffle data and batches 
 ## (set to batches or none to change this)
-MARIAN_SHUFFLE          ?= data
+# MARIAN_SHUFFLE        ?= data
+MARIAN_SHUFFLE          ?= batches
 
 ## default: use sqlite database to store data
 ## remove this to use regular temp data
 ## set to --shuffle-in-ram to keep all shuffled data in RAM
-MARIAN_DATA_STORAGE     ?= --sqlite
+# MARIAN_DATA_STORAGE     ?= --sqlite
+
 
 ## set to global for lower memory usage in multiprocess training
 ## TODO: does this parameter really work?
@@ -596,11 +601,11 @@ endif
 .PHONY: config local-config
 config local-config: ${WORKDIR}/${MODELCONFIG}
 
-SMALLEST_TRAINSIZE = 10000
-SMALL_TRAINSIZE    = 100000
-MEDIUM_TRAINSIZE   = 500000
-LARGE_TRAINSIZE    = 1000000
-LARGEST_TRAINSIZE  = 10000000
+SMALLEST_TRAINSIZE ?= 10000
+SMALL_TRAINSIZE    ?= 100000
+MEDIUM_TRAINSIZE   ?= 500000
+LARGE_TRAINSIZE    ?= 1000000
+LARGEST_TRAINSIZE  ?= 10000000
 
 ${WORKDIR}/${MODELCONFIG}:
 	mkdir -p ${dir $@}

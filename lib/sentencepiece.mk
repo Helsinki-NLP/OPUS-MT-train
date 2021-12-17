@@ -126,16 +126,18 @@ SPMTRGVOCAB = ${SPMDIR}/${LANGTRGSTR}/${BPEMODELNAME}.spm${TRGBPESIZE:000=}k.voc
 
 mono-spm-vocab: ${SPMVOCAB}
 
+
 ifneq (${SPMVOCAB},${SPMSRCVOCAB})
   ${SPMSRCVOCAB}:
-	${MAKE} LANGS=${SRCLANGS} BPESIZE=${SRCBPESIZE} mono-spm-vocab
+	${MAKE} LANGS="${SRCLANGS}" BPESIZE=${SRCBPESIZE} mono-spm-vocab
 endif
 
+ifneq (${SPMSRCVOCAB},${SPMTRGVOCAB})
 ifneq (${SPMVOCAB},${SPMTRGVOCAB})
   ${SPMTRGVOCAB}:
-	${MAKE} LANGS=${TRGLANGS} BPESIZE=${TRGBPESIZE} mono-spm-vocab
+	${MAKE} LANGS="${TRGLANGS}" BPESIZE=${TRGBPESIZE} mono-spm-vocab
 endif
-
+endif
 
 ${SPMVOCAB}: ${LOCAL_MONO_DATA}.${PRE} ${SPMMODEL}
 ifeq ($(wildcard ${SPMVOCAB}),)
@@ -160,9 +162,11 @@ ifneq (${SPMMODEL},${SPMSRCMONO})
 	${MAKE} LANGS=${SRCLANGS} BPESIZE=${SRCBPESIZE} mono-spm-model
 endif
 
+ifneq (${SPMSRCMODEL},${SPMTRGMONO})
 ifneq (${SPMMODEL},${SPMTRGMONO})
   ${SPMTRGMONO}:
 	${MAKE} LANGS=${TRGLANGS} BPESIZE=${TRGBPESIZE} mono-spm-model
+endif
 endif
 
 

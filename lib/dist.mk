@@ -7,12 +7,12 @@
 TODAY := ${shell date +%F}
 DATE  ?= ${TODAY}
 
-OBJECTSTORAGE       = https://object.pouta.csc.fi
-MODEL_CONTAINER     = OPUS-MT-models
-DEV_MODEL_CONTAINER = OPUS-MT-dev
-MODELINDEX          = ${OBJECTSTORAGE}/${MODEL_CONTAINER}/index.txt
-MODELSHOME          = ${WORKHOME}/models
-RELEASEDIR          = ${PWD}/models
+OBJECTSTORAGE       ?= https://object.pouta.csc.fi
+MODEL_CONTAINER     ?= OPUS-MT-models
+DEV_MODEL_CONTAINER ?= OPUS-MT-dev
+MODELINDEX          ?= ${OBJECTSTORAGE}/${MODEL_CONTAINER}/index.txt
+MODELSHOME          ?= ${WORKHOME}/models
+RELEASEDIR          ?= ${PWD}/models
 
 
 ## TODO: better create a recipe for the yaml file and not the zip file
@@ -41,7 +41,7 @@ find-model:
 
 
 ## minimum BLEU score for models to be accepted as distribution package
-MIN_BLEU_SCORE = 20
+MIN_BLEU_SCORE ?= 20
 
 .PHONY: dist local-dist global-dist release
 

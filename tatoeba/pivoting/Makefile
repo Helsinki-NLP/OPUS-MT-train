@@ -1,30 +1,20 @@
 #
-# forward translation to be used for 
-# knowledge distillation
-#
-# only works with sentencepiece models!
-#
-# TODO's
-#
-#   - forward-translate monolingual data (re-use bt-data)
-#   - reconstruction filtering (score translation in opposite direction)
-#     (use weights? normalise-script from bergamot/students)
-#   - other kind of data filtering / selection?
-#   - create lexical shortlists (see bergamot)
-#   - finetune alphas in intgemm8 models (see bergamot)
-#   - benchmark distilled models
-#
+# translate PIVOT language into SRC language
+# to make a synthetic SRC-TRG corpus from another
+# PIVOT-TRG corpus
+
 
 PWD      := ${shell pwd}
-REPOHOME := ${PWD}/../
+REPOHOME := ${PWD}/../../
 
 include ${REPOHOME}lib/env.mk
 include ${REPOHOME}lib/config.mk
 include ${REPOHOME}lib/slurm.mk
 
 
-SRC = fin
-TRG = eng
+SRC = swe
+TRG = fin
+PIVOT = eng
 
 
 ## change decoder settings
@@ -58,52 +48,49 @@ SPLIT_SIZE ?= 1000000
 MAX_LENGTH    ?= 200
 MAX_SENTENCES ?= ${SPLIT_SIZE}
 
-SORTLANGS          = $(sort ${SRC} ${TRG})
-LANGPAIR           = ${SRC}-${TRG}
+TRANSLATE_LANGPAIR = ${PIVOT}-${SRC}
+ORIGINAL_LANGPAIR  = ${PIVOT}-${TRG}
+NEW_LANGPAIR       = ${SRC}-${TRG}
+
+SORTLANGS          = $(sort ${PIVOT} ${TRG})
 SORTED_LANGPAIR    = ${firstword ${SORTLANGS}}-${lastword ${SORTLANGS}}
 
-PWD := $(shell pwd)
-
+PART           ?= aa
+OUTPUT_DIR     ?= ${NEW_LANGPAIR}
 
 
 # MODELZIP = https://object.pouta.csc.fi/Tatoeba-Challenge/ang.tar
-MODELZIP := ${shell wget -qq -O - ${TATOEBA_RELEASED} | grep '^${LANGPAIR}' | head -1 | cut -f4}
+MODELZIP := ${shell wget -qq -O - ${TATOEBA_RELEASED} | grep '^${TRANSLATE_LANGPAIR}' | head -1 | cut -f4}
 MODELINFO = ${patsubst ${TATOEBA_MODEL_STORAGE}/%.zip,${TATOEBA_GITRAW}/models/%.yml,${MODELZIP}}
 MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
+MODELDIR  = ${OUTPUT_DIR}/${TRANSLATE_LANGPAIR}/${MODELNAME}
 
 MULTI_TARGET_MODEL := ${shell wget -qq -O - ${MODELINFO} | grep 'use-target-labels' | wc -l}
 ifneq (${MULTI_TARGET_MODEL},0)
   TARGET_LANG_LABEL := ${shell wget -qq -O - ${MODELINFO} | grep -o '>>${TRG}.*<<'}
 endif
 
-RELEASED_BITEXTS := $(patsubst %.tar,%,${shell wget -qq -O - ${TATOEBA_GITRAW}/Wiki.md | \
-					grep -o 'WikiShuffled/...\.tar' | cut -f2 -d'/'})
-
-RELEASED_BITEXTS_REV = ${shell (for d in ${RELEASED_BITEXTS}; do echo $$d; done) | tac}
 
 
-PART           ?= aa
-OUTPUT_DIR     ?= ${LANGPAIR}
-
-BITEXT_DATADIR = ${PWD}/../work-tatoeba/data/simple
-MODEL_WORKDIR  = ${PWD}/../work-tatoeba/${LANGPAIR}
-BITEXT_SRCRAW  = ${BITEXT_DATADIR}/Tatoeba-train-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${SRC}.gz
+BITEXT_DATADIR = ${PWD}/../work/data/simple
+MODEL_WORKDIR  = ${PWD}/../work/${PIVOT}-${TRG}
+BITEXT_SRCRAW  = ${BITEXT_DATADIR}/Tatoeba-train-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${PIVOT}.gz
 BITEXT_SRCPRE  = ${wildcard ${MODEL_WORKDIR}/train/opusTC${TATOEBA_VERSION_NOHYPHEN}.src.clean.spm*.gz}
 
-BITEXT_BASE    = ${OUTPUT_DIR}/Tatoeba-train.${MODELNAME}.${LANGPAIR}
+BITEXT_BASE    = ${OUTPUT_DIR}/Tatoeba-train.${MODELNAME}.${PIVOT}-${SRC}-${TRG}
 BITEXT_SRC     = ${BITEXT_BASE}.${SRC}.${PART}.gz
 BITEXT_PRE     = ${BITEXT_BASE}.${SRC}.spm.${PART}.gz
 BITEXT_TRG     = ${BITEXT_BASE}.${TRG}.${PART}.gz
 
-BITEXT_LATEST_SRC    = ${OUTPUT_DIR}/latest/Tatoeba-train.${PART}.${LANGPAIR}.${SRC}.gz
-BITEXT_LATEST_TRG    = ${OUTPUT_DIR}/latest/Tatoeba-train.${PART}.${LANGPAIR}.${TRG}.gz
+BITEXT_LATEST_SRC    = ${OUTPUT_DIR}/latest/Tatoeba-train.${PIVOT}-${SRC}-${TRG}.${PART}.${SRC}.gz
+BITEXT_LATEST_TRG    = ${OUTPUT_DIR}/latest/Tatoeba-train.${PIVOT}-${SRC}-${TRG}.${PART}.${TRG}.gz
 BITEXT_LATEST_README = ${OUTPUT_DIR}/latest/README.md
 
 
 ## all parts of the bitext
 PARTS                 = $(subst .,,${suffix ${basename ${wildcard ${BITEXT_PRE:${PART}.gz=}??.gz}}})
-ALL_BITEXT_LATEST_SRC = ${patsubst %,${OUTPUT_DIR}/latest/Tatoeba-train.%.${LANGPAIR}.${SRC}.gz,${PARTS}}
-ALL_BITEXT_LATEST_TRG = ${patsubst %,${OUTPUT_DIR}/latest/Tatoeba-train.%.${LANGPAIR}.${TRG}.gz,${PARTS}}
+ALL_BITEXT_LATEST_SRC = ${patsubst %,${OUTPUT_DIR}/latest/Tatoeba-train.${PIVOT}-${SRC}-${TRG}.%.${SRC}.gz,${PARTS}}
+ALL_BITEXT_LATEST_TRG = ${patsubst %,${OUTPUT_DIR}/latest/Tatoeba-train.${PIVOT}-${SRC}-${TRG}.%.${TRG}.gz,${PARTS}}
 
 
 ## don't delete translated text even if the process crashes
@@ -113,7 +100,7 @@ ALL_BITEXT_LATEST_TRG = ${patsubst %,${OUTPUT_DIR}/latest/Tatoeba-train.%.${LANG
 all: translate
 
 .PHONY: prepare
-prepare: ${LANGPAIR}/${MODELNAME}/decoder.yml ${BITEXT_PRE}
+prepare: ${MODELDIR}/decoder.yml ${BITEXT_PRE}
 
 .PHONY: translate
 translate: ${BITEXT_LATEST_README} ${BITEXT_LATEST_TRG}
@@ -138,7 +125,7 @@ print-modelinfo:
 
 ## fetch the latest model
 
-${LANGPAIR}/${MODELNAME}/decoder.yml:
+${MODELDIR}/decoder.yml:
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
 	wget -O ${dir $@}/model.zip ${MODELZIP}
@@ -154,37 +141,36 @@ endif
 ## pre-process data
 
 ifeq (${MULTI_TARGET_MODEL},1)
-  PREPROCESS_ARGS = ${SRC} ${TRG} ${LANGPAIR}/${MODELNAME}/source.spm
+  PREPROCESS_ARGS = ${SRC} ${TRG} ${MODELDIR}/source.spm
 else
-  PREPROCESS_ARGS = ${SRC} ${LANGPAIR}/${MODELNAME}/source.spm
+  PREPROCESS_ARGS = ${SRC} ${MODELDIR}/source.spm
 endif
+
 
 
 ifeq (${BITEXT_SRCPRE},)
 
 ${BITEXT_SRCRAW}:
-	${MAKE} -C .. SRCLANGS=${SRC} TRGLANGS=${TRG} clean-data-tatoeba
+	${MAKE} -C .. SRCLANGS=${PIVOT} TRGLANGS=${TRG} clean-data
+
+else
+
+${BITEXT_SRCRAW}: ${BITEXT_SRCPRE}
+	sed 's/ //g;s/▁/ /g' < $< | sed 's/^ *//;s/ *$$//' | ${GZIP} -f > $@
+
+endif
+
 
 ${BITEXT_PRE}: ${BITEXT_SRCRAW}
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
-	${MAKE} ${LANGPAIR}/${MODELNAME}/decoder.yml
+	${MAKE} ${MODELDIR}/decoder.yml
 	${GZCAT} $< |\
 	grep -v '[<>{}]' |\
-	${LANGPAIR}/${MODELNAME}/preprocess.sh ${PREPROCESS_ARGS} |\
-	perl -e 'while (<>){next if (split(/\s+/)>${MAX_LENGTH});print;}' |\
-	split -l ${SPLIT_SIZE} - ${patsubst %${PART}.gz,%,$@} |\
-	gzip -f > $@
-endif
-
-else
-
-${BITEXT_PRE}: ${BITEXT_SRCPRE}
-	${GZCAT} $< |\
+	${MODELDIR}/preprocess.sh ${PREPROCESS_ARGS} |\
 	perl -e 'while (<>){next if (split(/\s+/)>${MAX_LENGTH});print;}' |\
 	split -l ${SPLIT_SIZE} - ${patsubst %${PART}.gz,%,$@}
 	${GZIP} -f ${patsubst %${PART}.gz,%,$@}??
-
 endif
 
 
@@ -207,15 +193,15 @@ ${BITEXT_BASE}.${SRC}.%.gz: ${BITEXT_BASE}.${SRC}.spm.%.gz
 ## --> this allows multiple translation iterations
 ##     without duplicating the data we want to use in MT training
 
-${OUTPUT_DIR}/latest/Tatoeba-train.%.${LANGPAIR}.${SRC}.gz: ${BITEXT_BASE}.${SRC}.%.gz
+${OUTPUT_DIR}/latest/Tatoeba-train.${PIVOT}-${SRC}-${TRG}.%.${SRC}.gz: ${BITEXT_BASE}.${SRC}.%.gz
 	mkdir -p ${dir $@}
 	cp $< $@
 
-${OUTPUT_DIR}/latest/Tatoeba-train.%.${LANGPAIR}.${TRG}.gz: ${BITEXT_BASE}.${TRG}.%.gz
+${OUTPUT_DIR}/latest/Tatoeba-train.${PIVOT}-${SRC}-${TRG}.%.${TRG}.gz: ${BITEXT_BASE}.${TRG}.%.gz
 	mkdir -p ${dir $@}
 	cp $< $@
 
-${BITEXT_LATEST_README}: ${LANGPAIR}/${MODELNAME}/README.md
+${BITEXT_LATEST_README}: ${MODELDIR}/README.md
 	mkdir -p ${dir $@}
 	cp $< $@
 
@@ -225,8 +211,8 @@ ${BITEXT_LATEST_README}: ${LANGPAIR}/${MODELNAME}/README.md
 ${BITEXT_BASE}.${TRG}.%.gz: ${BITEXT_BASE}.${SRC}.spm.%.gz
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
-	${MAKE} ${LANGPAIR}/${MODELNAME}/decoder.yml
-	${LOAD_ENV} && cd ${LANGPAIR}/${MODELNAME} && \
+	${MAKE} ${MODELDIR}/decoder.yml
+	${LOAD_ENV} && cd ${MODELDIR} && \
 	${MARIAN_DECODER} \
 		-c decoder.yml \
 		-i ${PWD}/$< \
@@ -239,8 +225,8 @@ endif
 
 
 check-latest:
-	@if [ -d ${LANGPAIR}/latest ]; then \
-	  for S in `ls ${LANGPAIR}/latest/*.${SRC}.gz`; do \
+	@if [ -d ${OUTPUT_DIR}/latest ]; then \
+	  for S in `ls ${OUTPUT_DIR}/latest/*.${SRC}.gz`; do \
 	    T=`echo $$S | sed 's/.${SRC}.gz/.${TRG}.gz/'`; \
 	    a=`${GZCAT} $$S | wc -l`; \
 	    b=`${GZCAT} $$T | wc -l`; \
@@ -253,7 +239,7 @@ check-latest:
 	fi
 
 check-translated:
-	@for S in `ls ${LANGPAIR}/*.${SRC}.spm.gz`; do \
+	@for S in `ls ${OUTPUT_DIR}/*.${SRC}.spm.gz`; do \
 	    T=`echo $$S | sed 's/.${SRC}.gz/.${TRG}.gz/'`; \
 	    a=`${GZCAT} $$S | wc -l`; \
 	    b=`${GZCAT} $$T | wc -l`; \
@@ -265,7 +251,7 @@ check-translated:
 	done
 
 check-length:
-	@echo "check ${LANGPAIR}"
+	@echo "check ${OUTPUT_DIR}"
 	@${MAKE} check-translated
 	@${MAKE} check-latest
 
@@ -284,32 +270,32 @@ remove-incomplete:
 	${MAKE} remove-incomplete-latest
 
 remove-incomplete-translated:
-	@echo "check ${LANGPAIR}"
-	@mkdir -p ${LANGPAIR}/incomplete
-	@for S in `ls ${LANGPAIR}/*.${SRC}.gz`; do \
+	@echo "check ${OUTPUT_DIR}"
+	@mkdir -p ${OUTPUT_DIR}/incomplete
+	@for S in `ls ${OUTPUT_DIR}/*.${SRC}.gz`; do \
 	    T=`echo $$S | sed 's/.${SRC}.gz/.${TRG}.gz/'`; \
 	    a=`${GZCAT} $$S | wc -l`; \
 	    b=`${GZCAT} $$T | wc -l`; \
 	    if [ $$a != $$b ]; then \
 	      echo "$$a != $$b	$$S	$$T"; \
-	      mv $$S ${LANGPAIR}/incomplete/; \
-	      mv $$T ${LANGPAIR}/incomplete/; \
+	      mv $$S ${OUTPUT_DIR}/incomplete/; \
+	      mv $$T ${OUTPUT_DIR}/incomplete/; \
 	    fi \
 	done
 
 
 remove-incomplete-latest:
-	@echo "check ${LANGPAIR}"
-	@mkdir -p ${LANGPAIR}/incomplete/latest
-	@if [ -d ${LANGPAIR}/latest ]; then \
-	  for S in `ls ${LANGPAIR}/latest/*.${SRC}.gz`; do \
+	@echo "check ${OUTPUT_DIR}"
+	@mkdir -p ${OUTPUT_DIR}/incomplete/latest
+	@if [ -d ${OUTPUT_DIR}/latest ]; then \
+	  for S in `ls ${OUTPUT_DIR}/latest/*.${SRC}.gz`; do \
 	    T=`echo $$S | sed 's/.${SRC}.gz/.${TRG}.gz/'`; \
 	    a=`${GZCAT} $$S | wc -l`; \
 	    b=`${GZCAT} $$T | wc -l`; \
 	    if [ $$a != $$b ]; then \
 	      echo "$$a != $$b	$$S	$$T"; \
-	      mv $$S ${LANGPAIR}/incomplete/latest/; \
-	      mv $$T ${LANGPAIR}/incomplete/latest/; \
+	      mv $$S ${OUTPUT_DIR}/incomplete/latest/; \
+	      mv $$T ${OUTPUT_DIR}/incomplete/latest/; \
 	    fi \
 	  done \
 	fi

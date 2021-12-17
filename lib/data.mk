@@ -55,9 +55,8 @@ endif
 ## - use only the latest backtranslations
 ##   if such a subdir exists
 
-BACKTRANS_HOME    = backtranslate
-FORWARDTRANS_HOME = ${BACKTRANS_HOME}
-# FORWARDTRANS_HOME = ${BACKTRANS_HOME}
+BACKTRANS_HOME    ?= backtranslate
+FORWARDTRANS_HOME ?= ${BACKTRANS_HOME}
 
 ifneq (${wildcard ${BACKTRANS_HOME}/${TRG}-${SRC}/latest},)
   BACKTRANS_DIR = ${BACKTRANS_HOME}/${TRG}-${SRC}/latest
@@ -70,6 +69,13 @@ ifneq (${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest},)
 else
   FORWARDTRANS_DIR = ${FORWARDTRANS_HOME}/${SRC}-${TRG}
 endif
+
+ifneq (${wildcard ${BACKTRANS_HOME}/${SRC}-${TRG}/latest},)
+  FORWARDTRANSMONO_DIR = ${BACKTRANS_HOME}/${SRC}-${TRG}/latest
+else
+  FORWARDTRANSMONO_DIR = ${BACKTRANS_HOME}/${SRC}-${TRG}
+endif
+
 
 
 ## TODO: make it possible to select only parts of the BT data
@@ -85,6 +91,11 @@ ifeq (${USE_FORWARDTRANS},1)
   FORWARDTRANS_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${FORWARDTRANS_SRC}}
 endif
 
+ifeq (${USE_FORWARDTRANSMONO},1)
+  FORWARDTRANSMONO_SRC = ${sort ${wildcard ${FORWARDTRANSMONO_DIR}/*.${SRCEXT}.gz}}
+  FORWARDTRANSMONO_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${FORWARDTRANSMONO_SRC}}
+endif
+
 ifeq (${USE_PIVOTING},1)
   PIVOTING_SRC = ${sort ${wildcard pivoting/${SRC}-${TRG}/latest/*.${SRCEXT}.gz} \
 			${wildcard pivoting/${TRG}-${SRC}/latest/*.${SRCEXT}.gz}}
@@ -95,6 +106,10 @@ print-ft-data:
 	@echo ${FORWARDTRANS_SRC}
 	@echo ${FORWARDTRANS_TRG}
 	@echo ${FORWARDTRANS_DIR}
+	@echo ${FORWARDTRANSMONO_SRC}
+	@echo ${FORWARDTRANSMONO_TRG}
+	@echo ${FORWARDTRANSMONO_DIR}
+
 
 ##-------------------------------------------------------------
 ## data sets (train/dev/test)
@@ -104,7 +119,7 @@ print-ft-data:
 ## with some basic pre-processing (see lib/preprocess.mk)
 
 CLEAN_TRAIN_SRC    = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.clean.${SRCEXT}.gz,${TRAINSET}} \
-			${BACKTRANS_SRC} ${FORWARDTRANS_SRC} ${PIVOTING_SRC}
+			${BACKTRANS_SRC} ${FORWARDTRANS_SRC} ${FORWARDTRANSMONO_SRC} ${PIVOTING_SRC}
 CLEAN_TRAIN_TRG    = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_TRAIN_SRC}}
 
 CLEAN_DEV_SRC      = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.clean.${SRCEXT}.gz,${DEVSET}}
@@ -239,6 +254,8 @@ MAX_WORDALIGN_SIZE = 5000000
 ## (assuming that each of them occupies up to 6 cores
 NR_ALIGN_JOBS ?=  $$(( ${CPU_CORES} / 6 + 1 ))
 
+## job forcing doesn't work within recipes
+#	    ${MAKE} -j ${NR_ALIGN_JOBS} $$a
 
 ${TRAIN_ALG}: 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 		${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz
@@ -250,7 +267,7 @@ ${TRAIN_ALG}: 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 	  split -l ${MAX_WORDALIGN_SIZE} $(LOCAL_TRAIN_TRG).algtmp $(LOCAL_TRAIN_TRG).algtmp.d/; \
 	  a=`ls $(LOCAL_TRAIN_SRC).algtmp.d/* | sed 's#$$#.alg#' | xargs`; \
 	  if [ "$$a" != "" ]; then \
-	    ${MAKE} -j ${NR_ALIGN_JOBS} $$a; \
+	    ${MAKE} $$a; \
 	    cat $(LOCAL_TRAIN_SRC).algtmp.d/*.alg | ${GZIP} -c > $@; \
 	    rm -f ${LOCAL_TRAIN_SRC}.algtmp.d/*; \
 	    rm -f ${LOCAL_TRAIN_TRG}.algtmp.d/*; \
@@ -449,7 +466,7 @@ endif
 #    --> shuffle data for each langpair
 #    --> do this when FIT_DATA_SIZE is set!
 ######################################
-ifneq (${SHUFFLE_DATA},1)
+ifeq (${SHUFFLE_DATA},1)
 	@echo "shuffle training data"
 	@paste ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg |\
 		${SHUFFLE} > ${LOCAL_TRAIN_SRC}.shuffled
@@ -503,10 +520,10 @@ raw-devdata: ${DEV_SRC} ${DEV_TRG}
 ## maybe introduce over/undersampling of dev data like we have for train data?
 
 ${DEV_SRC}.shuffled.gz:
-	mkdir -p ${dir $@}
+	mkdir -p ${sort ${dir $@} ${dir ${DEV_SRC}} ${dir ${DEV_TRG}}}
 	rm -f ${DEV_SRC} ${DEV_TRG}
-	echo "# Validation data"                         > ${dir ${DEV_SRC}}/README.md
-	echo ""                                         >> ${dir ${DEV_SRC}}/README.md
+	echo "# Validation data"                         > ${dir ${DEV_SRC}}README.md
+	echo ""                                         >> ${dir ${DEV_SRC}}README.md
 	-for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
 	    if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \

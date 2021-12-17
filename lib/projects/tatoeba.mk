@@ -188,7 +188,6 @@ TATOEBA_PARAMS := DATASET=${TATOEBA_DATASET} \
 		TESTSET_NAME=${TATOEBA_TESTSET_NAME} \
 		TRAINSET_NAME=${TATOEBA_TRAINSET_NAME} \
 		SMALLEST_TRAINSIZE=1000 \
-		DATA_IS_SHUFFLED=1 \
 		USE_REST_DEVDATA=0 \
 		HELDOUTSIZE=0 \
 		DEVSIZE=5000 \
@@ -206,21 +205,24 @@ TATOEBA_PARAMS := DATASET=${TATOEBA_DATASET} \
 		DEFAULT_PIVOT_LANG=${TATOEBA_PIVOT} \
 		MIN_BLEU_SCORE=${TATOEBA_MIN_BLEU}
 
-MARIAN_SHUFFLE=data
-MARIAN_DATA_STORAGE=--sqlite
-HPC_DISK=500
 
-## unless we have multilingual models:
-## no need to shuffle data again, just shuffle batches
-## no need to store data in sqlite databases
-ifeq (${words ${SRCLANGS}},1)
-ifeq (${words ${TRGLANGS}},1)
-#   TATOEBA_PARAMS += MARIAN_SHUFFLE=batches MARIAN_DATA_STORAGE= HPC_DISK=
-  MARIAN_SHUFFLE=batches
-  MARIAN_DATA_STORAGE=
-  HPC_DISK=
-endif
-endif
+## NEW (2012-12-15): use default (always shuffle training data)
+#
+# DATA_IS_SHUFFLED    = 1
+# MARIAN_SHUFFLE      = data
+# MARIAN_DATA_STORAGE = --sqlite
+# HPC_DISK            = 500
+
+# ## unless we have multilingual models:
+# ## no need to shuffle data again, just shuffle batches
+# ## no need to store data in sqlite databases
+# ifeq (${words ${SRCLANGS}},1)
+# ifeq (${words ${TRGLANGS}},1)
+#   MARIAN_SHUFFLE      = batches
+#   MARIAN_DATA_STORAGE =
+#   HPC_DISK            =
+# endif
+# endif
 
 
 

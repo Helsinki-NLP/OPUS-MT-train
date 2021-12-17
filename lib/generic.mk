@@ -274,8 +274,8 @@ endif
 ## --> make a new BPE/sentencepiece model
 ## --> make a new config file
 
-DEFAULT_PIVOT_LANG = en
-PIVOT_LANG ?= ${DEFAULT_PIVOT_LANG}
+DEFAULT_PIVOT_LANG ?= en
+PIVOT_LANG         ?= ${DEFAULT_PIVOT_LANG}
 
 %-pivotlang:
 	if [ "$(sort ${SRCLANGS} ${TRGLANGS} ${PIVOT_LANG})" != "$(sort ${SRCLANGS} ${TRGLANGS})" ]; then \
@@ -316,6 +316,11 @@ endif
 		MARIAN_EARLY_STOPPING=${FT_MARIAN_EARLY_STOPPING} \
 	${@:-ft=}
 
+## add forward translation of monolingual data
+%-ftmono:
+	${MAKE} DATASET=${DATASET}+ftmono \
+		USE_FORWARDTRANSMONO=1 \
+	${@:-ftmono=}
 
 
 ## train on back-translations only

@@ -16,7 +16,7 @@
 #
 
 PWD      := ${shell pwd}
-REPOHOME := ${PWD}/../
+REPOHOME := ${PWD}/../../
 
 include ${REPOHOME}lib/env.mk
 include ${REPOHOME}lib/config.mk
@@ -85,8 +85,8 @@ RELEASED_BITEXTS_REV = ${shell (for d in ${RELEASED_BITEXTS}; do echo $$d; done)
 PART           ?= aa
 OUTPUT_DIR     ?= ${LANGPAIR}
 
-BITEXT_DATADIR = ${PWD}/../work-tatoeba/data/simple
-MODEL_WORKDIR  = ${PWD}/../work-tatoeba/${LANGPAIR}
+BITEXT_DATADIR = ${PWD}/../work/data/simple
+MODEL_WORKDIR  = ${PWD}/../work/${LANGPAIR}
 BITEXT_SRCRAW  = ${BITEXT_DATADIR}/Tatoeba-train-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${SRC}.gz
 BITEXT_SRCPRE  = ${wildcard ${MODEL_WORKDIR}/train/opusTC${TATOEBA_VERSION_NOHYPHEN}.src.clean.spm*.gz}
 
@@ -165,6 +165,14 @@ ifeq (${BITEXT_SRCPRE},)
 ${BITEXT_SRCRAW}:
 	${MAKE} -C .. SRCLANGS=${SRC} TRGLANGS=${TRG} clean-data-tatoeba
 
+else
+
+${BITEXT_SRCRAW}: ${BITEXT_SRCPRE}
+	sed 's/ //g;s/▁/ /g' < $< | sed 's/^ *//;s/ *$$//' | ${GZIP} -f > $@
+
+endif
+
+
 ${BITEXT_PRE}: ${BITEXT_SRCRAW}
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
@@ -173,20 +181,9 @@ ifneq (${MODELZIP},)
 	grep -v '[<>{}]' |\
 	${LANGPAIR}/${MODELNAME}/preprocess.sh ${PREPROCESS_ARGS} |\
 	perl -e 'while (<>){next if (split(/\s+/)>${MAX_LENGTH});print;}' |\
-	split -l ${SPLIT_SIZE} - ${patsubst %${PART}.gz,%,$@} |\
-	gzip -f > $@
-endif
-
-else
-
-${BITEXT_PRE}: ${BITEXT_SRCPRE}
-	${GZCAT} $< |\
-	perl -e 'while (<>){next if (split(/\s+/)>${MAX_LENGTH});print;}' |\
 	split -l ${SPLIT_SIZE} - ${patsubst %${PART}.gz,%,$@}
 	${GZIP} -f ${patsubst %${PART}.gz,%,$@}??
-
 endif
-
 
 
 ## merge SentencePiece segments in the source text
