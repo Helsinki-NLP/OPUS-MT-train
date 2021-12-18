@@ -88,6 +88,18 @@ PWD      := ${shell pwd}
 REPOHOME := ${PWD}/../
 
 
+ifeq (${SRCLANGS},)
+ifdef SRC
+  SRCLANGS = ${SRC}
+endif
+endif
+ifeq (${TRGLANGS},)
+ifdef TRG
+  TRGLANGS = ${TRG}
+endif
+endif
+
+
 ## Tatoeba Challenge Data release number
 # TATOEBA_VERSION        ?= v2020-07-28
 TATOEBA_VERSION          ?= v2021-08-07
@@ -128,11 +140,6 @@ SKIP_DATA_DETAILS   = 1
 DEFAULT_PIVOT_LANG  = eng
 MIN_BLEU_SCORE      = 10
 TATOEBA_PIVOT      ?= ${DEFAULT_PIVOT_LANG}
-
-## overwrite the standard langpair string
-## basically take ${SRC}-${TRG}
-## backoff to first langs in SRCLANGS and TRGLANGS
-LANGPAIRSTR := ${firstword ${SRC} ${SRCLANGS}}-${firstword ${TRG} ${TRGLANGS}}
 
 
 include ${REPOHOME}lib/env.mk
@@ -191,10 +198,14 @@ TATOEBA_TRGLABELFILE = ${WORKHOME}/${LANGPAIRSTR}/${DATASET}-langlabels.trg
 ## get source and target languages from the label files
 
 ifneq (${wildcard ${TATOEBA_SRCLABELFILE}},)
-  SRCLANGS := ${shell cat ${TATOEBA_SRCLABELFILE}}
+  TATOEBA_SRCLANGS := ${shell cat ${TATOEBA_SRCLABELFILE}}
+else
+  TATOEBA_SRCLANGS := ${SRCLANGS}
 endif
 ifneq (${wildcard ${TATOEBA_TRGLABELFILE}},)
-  TRGLANGS := ${shell cat ${TATOEBA_TRGLABELFILE}}
+  TATOEBA_TRGLANGS := ${shell cat ${TATOEBA_TRGLABELFILE}}
+else
+  TATOEBA_TRGLANGS := ${TRGLANGS}
 endif
 
 ifdef TATOEBA_TRGLANGS
@@ -202,13 +213,6 @@ ifneq (${words ${TATOEBA_TRGLANGS}},1)
   USE_TARGET_LABELS = 1
   TARGET_LABELS = $(patsubst %,>>%<<,$(sort ${TATOEBA_TRGLANGS} ${TATOEBA_TRGLANG_GROUP}))
 endif
-endif
-
-ifeq (${SRCLANGS},)
-  SRCLANGS = ${SRC}
-endif
-ifeq (${TRGLANGS},)
-  TRGLANGS = ${TRG}
 endif
 
 
@@ -262,10 +266,20 @@ OPUS_LANG_GROUPS       := ${sort ${OPUS_LANG_PARENTS} ${OPUS_LANG_GRANDPARENTS}}
 .PHONY: all
 all: 
 	${MAKE} prepare
-	${MAKE} train
-	${MAKE} eval
-	${MAKE} compare
-	${MAKE} eval-testsets
+	${MAKE} train-tatoeba
+	${MAKE} eval-tatoeba
+	${MAKE} compare-tatoeba
+	${MAKE} eval-testsets-tatoeba
+
+## generic recipe to replace SRCLANGS and TRGLANGS
+## with all languages that are part of the Tatoeba data sets
+## (there can be sub-languages in each package)
+%-tatoeba: ${TATOEBA_SRCLABELFILE} ${TATOEBA_TRGLABELFILE} ${TATOEBA_LANGIDS_TRAINONLY}
+	${MAKE} LANGPAIRSTR=${LANGPAIRSTR} \
+		SRCLANGS="${shell cat ${word 1,$^}}" \
+		TRGLANGS="${shell cat ${word 2,$^}}" \
+	${@:-tatoeba=}
+
 
 ## prepare data (config, train.dev.test data, labels)
 .PHONY: prepare tatoeba-prepare
@@ -273,7 +287,7 @@ prepare tatoeba-prepare: ${TATOEBA_LANGIDS_TRAINONLY}
 	${MAKE} fetch-datasets
 	${MAKE} langlabel-files
 	${MAKE} local-config
-	${MAKE} data
+	${MAKE} data-tatoeba
 
 .PHONY: trainonly_langids
 trainonly_langids: ${TATOEBA_LANGIDS_TRAINONLY}
@@ -1569,16 +1583,6 @@ ${WORKHOME}/${LANGPAIRSTR}/${DATASET}-languages.%: ${WORKHOME}/${LANGPAIRSTR}/${
 	cat $< | tr ' ' "\n" | cut -f1 -d'_' | cut -f1 -d'-' | \
 	sed 's/ *$$//;s/^ *//' | tr "\n" ' '  > $@
 
-
-## generic target for tatoeba challenge jobs
-%-tatoeba: ${TATOEBA_SRCLABELFILE} ${TATOEBA_TRGLABELFILE}
-	${MAKE} ${TATOEBA_LANGIDS_TRAINONLY}
-	${MAKE} LANGPAIRSTR=${LANGPAIRSTR} \
-		SRCLANGS="${shell cat ${word 1,$^}}" \
-		TRGLANGS="${shell cat ${word 2,$^}}" \
-		SRC=${SRC} TRG=${TRG} \
-		EMAIL= \
-	${@:-tatoeba=}
 
 
 %-bttatoeba: 	${WORKHOME}/${LANGPAIRSTR}/${DATASET}-langlabels.src \
