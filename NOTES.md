@@ -16,6 +16,11 @@ test -s $DIR/corpus.spm.$TRG || cat $CORPUS_TRG | pigz -dc | parallel --no-notic
 ```
 
 
+# OPUS-MT at huggingface
+
+* more efficient GPU usage: https://github.com/kb-labb/kblabb-examples/tree/master/text/machine_translation_gpu
+
+
 # related projects
 
 * https://browser.mt (bergamot project)

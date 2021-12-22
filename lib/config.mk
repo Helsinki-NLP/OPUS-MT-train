@@ -322,12 +322,25 @@ TRGBPESIZE ?= ${BPESIZE}
 
 BPEMODELNAME ?= opus
 
-BPESRCMODEL   ?= ${WORKDIR}/train/${BPEMODELNAME}.src.bpe${SRCBPESIZE:000=}k-model
-BPETRGMODEL   ?= ${WORKDIR}/train/${BPEMODELNAME}.trg.bpe${TRGBPESIZE:000=}k-model
+BPESRCMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.src.bpe${SRCBPESIZE:000=}k-model
+BPETRGMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.trg.bpe${TRGBPESIZE:000=}k-model
+BPE_MODEL    ?= ${WORKDIR}/train/${BPEMODELNAME}.bpe${TRGBPESIZE:000=}k-model
 
-SPM_MODEL     ?= ${WORKDIR}/train/${BPEMODELNAME}.spm${SRCBPESIZE:000=}k-model
-SPMSRCMODEL   ?= ${WORKDIR}/train/${BPEMODELNAME}.src.spm${SRCBPESIZE:000=}k-model
-SPMTRGMODEL   ?= ${WORKDIR}/train/${BPEMODELNAME}.trg.spm${TRGBPESIZE:000=}k-model
+SPMSRCMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.src.spm${SRCBPESIZE:000=}k-model
+SPMTRGMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.trg.spm${TRGBPESIZE:000=}k-model
+SPM_MODEL    ?= ${WORKDIR}/train/${BPEMODELNAME}.spm${SRCBPESIZE:000=}k-model
+
+
+ifeq (${SUBWORDS},bpe)
+  SUBWORD_SRC_MODEL = ${BPESRCMODEL}
+  SUBWORD_TRG_MODEL = ${BPETRGMODEL}
+else
+  SUBWORD_SRC_MODEL = ${SPMSRCMODEL}
+  SUBWORD_TRG_MODEL = ${SPMTRGMODEL}
+  SUBWORD_SRC_VOCAB = ${SPMSRCMODEL}.vocab
+  SUBWORD_TRG_VOCAB = ${SPMTRGMODEL}.vocab
+endif
+
 
 ## don't delete BPE/sentencepiece models!
 .PRECIOUS: ${BPESRCMODEL} ${BPETRGMODEL}
@@ -395,6 +408,7 @@ TESTDATA_TRG  = ${TEST_TRG}
 ## training data in local space
 LOCAL_TRAIN_SRC = ${TMPDIR}/${LANGPAIRSTR}/train/${DATASET}.src
 LOCAL_TRAIN_TRG = ${TMPDIR}/${LANGPAIRSTR}/train/${DATASET}.trg
+LOCAL_TRAIN     = ${TMPDIR}/${LANGPAIRSTR}/train/${DATASET}
 LOCAL_MONO_DATA = ${TMPDIR}/${LANGSTR}/train/${DATASET}.mono
 
 ## dev and test data
@@ -624,15 +638,15 @@ ${WORKDIR}/${MODELCONFIG}:
 	fi; \
 	if [ $$s -gt ${LARGEST_TRAINSIZE} ]; then \
 	  echo "# ${LANGPAIRSTR} training data bigger than ${LARGEST_TRAINSIZE}" > $@; \
-	  echo "GPUJOB_HPC_MEM = 8g"        >> $@; \
-	  echo "GPUJOB_SUBMIT  = -multigpu" >> $@; \
+	  echo "GPUJOB_HPC_MEM = 16g"        >> $@; \
+	  echo "GPUJOB_SUBMIT  = -gpu01" >> $@; \
 	  echo "BPESIZE    = ${BPESIZE}"    >> $@; \
 	  echo "DEVSIZE    = ${DEVSIZE}"    >> $@; \
 	  echo "TESTSIZE   = ${TESTSIZE}"   >> $@; \
 	  echo "DEVMINSIZE = ${DEVMINSIZE}" >> $@; \
 	elif [ $$s -gt ${LARGE_TRAINSIZE} ]; then \
 	  echo "# ${LANGPAIRSTR} training data bigger than ${LARGE_TRAINSIZE}" > $@; \
-	  echo "GPUJOB_HPC_MEM = 8g"       >> $@; \
+	  echo "GPUJOB_HPC_MEM = 16g"       >> $@; \
 	  echo "GPUJOB_SUBMIT  = "         >> $@; \
 	  echo "MARIAN_VALID_FREQ = 2500"  >> $@; \
 	  echo "BPESIZE    = ${BPESIZE}"    >> $@; \
@@ -641,7 +655,7 @@ ${WORKDIR}/${MODELCONFIG}:
 	  echo "DEVMINSIZE = ${DEVMINSIZE}" >> $@; \
 	elif [ $$s -gt ${MEDIUM_TRAINSIZE} ]; then \
 	  echo "# ${LANGPAIRSTR} training data bigger than ${MEDIUM_TRAINSIZE}" > $@; \
-	  echo "GPUJOB_HPC_MEM = 4g"       >> $@; \
+	  echo "GPUJOB_HPC_MEM = 8g"       >> $@; \
 	  echo "GPUJOB_SUBMIT  = "         >> $@; \
 	  echo "MARIAN_VALID_FREQ = 2500"  >> $@; \
 	  echo "MARIAN_WORKSPACE  = 10000" >> $@; \
@@ -709,6 +723,9 @@ ifdef USE_TARGET_LABELS
 endif
 ifdef USE_SPM_VOCAB
 	echo "USE_SPM_VOCAB = ${USE_SPM_VOCAB}"  >> $@
+endif
+ifdef USE_JOINT_SUBWORD_MODEL
+	echo "USE_JOINT_SUBWORD_MODEL = ${USE_JOINT_SUBWORD_MODEL}"  >> $@
 endif
 
 

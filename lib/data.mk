@@ -38,12 +38,12 @@ TRAINDATA_SIZE = ${shell \
 ## they should be executable and should basically read STDIN and print to STDOUT
 ## no further arguments are supported
 
-ifneq (${wildcard scripts/cleanup/${SRC}},)
-  SRC_CLEANUP_SCRIPTS = | ${subst ${SPACE}, | ,${shell find scripts/cleanup/${SRC} -executable -type f}}
+ifneq (${wildcard ${REPOHOME}scripts/cleanup/${SRC}},)
+  SRC_CLEANUP_SCRIPTS = | ${subst ${SPACE}, | ,${shell find ${REPOHOME}scripts/cleanup/${SRC} -executable -type f}}
 endif
 
-ifneq (${wildcard scripts/cleanup/${TRG}},)
-  TRG_CLEANUP_SCRIPTS = | ${subst ${SPACE}, | ,${shell find scripts/cleanup/${TRG} -executable -type f}}
+ifneq (${wildcard ${REPOHOME}scripts/cleanup/${TRG}},)
+  TRG_CLEANUP_SCRIPTS = | ${subst ${SPACE}, | ,${shell find ${REPOHOME}scripts/cleanup/${TRG} -executable -type f}}
 endif
 
 
@@ -57,6 +57,8 @@ endif
 
 BACKTRANS_HOME    ?= backtranslate
 FORWARDTRANS_HOME ?= ${BACKTRANS_HOME}
+PIVOTTRANS_HOME   ?= pivoting
+
 
 ifneq (${wildcard ${BACKTRANS_HOME}/${TRG}-${SRC}/latest},)
   BACKTRANS_DIR = ${BACKTRANS_HOME}/${TRG}-${SRC}/latest
@@ -64,52 +66,56 @@ else
   BACKTRANS_DIR = ${BACKTRANS_HOME}/${TRG}-${SRC}
 endif
 
-ifneq (${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest},)
-  FORWARDTRANS_DIR = ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest
-else
-  FORWARDTRANS_DIR = ${FORWARDTRANS_HOME}/${SRC}-${TRG}
-endif
-
-ifneq (${wildcard ${BACKTRANS_HOME}/${SRC}-${TRG}/latest},)
-  FORWARDTRANSMONO_DIR = ${BACKTRANS_HOME}/${SRC}-${TRG}/latest
-else
-  FORWARDTRANSMONO_DIR = ${BACKTRANS_HOME}/${SRC}-${TRG}
-endif
-
-
 
 ## TODO: make it possible to select only parts of the BT data
 ## ---> use TRAINDATA_SIZE to take max the same amount of all shuffled BT data
 
+# back-translation data (target-to-source)
 ifeq (${USE_BACKTRANS},1)
   BACKTRANS_SRC = ${sort ${wildcard ${BACKTRANS_DIR}/*.${SRCEXT}.gz}}
   BACKTRANS_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${BACKTRANS_SRC}}
 endif
 
+# forward-translation data (source-to-target)
 ifeq (${USE_FORWARDTRANS},1)
-  FORWARDTRANS_SRC = ${sort ${wildcard ${FORWARDTRANS_DIR}/*.${SRCEXT}.gz}}
+  FORWARDTRANS_SRC = ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.gz}}
   FORWARDTRANS_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${FORWARDTRANS_SRC}}
 endif
 
+# forward-translation data of monolingual data (source-to-target)
 ifeq (${USE_FORWARDTRANSMONO},1)
-  FORWARDTRANSMONO_SRC = ${sort ${wildcard ${FORWARDTRANSMONO_DIR}/*.${SRCEXT}.gz}}
+  FORWARDTRANSMONO_SRC = ${sort ${wildcard ${BACKTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.gz}}
   FORWARDTRANSMONO_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${FORWARDTRANSMONO_SRC}}
 endif
 
-ifeq (${USE_PIVOTING},1)
-  PIVOTING_SRC = ${sort ${wildcard pivoting/${SRC}-${TRG}/latest/*.${SRCEXT}.gz} \
-			${wildcard pivoting/${TRG}-${SRC}/latest/*.${SRCEXT}.gz}}
+# forward translation using pivoting (target language is automatically created)
+ifeq (${USE_FORWARD_PIVOTING},1)
+  PIVOTING_SRC = ${sort ${wildcard ${PIVOTTRANS_HOME}/${TRG}-${SRC}/latest/*.${SRCEXT}.gz}}
   PIVOTING_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${PIVOTING_SRC}}
 endif
 
-print-ft-data:
-	@echo ${FORWARDTRANS_SRC}
-	@echo ${FORWARDTRANS_TRG}
-	@echo ${FORWARDTRANS_DIR}
-	@echo ${FORWARDTRANSMONO_SRC}
-	@echo ${FORWARDTRANSMONO_TRG}
-	@echo ${FORWARDTRANSMONO_DIR}
+# backward translation using pivoting (source language is automatically created)
+ifeq (${USE_BACKWARD_PIVOTING},1)
+  PIVOTING_SRC = ${sort ${wildcard ${PIVOTTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.gz}}
+  PIVOTING_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${PIVOTING_SRC}}
+endif
 
+# pivot-based data augmentation data (in both directions)
+ifeq (${USE_PIVOTING},1)
+  PIVOTING_SRC = ${sort ${wildcard ${PIVOTTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.gz} \
+			${wildcard ${PIVOTTRANS_HOME}/${TRG}-${SRC}/latest/*.${SRCEXT}.gz}}
+  PIVOTING_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${PIVOTING_SRC}}
+endif
+
+
+print-datasets:
+	@echo ${TATOEBA_TRAINSET}
+	@echo ${TRAINSET}
+	@echo ${CLEAN_TRAIN_SRC}
+	@echo ${BACKTRANS_SRC} 
+	@echo ${FORWARDTRANS_SRC} 
+	@echo ${FORWARDTRANSMONO_SRC} 
+	@echo ${PIVOTING_SRC}
 
 ##-------------------------------------------------------------
 ## data sets (train/dev/test)
@@ -369,6 +375,7 @@ ifeq (${USE_REST_DEVDATA},1)
   LOCAL_TRAINDATA_DEPENDENCIES = ${DEV_SRC} ${DEV_TRG}
 endif
 
+
 ## add training data for each language combination
 ## and put it together in local space
 ${LOCAL_TRAIN_SRC}: ${LOCAL_TRAINDATA_DEPENDENCIES}
@@ -383,6 +390,7 @@ ${LOCAL_TRAIN_SRC}: ${LOCAL_TRAINDATA_DEPENDENCIES}
 	      if [ "${SKIP_SAME_LANG}" == "1" ] && [ "$$s" == "$$t" ]; then \
 	        echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
 	      else \
+	        echo "..... add data for $$s-$$t"; \
 	        ${MAKE} DATASET=${DATASET} SRC:=$$s TRG:=$$t add-to-local-train-data; \
 	      fi \
 	    else \
@@ -442,6 +450,7 @@ ifdef CHECK_TRAINDATA_SIZE
 	  echo ${CLEAN_TRAIN_TRG}; \
 	fi
 endif
+	@echo "..... add info about training data"
 	@echo -n "* ${SRC}-${TRG}: "                          >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 	@for d in ${wildcard ${CLEAN_TRAIN_SRC}}; do \
 	  l=`${GZIP} -cd < $$d ${CUT_DATA_SETS} 2>/dev/null | wc -l`; \
@@ -457,6 +466,7 @@ endif
 ######################################
 # create local data files (add label if necessary)
 ######################################
+	@echo "..... create training data in local scratch space"
 	@${ZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} ${CUT_DATA_SETS} 2>/dev/null \
 		${LABEL_SOURCE_DATA} > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
 	@${ZCAT} ${wildcard ${CLEAN_TRAIN_TRG}} ${CUT_DATA_SETS} 2>/dev/null \
@@ -467,7 +477,7 @@ endif
 #    --> do this when FIT_DATA_SIZE is set!
 ######################################
 ifeq (${SHUFFLE_DATA},1)
-	@echo "shuffle training data"
+	@echo "..... shuffle training data"
 	@paste ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg |\
 		${SHUFFLE} > ${LOCAL_TRAIN_SRC}.shuffled
 	@cut -f1 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
@@ -482,11 +492,11 @@ endif
 	@echo -n "* ${SRC}-${TRG}: total size = " >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 ifdef FIT_DATA_SIZE
 	@echo "sample data to fit size = ${FIT_DATA_SIZE}"
-	@scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
+	@${REPOHOME}scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
 		${LOCAL_TRAIN_SRC}.${LANGPAIR}.src | wc -l >> ${dir ${LOCAL_TRAIN_SRC}}README.md
-	@scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
+	@${REPOHOME}scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
 		${LOCAL_TRAIN_SRC}.${LANGPAIR}.src >> ${LOCAL_TRAIN_SRC}
-	@scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
+	@${REPOHOME}scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
 		${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg >> ${LOCAL_TRAIN_TRG}
 else
 	@cat ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src | wc -l >> ${dir ${LOCAL_TRAIN_SRC}}README.md
@@ -625,9 +635,9 @@ add-to-dev-data: ${CLEAN_DEV_SRC} ${CLEAN_DEV_TRG}
 #-----------------------------------------------------------------
 ifdef FIT_DEVDATA_SIZE
 	@echo "sample dev data to fit size = ${FIT_DEVDATA_SIZE}"
-	@scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DEVDATA_SIZE} \
+	@${REPOHOME}scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DEVDATA_SIZE} \
 		${CLEAN_DEV_SRC} 2>/dev/null ${LABEL_SOURCE_DATA} >> ${DEV_SRC}
-	@scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DEVDATA_SIZE} \
+	@${REPOHOME}scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DEVDATA_SIZE} \
 		${CLEAN_DEV_TRG} 2>/dev/null                      >> ${DEV_TRG}
 else
 	@${ZCAT} ${CLEAN_DEV_SRC} 2>/dev/null ${LABEL_SOURCE_DATA} >> ${DEV_SRC}
@@ -736,7 +746,7 @@ add-to-local-mono-data:
 	for c in ${MONOSET}; do \
 	  if [ -e ${OPUSHOME}/$$c/latest/mono/${LANGID}.txt.gz ]; then \
 	    ${GZIP} -cd < ${OPUSHOME}/$$c/latest/mono/${LANGID}.txt.gz |\
-	    scripts/filter/mono-match-lang.py -l ${LANGID} >> ${LOCAL_MONO_DATA}.raw; \
+	    ${REPOHOME}scripts/filter/mono-match-lang.py -l ${LANGID} >> ${LOCAL_MONO_DATA}.raw; \
 	  fi \
 	done
 

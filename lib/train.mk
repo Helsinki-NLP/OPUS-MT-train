@@ -12,13 +12,13 @@
 
 ## extract vocabulary from sentence piece model
 
-${WORKDIR}/${MODEL}.src.vocab: ${SPMSRCMODEL}
+${WORKDIR}/${MODEL}.src.vocab: ${SUBWORD_SRC_MODEL}
 	cut -f1 < $<.vocab > $@
 ifeq (${USE_TARGET_LABELS},1)
 	echo "${TARGET_LABELS}" | tr ' ' "\n" >> $@
 endif
 
-${WORKDIR}/${MODEL}.trg.vocab: ${SPMTRGMODEL}
+${WORKDIR}/${MODEL}.trg.vocab: ${SUBWORD_TRG_MODEL}
 	cut -f1 < $<.vocab > $@
 
 
@@ -34,7 +34,7 @@ ifneq (${MODEL_LATEST_VOCAB},$@)
 	cp ${MODEL_LATEST_VOCAB} $@
 endif
 else
-	cat $^ | sort -u | scripts/vocab2yaml.py > $@
+	cat $^ | sort -u | ${REPOHOME}scripts/vocab2yaml.py > $@
 endif
 else
 	@echo "$@ already exists! We will re-use it ..."
@@ -119,10 +119,12 @@ endif
 ## TODO: if we use pre-defined tasks than tied-embeddings-all is set to true
 ##       How can we unset it if it should not be used?
 
+MARIAN_TIE_EMBEDDINGS = --tied-embeddings-all
+
 ifeq ($(USE_SPM_VOCAB),1)
+ifneq (${USE_JOINT_SUBWORD_MODEL},1)
   MARIAN_TIE_EMBEDDINGS = --tied-embeddings
-else
-  MARIAN_TIE_EMBEDDINGS = --tied-embeddings-all
+endif
 endif
 
 

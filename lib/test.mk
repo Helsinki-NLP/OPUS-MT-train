@@ -6,7 +6,7 @@
 
 ## testset dir for all test sets in this language pair
 ## and all trokenized test sets that can be found in that directory
-TESTSET_HOME    = ${PWD}/testsets
+TESTSET_HOME    = ${REPOHOME}testsets
 TESTSET_DIR     = ${TESTSET_HOME}/${SRC}-${TRG}
 TESTSETS        = $(sort $(patsubst ${TESTSET_DIR}/%.${SRCEXT}.gz,%,${wildcard ${TESTSET_DIR}/*.${SRCEXT}.gz}))
 TESTSETS_PRESRC = $(patsubst %,${TESTSET_DIR}/%.${SRCEXT}.${PRE}.gz,${TESTSETS})

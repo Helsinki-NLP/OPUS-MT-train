@@ -184,18 +184,18 @@ ifneq ("$(wildcard ${BPESRCMODEL})","")
 else
   PREPROCESS_TYPE     = spm
   SUBWORD_TYPE        = spm
-  PREPROCESS_SRCMODEL = ${SPMSRCMODEL}
-  PREPROCESS_TRGMODEL = ${SPMTRGMODEL}
+  PREPROCESS_SRCMODEL = ${SUBWORD_SRC_MODEL}
+  PREPROCESS_TRGMODEL = ${SUBWORD_TRG_MODEL}
   PREPROCESS_DESCRIPTION = normalization + SentencePiece (${PRE_SRC},${PRE_TRG})
 endif
 
 ifneq (${words ${TRGLANGS}},1)
-  PREPROCESS_SCRIPT = scripts/preprocess-${PREPROCESS_TYPE}-multi-target.sh
+  PREPROCESS_SCRIPT = ${REPOHOME}scripts/preprocess-${PREPROCESS_TYPE}-multi-target.sh
 else
-  PREPROCESS_SCRIPT = scripts/preprocess-${PREPROCESS_TYPE}.sh
+  PREPROCESS_SCRIPT = ${REPOHOME}scripts/preprocess-${PREPROCESS_TYPE}.sh
 endif
 
-POSTPROCESS_SCRIPT  = scripts/postprocess-${PREPROCESS_TYPE}.sh
+POSTPROCESS_SCRIPT  = ${REPOHOME}scripts/postprocess-${PREPROCESS_TYPE}.sh
 
 
 ##--------------------------------------------------------------------------
@@ -793,7 +793,7 @@ endif
 
 create-yaml:
 	for d in `find ${RELEASEDIR} -maxdepth 1 -mindepth 1 -type d`; do \
-	    scripts/readme2yaml.pl $$d; \
+	    ${REPOHOME}scripts/readme2yaml.pl $$d; \
 	done
 
 

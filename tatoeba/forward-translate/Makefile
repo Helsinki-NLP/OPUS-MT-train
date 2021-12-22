@@ -165,14 +165,6 @@ ifeq (${BITEXT_SRCPRE},)
 ${BITEXT_SRCRAW}:
 	${MAKE} -C .. SRCLANGS=${SRC} TRGLANGS=${TRG} clean-data-tatoeba
 
-else
-
-${BITEXT_SRCRAW}: ${BITEXT_SRCPRE}
-	sed 's/ //g;s/▁/ /g' < $< | sed 's/^ *//;s/ *$$//' | ${GZIP} -f > $@
-
-endif
-
-
 ${BITEXT_PRE}: ${BITEXT_SRCRAW}
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
@@ -183,6 +175,23 @@ ifneq (${MODELZIP},)
 	perl -e 'while (<>){next if (split(/\s+/)>${MAX_LENGTH});print;}' |\
 	split -l ${SPLIT_SIZE} - ${patsubst %${PART}.gz,%,$@}
 	${GZIP} -f ${patsubst %${PART}.gz,%,$@}??
+endif
+
+else
+
+${BITEXT_PRE}: ${BITEXT_SRCPRE}
+ifneq (${MODELZIP},)
+	mkdir -p ${dir $@}
+	${MAKE} ${LANGPAIR}/${MODELNAME}/decoder.yml
+	${GZCAT} $< |\
+	sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' | \
+	grep -v '[<>{}]' |\
+	${LANGPAIR}/${MODELNAME}/preprocess.sh ${PREPROCESS_ARGS} |\
+	perl -e 'while (<>){next if (split(/\s+/)>${MAX_LENGTH});print;}' |\
+	split -l ${SPLIT_SIZE} - ${patsubst %${PART}.gz,%,$@}
+	${GZIP} -f ${patsubst %${PART}.gz,%,$@}??
+endif
+
 endif
 
 

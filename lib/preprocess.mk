@@ -27,7 +27,7 @@
 	perl -CIOE -pe 's/[\x{2060}\x{200B}\x{feff}]//g' |\
 	perl -CS -pe 's/\&\s*\#\s*160\s*\;/ /g' > $@.2
 	paste $@.1 $@.2 |\
-	scripts/filter/bitext-match-lang.py -s ${SRC} -t ${TRG} > $@.bitext
+	${REPOHOME}scripts/filter/bitext-match-lang.py -s ${SRC} -t ${TRG} > $@.bitext
 	cut -f1 $@.bitext | ${GZIP} -c > $@
 	cut -f2 $@.bitext | ${GZIP} -c > $(@:.clean.${SRCEXT}.gz=.clean.${TRGEXT}.gz)
 	rm -f $@.bitext $@.1 $@.2
@@ -114,7 +114,7 @@
 	sed 's/^ *//;s/  */ /g;s/ *$$//g' > $@
 
 
-## minimal pre-processing
+## minimal pre-processing (is that the same as norm?)
 %.simple.gz: %.gz
 	$(LOAD_MOSES) ${GZIP} -cd < $< |\
 	$(TOKENIZER)/replace-unicode-punctuation.perl |\

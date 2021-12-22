@@ -72,14 +72,16 @@ endif
 
 
 
-BITEXT_DATADIR = ${PWD}/../work/data/simple
-MODEL_WORKDIR  = ${PWD}/../work/${PIVOT}-${TRG}
-BITEXT_SRCRAW  = ${BITEXT_DATADIR}/Tatoeba-train-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${PIVOT}.gz
-BITEXT_SRCPRE  = ${wildcard ${MODEL_WORKDIR}/train/opusTC${TATOEBA_VERSION_NOHYPHEN}.src.clean.spm*.gz}
+BITEXT_DATADIR  = ${PWD}/../work/data/simple
+MODEL_WORKDIR   = ${PWD}/../work/${PIVOT}-${TRG}
+BITEXT_PIVOTRAW = ${BITEXT_DATADIR}/Tatoeba-train-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${PIVOT}.gz
+BITEXT_TRGRAW   = ${BITEXT_DATADIR}/Tatoeba-train-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${TRG}.gz
+BITEXT_PIVOTPRE = ${wildcard ${MODEL_WORKDIR}/train/opusTC${TATOEBA_VERSION_NOHYPHEN}.src.clean.spm*.gz}
 
 BITEXT_BASE    = ${OUTPUT_DIR}/Tatoeba-train.${MODELNAME}.${PIVOT}-${SRC}-${TRG}
+BITEXT_PIVOT   = ${BITEXT_BASE}.${PIVOT}.${PART}.gz
+BITEXT_PRE     = ${BITEXT_BASE}.${PIVOT}.spm.${PART}.gz
 BITEXT_SRC     = ${BITEXT_BASE}.${SRC}.${PART}.gz
-BITEXT_PRE     = ${BITEXT_BASE}.${SRC}.spm.${PART}.gz
 BITEXT_TRG     = ${BITEXT_BASE}.${TRG}.${PART}.gz
 
 BITEXT_LATEST_SRC    = ${OUTPUT_DIR}/latest/Tatoeba-train.${PIVOT}-${SRC}-${TRG}.${PART}.${SRC}.gz
@@ -94,7 +96,7 @@ ALL_BITEXT_LATEST_TRG = ${patsubst %,${OUTPUT_DIR}/latest/Tatoeba-train.${PIVOT}
 
 
 ## don't delete translated text even if the process crashes
-.PRECIOUS: ${BITEXT_BASE}.${TRG}.%.gz
+.PRECIOUS: ${BITEXT_BASE}.${SRC}.%.gz
 
 .PHONY: all
 all: translate
@@ -103,16 +105,17 @@ all: translate
 prepare: ${MODELDIR}/decoder.yml ${BITEXT_PRE}
 
 .PHONY: translate
-translate: ${BITEXT_LATEST_README} ${BITEXT_LATEST_TRG}
-	${MAKE} ${BITEXT_LATEST_SRC}
+translate: ${BITEXT_LATEST_README} ${BITEXT_LATEST_SRC}
+	${MAKE} ${BITEXT_LATEST_TRG}
 
 ## translate all parts
 .PHONY: translate-all-parts
-translate-all-parts: ${ALL_BITEXT_LATEST_TRG}
-	${MAKE} source-all-parts
+translate-all-parts: ${ALL_BITEXT_LATEST_SRC} ${BITEXT_LATEST_TRG}
+	${MAKE} target-all-parts
 
-.PHONY: source-all-parts
-source-all-parts: ${ALL_BITEXT_LATEST_SRC}
+.PHONY: target-all-parts
+target-all-parts: ${BITEXT_LATEST_TRG}
+	${MAKE} ${ALL_BITEXT_LATEST_TRG}
 
 
 .PHONY: print-modelinfo
@@ -141,52 +144,30 @@ endif
 ## pre-process data
 
 ifeq (${MULTI_TARGET_MODEL},1)
-  PREPROCESS_ARGS = ${SRC} ${TRG} ${MODELDIR}/source.spm
+  PREPROCESS_ARGS = ${PIVOT} ${TRG} ${MODELDIR}/source.spm
 else
-  PREPROCESS_ARGS = ${SRC} ${MODELDIR}/source.spm
+  PREPROCESS_ARGS = ${PIVOT} ${MODELDIR}/source.spm
 endif
 
 
 
-ifeq (${BITEXT_SRCPRE},)
-
-${BITEXT_SRCRAW}:
+${BITEXT_PIVOTRAW}:
 	${MAKE} -C .. SRCLANGS=${PIVOT} TRGLANGS=${TRG} clean-data
 
-else
-
-${BITEXT_SRCRAW}: ${BITEXT_SRCPRE}
-	sed 's/ //g;s/▁/ /g' < $< | sed 's/^ *//;s/ *$$//' | ${GZIP} -f > $@
-
-endif
-
-
-${BITEXT_PRE}: ${BITEXT_SRCRAW}
+${BITEXT_PRE}: ${BITEXT_PIVOTRAW}
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
 	${MAKE} ${MODELDIR}/decoder.yml
 	${GZCAT} $< |\
-	grep -v '[<>{}]' |\
 	${MODELDIR}/preprocess.sh ${PREPROCESS_ARGS} |\
-	perl -e 'while (<>){next if (split(/\s+/)>${MAX_LENGTH});print;}' |\
 	split -l ${SPLIT_SIZE} - ${patsubst %${PART}.gz,%,$@}
 	${GZIP} -f ${patsubst %${PART}.gz,%,$@}??
 endif
 
-
-
-## merge SentencePiece segments in the source text
-## (Why? because we filter out some data from the original wiki text, see above)
-
-${BITEXT_BASE}.${SRC}.%.gz: ${BITEXT_BASE}.${SRC}.spm.%.gz
-	if [ -e ${patsubst ${BITEXT_BASE}.${SRC}.%.gz,${BITEXT_BASE}.${TRG}.%.gz,$@} ]; then \
-	  mkdir -p ${dir $@}; \
-	  ${GZCAT} $< |\
-	  sed 's/ //g;s/▁/ /g' | \
-	  sed 's/^ *//;s/ *$$//' |\
-	  sed 's/^>>[a-z]*<< //' |\
-	  gzip -c > $@; \
-	fi
+${BITEXT_TRG}: ${BITEXT_TRGRAW}
+	${GZCAT} $< |\
+	split -l ${SPLIT_SIZE} - ${patsubst %${PART}.gz,%,$@}
+	${GZIP} -f ${patsubst %${PART}.gz,%,$@}??
 
 
 ## overwrite the file with the latest translations
@@ -208,7 +189,7 @@ ${BITEXT_LATEST_README}: ${MODELDIR}/README.md
 
 ## translate
 
-${BITEXT_BASE}.${TRG}.%.gz: ${BITEXT_BASE}.${SRC}.spm.%.gz
+${BITEXT_BASE}.${SRC}.%.gz: ${BITEXT_BASE}.${PIVOT}.spm.%.gz
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
 	${MAKE} ${MODELDIR}/decoder.yml
@@ -221,8 +202,6 @@ ifneq (${MODELZIP},)
 	sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' |\
 	gzip -c > ${PWD}/$@
 endif
-
-
 
 check-latest:
 	@if [ -d ${OUTPUT_DIR}/latest ]; then \
@@ -237,52 +216,6 @@ check-latest:
 	    fi \
 	  done \
 	fi
-
-check-translated:
-	@for S in `ls ${OUTPUT_DIR}/*.${SRC}.spm.gz`; do \
-	    T=`echo $$S | sed 's/.${SRC}.gz/.${TRG}.gz/'`; \
-	    a=`${GZCAT} $$S | wc -l`; \
-	    b=`${GZCAT} $$T | wc -l`; \
-	    if [ $$a != $$b ]; then \
-	      echo "$$a != $$b	$$S	$$T"; \
-	    else \
-	      echo "$$a	$$S	$$T"; \
-	    fi \
-	done
-
-check-length:
-	@echo "check ${OUTPUT_DIR}"
-	@${MAKE} check-translated
-	@${MAKE} check-latest
-
-
-remove-%-all check-%-all:
-	for d in `find . -maxdepth 1 -type d -name '*-*' -printf "%f "`; do \
-	  s=`echo $$d | cut -f1 -d'-'`; \
-	  t=`echo $$d | cut -f2 -d'-'`; \
-	  make SRC=$$s TRG=$$t ${@:-all=}; \
-	done
-
-
-
-remove-incomplete:
-	${MAKE} remove-incomplete-translated
-	${MAKE} remove-incomplete-latest
-
-remove-incomplete-translated:
-	@echo "check ${OUTPUT_DIR}"
-	@mkdir -p ${OUTPUT_DIR}/incomplete
-	@for S in `ls ${OUTPUT_DIR}/*.${SRC}.gz`; do \
-	    T=`echo $$S | sed 's/.${SRC}.gz/.${TRG}.gz/'`; \
-	    a=`${GZCAT} $$S | wc -l`; \
-	    b=`${GZCAT} $$T | wc -l`; \
-	    if [ $$a != $$b ]; then \
-	      echo "$$a != $$b	$$S	$$T"; \
-	      mv $$S ${OUTPUT_DIR}/incomplete/; \
-	      mv $$T ${OUTPUT_DIR}/incomplete/; \
-	    fi \
-	done
-
 
 remove-incomplete-latest:
 	@echo "check ${OUTPUT_DIR}"

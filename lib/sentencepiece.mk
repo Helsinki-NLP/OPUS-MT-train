@@ -38,9 +38,32 @@ else
   SPM_PREPROCESS = grep .
 endif
 
+
+##-------------------------------------------
+## simple trick to use a joint subword model:
+##   just duplicate the model to work for
+##   source and target language texts
+##-------------------------------------------
+
+ifeq ($(USE_JOINT_SUBWORD_MODEL),1)
+
+${SPMSRCMODEL}: ${SPM_MODEL}
+	ln -s $< $@
+	ln -s $<.vocab $@.vocab
+
+${SPMTRGMODEL}: ${SPM_MODEL}
+	ln -s $< $@
+	ln -s $<.vocab $@.vocab
+
+else
+
+##-------------------------------------------
+## source and target side specific subword models:
+##
 ## we keep the dependency on LOCAL_TRAIN_SRC
 ## to make multi-threaded make calls behave properly
 ## --> otherwise there can be multiple threads writing to the same file!
+##-------------------------------------------
 
 ${SPMSRCMODEL}: ${LOCAL_TRAIN_SRC}
 ifneq (${wildcard ${SPMSRCMODEL}},)
@@ -108,21 +131,64 @@ endif
 	rm -f ${LOCAL_TRAIN_TRG}.text
 endif
 
+endif
+
+
+##-------------------------------------------
+## joint sentence piece model
+## (concatenate both, source and target language texts)
+##-------------------------------------------
+
+${SPM_MODEL}: ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG}
+ifneq (${wildcard ${SPM_MODEL}},)
+	@echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+	@echo "!!!!!!!! $@ already exists!"
+	@echo "!!!!!!!! re-use the old one even if there is new training data"
+	@echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+	@echo "!!!!!!!! back-date $^"
+	touch -r $@ $<
+else
+	mkdir -p ${dir $@}
+	cat ${LOCAL_TRAIN_TRG} | ${SPM_PREPROCESS} | head -$$((${SPM_INPUT_SIZE}/2)) > ${LOCAL_TRAIN}.tmp
+	cat ${LOCAL_TRAIN_TRG} | ${SPM_PREPROCESS} | head -$$((${SPM_INPUT_SIZE}/2)) >> ${LOCAL_TRAIN}.tmp
+	${SHUFFLE} < ${LOCAL_TRAIN}.tmp > ${LOCAL_TRAIN}.text
+	rm -f ${LOCAL_TRAIN}.tmp
+	${MAKE} ${LOCAL_TRAIN}.text.charfreq
+	if [ `cat ${LOCAL_TRAIN}.text.charfreq | wc -l` -gt 1000 ]; then \
+	  ${SPM_TRAIN} ${SPMEXTRA} \
+		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=${LOCAL_TRAIN}.text \
+		--input_sentence_size ${SPM_INPUT_SIZE} --shuffle_input_sentence ${SPM_SHUFFLE_INPUT} \
+		--character_coverage=0.9995 --hard_vocab_limit=false; \
+	else \
+	  ${SPM_TRAIN} ${SPMEXTRA} \
+		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=${LOCAL_TRAIN}.text \
+		--input_sentence_size ${SPM_INPUT_SIZE} --shuffle_input_sentence ${SPM_SHUFFLE_INPUT} \
+		--character_coverage=1.0 --hard_vocab_limit=false; \
+	fi
+	mv $@.model $@
+ifeq (${GENERATE_SPM_VOC},1)
+	${SPM_ENCODE} --model=$@ --generate_vocabulary < ${LOCAL_TRAIN}.text > $@.voc
+endif
+	rm -f ${LOCAL_TRAIN}.text
+endif
+
+
+
 
 
 
 
 ## sentence piece model trained on monolingual data
-SPMMODEL   = ${SPMDIR}/${LANGSTR}/${BPEMODELNAME}.spm${BPESIZE:000=}k-model
-SPMSRCMONO = ${SPMDIR}/${LANGSRCSTR}/${BPEMODELNAME}.spm${SRCBPESIZE:000=}k-model
-SPMTRGMONO = ${SPMDIR}/${LANGTRGSTR}/${BPEMODELNAME}.spm${TRGBPESIZE:000=}k-model
+SPM_MONO    = ${SPMDIR}/${LANGSTR}/${BPEMODELNAME}.spm${BPESIZE:000=}k-model
+SPM_SRCMONO = ${SPMDIR}/${LANGSRCSTR}/${BPEMODELNAME}.spm${SRCBPESIZE:000=}k-model
+SPM_TRGMONO = ${SPMDIR}/${LANGTRGSTR}/${BPEMODELNAME}.spm${TRGBPESIZE:000=}k-model
 
 ## vocabulary files created from monolingual data
 SPMVOCAB    = ${SPMDIR}/${LANGSTR}/${BPEMODELNAME}.spm${BPESIZE:000=}k.vocab.yml
 SPMSRCVOCAB = ${SPMDIR}/${LANGSRCSTR}/${BPEMODELNAME}.spm${SRCBPESIZE:000=}k.vocab.yml
 SPMTRGVOCAB = ${SPMDIR}/${LANGTRGSTR}/${BPEMODELNAME}.spm${TRGBPESIZE:000=}k.vocab.yml
 
-.PRECIOUS: ${SPMMODEL} ${SPMSRCMONO} ${SPMTRGMONO} ${SPMVOCAB}
+.PRECIOUS: ${SPM_MONO} ${SPM_SRCMONO} ${SPM_TRGMONO} ${SPMVOCAB}
 
 mono-spm-vocab: ${SPMVOCAB}
 
@@ -139,10 +205,10 @@ ifneq (${SPMVOCAB},${SPMTRGVOCAB})
 endif
 endif
 
-${SPMVOCAB}: ${LOCAL_MONO_DATA}.${PRE} ${SPMMODEL}
+${SPMVOCAB}: ${LOCAL_MONO_DATA}.${PRE} ${SPM_MONO}
 ifeq ($(wildcard ${SPMVOCAB}),)
 	mkdir -p ${dir $@}
-	${SPM_ENCODE} --model ${SPMMODEL} < $< |\
+	${SPM_ENCODE} --model ${SPM_MONO} < $< |\
 	${MARIAN_VOCAB} --max-size ${VOCABSIZE} > $@
 else
 	@echo "$@ already exists!"
@@ -155,23 +221,23 @@ endif
 
 ## sentence piece model trained on monolingual data
 
-mono-spm-model: ${SPMMODEL}
+mono-spm-model: ${SPM_MONO}
 
-ifneq (${SPMMODEL},${SPMSRCMONO})
-  ${SPMSRCMONO}:
-	${MAKE} LANGS=${SRCLANGS} BPESIZE=${SRCBPESIZE} mono-spm-model
+ifneq (${SPM_MONO},${SPM_SRCMONO})
+  ${SPM_SRCMONO}:
+	${MAKE} LANGS="${SRCLANGS}" BPESIZE=${SRCBPESIZE} mono-spm-model
 endif
 
-ifneq (${SPMSRCMODEL},${SPMTRGMONO})
-ifneq (${SPMMODEL},${SPMTRGMONO})
-  ${SPMTRGMONO}:
-	${MAKE} LANGS=${TRGLANGS} BPESIZE=${TRGBPESIZE} mono-spm-model
+ifneq (${SPMSRCMODEL},${SPM_TRGMONO})
+ifneq (${SPM_MONO},${SPM_TRGMONO})
+  ${SPM_TRGMONO}:
+	${MAKE} LANGS="${TRGLANGS}" BPESIZE=${TRGBPESIZE} mono-spm-model
 endif
 endif
 
 
-${SPMMODEL}: ${LOCAL_MONO_DATA}.${PRE}
-ifeq ($(wildcard ${SPMMODEL}),)
+${SPM_MONO}: ${LOCAL_MONO_DATA}.${PRE}
+ifeq ($(wildcard ${SPM_MONO}),)
 	mkdir -p ${dir $@}
 	cat $< | ${SPM_PREPROCESS} | head -${SPM_INPUT_SIZE} > $<.text
 	${MAKE} ${LOCAL_MONO_DATA}.${PRE}.charfreq
@@ -237,7 +303,7 @@ endif
 ## --vocabulary={vocab_file}.L1 --vocabulary_threshold=50
 ## see https://github.com/google/sentencepiece#c-from-source
 
-%.src.spm${SRCBPESIZE:000=}k: %.src ${SPMSRCMODEL}
+%.src.spm${SRCBPESIZE:000=}k: %.src ${SUBWORD_SRC_MODEL}
 ifeq (${USE_TARGET_LABELS},1)
 	cut -f1 -d ' ' $< > $<.labels
 	cut -f2- -d ' ' $< > $<.txt
@@ -248,7 +314,7 @@ else
 	${SPM_ENCODE} --model $(word 2,$^) < $< > $@
 endif
 
-%.trg.spm${TRGBPESIZE:000=}k: %.trg ${SPMTRGMODEL}
+%.trg.spm${TRGBPESIZE:000=}k: %.trg ${SUBWORD_TRG_MODEL}
 	${SPM_ENCODE} --model $(word 2,$^) < $< > $@
 
 
