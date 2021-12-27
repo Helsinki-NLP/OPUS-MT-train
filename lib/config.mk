@@ -29,9 +29,10 @@ MODELTYPE    =  transformer-align
 NR           =  1
 
 
-
 ## name of the model-specific configuration file
-MODELCONFIG ?= config.mk
+## NEW: make it more model specific
+#
+# MODELCONFIG ?= config.mk
 
 
 ## various ways of setting the model languages
@@ -314,27 +315,32 @@ ALL_MULTILINGUAL_MODELS := ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" | grep
 ##----------------------------------------------------------------------------
 
 ## type of subword segmentation (bpe|spm)
-## model size (NOTE: BPESIZE is also used for sentencepiece!)
-SUBWORDS   ?= spm
-BPESIZE    ?= 32000
-SRCBPESIZE ?= ${BPESIZE}
-TRGBPESIZE ?= ${BPESIZE}
+## model vocabulary size (NOTE: BPESIZE is used as default)
+SUBWORDS              ?= spm
+BPESIZE               ?= 32000
+SRCBPESIZE            ?= ${BPESIZE}
+TRGBPESIZE            ?= ${BPESIZE}
+SUBWORD_VOCAB_SIZE    ?= ${BPESIZE}
+SUBWORD_SRCVOCAB_SIZE ?= ${SUBWORD_VOCAB_SIZE}
+SUBWORD_TRGVOCAB_SIZE ?= ${SUBWORD_VOCAB_SIZE}
 
-BPEMODELNAME ?= opus
+## joint source+target sentencepiece model
+ifeq (${USE_JOINT_SUBWORD_MODEL},1)
+  SUBWORDS = jointspm
+endif
 
-BPESRCMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.src.bpe${SRCBPESIZE:000=}k-model
-BPETRGMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.trg.bpe${TRGBPESIZE:000=}k-model
-BPE_MODEL    ?= ${WORKDIR}/train/${BPEMODELNAME}.bpe${TRGBPESIZE:000=}k-model
-
-SPMSRCMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.src.spm${SRCBPESIZE:000=}k-model
-SPMTRGMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.trg.spm${TRGBPESIZE:000=}k-model
-SPM_MODEL    ?= ${WORKDIR}/train/${BPEMODELNAME}.spm${SRCBPESIZE:000=}k-model
-
+SUBWORD_MODEL_NAME ?= opus
 
 ifeq (${SUBWORDS},bpe)
+  BPESRCMODEL      ?= ${WORKDIR}/train/${SUBWORD_MODEL_NAME}.src.bpe${SUBWORD_SRCVOCAB_SIZE:000=}k-model
+  BPETRGMODEL      ?= ${WORKDIR}/train/${SUBWORD_MODEL_NAME}.trg.bpe${SUBWORD_TRGVOCAB_SIZE:000=}k-model
+  BPE_MODEL        ?= ${WORKDIR}/train/${SUBWORD_MODEL_NAME}.bpe${SUBWORD_VOCAB_SIZE:000=}k-model
   SUBWORD_SRC_MODEL = ${BPESRCMODEL}
   SUBWORD_TRG_MODEL = ${BPETRGMODEL}
 else
+  SPMSRCMODEL      ?= ${WORKDIR}/train/${SUBWORD_MODEL_NAME}.src.${SUBWORDS}${SUBWORD_SRCVOCAB_SIZE:000=}k-model
+  SPMTRGMODEL      ?= ${WORKDIR}/train/${SUBWORD_MODEL_NAME}.trg.${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k-model
+  SPM_MODEL        ?= ${WORKDIR}/train/${SUBWORD_MODEL_NAME}.${SUBWORDS}${SUBWORD_VOCAB_SIZE:000=}k-model
   SUBWORD_SRC_MODEL = ${SPMSRCMODEL}
   SUBWORD_TRG_MODEL = ${SPMTRGMODEL}
   SUBWORD_SRC_VOCAB = ${SPMSRCMODEL}.vocab
@@ -342,13 +348,12 @@ else
 endif
 
 
-## don't delete BPE/sentencepiece models!
-.PRECIOUS: ${BPESRCMODEL} ${BPETRGMODEL}
-.PRECIOUS: ${SPMSRCMODEL} ${SPMTRGMODEL}
+## don't delete subword models!
+.PRECIOUS: ${SUBWORD_SRC_MODEL} ${SUBWORD_TRG_MODEL}
 
 ## size of the joined vocabulary
 ## TODO: heuristically add 1,000 to cover language labels is a bit ad-hoc
-VOCABSIZE  ?= $$((${SRCBPESIZE} + ${TRGBPESIZE} + 1000))
+VOCABSIZE  ?= $$((${SUBWORD_SRCVOCAB_SIZE} + ${SUBWORD_TRGVOCAB_SIZE} + 1000))
 
 ## for document-level models
 CONTEXT_SIZE = 100
@@ -356,8 +361,8 @@ CONTEXT_SIZE = 100
 ## pre-processing type
 # PRE     = norm
 PRE       = simple
-PRE_SRC   = ${SUBWORDS}${SRCBPESIZE:000=}k
-PRE_TRG   = ${SUBWORDS}${TRGBPESIZE:000=}k
+PRE_SRC   = ${SUBWORDS}${SUBWORD_SRCVOCAB_SIZE:000=}k
+PRE_TRG   = ${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k
 
 
 ##-------------------------------------
@@ -406,10 +411,10 @@ TESTDATA_SRC  = ${TEST_SRC}.${PRE_SRC}
 TESTDATA_TRG  = ${TEST_TRG}
 
 ## training data in local space
-LOCAL_TRAIN_SRC = ${TMPDIR}/${LANGPAIRSTR}/train/${DATASET}.src
-LOCAL_TRAIN_TRG = ${TMPDIR}/${LANGPAIRSTR}/train/${DATASET}.trg
-LOCAL_TRAIN     = ${TMPDIR}/${LANGPAIRSTR}/train/${DATASET}
-LOCAL_MONO_DATA = ${TMPDIR}/${LANGSTR}/train/${DATASET}.mono
+LOCAL_TRAIN_SRC = ${TMPWORKDIR}/${LANGPAIRSTR}/train/${DATASET}.src
+LOCAL_TRAIN_TRG = ${TMPWORKDIR}/${LANGPAIRSTR}/train/${DATASET}.trg
+LOCAL_TRAIN     = ${TMPWORKDIR}/${LANGPAIRSTR}/train/${DATASET}
+LOCAL_MONO_DATA = ${TMPWORKDIR}/${LANGSTR}/train/${DATASET}.mono
 
 ## dev and test data
 DEV_SRC   ?= ${WORKDIR}/val/${DEVSET_NAME}.src
@@ -421,8 +426,9 @@ TEST_TRG  ?= ${WORKDIR}/test/${TESTSET_NAME}.trg
 
 ## model basename and optional sub-dir
 
-MODEL_SUBDIR =
-MODEL        =  ${MODEL_SUBDIR}${DATASET}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
+MODEL_SUBDIR  =
+MODEL_VARIANT = 
+MODEL         =  ${MODEL_SUBDIR}${DATASET}${MODEL_VARIANT}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
 
 MODEL_BASENAME   = ${MODEL}.${MODELTYPE}.model${NR}
 MODEL_VALIDLOG   = ${MODEL}.${MODELTYPE}.valid${NR}.log
@@ -430,6 +436,9 @@ MODEL_TRAINLOG   = ${MODEL}.${MODELTYPE}.train${NR}.log
 MODEL_START      = ${WORKDIR}/${MODEL_BASENAME}.npz
 MODEL_FINAL      = ${WORKDIR}/${MODEL_BASENAME}.npz.best-perplexity.npz
 MODEL_DECODER    = ${MODEL_FINAL}.decoder.yml
+
+
+
 
 ## for sentence-piece models: get plain text vocabularies
 ## for others: extract vocabulary from training data with MarianNMT
@@ -533,7 +542,7 @@ else ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny)
 else ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny11)
   MARIAN_WORKSPACE = 10000
 else
-  MARIAN_WORKSPACE = 24000
+  MARIAN_WORKSPACE = 20000
 endif
 
 else ifeq (${GPU},v100)
@@ -546,7 +555,7 @@ else ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny)
 else ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny11)
   MARIAN_WORKSPACE = 10000
 else
-  MARIAN_WORKSPACE = 24000
+  MARIAN_WORKSPACE = 20000
 endif
 
 else
@@ -602,6 +611,7 @@ endif
 # load model-specific configuration parameters
 # if they exist in the work directory
 
+MODELCONFIG ?= ${MODEL}.${MODELTYPE}.mk
 ifneq ($(wildcard ${WORKDIR}/${MODELCONFIG}),)
   include ${WORKDIR}/${MODELCONFIG}
 endif
@@ -622,8 +632,9 @@ LARGE_TRAINSIZE    ?= 1000000
 LARGEST_TRAINSIZE  ?= 10000000
 
 ${WORKDIR}/${MODELCONFIG}:
-	mkdir -p ${dir $@}
-	if [ -e ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz ]; then \
+	@echo ".... create model configuration file '$@'"
+	@mkdir -p ${dir $@}
+	@if [ -e ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz ]; then \
 	  ${MAKE} ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.charfreq \
 		  ${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.charfreq; \
 	  s=`${ZCAT} ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz | head -10000001 | wc -l`; \
@@ -638,18 +649,18 @@ ${WORKDIR}/${MODELCONFIG}:
 	fi; \
 	if [ $$s -gt ${LARGEST_TRAINSIZE} ]; then \
 	  echo "# ${LANGPAIRSTR} training data bigger than ${LARGEST_TRAINSIZE}" > $@; \
-	  echo "GPUJOB_HPC_MEM = 16g"        >> $@; \
+	  echo "GPUJOB_HPC_MEM = 8g"        >> $@; \
 	  echo "GPUJOB_SUBMIT  = -gpu01" >> $@; \
-	  echo "BPESIZE    = ${BPESIZE}"    >> $@; \
+	  echo "SUBWORD_VOCAB_SIZE    = ${SUBWORD_VOCAB_SIZE}"    >> $@; \
 	  echo "DEVSIZE    = ${DEVSIZE}"    >> $@; \
 	  echo "TESTSIZE   = ${TESTSIZE}"   >> $@; \
 	  echo "DEVMINSIZE = ${DEVMINSIZE}" >> $@; \
 	elif [ $$s -gt ${LARGE_TRAINSIZE} ]; then \
 	  echo "# ${LANGPAIRSTR} training data bigger than ${LARGE_TRAINSIZE}" > $@; \
-	  echo "GPUJOB_HPC_MEM = 16g"       >> $@; \
+	  echo "GPUJOB_HPC_MEM = 8g"       >> $@; \
 	  echo "GPUJOB_SUBMIT  = "         >> $@; \
 	  echo "MARIAN_VALID_FREQ = 2500"  >> $@; \
-	  echo "BPESIZE    = ${BPESIZE}"    >> $@; \
+	  echo "SUBWORD_VOCAB_SIZE    = ${SUBWORD_VOCAB_SIZE}"    >> $@; \
 	  echo "DEVSIZE    = ${DEVSIZE}"    >> $@; \
 	  echo "TESTSIZE   = ${TESTSIZE}"   >> $@; \
 	  echo "DEVMINSIZE = ${DEVMINSIZE}" >> $@; \
@@ -659,7 +670,7 @@ ${WORKDIR}/${MODELCONFIG}:
 	  echo "GPUJOB_SUBMIT  = "         >> $@; \
 	  echo "MARIAN_VALID_FREQ = 2500"  >> $@; \
 	  echo "MARIAN_WORKSPACE  = 10000" >> $@; \
-	  echo "BPESIZE    = 12000"         >> $@; \
+	  echo "SUBWORD_VOCAB_SIZE    = 12000"         >> $@; \
 	  echo "DEVSIZE    = ${DEVSIZE}"    >> $@; \
 	  echo "TESTSIZE   = ${TESTSIZE}"   >> $@; \
 	  echo "DEVMINSIZE = ${DEVMINSIZE}" >> $@; \
@@ -670,7 +681,7 @@ ${WORKDIR}/${MODELCONFIG}:
 	  echo "MARIAN_VALID_FREQ = 1000"  >> $@; \
 	  echo "MARIAN_WORKSPACE  = 5000"  >> $@; \
 	  echo "MARIAN_VALID_MINI_BATCH = 8" >> $@; \
-	  echo "BPESIZE     = 4000"        >> $@; \
+	  echo "SUBWORD_VOCAB_SIZE     = 4000"        >> $@; \
 	  echo "DEVSIZE     = 1000"        >> $@; \
 	  echo "TESTSIZE    = 1000"        >> $@; \
 	  echo "DEVMINSIZE  = 250"         >> $@; \
@@ -682,7 +693,7 @@ ${WORKDIR}/${MODELCONFIG}:
 	  echo "MARIAN_WORKSPACE  = 3500"  >> $@; \
 	  echo "MARIAN_DROPOUT    = 0.5"   >> $@; \
 	  echo "MARIAN_VALID_MINI_BATCH = 4" >> $@; \
-	  echo "BPESIZE     = 1000"        >> $@; \
+	  echo "SUBWORD_VOCAB_SIZE     = 1000"        >> $@; \
 	  echo "DEVSIZE     = 500"         >> $@; \
 	  echo "TESTSIZE    = 1000"        >> $@; \
 	  echo "DEVMINSIZE  = 100"         >> $@; \
@@ -691,41 +702,41 @@ ${WORKDIR}/${MODELCONFIG}:
 	fi; \
 	if [ -e $@ ]; then \
 	  if [ $$S -gt 1000 ]; then \
-	    echo "SRCBPESIZE  = 32000"     >> $@; \
+	    echo "SUBWORD_SRCVOCAB_SIZE  = 32000"     >> $@; \
 	  fi; \
 	  if [ $$T -gt 1000 ]; then \
-	    echo "TRGBPESIZE  = 32000"     >> $@; \
+	    echo "SUBWORD_TRGVOCAB_SIZE  = 32000"     >> $@; \
 	  fi; \
 	fi
-	echo "SRCLANGS    = ${SRCLANGS}"    >> $@
-	echo "TRGLANGS    = ${TRGLANGS}"    >> $@
-	echo "SKIPLANGS   = ${SKIPLANGS}"   >> $@
-	echo "LANGPAIRSTR = ${LANGPAIRSTR}" >> $@
-	echo "DATASET     = ${DATASET}"     >> $@
-	echo "TRAINSET    = ${TRAINSET}"    >> $@
-	echo "DEVSET      = ${DEVSET}"      >> $@
-	echo "TESTSET     = ${TESTSET}"     >> $@
-	echo "PRE         = ${PRE}"         >> $@
-	echo "SUBWORDS    = ${SUBWORDS}"    >> $@
+	@echo "SRCLANGS    = ${SRCLANGS}"    >> $@
+	@echo "TRGLANGS    = ${TRGLANGS}"    >> $@
+	@echo "SKIPLANGS   = ${SKIPLANGS}"   >> $@
+	@echo "LANGPAIRSTR = ${LANGPAIRSTR}" >> $@
+	@echo "DATASET     = ${DATASET}"     >> $@
+	@echo "TRAINSET    = ${TRAINSET}"    >> $@
+	@echo "DEVSET      = ${DEVSET}"      >> $@
+	@echo "TESTSET     = ${TESTSET}"     >> $@
+	@echo "PRE         = ${PRE}"         >> $@
+	@echo "SUBWORDS    = ${SUBWORDS}"    >> $@
 ifdef SHUFFLE_DATA
-	echo "SHUFFLE_DATA      = ${SHUFFLE_DATA}"       >> $@
+	@echo "SHUFFLE_DATA      = ${SHUFFLE_DATA}"       >> $@
 endif
 ifdef FIT_DATA_SIZE
-	echo "FIT_DATA_SIZE     = ${FIT_DATA_SIZE}"      >> $@
+	@echo "FIT_DATA_SIZE     = ${FIT_DATA_SIZE}"      >> $@
 endif
 ifdef FIT_DEVDATA_SIZE
-	echo "FIT_DEVDATA_SIZE  = ${FIT_DEVDATA_SIZE}"   >> $@
+	@echo "FIT_DEVDATA_SIZE  = ${FIT_DEVDATA_SIZE}"   >> $@
 endif
-	echo "MAX_OVER_SAMPLING = ${MAX_OVER_SAMPLING}"  >> $@
-	echo "USE_REST_DEVDATA  = ${USE_REST_DEVDATA}"   >> $@
+	@echo "MAX_OVER_SAMPLING = ${MAX_OVER_SAMPLING}"  >> $@
+	@echo "USE_REST_DEVDATA  = ${USE_REST_DEVDATA}"   >> $@
 ifdef USE_TARGET_LABELS
-	echo "USE_TARGET_LABELS = ${USE_TARGET_LABELS}"  >> $@
+	@echo "USE_TARGET_LABELS = ${USE_TARGET_LABELS}"  >> $@
 endif
 ifdef USE_SPM_VOCAB
-	echo "USE_SPM_VOCAB = ${USE_SPM_VOCAB}"  >> $@
+	@echo "USE_SPM_VOCAB = ${USE_SPM_VOCAB}"  >> $@
 endif
 ifdef USE_JOINT_SUBWORD_MODEL
-	echo "USE_JOINT_SUBWORD_MODEL = ${USE_JOINT_SUBWORD_MODEL}"  >> $@
+	@echo "USE_JOINT_SUBWORD_MODEL = ${USE_JOINT_SUBWORD_MODEL}"  >> $@
 endif
 
 

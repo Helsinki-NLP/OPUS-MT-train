@@ -353,7 +353,7 @@ $(LOCAL_TRAIN_SRC).algtmp.d/%.alg: $(LOCAL_TRAIN_SRC).algtmp.d/% $(LOCAL_TRAIN_T
 	    echo "============================================"; \
 	    echo "fetch $$c (${LANGPAIR}) from OPUS"; \
 	    echo "============================================"; \
-	    opus_read ${OPUSREAD_ARGS} -ln -q -dl ${TMPDIR} -d $$c -s ${SRC} -t ${TRG} \
+	    opus_read ${OPUSREAD_ARGS} -ln -q -dl ${TMPWORKDIR} -d $$c -s ${SRC} -t ${TRG} \
 			-wm moses -p raw -w $@ ${@:.${SRCEXT}.raw=.${TRGEXT}.raw}; \
 	  fi )
 
@@ -451,6 +451,7 @@ ifdef CHECK_TRAINDATA_SIZE
 	fi
 endif
 	@echo "..... add info about training data"
+	@mkdir -p ${dir ${LOCAL_TRAIN_SRC}} ${dir ${LOCAL_TRAIN_TRG}}
 	@echo -n "* ${SRC}-${TRG}: "                          >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 	@for d in ${wildcard ${CLEAN_TRAIN_SRC}}; do \
 	  l=`${GZIP} -cd < $$d ${CUT_DATA_SETS} 2>/dev/null | wc -l`; \
@@ -462,7 +463,7 @@ endif
 	    echo -n "($$l) "                                  >> ${dir ${LOCAL_TRAIN_SRC}}README.md; \
 	  fi \
 	done
-	echo ""                                               >> ${dir ${LOCAL_TRAIN_SRC}}README.md
+	@echo ""                                              >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 ######################################
 # create local data files (add label if necessary)
 ######################################
@@ -756,13 +757,13 @@ add-to-local-mono-data:
 ## get data from local space and compress ...
 ##----------------------------------------------
 
-${WORKDIR}/%.clean.${PRE_SRC}.gz: ${TMPDIR}/${LANGPAIRSTR}/%.clean.${PRE_SRC}
+${WORKDIR}/%.clean.${PRE_SRC}.gz: ${TMPWORKDIR}/${LANGPAIRSTR}/%.clean.${PRE_SRC}
 	mkdir -p ${dir $@}
 	${GZIP} -c < $< > $@
 	-cat ${dir $<}README.md >> ${dir $@}README.md
 
 ifneq (${PRE_SRC},${PRE_TRG})
-${WORKDIR}/%.clean.${PRE_TRG}.gz: ${TMPDIR}/${LANGPAIRSTR}/%.clean.${PRE_TRG}
+${WORKDIR}/%.clean.${PRE_TRG}.gz: ${TMPWORKDIR}/${LANGPAIRSTR}/%.clean.${PRE_TRG}
 	mkdir -p ${dir $@}
 	${GZIP} -c < $< > $@
 endif

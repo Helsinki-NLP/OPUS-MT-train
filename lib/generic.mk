@@ -255,7 +255,9 @@ BT_CONTINUE_EXISTING = 1
 ifneq (${wildcard ${MODEL_FINAL}},)
 ifeq (${wildcard ${BT_MODEL_START}},)
 	cp ${MODEL_FINAL} ${BT_MODEL_START}
+ifeq (${wildcard ${MODEL_VOCAB}},)
 	cp ${MODEL_VOCAB} ${BT_MODEL_VOCAB}
+endif
 endif
 endif
 	${MAKE} DATASET=${DATASET}+bt \
@@ -285,7 +287,7 @@ PIVOT_LANG         ?= ${DEFAULT_PIVOT_LANG}
 		SKIP_LANGPAIRS=${PIVOT_LANG}-${PIVOT_LANG} \
 		MODEL_LATEST_VOCAB= \
 		PIVOT=${PIVOT_LANG} \
-		BPEMODELNAME=opus+${PIVOT_LANG} \
+		SUBWORD_MODEL_NAME=opus+${PIVOT_LANG} \
 	  ${@:-pivotlang=}; \
 	fi
 
@@ -303,7 +305,9 @@ FT_MARIAN_EARLY_STOPPING = 15
 ifneq (${wildcard ${MODEL_FINAL}},)
 ifeq (${wildcard ${FT_MODEL_START}},)
 	cp ${MODEL_FINAL} ${FT_MODEL_START}
+ifeq (${wildcard ${MODEL_VOCAB}},)
 	cp ${MODEL_VOCAB} ${FT_MODEL_VOCAB}
+endif
 endif
 endif
 	${MAKE} DATASET=${DATASET}+ft \
@@ -323,7 +327,7 @@ endif
 
 ## pivot-based backward translation
 %-pft:
-	${MAKE} DATASET=${DATASET}+pft USE_FORWARDWARD_PIVOTING=1 ${@:-pft=}
+	${MAKE} DATASET=${DATASET}+pft USE_FORWARD_PIVOTING=1 ${@:-pft=}
 
 ## pivot-based backward translation
 %-pivot:
@@ -333,6 +337,26 @@ endif
 ## (only makes sense if bt, ft, or pivot-based data are activated)
 %-nopar:
 	${MAKE} DATASET=${DATASET}+nopar TRAINSET= TATOEBA_TRAINSET= ${@:-nopar=}
+
+
+##-------------------------------------------------------------
+## default: make separate sentencepiece models
+## but create a joint vocabulary for training with
+## tied embeddings
+## alternatives:
+## * joint-spm: create a joint sentencepiece model
+## * separate-spm: create separate SPMs and use them directly
+##-------------------------------------------------------------
+
+## joint sentencepiece model and joint vocabulary
+%-joint-spm:
+	${MAKE} USE_JOINT_SUBWORD_MODEL=1 USE_SPM_VOCAB=1 ${@:-joint-spm=}
+
+## use sentenceopiece models directly as separate vocabularies
+%-separate-spm:
+	${MAKE} USE_SPM_VOCAB=1 MODEL_VARIANT=-sepvoc ${@:-separate-spm=}
+
+
 
 
 
@@ -404,8 +428,8 @@ endif
 ## document level models
 ## devtest data should not be shuffled
 %-doc:
-	${MAKE} PRE_SRC=spm${SRCBPESIZE:000=}k.doc${CONTEXT_SIZE} \
-		PRE_TRG=spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE} \
+	${MAKE} PRE_SRC=${SUBWORDS}${SUBWORD_SRCVOCAB_SIZE:000=}k.doc${CONTEXT_SIZE} \
+		PRE_TRG=${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k.doc${CONTEXT_SIZE} \
 		SHUFFLE_DEVDATA=0 \
 	${@:-doc=}
 

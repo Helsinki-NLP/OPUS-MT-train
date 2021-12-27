@@ -935,7 +935,7 @@ tatoeba-%-pivotlang:
 		MODELCONFIG=${MODELCONFIG:.mk=+${TATOEBA_PIVOT}.mk} \
 		MODEL_LATEST_VOCAB= \
 		SKIP_LANGPAIRS=${TATOEBA_PIVOT}-${TATOEBA_PIVOT} \
-		BPEMODELNAME=opus+${TATOEBA_PIVOT} \
+		SUBWORD_MODEL_NAME=opus+${TATOEBA_PIVOT} \
 	  ${@:-pivotlang=}; \
 	else \
 	  echo "pivot language '${TATOEBA_PIVOT}' is already included in $@!"; \

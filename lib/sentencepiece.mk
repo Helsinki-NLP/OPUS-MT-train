@@ -83,12 +83,12 @@ endif
 	${MAKE} ${LOCAL_TRAIN_SRC}.charfreq
 	if [ `cat ${LOCAL_TRAIN_SRC}.charfreq | wc -l` -gt 1000 ]; then \
 	  ${SPM_TRAIN} ${SPMEXTRA} \
-		--model_prefix=$@ --vocab_size=$(SRCBPESIZE) --input=${LOCAL_TRAIN_SRC}.text \
+		--model_prefix=$@ --vocab_size=$(SUBWORD_SRCVOCAB_SIZE) --input=${LOCAL_TRAIN_SRC}.text \
 		--input_sentence_size ${SPM_INPUT_SIZE} --shuffle_input_sentence ${SPM_SHUFFLE_INPUT} \
 		--character_coverage=0.9995 --hard_vocab_limit=false; \
 	else \
 	  ${SPM_TRAIN} ${SPMEXTRA} \
-		--model_prefix=$@ --vocab_size=$(SRCBPESIZE) --input=${LOCAL_TRAIN_SRC}.text \
+		--model_prefix=$@ --vocab_size=$(SUBWORD_SRCVOCAB_SIZE) --input=${LOCAL_TRAIN_SRC}.text \
 		--input_sentence_size ${SPM_INPUT_SIZE} --shuffle_input_sentence ${SPM_SHUFFLE_INPUT} \
 		--character_coverage=1.0 --hard_vocab_limit=false; \
 	fi
@@ -115,12 +115,12 @@ else
 	${MAKE} ${LOCAL_TRAIN_TRG}.charfreq
 	if [ `cat ${LOCAL_TRAIN_TRG}.charfreq | wc -l` -gt 1000 ]; then \
 	  ${SPM_TRAIN} ${SPMEXTRA} \
-		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=${LOCAL_TRAIN_TRG}.text \
+		--model_prefix=$@ --vocab_size=$(SUBWORD_TRGVOCAB_SIZE) --input=${LOCAL_TRAIN_TRG}.text \
 		--input_sentence_size ${SPM_INPUT_SIZE} --shuffle_input_sentence ${SPM_SHUFFLE_INPUT} \
 		--character_coverage=0.9995 --hard_vocab_limit=false; \
 	else \
 	  ${SPM_TRAIN} ${SPMEXTRA} \
-		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=${LOCAL_TRAIN_TRG}.text \
+		--model_prefix=$@ --vocab_size=$(SUBWORD_TRGVOCAB_SIZE) --input=${LOCAL_TRAIN_TRG}.text \
 		--input_sentence_size ${SPM_INPUT_SIZE} --shuffle_input_sentence ${SPM_SHUFFLE_INPUT} \
 		--character_coverage=1.0 --hard_vocab_limit=false; \
 	fi
@@ -156,12 +156,12 @@ else
 	${MAKE} ${LOCAL_TRAIN}.text.charfreq
 	if [ `cat ${LOCAL_TRAIN}.text.charfreq | wc -l` -gt 1000 ]; then \
 	  ${SPM_TRAIN} ${SPMEXTRA} \
-		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=${LOCAL_TRAIN}.text \
+		--model_prefix=$@ --vocab_size=$(SUBWORD_TRGVOCAB_SIZE) --input=${LOCAL_TRAIN}.text \
 		--input_sentence_size ${SPM_INPUT_SIZE} --shuffle_input_sentence ${SPM_SHUFFLE_INPUT} \
 		--character_coverage=0.9995 --hard_vocab_limit=false; \
 	else \
 	  ${SPM_TRAIN} ${SPMEXTRA} \
-		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=${LOCAL_TRAIN}.text \
+		--model_prefix=$@ --vocab_size=$(SUBWORD_TRGVOCAB_SIZE) --input=${LOCAL_TRAIN}.text \
 		--input_sentence_size ${SPM_INPUT_SIZE} --shuffle_input_sentence ${SPM_SHUFFLE_INPUT} \
 		--character_coverage=1.0 --hard_vocab_limit=false; \
 	fi
@@ -179,14 +179,14 @@ endif
 
 
 ## sentence piece model trained on monolingual data
-SPM_MONO    = ${SPMDIR}/${LANGSTR}/${BPEMODELNAME}.spm${BPESIZE:000=}k-model
-SPM_SRCMONO = ${SPMDIR}/${LANGSRCSTR}/${BPEMODELNAME}.spm${SRCBPESIZE:000=}k-model
-SPM_TRGMONO = ${SPMDIR}/${LANGTRGSTR}/${BPEMODELNAME}.spm${TRGBPESIZE:000=}k-model
+SPM_MONO    = ${SPMDIR}/${LANGSTR}/${SUBWORD_MODEL_NAME}.${SUBWORDS}${BPESIZE:000=}k-model
+SPM_SRCMONO = ${SPMDIR}/${LANGSRCSTR}/${SUBWORD_MODEL_NAME}.${SUBWORDS}${SUBWORD_SRCVOCAB_SIZE:000=}k-model
+SPM_TRGMONO = ${SPMDIR}/${LANGTRGSTR}/${SUBWORD_MODEL_NAME}.${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k-model
 
 ## vocabulary files created from monolingual data
-SPMVOCAB    = ${SPMDIR}/${LANGSTR}/${BPEMODELNAME}.spm${BPESIZE:000=}k.vocab.yml
-SPMSRCVOCAB = ${SPMDIR}/${LANGSRCSTR}/${BPEMODELNAME}.spm${SRCBPESIZE:000=}k.vocab.yml
-SPMTRGVOCAB = ${SPMDIR}/${LANGTRGSTR}/${BPEMODELNAME}.spm${TRGBPESIZE:000=}k.vocab.yml
+SPMVOCAB    = ${SPMDIR}/${LANGSTR}/${SUBWORD_MODEL_NAME}.${SUBWORDS}${BPESIZE:000=}k.vocab.yml
+SPMSRCVOCAB = ${SPMDIR}/${LANGSRCSTR}/${SUBWORD_MODEL_NAME}.${SUBWORDS}${SUBWORD_SRCVOCAB_SIZE:000=}k.vocab.yml
+SPMTRGVOCAB = ${SPMDIR}/${LANGTRGSTR}/${SUBWORD_MODEL_NAME}.${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k.vocab.yml
 
 .PRECIOUS: ${SPM_MONO} ${SPM_SRCMONO} ${SPM_TRGMONO} ${SPMVOCAB}
 
@@ -195,13 +195,13 @@ mono-spm-vocab: ${SPMVOCAB}
 
 ifneq (${SPMVOCAB},${SPMSRCVOCAB})
   ${SPMSRCVOCAB}:
-	${MAKE} LANGS="${SRCLANGS}" BPESIZE=${SRCBPESIZE} mono-spm-vocab
+	${MAKE} LANGS="${SRCLANGS}" BPESIZE=${SUBWORD_SRCVOCAB_SIZE} mono-spm-vocab
 endif
 
 ifneq (${SPMSRCVOCAB},${SPMTRGVOCAB})
 ifneq (${SPMVOCAB},${SPMTRGVOCAB})
   ${SPMTRGVOCAB}:
-	${MAKE} LANGS="${TRGLANGS}" BPESIZE=${TRGBPESIZE} mono-spm-vocab
+	${MAKE} LANGS="${TRGLANGS}" BPESIZE=${SUBWORD_TRGVOCAB_SIZE} mono-spm-vocab
 endif
 endif
 
@@ -225,13 +225,13 @@ mono-spm-model: ${SPM_MONO}
 
 ifneq (${SPM_MONO},${SPM_SRCMONO})
   ${SPM_SRCMONO}:
-	${MAKE} LANGS="${SRCLANGS}" BPESIZE=${SRCBPESIZE} mono-spm-model
+	${MAKE} LANGS="${SRCLANGS}" BPESIZE=${SUBWORD_SRCVOCAB_SIZE} mono-spm-model
 endif
 
 ifneq (${SPMSRCMODEL},${SPM_TRGMONO})
 ifneq (${SPM_MONO},${SPM_TRGMONO})
   ${SPM_TRGMONO}:
-	${MAKE} LANGS="${TRGLANGS}" BPESIZE=${TRGBPESIZE} mono-spm-model
+	${MAKE} LANGS="${TRGLANGS}" BPESIZE=${SUBWORD_TRGVOCAB_SIZE} mono-spm-model
 endif
 endif
 
@@ -243,12 +243,12 @@ ifeq ($(wildcard ${SPM_MONO}),)
 	${MAKE} ${LOCAL_MONO_DATA}.${PRE}.charfreq
 	if [ `cat ${LOCAL_MONO_DATA}.${PRE}.charfreq | wc -l` -gt 1000 ]; then \
 	  ${SPM_TRAIN} ${SPMEXTRA} \
-		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=$<.text \
+		--model_prefix=$@ --vocab_size=$(SUBWORD_TRGVOCAB_SIZE) --input=$<.text \
 		--input_sentence_size ${SPM_INPUT_SIZE} --shuffle_input_sentence ${SPM_SHUFFLE_INPUT} \
 		--character_coverage=0.9995 --hard_vocab_limit=false; \
 	else \
 	  ${SPM_TRAIN} ${SPMEXTRA} \
-		--model_prefix=$@ --vocab_size=$(TRGBPESIZE) --input=$<.text \
+		--model_prefix=$@ --vocab_size=$(SUBWORD_TRGVOCAB_SIZE) --input=$<.text \
 		--input_sentence_size ${SPM_INPUT_SIZE} --shuffle_input_sentence ${SPM_SHUFFLE_INPUT} \
 		--character_coverage=1.0 --hard_vocab_limit=false; \
 	fi
@@ -303,7 +303,7 @@ endif
 ## --vocabulary={vocab_file}.L1 --vocabulary_threshold=50
 ## see https://github.com/google/sentencepiece#c-from-source
 
-%.src.spm${SRCBPESIZE:000=}k: %.src ${SUBWORD_SRC_MODEL}
+%.src.${SUBWORDS}${SUBWORD_SRCVOCAB_SIZE:000=}k: %.src ${SUBWORD_SRC_MODEL}
 ifeq (${USE_TARGET_LABELS},1)
 	cut -f1 -d ' ' $< > $<.labels
 	cut -f2- -d ' ' $< > $<.txt
@@ -314,42 +314,42 @@ else
 	${SPM_ENCODE} --model $(word 2,$^) < $< > $@
 endif
 
-%.trg.spm${TRGBPESIZE:000=}k: %.trg ${SUBWORD_TRG_MODEL}
+%.trg.${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k: %.trg ${SUBWORD_TRG_MODEL}
 	${SPM_ENCODE} --model $(word 2,$^) < $< > $@
 
 
 ## document-level models (with guided alignment)
-%.src.spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE}.gz:
-	${MAKE} PRE_SRC=spm${SRCBPESIZE:000=}k PRE_TRG=spm${TRGBPESIZE:000=}k wordalign
+%.src.${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k.doc${CONTEXT_SIZE}.gz:
+	${MAKE} PRE_SRC=spm${SUBWORD_SRCVOCAB_SIZE:000=}k PRE_TRG=spm${SUBWORD_TRGVOCAB_SIZE:000=}k wordalign
 	${SCRIPTDIR}/large-context.pl -l ${CONTEXT_SIZE} \
-		${patsubst %.src.spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE}.gz,%.src.spm${SRCBPESIZE:000=}k.gz,$@} \
-		${patsubst %.src.spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE}.gz,%.trg.spm${TRGBPESIZE:000=}k.gz,$@} \
-		${patsubst %.src.spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE}.gz,%.spm${SRCBPESIZE:000=}k-spm${TRGBPESIZE:000=}k.src-trg.alg.gz,$@} \
+		${patsubst %.src.${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k.doc${CONTEXT_SIZE}.gz,%.src.${SUBWORDS}${SUBWORD_SRCVOCAB_SIZE:000=}k.gz,$@} \
+		${patsubst %.src.${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k.doc${CONTEXT_SIZE}.gz,%.trg.${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k.gz,$@} \
+		${patsubst %.src.${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k.doc${CONTEXT_SIZE}.gz,%.${SUBWORDS}${SUBWORD_SRCVOCAB_SIZE:000=}k-spm${SUBWORD_TRGVOCAB_SIZE:000=}k.src-trg.alg.gz,$@} \
 	| ${GZIP} > $@.tmp.gz
 	${GZIP} -cd < $@.tmp.gz | cut -f1 | ${GZIP} -c > $@
 	${GZIP} -cd < $@.tmp.gz | cut -f2 | ${GZIP} -c > ${subst .src.,.trg.,$@}
 	${GZIP} -cd < $@.tmp.gz | cut -f3 | \
-		${GZIP} -c > ${patsubst %.src.spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE}.gz,\
-		%.spm${SRCBPESIZE:000=}k.doc${CONTEXT_SIZE}-spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE}.src-trg.alg.gz,$@}
+		${GZIP} -c > ${patsubst %.src.${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k.doc${CONTEXT_SIZE}.gz,\
+		%.${SUBWORDS}${SUBWORD_SRCVOCAB_SIZE:000=}k.doc${CONTEXT_SIZE}-spm${SUBWORD_TRGVOCAB_SIZE:000=}k.doc${CONTEXT_SIZE}.src-trg.alg.gz,$@}
 	rm -f $@.tmp.gz
 
-%.trg.spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE}.gz: %.src.spm${SRCBPESIZE:000=}k.doc${CONTEXT_SIZE}.gz
+%.trg.${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k.doc${CONTEXT_SIZE}.gz: %.src.${SUBWORDS}${SUBWORD_SRCVOCAB_SIZE:000=}k.doc${CONTEXT_SIZE}.gz
 	@echo "done!"
 
 
 
 ## for validation and test data:
-%.src.spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE}:
-	${MAKE} PRE_SRC=spm${SRCBPESIZE:000=}k PRE_TRG=spm${TRGBPESIZE:000=}k devdata
-	${MAKE} PRE_SRC=spm${SRCBPESIZE:000=}k PRE_TRG=spm${TRGBPESIZE:000=}k testdata
+%.src.${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k.doc${CONTEXT_SIZE}:
+	${MAKE} PRE_SRC=spm${SUBWORD_SRCVOCAB_SIZE:000=}k PRE_TRG=spm${SUBWORD_TRGVOCAB_SIZE:000=}k devdata
+	${MAKE} PRE_SRC=spm${SUBWORD_SRCVOCAB_SIZE:000=}k PRE_TRG=spm${SUBWORD_TRGVOCAB_SIZE:000=}k testdata
 	${SCRIPTDIR}/large-context.pl -l ${CONTEXT_SIZE} \
-		${patsubst %.src.spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE},%.src.spm${SRCBPESIZE:000=}k,$@} \
-		${patsubst %.src.spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE},%.trg.spm${TRGBPESIZE:000=}k,$@} \
+		${patsubst %.src.${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k.doc${CONTEXT_SIZE},%.src.${SUBWORDS}${SUBWORD_SRCVOCAB_SIZE:000=}k,$@} \
+		${patsubst %.src.${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k.doc${CONTEXT_SIZE},%.trg.${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k,$@} \
 	| ${GZIP} > $@.tmp.gz
 	${GZIP} -cd < $@.tmp.gz | cut -f1 > $@
 	${GZIP} -cd < $@.tmp.gz | cut -f2 > ${subst .src.,.trg.,$@}
 	rm -f $@.tmp.gz
 
-%.trg.spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE}: %.src.spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE}
+%.trg.${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k.doc${CONTEXT_SIZE}: %.src.${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k.doc${CONTEXT_SIZE}
 	@echo "done!"
 

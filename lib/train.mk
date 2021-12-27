@@ -22,7 +22,7 @@ ${WORKDIR}/${MODEL}.trg.vocab: ${SUBWORD_TRG_MODEL}
 	cut -f1 < $<.vocab > $@
 
 
-ifeq (${SUBWORDS},spm)
+ifneq ($(findstring spm,${SUBWORDS}),)
 
 ## make vocabulary from the source and target language specific
 ## sentence piece models (concatenate and yamlify)
@@ -176,7 +176,7 @@ ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny11)
   MARIAN_EXTRA += --transformer-decoder-autoreg rnn \
 		--dec-cell ssru --optimizer-delay 2 \
 		 --transformer-dim-ffn 1536
-# --dim-vocabs ${SRCBPESIZE} ${TRGBPESIZE}
+# --dim-vocabs ${SUBWORD_SRCVOCAB_SIZE} ${SUBWORD_TRGVOCAB_SIZE}
 # --fp16
 endif
 

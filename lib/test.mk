@@ -42,7 +42,7 @@ ${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.ensemble.${SRC}.${TRG}: ${
 		--models ${ENSEMBLE} \
 		--vocabs ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB} \
 		${MARIAN_DECODER_FLAGS} > $@.output
-ifeq (${PRE_TRG},spm${TRGBPESIZE:000=}k)
+ifneq ($(findstring spm,${PRE_TRG}),)
 	sed 's/ //g;s/▁/ /g' < $@.output | sed 's/^ *//;s/ *$$//' > $@
 else
 	sed 's/\@\@ //g;s/ \@\@//g;s/ \@\-\@ /-/g' < $@.output |\
@@ -63,7 +63,7 @@ ${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}: ${TEST_SRC}
 		-c ${word 2,$^}.decoder.yml \
 		-d ${MARIAN_GPUS} \
 		${MARIAN_DECODER_FLAGS} > $@.output
-ifeq (${PRE_TRG},spm${TRGBPESIZE:000=}k)
+ifneq ($(findstring spm,${PRE_TRG}),)
 	sed 's/ //g;s/▁/ /g' < $@.output | sed 's/^ *//;s/ *$$//' > $@
 else
 	sed 's/\@\@ //g;s/ \@\@//g;s/ \@\-\@ /-/g' < $@.output |\

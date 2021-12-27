@@ -18,9 +18,9 @@ HPC_QUEUE    = serial
 HPC_GPUQUEUE = gpu
 
 
-MEM          = 4g
-THREADS      = 1
-WALLTIME     = 72
+MEM          ?= 4g
+CORES        ?= 1
+WALLTIME     ?= 72
 
 GPUJOB_HPC_MEM ?= 4g
 
@@ -59,25 +59,39 @@ endif
 
 ## default settings for CPU cores
 
-CPU_CORES ?= ${THREADS}
-CORES     ?= ${CPU_CORES}
+CPU_CORES ?= ${CORES}
+THREADS   ?= ${CPU_CORES}
+JOBS      ?= ${THREADS}
 
 ## set variables with HPC prefix
 
-HPC_TIME  ?= ${WALLTIME}:00
-HPC_CORES ?= ${CPU_CORES}
-HPC_MEM   ?= ${MEM}
+HPC_TIME    ?= ${WALLTIME}:00
+HPC_CORES   ?= ${CPU_CORES}
+HPC_THREADS ?= ${HPC_CORES}
+HPC_JOBS    ?= ${HPC_THREADS}
+HPC_MEM     ?= ${MEM}
 
 
+print_hpc:
+	@echo ${HPC_MEM}
+	@echo ${HPC_CORES}
+	@echo ${THREADS}
+	@echo ${HPC_JOBS}
 
 
 SUBMIT_PREFIX ?= submit
 
 ifdef LOCAL_SCRATCH
-  TMPDIR       = ${LOCAL_SCRATCH}
+  TMPDIR := ${LOCAL_SCRATCH}
 endif
 
-TMPDIR ?= /tmp
+ifndef TMPDIR
+  TMPDIR := /tmp
+endif
+
+TMPWORKDIR ?= ${shell mktemp -d -p ${TMPDIR}}
+export TMPWORKDIR
+
 
 ## tools and their locations
 

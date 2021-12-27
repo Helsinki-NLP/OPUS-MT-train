@@ -142,6 +142,11 @@ MIN_BLEU_SCORE      = 10
 TATOEBA_PIVOT      ?= ${DEFAULT_PIVOT_LANG}
 
 
+## don't need local scratch space
+## TODO: do we need it?
+HPC_DISK =
+
+
 include ${REPOHOME}lib/env.mk
 include ${REPOHOME}lib/config.mk
 include ${REPOHOME}lib/tasks.mk
