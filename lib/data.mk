@@ -158,15 +158,13 @@ ifeq (${words ${TRGLANGS}},1)
 	  ln -s ${TRAIN_TRG}.clean.${PRE_TRG}.gz ${REV_WORKDIR}/train/${notdir ${TRAIN_SRC}.clean.${PRE_SRC}.gz}; \
 	  cp ${WORKDIR}/train/README.md ${REV_WORKDIR}/train/README.md; \
 	fi
-	-if [ -e ${SPMSRCMODEL} ]; then \
-	  ln -s ${SPMSRCMODEL} ${REV_WORKDIR}/train/${notdir ${SPMTRGMODEL}}; \
-	  ln -s ${SPMTRGMODEL} ${REV_WORKDIR}/train/${notdir ${SPMSRCMODEL}}; \
-	  ln -s ${SPMSRCMODEL}.vocab ${REV_WORKDIR}/train/${notdir ${SPMTRGMODEL}}.vocab; \
-	  ln -s ${SPMTRGMODEL}.vocab ${REV_WORKDIR}/train/${notdir ${SPMSRCMODEL}}.vocab; \
+	-if [ -e ${SUBWORD_SRC_MODEL} ]; then \
+	  ln -s ${SUBWORD_SRC_MODEL} ${REV_WORKDIR}/train/${notdir ${SUBWORD_TRG_MODEL}}; \
+	  ln -s ${SUBWORD_TRG_MODEL} ${REV_WORKDIR}/train/${notdir ${SUBWORD_SRC_MODEL}}; \
 	fi
-	if [ -e ${BPESRCMODEL} ]; then \
-	  ln -s ${BPESRCMODEL} ${REV_WORKDIR}/train/${notdir ${BPETRGMODEL}}; \
-	  ln -s ${BPETRGMODEL} ${REV_WORKDIR}/train/${notdir ${BPESRCMODEL}}; \
+	-if [ -e ${SUBWORD_SRC_MODEL}.vocab ]; then \
+	  ln -s ${SUBWORD_SRC_MODEL}.vocab ${REV_WORKDIR}/train/${notdir ${SUBWORD_TRG_MODEL}}.vocab; \
+	  ln -s ${SUBWORD_TRG_MODEL}.vocab ${REV_WORKDIR}/train/${notdir ${SUBWORD_SRC_MODEL}}.vocab; \
 	fi
 	-if [ -e ${TRAIN_ALG} ]; then \
 	  if [ ! -e ${REV_WORKDIR}/train/${notdir ${TRAIN_ALG}} ]; then \
@@ -191,6 +189,10 @@ ifeq (${words ${TRGLANGS}},1)
 	  ln -s ${TEST_TRG} ${REV_WORKDIR}/test/${notdir ${TEST_SRC}}; \
 	  cp ${WORKDIR}/test/README.md ${REV_WORKDIR}/test/README.md; \
 	fi
+	-if [ -e ${MODEL_SRCVOCAB} ]; then \
+	  ln -s ${MODEL_SRCVOCAB} ${REV_WORKDIR}/${notdir ${MODEL_TRGVOCAB}}; \
+	  ln -s ${MODEL_TRGVOCAB} ${REV_WORKDIR}/${notdir ${MODEL_SRCVOCAB}}; \
+	fi
 	-if [ -e ${MODEL_VOCAB} ]; then \
 	  ln -s ${MODEL_VOCAB} ${REV_WORKDIR}/${notdir ${MODEL_VOCAB}}; \
 	fi
@@ -198,11 +200,11 @@ ifeq (${words ${TRGLANGS}},1)
 ## this is a bit dangerous with some trick to 
 ## swap parameters between SRC and TRG
 ##
-	-if [ -e ${WORKDIR}/config.mk ]; then \
-	   if [ ! -e ${REV_WORKDIR}/config.mk ]; then \
-	     cat ${WORKDIR}/config.mk |\
+	-if [ -e ${WORKDIR}/${MODELCONFIG} ]; then \
+	   if [ ! -e ${REV_WORKDIR}/${MODELCONFIG} ]; then \
+	     cat ${WORKDIR}/${MODELCONFIG} |\
 	     sed -e 's/SRC/TTT/g;s/TRG/SRC/g;s/TTT/TRG/' |\
-	     grep -v LANGPAIRSTR > ${REV_WORKDIR}/config.mk; \
+	     grep -v LANGPAIRSTR > ${REV_WORKDIR}/$(notdir ${MODELCONFIG}); \
 	   fi \
 	fi
 endif
@@ -307,7 +309,7 @@ $(LOCAL_TRAIN_SRC).algtmp.d/%.alg: $(LOCAL_TRAIN_SRC).algtmp.d/% $(LOCAL_TRAIN_T
 		-r $(word 2,$^).rev
 	echo "merge and symmetrize part ${notdir $<}"
 	${ATOOLS} -c grow-diag-final -i $(word 1,$^).fwd -j $(word 2,$^).rev > $@
-	rm -f $(word 2,$^).fwd $(word 2,$^).rev
+	rm -f $(word 1,$^).fwd $(word 2,$^).rev
 
 
 
@@ -517,8 +519,8 @@ endif
 show-devdata:
 	@echo "${CLEAN_DEV_SRC}" 
 	@echo "${CLEAN_DEV_TRG}"
-	@echo ${SPMSRCMODEL}
-	@echo ${SPMTRGMODEL}
+	@echo ${SUBWORD_SRC_MODEL}
+	@echo ${SUBWORD_TRG_MODEL}
 	@echo "${DEV_SRC}.${PRE_SRC}"
 	@echo "${DEV_TRG}.${PRE_TRG}"
 

@@ -57,26 +57,28 @@ else ifeq (${shell hostname --domain 2>/dev/null},bullx)
 endif
 
 
-## default settings for CPU cores
+## default settings for CPU cores to be used
 
 CPU_CORES ?= ${CORES}
 THREADS   ?= ${CPU_CORES}
-JOBS      ?= ${THREADS}
 
 ## set variables with HPC prefix
+## (this is mostly for backwards compatibility)
 
 HPC_TIME    ?= ${WALLTIME}:00
 HPC_CORES   ?= ${CPU_CORES}
 HPC_THREADS ?= ${HPC_CORES}
-HPC_JOBS    ?= ${HPC_THREADS}
 HPC_MEM     ?= ${MEM}
 
+## number parallel jobs in make
+## (for slurm jobs)
 
-print_hpc:
-	@echo ${HPC_MEM}
-	@echo ${HPC_CORES}
-	@echo ${THREADS}
-	@echo ${HPC_JOBS}
+ifdef JOBS
+  HPC_JOBS  ?= ${JOBS}
+else
+  JOBS      ?= ${THREADS}
+  HPC_JOBS  ?= ${HPC_THREADS}
+endif
 
 
 SUBMIT_PREFIX ?= submit
@@ -120,6 +122,7 @@ TMX2MOSES      ?= ${shell which tmx2moses 2>/dev/null || echo ${TOOLSDIR}/OpusTo
 
 MARIAN_TRAIN   = ${MARIAN_HOME}marian
 MARIAN_DECODER = ${MARIAN_HOME}marian-decoder
+MARIAN_SCORER  = ${MARIAN_HOME}marian-scorer
 MARIAN_VOCAB   = ${MARIAN_HOME}marian-vocab
 
 

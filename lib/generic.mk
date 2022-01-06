@@ -262,10 +262,11 @@ endif
 endif
 	${MAKE} DATASET=${DATASET}+bt \
 		USE_BACKTRANS=1 \
-		MODELCONFIG=config-bt.mk \
 		CONTINUE_EXISTING=${BT_CONTINUE_EXISTING} \
 		MARIAN_EARLY_STOPPING=${BT_MARIAN_EARLY_STOPPING} \
 	${@:-bt=}
+
+#		MODELCONFIG=config-bt.mk \
 
 
 ## adding a pivot language to the model
@@ -281,7 +282,6 @@ PIVOT_LANG         ?= ${DEFAULT_PIVOT_LANG}
 %-pivotlang:
 	if [ "$(sort ${SRCLANGS} ${TRGLANGS} ${PIVOT_LANG})" != "$(sort ${SRCLANGS} ${TRGLANGS})" ]; then \
 	  ${MAKE} DATASET=${DATASET}+${PIVOT_LANG} \
-		MODELCONFIG=${MODELCONFIG:.mk=+${PIVOT_LANG}.mk} \
 		SRCLANGS="$(sort ${SRCLANGS} ${PIVOT_LANG})" \
 		TRGLANGS="$(sort ${TRGLANGS} ${PIVOT_LANG})" \
 		SKIP_LANGPAIRS=${PIVOT_LANG}-${PIVOT_LANG} \
@@ -290,6 +290,8 @@ PIVOT_LANG         ?= ${DEFAULT_PIVOT_LANG}
 		SUBWORD_MODEL_NAME=opus+${PIVOT_LANG} \
 	  ${@:-pivotlang=}; \
 	fi
+
+#		MODELCONFIG=${MODELCONFIG:.mk=+${PIVOT_LANG}.mk} \
 
 
 ## add forward translations
@@ -313,9 +315,11 @@ endif
 	${MAKE} DATASET=${DATASET}+ft \
 		USE_FORWARDTRANS=1 \
 		CONTINUE_EXISTING=1 \
-		MODELCONFIG=config-ft.mk \
 		MARIAN_EARLY_STOPPING=${FT_MARIAN_EARLY_STOPPING} \
 	${@:-ft=}
+
+#		MODELCONFIG=config-ft.mk \
+
 
 ## add forward translation of monolingual data
 %-ftmono:
@@ -366,11 +370,11 @@ endif
 	${MAKE} DATASET=${DATASET}+ftonly \
 		USE_FORWARDTRANS=1 \
 		CONTINUE_EXISTING=1 \
-		MODELCONFIG=config-ft.mk \
 		MARIAN_EARLY_STOPPING=${FT_MARIAN_EARLY_STOPPING} \
 		TRAINSET= TATOEBA_TRAINSET= \
 	${@:-ftonly=}
 
+#		MODELCONFIG=config-ft.mk \
 
 
 ## NEW: don't continue from existing models when including pivot data

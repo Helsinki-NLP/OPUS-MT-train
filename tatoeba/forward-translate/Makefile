@@ -73,7 +73,7 @@ MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
 
 MULTI_TARGET_MODEL := ${shell wget -qq -O - ${MODELINFO} | grep 'use-target-labels' | wc -l}
 ifneq (${MULTI_TARGET_MODEL},0)
-  TARGET_LANG_LABEL := ${shell wget -qq -O - ${MODELINFO} | grep -o '>>${TRG}.*<<'}
+  TARGET_LANG_LABEL := ${shell wget -qq -O - ${MODELINFO} | grep -o '>>${TRG}.*<<' | head -1}
 endif
 
 RELEASED_BITEXTS := $(patsubst %.tar,%,${shell wget -qq -O - ${TATOEBA_GITRAW}/Wiki.md | \
@@ -112,6 +112,9 @@ ALL_BITEXT_LATEST_TRG = ${patsubst %,${OUTPUT_DIR}/latest/Tatoeba-train.%.${LANG
 .PHONY: all
 all: translate
 
+.PHONY: mtmodel
+mtmodel: ${LANGPAIR}/${MODELNAME}/decoder.yml
+
 .PHONY: prepare
 prepare: ${LANGPAIR}/${MODELNAME}/decoder.yml ${BITEXT_PRE}
 
@@ -136,6 +139,75 @@ print-modelinfo:
 	@echo "multi-target model: ${MULTI_TARGET_MODEL}"
 	@echo "target language label: ${TARGET_LANG_LABEL}"
 
+##-------------------------------------------
+## translation model in reverse direction
+## --> for scoring translations
+##-------------------------------------------
+
+REV_LANGPAIR  = ${TRG}-${SRC}
+REV_MODELZIP := ${shell wget -qq -O - ${TATOEBA_RELEASED} | grep '^${REV_LANGPAIR}' | head -1 | cut -f4}
+REV_MODELINFO = ${patsubst ${TATOEBA_MODEL_STORAGE}/%.zip,${TATOEBA_GITRAW}/models/%.yml,${REV_MODELZIP}}
+REV_MODELNAME = ${patsubst %.zip,%,${notdir ${REV_MODELZIP}}}
+
+REV_MULTI_TARGET_MODEL := ${shell wget -qq -O - ${REV_MODELINFO} | grep 'use-target-labels' | wc -l}
+ifeq (${REV_MULTI_TARGET_MODEL},1)
+  REV_PREPROCESS_ARGS = ${TRG} ${SRC} ${REV_LANGPAIR}/${REV_MODELNAME}/source.spm
+else
+  REV_PREPROCESS_ARGS = ${TRG} ${REV_LANGPAIR}/${REV_MODELNAME}/source.spm
+endif
+
+
+## score translations with reverse translation model
+## normalize scores (see https://github.com/browsermt/students)
+
+SCOREFILES = $(patsubst %.${SRC}.gz,%.${SRC}.scores.gz,$(wildcard ${OUTPUT_DIR}/latest/*.${SRC}.gz))
+
+.PHONY: score-translation score-translations
+score-translation: ${BITEXT_LATEST_SRC:.gz=.scores.gz}
+score-translations: ${SCOREFILES}
+sort-scored-translations: ${OUTPUT_DIR}/latest/Tatoeba-train.sorted.gz
+
+print-score-file:
+	echo ${BITEXT_LATEST_SRC:.gz=.scores.gz}
+
+${OUTPUT_DIR}/latest/%.${SRC}.scores.gz: ${OUTPUT_DIR}/latest/%.${SRC}.gz
+	${MAKE} SRC=${TRG} TRG=${SRC} mtmodel
+	${GZCAT} ${<:.${SRC}.gz=.${TRG}.gz} |\
+	${REV_LANGPAIR}/${REV_MODELNAME}/preprocess.sh ${REV_PREPROCESS_ARGS} |\
+	${GZIP} -c > $@.src.gz
+	${GZCAT} $< |\
+	${SPM_ENCODE} --model=${REV_LANGPAIR}/${REV_MODELNAME}/target.spm |\
+	${GZIP} -c > $@.trg.gz
+	${LOAD_ENV} && cd ${LANGPAIR}/${MODELNAME} && ${MARIAN_SCORER} \
+		-m `grep -A1 models decoder.yml | tail -1 | sed 's/ *- //'` \
+		-v `grep -A2 vocabs decoder.yml | tail -2 | sed 's/ *- //' | tr "\n" ' '` \
+		-t ${PWD}/$@.src.gz ${PWD}/$@.trg.gz \
+		-d ${MARIAN_GPUS} \
+		${MARIAN_SCORER_FLAGS} |\
+	${GZIP} -c > ${PWD}/$(@:.scores.gz=.raw-scores.gz)
+	paste <(gzip -dc $(@:.scores.gz=.raw-scores.gz)) <(gzip -dc $@.trg.gz) | \
+	python3 ${SCRIPTDIR}/normalize-scores.py | cut -f1 | ${GZIP} -c > $@
+	rm -f $@.src.gz $@.trg.gz
+
+${OUTPUT_DIR}/latest/Tatoeba-train.sorted.gz: ${SCOREFILES}
+	${GZCAT} ${OUTPUT_DIR}/latest/*.${SRC}.scores.gz | ${GZIP} -c > $@.scores.gz
+	${GZCAT} ${OUTPUT_DIR}/latest/*.${SRC}.gz | ${GZIP} -c > $@.src.gz
+	${GZCAT} ${OUTPUT_DIR}/latest/*.${TRG}.gz | ${GZIP} -c > $@.trg.gz
+	paste <(gzip -cd $@.scores.gz) <(gzip -cd $@.src.gz) <(gzip -cd $@.trg.gz) |\
+	LC_ALL=C sort -n -k1,1 -S 10G | uniq -f1 | ${GZIP} -c > $@
+	rm -f $@.src.gz $@.trg.gz
+
+
+#
+# (see https://github.com/browsermt/students)
+#
+#scored/%.best.gz: scored/%.sorted.gz
+#	$(eval STARTLINE := $(shell pigz -dc $< | wc -l | sed "s|$$|*$(REMOVE)|" | bc | cut -f1 -d.))
+#	@echo Removing $(REMOVE) removes $(STARTLINE) lines
+#	pigz -dc $< | tail -n +$(STARTLINE) | cut -f2,3 | pigz > $@
+
+
+
 ## fetch the latest model
 
 ${LANGPAIR}/${MODELNAME}/decoder.yml:
@@ -159,8 +231,10 @@ else
   PREPROCESS_ARGS = ${SRC} ${LANGPAIR}/${MODELNAME}/source.spm
 endif
 
-
-ifeq (${BITEXT_SRCPRE},)
+## OLD: check whether we have source files in the work directory
+## NEW: make them from scratch from raw bitexts
+##
+# ifeq (${BITEXT_SRCPRE},)
 
 ${BITEXT_SRCRAW}:
 	${MAKE} -C .. SRCLANGS=${SRC} TRGLANGS=${TRG} clean-data-tatoeba
@@ -177,22 +251,26 @@ ifneq (${MODELZIP},)
 	${GZIP} -f ${patsubst %${PART}.gz,%,$@}??
 endif
 
-else
 
-${BITEXT_PRE}: ${BITEXT_SRCPRE}
-ifneq (${MODELZIP},)
-	mkdir -p ${dir $@}
-	${MAKE} ${LANGPAIR}/${MODELNAME}/decoder.yml
-	${GZCAT} $< |\
-	sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' | \
-	grep -v '[<>{}]' |\
-	${LANGPAIR}/${MODELNAME}/preprocess.sh ${PREPROCESS_ARGS} |\
-	perl -e 'while (<>){next if (split(/\s+/)>${MAX_LENGTH});print;}' |\
-	split -l ${SPLIT_SIZE} - ${patsubst %${PART}.gz,%,$@}
-	${GZIP} -f ${patsubst %${PART}.gz,%,$@}??
-endif
+## NEW: skip this option
+##
+# else
 
-endif
+# ${BITEXT_PRE}: ${BITEXT_SRCPRE}
+# ifneq (${MODELZIP},)
+# 	mkdir -p ${dir $@}
+# 	${MAKE} ${LANGPAIR}/${MODELNAME}/decoder.yml
+# 	${GZCAT} $< |\
+# 	sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' | \
+# 	grep -v '[<>{}]' |\
+# 	${LANGPAIR}/${MODELNAME}/preprocess.sh ${PREPROCESS_ARGS} |\
+# 	perl -e 'while (<>){next if (split(/\s+/)>${MAX_LENGTH});print;}' |\
+# 	split -l ${SPLIT_SIZE} - ${patsubst %${PART}.gz,%,$@}
+# 	${GZIP} -f ${patsubst %${PART}.gz,%,$@}??
+# endif
+
+# endif
+
 
 
 ## merge SentencePiece segments in the source text

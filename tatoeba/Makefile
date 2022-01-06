@@ -1844,38 +1844,38 @@ TATOEBADATA = data/release/${TATOEBA_VERSION}/${LANGPAIR}
 
 ## make dev data (extract additional examples from the training data if neccessary)
 %.gz.d/devdata.created: %.gz.d/data.fetched
-	@if [ -e ${dir $@}/${TATOEBADATA}/dev.src ]; then \
-	  if [ `cat ${dir $@}/${TATOEBADATA}/dev.src | wc -l` -gt 50 ]; then \
+	@if [ -e ${dir $@}${TATOEBADATA}/dev.src ]; then \
+	  if [ `cat ${dir $@}${TATOEBADATA}/dev.src | wc -l` -gt 50 ]; then \
 	    touch $@; \
 	  else \
-	    mv ${dir $@}/${TATOEBADATA}/dev.src $@.dev.src; \
-	    mv ${dir $@}/${TATOEBADATA}/dev.trg $@.dev.trg; \
-	    mv ${dir $@}/${TATOEBADATA}/dev.id  $@.dev.id; \
+	    mv ${dir $@}${TATOEBADATA}/dev.src $@.dev.src; \
+	    mv ${dir $@}${TATOEBADATA}/dev.trg $@.dev.trg; \
+	    mv ${dir $@}${TATOEBADATA}/dev.id  $@.dev.id; \
 	  fi \
 	fi
 	@if [ ! -e $@ ]; then \
-	  if [ -e ${dir $@}/${TATOEBADATA}/train.src.gz ]; then \
+	  if [ -e ${dir $@}${TATOEBADATA}/train.src.gz ]; then \
 	    echo "........ too little devdata available - get top 1000 from training data!"; \
-	    ${GZCAT} $@.d/${TATOEBADATA}/train.src.gz | head -1000                >> $@.dev.src; \
-	    ${GZCAT} $@.d/${TATOEBADATA}/train.trg.gz | head -1000                >> $@.dev.trg; \
-	    ${GZCAT} $@.d/${TATOEBADATA}/train.id.gz  | head -1000 | cut -f2,3    >> $@.dev.id; \
-	    ${GZCAT} $@.d/${TATOEBADATA}/train.src.gz | tail -n +1001 | ${GZIP} -f > $@.src.gz; \
-	    ${GZCAT} $@.d/${TATOEBADATA}/train.trg.gz | tail -n +1001 | ${GZIP} -f > $@.trg.gz; \
-	    ${GZCAT} $@.d/${TATOEBADATA}/train.id.gz  | tail -n +1001 | ${GZIP} -f > $@.id.gz; \
-	    mv $@.src.gz $@.d/${TATOEBADATA}/train.src.gz; \
-	    mv $@.trg.gz $@.d/${TATOEBADATA}/train.trg.gz; \
-	    mv $@.id.gz  $@.d/${TATOEBADATA}/train.id.gz; \
+	    ${GZCAT} ${dir $@}${TATOEBADATA}/train.src.gz | head -1000                >> $@.dev.src; \
+	    ${GZCAT} ${dir $@}${TATOEBADATA}/train.trg.gz | head -1000                >> $@.dev.trg; \
+	    ${GZCAT} ${dir $@}${TATOEBADATA}/train.id.gz  | head -1000 | cut -f2,3    >> $@.dev.id; \
+	    ${GZCAT} ${dir $@}${TATOEBADATA}/train.src.gz | tail -n +1001 | ${GZIP} -f > $@.src.gz; \
+	    ${GZCAT} ${dir $@}${TATOEBADATA}/train.trg.gz | tail -n +1001 | ${GZIP} -f > $@.trg.gz; \
+	    ${GZCAT} ${dir $@}${TATOEBADATA}/train.id.gz  | tail -n +1001 | ${GZIP} -f > $@.id.gz; \
+	    mv $@.src.gz ${dir $@}${TATOEBADATA}/train.src.gz; \
+	    mv $@.trg.gz ${dir $@}${TATOEBADATA}/train.trg.gz; \
+	    mv $@.id.gz  ${dir $@}${TATOEBADATA}/train.id.gz; \
 	  fi; \
-	  mv $@.dev.src ${dir $@}/${TATOEBADATA}/dev.src; \
-	  mv $@.dev.trg ${dir $@}/${TATOEBADATA}/dev.trg; \
-	  mv $@.dev.id  ${dir $@}/${TATOEBADATA}/dev.id; \
+	  mv $@.dev.src ${dir $@}${TATOEBADATA}/dev.src; \
+	  mv $@.dev.trg ${dir $@}${TATOEBADATA}/dev.trg; \
+	  mv $@.dev.id  ${dir $@}${TATOEBADATA}/dev.id; \
 	  touch $@; \
 	fi
 
 ## fix language IDs and make sure that dev/test/train exist
 %.gz.d/data.fixed: %.gz.d/devdata.created
 	@echo ".... fix language codes"
-	@if [ -e ${dir $@}/${TATOEBADATA}/train.id.gz ]; then \
+	@if [ -e ${dir $@}${TATOEBADATA}/train.id.gz ]; then \
 	  ${GZCAT} ${dir $@}${TATOEBADATA}/train.id.gz | cut -f2,3 $(FIXLANGIDS) | ${GZIP} -c > ${dir $@}train.id.gz; \
 	  ${GZCAT} ${dir $@}${TATOEBADATA}/train.id.gz | cut -f1 | ${GZIP} -c > ${dir $@}train.domain.gz; \
 	  mv ${dir $@}train.id.gz ${dir $@}train.domain.gz ${dir $@}${TATOEBADATA}/; \
@@ -1884,8 +1884,8 @@ TATOEBADATA = data/release/${TATOEBA_VERSION}/${LANGPAIR}
 	  touch ${dir $@}${TATOEBADATA}/train.id ${dir $@}${TATOEBADATA}/train.domain; \
 	  ${GZIP} -cd ${dir $@}${TATOEBADATA}/train.*; \
 	fi
-	@touch ${dir $@}/${TATOEBADATA}/test.id ${dir $@}/${TATOEBADATA}/test.src ${dir $@}/${TATOEBADATA}/test.trg
-	@touch ${dir $@}/${TATOEBADATA}/dev.id ${dir $@}/${TATOEBADATA}/dev.src ${dir $@}/${TATOEBADATA}/dev.trg
+	@touch ${dir $@}${TATOEBADATA}/test.id ${dir $@}${TATOEBADATA}/test.src ${dir $@}${TATOEBADATA}/test.trg
+	@touch ${dir $@}${TATOEBADATA}/dev.id ${dir $@}${TATOEBADATA}/dev.src ${dir $@}${TATOEBADATA}/dev.trg
 	@cat ${dir $@}${TATOEBADATA}/dev.id  $(FIXLANGIDS) > ${dir $@}dev.id
 	@cat ${dir $@}${TATOEBADATA}/test.id $(FIXLANGIDS) > ${dir $@}test.id
 	@mv ${dir $@}dev.id ${dir $@}test.id ${dir $@}${TATOEBADATA}/
