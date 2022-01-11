@@ -87,8 +87,7 @@ OUTPUT_DIR     ?= ${LANGPAIR}
 
 BITEXT_DATADIR = ${PWD}/../work/data/simple
 MODEL_WORKDIR  = ${PWD}/../work/${LANGPAIR}
-BITEXT_SRCRAW  = ${BITEXT_DATADIR}/Tatoeba-train-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${SRC}.gz
-BITEXT_SRCPRE  = ${wildcard ${MODEL_WORKDIR}/train/opusTC${TATOEBA_VERSION_NOHYPHEN}.src.clean.spm*.gz}
+BITEXT_SRCRAW  = ${BITEXT_DATADIR}/Tatoeba-train-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.${CLEAN_TRAINDATA_TYPE}.${SRC}.gz
 
 BITEXT_BASE    = ${OUTPUT_DIR}/Tatoeba-train.${MODELNAME}.${LANGPAIR}
 BITEXT_SRC     = ${BITEXT_BASE}.${SRC}.${PART}.gz
@@ -231,13 +230,9 @@ else
   PREPROCESS_ARGS = ${SRC} ${LANGPAIR}/${MODELNAME}/source.spm
 endif
 
-## OLD: check whether we have source files in the work directory
-## NEW: make them from scratch from raw bitexts
-##
-# ifeq (${BITEXT_SRCPRE},)
 
 ${BITEXT_SRCRAW}:
-	${MAKE} -C .. SRCLANGS=${SRC} TRGLANGS=${TRG} clean-data-tatoeba
+	${MAKE} -C .. SRCLANGS=${SRC} TRGLANGS=${TRG} rawdata-tatoeba
 
 ${BITEXT_PRE}: ${BITEXT_SRCRAW}
 ifneq (${MODELZIP},)
@@ -252,24 +247,6 @@ ifneq (${MODELZIP},)
 endif
 
 
-## NEW: skip this option
-##
-# else
-
-# ${BITEXT_PRE}: ${BITEXT_SRCPRE}
-# ifneq (${MODELZIP},)
-# 	mkdir -p ${dir $@}
-# 	${MAKE} ${LANGPAIR}/${MODELNAME}/decoder.yml
-# 	${GZCAT} $< |\
-# 	sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' | \
-# 	grep -v '[<>{}]' |\
-# 	${LANGPAIR}/${MODELNAME}/preprocess.sh ${PREPROCESS_ARGS} |\
-# 	perl -e 'while (<>){next if (split(/\s+/)>${MAX_LENGTH});print;}' |\
-# 	split -l ${SPLIT_SIZE} - ${patsubst %${PART}.gz,%,$@}
-# 	${GZIP} -f ${patsubst %${PART}.gz,%,$@}??
-# endif
-
-# endif
 
 
 

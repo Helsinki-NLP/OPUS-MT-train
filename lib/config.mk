@@ -358,9 +358,22 @@ VOCABSIZE  ?= $$((${SUBWORD_SRCVOCAB_SIZE} + ${SUBWORD_TRGVOCAB_SIZE} + 1000))
 ## for document-level models
 CONTEXT_SIZE = 100
 
-## pre-processing type
-# PRE     = norm
-PRE       = simple
+
+## pre-processing/data-cleanup type
+## PRE .......... apply basic normalisation scripts
+## CLEAN_TYPE ... clean = simple noise filtering
+##                strict = some additional cleanup based on test set stats
+## CLEAN_TESTDATA_TYPE should stay as 'clean' because
+## we need those data sets to get the parameters
+## for the strict mode
+
+PRE                  = simple
+CLEAN_TRAINDATA_TYPE = strict
+CLEAN_DEVDATA_TYPE   = strict
+CLEAN_TESTDATA_TYPE  = clean
+
+
+## subword splitting type
 PRE_SRC   = ${SUBWORDS}${SUBWORD_SRCVOCAB_SIZE:000=}k
 PRE_TRG   = ${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k
 
@@ -426,8 +439,8 @@ TEST_TRG  ?= ${WORKDIR}/test/${TESTSET_NAME}.trg
 
 ## model basename and optional sub-dir
 
-MODEL_SUBDIR  =
-MODEL_VARIANT = 
+# MODEL_SUBDIR  =
+# MODEL_VARIANT = 
 MODEL         =  ${MODEL_SUBDIR}${DATASET}${MODEL_VARIANT}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
 
 MODEL_BASENAME   = ${MODEL}.${MODELTYPE}.model${NR}
@@ -619,7 +632,8 @@ endif
 # load model-specific configuration parameters
 # if they exist in the work directory
 
-MODELCONFIG ?= ${MODEL}.${MODELTYPE}.mk
+# MODELCONFIG ?= ${MODEL}.${MODELTYPE}.mk
+MODELCONFIG = ${DATASET}.${MODELTYPE}.mk
 ifneq ($(wildcard ${WORKDIR}/${MODELCONFIG}),)
   include ${WORKDIR}/${MODELCONFIG}
 endif

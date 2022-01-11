@@ -124,15 +124,19 @@ print-datasets:
 ## data sets to be included in the train/dev/test sets
 ## with some basic pre-processing (see lib/preprocess.mk)
 
-CLEAN_TRAIN_SRC    = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.clean.${SRCEXT}.gz,${TRAINSET}} \
+CLEAN_TRAIN_SRC    = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.${CLEAN_TRAINDATA_TYPE}.${SRCEXT}.gz,${TRAINSET}} \
 			${BACKTRANS_SRC} ${FORWARDTRANS_SRC} ${FORWARDTRANSMONO_SRC} ${PIVOTING_SRC}
 CLEAN_TRAIN_TRG    = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_TRAIN_SRC}}
 
-CLEAN_DEV_SRC      = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.clean.${SRCEXT}.gz,${DEVSET}}
+CLEAN_DEV_SRC      = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.${CLEAN_DEVDATA_TYPE}.${SRCEXT}.gz,${DEVSET}}
 CLEAN_DEV_TRG      = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_DEV_SRC}}
 
-CLEAN_TEST_SRC     = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.clean.${SRCEXT}.gz,${TESTSET}}
+CLEAN_TEST_SRC     = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.${CLEAN_TESTDATA_TYPE}.${SRCEXT}.gz,${TESTSET}}
 CLEAN_TEST_TRG     = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_TEST_SRC}}
+
+CLEAN_TEST_SRC_STATS = ${CLEAN_TEST_SRC:.gz=.stats}
+CLEAN_TEST_TRG_STATS = ${CLEAN_TEST_TRG:.gz=.stats}
+
 
 DATA_SRC := ${sort ${CLEAN_TRAIN_SRC} ${CLEAN_DEV_SRC} ${CLEAN_TEST_SRC}}
 DATA_TRG := ${sort ${CLEAN_TRAIN_TRG} ${CLEAN_DEV_TRG} ${CLEAN_TEST_TRG}}
@@ -223,7 +227,10 @@ clean-data rawdata:
 	done
 
 .PHONY: clean-data-source
-clean-data-source: ${DATA_SRC} ${DATA_TRG}
+clean-data-source: 
+	${MAKE} ${CLEAN_TEST_SRC} ${CLEAN_TEST_TRG}
+	${MAKE} ${CLEAN_TEST_SRC_STATS} ${CLEAN_TEST_TRG_STATS}
+	${MAKE} ${DATA_SRC} ${DATA_TRG}
 
 
 
@@ -759,13 +766,13 @@ add-to-local-mono-data:
 ## get data from local space and compress ...
 ##----------------------------------------------
 
-${WORKDIR}/%.clean.${PRE_SRC}.gz: ${TMPWORKDIR}/${LANGPAIRSTR}/%.clean.${PRE_SRC}
+${WORKDIR}/%.${PRE_SRC}.gz: ${TMPWORKDIR}/${LANGPAIRSTR}/%.${PRE_SRC}
 	mkdir -p ${dir $@}
 	${GZIP} -c < $< > $@
 	-cat ${dir $<}README.md >> ${dir $@}README.md
 
 ifneq (${PRE_SRC},${PRE_TRG})
-${WORKDIR}/%.clean.${PRE_TRG}.gz: ${TMPWORKDIR}/${LANGPAIRSTR}/%.clean.${PRE_TRG}
+${WORKDIR}/%.${PRE_TRG}.gz: ${TMPWORKDIR}/${LANGPAIRSTR}/%.${PRE_TRG}
 	mkdir -p ${dir $@}
 	${GZIP} -c < $< > $@
 endif

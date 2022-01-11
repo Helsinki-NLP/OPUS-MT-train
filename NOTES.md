@@ -4,6 +4,16 @@
 https://github.com/UKPLab/EasyNMT
 
 
+# Data cleanup
+
+Need better data filtering:
+* integrate OpusFilter
+* Tatoeba MT challenge data sets are noisy for smaller languages like Breton (but the similarity scores are not available), CC-Matrix etc is not very good for those languages
+* cleanup script also before subword splitting?
+* stronger filters in cleanup script?
+* idea: compare character diversity between the two languages and use a threshold to filter sentences? (language-specific?)
+
+
 # more efficient parallelisation
 
 from Bergamot:

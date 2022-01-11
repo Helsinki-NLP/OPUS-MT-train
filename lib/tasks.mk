@@ -21,12 +21,14 @@ include ${REPOHOME}lib/dist.mk
 #------------------------------------------------------------------------
 
 .PHONY: data
-data:	${TRAINDATA_SRC} ${TRAINDATA_TRG}
-	${MAKE} ${DEVDATA_SRC} ${DEVDATA_TRG}
-	${MAKE} ${TESTDATA_SRC} ${TESTDATA_TRG}
-	${MAKE} ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB}
+data:	
+	@${MAKE} rawdata
+	@${MAKE} ${TRAINDATA_SRC} ${TRAINDATA_TRG}
+	@${MAKE} ${DEVDATA_SRC} ${DEVDATA_TRG}
+	@${MAKE} ${TESTDATA_SRC} ${TESTDATA_TRG}
+	@${MAKE} ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB}
 ifeq ($(filter align,${subst -, ,${MODELTYPE}}),align)
-	${MAKE} ${TRAIN_ALG}
+	@${MAKE} ${TRAIN_ALG}
 endif
 
 traindata: 	${TRAINDATA_SRC} ${TRAINDATA_TRG}
