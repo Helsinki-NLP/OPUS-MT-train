@@ -740,6 +740,8 @@ ${WORKDIR}/${MODELCONFIG}:
 	@echo "TESTSET     = ${TESTSET}"     >> $@
 	@echo "PRE         = ${PRE}"         >> $@
 	@echo "SUBWORDS    = ${SUBWORDS}"    >> $@
+	@echo "MODEL_SRCVOCAB = ${MODEL_SRCVOCAB}" >> $@
+	@echo "MODEL_TRGVOCAB = ${MODEL_TRGVOCAB}" >> $@
 ifdef SHUFFLE_DATA
 	@echo "SHUFFLE_DATA      = ${SHUFFLE_DATA}"       >> $@
 endif

@@ -82,6 +82,13 @@ ifeq (${USE_FORWARDTRANS},1)
   FORWARDTRANS_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${FORWARDTRANS_SRC}}
 endif
 
+# forward-translation data (source-to-target)
+# filtered by reconstruction scores (ce filter)
+ifneq (${USE_FORWARDTRANS_SELECTED},)
+  FORWARDTRANS_SRC += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.best${USE_FORWARDTRANS_SELECTED}.gz}}
+  FORWARDTRANS_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${FORWARDTRANS_SRC}}
+endif
+
 # forward-translation data of monolingual data (source-to-target)
 ifeq (${USE_FORWARDTRANSMONO},1)
   FORWARDTRANSMONO_SRC = ${sort ${wildcard ${BACKTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.gz}}

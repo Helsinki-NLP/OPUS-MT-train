@@ -159,12 +159,14 @@ endif
 ## score translations with reverse translation model
 ## normalize scores (see https://github.com/browsermt/students)
 
-SCOREFILES = $(patsubst %.${SRC}.gz,%.${SRC}.scores.gz,$(wildcard ${OUTPUT_DIR}/latest/*.${SRC}.gz))
+SCOREFILES    = $(patsubst %.${SRC}.gz,%.${SRC}.scores.gz,$(wildcard ${OUTPUT_DIR}/latest/*.${SRC}.gz))
+RAWSCOREFILES = $(patsubst %.${SRC}.gz,%.${SRC}.raw-scores.gz,$(wildcard ${OUTPUT_DIR}/latest/*.${SRC}.gz))
 
 .PHONY: score-translation score-translations
 score-translation: ${BITEXT_LATEST_SRC:.gz=.scores.gz}
 score-translations: ${SCOREFILES}
 sort-scored-translations: ${OUTPUT_DIR}/latest/Tatoeba-train.sorted.gz
+sort-raw-scored-translations: ${OUTPUT_DIR}/latest/Tatoeba-train.sorted-raw.gz
 
 print-score-file:
 	echo ${BITEXT_LATEST_SRC:.gz=.scores.gz}
@@ -197,13 +199,52 @@ ${OUTPUT_DIR}/latest/Tatoeba-train.sorted.gz: ${SCOREFILES}
 	rm -f $@.src.gz $@.trg.gz
 
 
+${OUTPUT_DIR}/latest/Tatoeba-train.sorted-raw.gz: ${RAWSCOREFILES}
+	${GZCAT} ${OUTPUT_DIR}/latest/*.${SRC}.raw-scores.gz | ${GZIP} -c > $@.raw-scores.gz
+	${GZCAT} ${OUTPUT_DIR}/latest/*.${SRC}.gz | ${GZIP} -c > $@.src.gz
+	${GZCAT} ${OUTPUT_DIR}/latest/*.${TRG}.gz | ${GZIP} -c > $@.trg.gz
+	paste <(gzip -cd $@.raw-scores.gz) <(gzip -cd $@.src.gz) <(gzip -cd $@.trg.gz) |\
+	LC_ALL=C sort -n -k1,1 -S 10G | uniq -f1 | ${GZIP} -c > $@
+	rm -f $@.src.gz $@.trg.gz
+
+
+# Part of the data to be removed (0.05 is 5%)
+# RETAIN - give a number in percent about how much to retain
+# REMOVE - 
 #
 # (see https://github.com/browsermt/students)
-#
-#scored/%.best.gz: scored/%.sorted.gz
-#	$(eval STARTLINE := $(shell pigz -dc $< | wc -l | sed "s|$$|*$(REMOVE)|" | bc | cut -f1 -d.))
-#	@echo Removing $(REMOVE) removes $(STARTLINE) lines
-#	pigz -dc $< | tail -n +$(STARTLINE) | cut -f2,3 | pigz > $@
+
+# REMOVE = 0.05
+# RETAIN = ${shell echo "100-100*${REMOVE}/1;" | bc}
+RETAIN = 95
+REMOVE = ${shell echo "scale=2; (100-${RETAIN})/100" | bc}
+
+extract-best-translations: ${OUTPUT_DIR}/latest/Tatoeba-train.${SRC}.best${RETAIN}.gz
+extract-rawbest-translations: ${OUTPUT_DIR}/latest/Tatoeba-train.${SRC}.rawbest${RETAIN}.gz
+
+%.${SRC}.best${RETAIN}.gz: %.sorted.gz
+	$(eval STARTLINE := $(shell ${GZIP} -dc $< | wc -l | sed "s|$$|*$(REMOVE)|" | bc | cut -f1 -d.))
+	@echo Removing $(REMOVE) removes $(STARTLINE) lines
+	${GZIP} -dc $< | tail -n +$(STARTLINE) | cut -f2,3 | \
+	tee >(cut -f1 | gzip -c >$@) |\
+	cut -f2 | gzip -c > ${@:.${SRC}.best${RETAIN}.gz=.${TRG}.best${RETAIN}.gz}
+
+%.${TRG}.best${RETAIN}.gz: %.${SRC}.best${RETAIN}.gz
+	@echo "done!"
+
+%.${SRC}.rawbest${RETAIN}.gz: %.sorted-raw.gz
+	$(eval STARTLINE := $(shell ${GZIP} -dc $< | wc -l | sed "s|$$|*$(REMOVE)|" | bc | cut -f1 -d.))
+	@echo Removing $(REMOVE) removes $(STARTLINE) lines
+	${GZIP} -dc $< | tail -n +$(STARTLINE) | cut -f2,3 | \
+	tee >(cut -f1 | gzip -c >$@) |\
+	cut -f2 | gzip -c > ${@:.${SRC}.rawbest${RETAIN}.gz=.${TRG}.rawbest${RETAIN}.gz}
+
+%.${TRG}.raawbest${RETAIN}.gz: %.${SRC}.rawbest${RETAIN}.gz
+	@echo "done!"
+
+
+
+
 
 
 

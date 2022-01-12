@@ -321,6 +321,29 @@ endif
 #		MODELCONFIG=config-ft.mk \
 
 
+
+# use a selected set of forward translation
+
+# default for ce-filter
+FT_SELECTED ?= 95
+
+%-ftbest:
+	for s in ${SRCLANGS}; do \
+	  for t in ${TRGLANGS}; do \
+	    if [ -e ${FORWARDTRANS_HOME}/$$s-$$t/latest ]; then \
+	      ${MAKE} -C ${FORWARDTRANS_HOME} SRC=$$s TRG=$$t \
+			RETAIN=${FT_SELECTED} extract-best-translations; \
+	    fi \
+	  done \
+	done
+	${MAKE} DATASET=${DATASET}+ft${FT_SELECTED} \
+		USE_FORWARDTRANS_SELECTED=${FT_SELECTED} \
+	${@:-ftbest=}
+
+
+
+
+
 ## add forward translation of monolingual data
 %-ftmono:
 	${MAKE} DATASET=${DATASET}+ftmono USE_FORWARDTRANSMONO=1 ${@:-ftmono=}
@@ -340,8 +363,9 @@ endif
 ## don't use the regular parallel training data
 ## (only makes sense if bt, ft, or pivot-based data are activated)
 %-nopar:
-	${MAKE} DATASET=${DATASET}+nopar TRAINSET= TATOEBA_TRAINSET= ${@:-nopar=}
+	${MAKE} DATASET=${DATASET}+nopar TRAINSET= ${@:-nopar=}
 
+# TATOEBA_TRAINSET=
 
 ##-------------------------------------------------------------
 ## default: make separate sentencepiece models
@@ -371,9 +395,10 @@ endif
 		USE_FORWARDTRANS=1 \
 		CONTINUE_EXISTING=1 \
 		MARIAN_EARLY_STOPPING=${FT_MARIAN_EARLY_STOPPING} \
-		TRAINSET= TATOEBA_TRAINSET= \
+		TRAINSET= \
 	${@:-ftonly=}
 
+# TATOEBA_TRAINSET= \
 #		MODELCONFIG=config-ft.mk \
 
 
