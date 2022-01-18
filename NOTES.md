@@ -13,8 +13,18 @@ Need better data filtering:
 * stronger filters in cleanup script?
 * idea: compare character diversity between the two languages and use a threshold to filter sentences? (language-specific?)
 
+links and tools:
+
+* https://github.com/ZJaume/clean
+* https://github.com/Helsinki-NLP/OPUS-MT-distillation
+
 
 # more efficient parallelisation
+
+* https://www.gnu.org/software/parallel/
+* https://www.gnu.org/software/parallel/parallel_tutorial.html
+* https://www.gnu.org/software/bash/manual/html_node/GNU-Parallel.html
+* multinode training with MarianNMT: https://github.com/marian-nmt/marian/issues/244
 
 from Bergamot:
 https://github.com/browsermt/students/blob/master/train-student/alignment/generate-alignment-and-shortlist.sh
@@ -24,6 +34,11 @@ https://github.com/browsermt/students/blob/master/train-student/alignment/genera
 test -s $DIR/corpus.spm.$SRC || cat $CORPUS_SRC | pigz -dc | parallel --no-notice --pipe -k -j16 --block 50M "$MARIAN/spm_encode --model $VOCAB" > $DIR/corpus.spm.$SRC
 test -s $DIR/corpus.spm.$TRG || cat $CORPUS_TRG | pigz -dc | parallel --no-notice --pipe -k -j16 --block 50M "$MARIAN/spm_encode --model $VOCAB" > $DIR/corpus.spm.$TRG
 ```
+
+# Benchmarking
+
+* SOTA-bench forum: https://forum.sotabench.com/
+
 
 
 # OPUS-MT at huggingface

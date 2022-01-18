@@ -86,7 +86,7 @@ endif
 # filtered by reconstruction scores (ce filter)
 ifneq (${USE_FORWARDTRANS_SELECTED},)
   FORWARDTRANS_SRC += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.best${USE_FORWARDTRANS_SELECTED}.gz}}
-  FORWARDTRANS_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${FORWARDTRANS_SRC}}
+  FORWARDTRANS_TRG += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/*.${TRGEXT}.best${USE_FORWARDTRANS_SELECTED}.gz}}
 endif
 
 # forward-translation data of monolingual data (source-to-target)
@@ -118,11 +118,21 @@ endif
 print-datasets:
 	@echo ${TATOEBA_TRAINSET}
 	@echo ${TRAINSET}
+	@echo "all data:"
 	@echo ${CLEAN_TRAIN_SRC}
+	@echo ${CLEAN_TRAIN_TRG}
+	@echo "back-translation data:"
 	@echo ${BACKTRANS_SRC} 
+	@echo ${BACKTRANS_TRG} 
+	@echo "forward translation data:"
 	@echo ${FORWARDTRANS_SRC} 
+	@echo ${FORWARDTRANS_TRG} 
+	@echo "monolingual forward translation data:"
 	@echo ${FORWARDTRANSMONO_SRC} 
+	@echo ${FORWARDTRANSMONO_TRG} 
+	@echo "pivot-based translation data:"
 	@echo ${PIVOTING_SRC}
+	@echo ${PIVOTING_TRG}
 
 ##-------------------------------------------------------------
 ## data sets (train/dev/test)
@@ -133,7 +143,8 @@ print-datasets:
 
 CLEAN_TRAIN_SRC    = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.${CLEAN_TRAINDATA_TYPE}.${SRCEXT}.gz,${TRAINSET}} \
 			${BACKTRANS_SRC} ${FORWARDTRANS_SRC} ${FORWARDTRANSMONO_SRC} ${PIVOTING_SRC}
-CLEAN_TRAIN_TRG    = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_TRAIN_SRC}}
+CLEAN_TRAIN_TRG    = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.${CLEAN_TRAINDATA_TYPE}.${TRGEXT}.gz,${TRAINSET}} \
+			${BACKTRANS_TRG} ${FORWARDTRANS_TRG} ${FORWARDTRANSMONO_TRG} ${PIVOTING_TRG}
 
 CLEAN_DEV_SRC      = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.${CLEAN_DEVDATA_TYPE}.${SRCEXT}.gz,${DEVSET}}
 CLEAN_DEV_TRG      = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_DEV_SRC}}
@@ -235,9 +246,9 @@ clean-data rawdata:
 
 .PHONY: clean-data-source
 clean-data-source: 
-	${MAKE} ${CLEAN_TEST_SRC} ${CLEAN_TEST_TRG}
-	${MAKE} ${CLEAN_TEST_SRC_STATS} ${CLEAN_TEST_TRG_STATS}
-	${MAKE} ${DATA_SRC} ${DATA_TRG}
+	@${MAKE} ${CLEAN_TEST_SRC} ${CLEAN_TEST_TRG}
+	@${MAKE} ${CLEAN_TEST_SRC_STATS} ${CLEAN_TEST_TRG_STATS}
+	@${MAKE} ${DATA_SRC} ${DATA_TRG}
 
 
 

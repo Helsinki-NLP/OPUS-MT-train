@@ -14,6 +14,7 @@ OPUSHOME      = /projappl/nlpl/data/OPUS
 MOSESHOME     = ${APPLHOME}/install/mosesdecoder
 MOSESSCRIPTS  = ${MOSESHOME}/scripts
 EFLOMAL_HOME  = ${APPLHOME}/install/eflomal/
+BROWSERMT_HOME = ${APPLHOME}/install/browsermt
 MARIAN_HOME   = ${APPLHOME}/install/marian-dev/build/
 MARIAN        = ${MARIAN_HOME}
 SPM_HOME      = ${MARIAN_HOME}

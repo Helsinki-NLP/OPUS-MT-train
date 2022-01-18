@@ -61,7 +61,6 @@ ${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}: ${TEST_SRC}
 	grep . $< > $@.input
 	${LOAD_ENV} && ${MARIAN_DECODER} -i $@.input \
 		-c ${word 2,$^}.decoder.yml \
-		-d ${MARIAN_GPUS} \
 		${MARIAN_DECODER_FLAGS} > $@.output
 ifneq ($(findstring spm,${PRE_TRG}),)
 	sed 's/ //g;s/▁/ /g' < $@.output | sed 's/^ *//;s/ *$$//' > $@

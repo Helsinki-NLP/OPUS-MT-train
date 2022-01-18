@@ -31,3 +31,6 @@
 [submodule "OPUS-MT-testsets"]
 	path = OPUS-MT-testsets
 	url = https://github.com/Helsinki-NLP/OPUS-MT-testsets.git
+[submodule "tools/browsermt/marian-dev"]
+	path = tools/browsermt/marian-dev
+	url = https://github.com/browsermt/marian-dev.git

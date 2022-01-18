@@ -147,7 +147,9 @@ include lib/tasks.mk
 include lib/projects.mk
 
 .PHONY: all
-all: ${WORKDIR}/${MODELCONFIG}
+all: 
+	${MAKE} rawdata
+	${MAKE} ${WORKDIR}/${MODELCONFIG}
 	${MAKE} data
 	${MAKE} train
 	${MAKE} eval

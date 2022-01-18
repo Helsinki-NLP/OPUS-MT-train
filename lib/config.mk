@@ -18,9 +18,11 @@ MODELTYPES   = 	transformer \
 		transformer-base-align \
 		transformer-big \
 		transformer-big-align \
+		transformer-small \
 		transformer-small-align \
 		transformer-tiny \
 		transformer-tiny-align \
+		transformer-tiny11 \
 		transformer-tiny11-align
 
 ## default model type
@@ -450,7 +452,12 @@ MODEL_START      = ${WORKDIR}/${MODEL_BASENAME}.npz
 MODEL_FINAL      = ${WORKDIR}/${MODEL_BASENAME}.npz.best-perplexity.npz
 MODEL_DECODER    = ${MODEL_FINAL}.decoder.yml
 
+MODEL_BIN           = ${WORKDIR}/${MODEL_BASENAME}.intgemm8.bin
+MODEL_INTGEMM8TUNED = ${WORKDIR}/${MODEL_BASENAME}.intgemm8tuned.npz
+MODEL_BIN_ALPHAS    = ${WORKDIR}/${MODEL_BASENAME}.intgemm8.alphas.bin
 
+
+.PRECIOUS: ${MODEL_FINAL} ${MODEL_BIN}
 
 
 ## for sentence-piece models: get plain text vocabularies
@@ -671,7 +678,7 @@ ${WORKDIR}/${MODELCONFIG}:
 	fi; \
 	if [ $$s -gt ${LARGEST_TRAINSIZE} ]; then \
 	  echo "# ${LANGPAIRSTR} training data bigger than ${LARGEST_TRAINSIZE}" > $@; \
-	  echo "GPUJOB_HPC_MEM = 8g"        >> $@; \
+	  echo "GPUJOB_HPC_MEM = 16g"        >> $@; \
 	  echo "GPUJOB_SUBMIT  = -gpu01" >> $@; \
 	  echo "SUBWORD_VOCAB_SIZE    = ${SUBWORD_VOCAB_SIZE}"    >> $@; \
 	  echo "DEVSIZE    = ${DEVSIZE}"    >> $@; \
@@ -679,7 +686,7 @@ ${WORKDIR}/${MODELCONFIG}:
 	  echo "DEVMINSIZE = ${DEVMINSIZE}" >> $@; \
 	elif [ $$s -gt ${LARGE_TRAINSIZE} ]; then \
 	  echo "# ${LANGPAIRSTR} training data bigger than ${LARGE_TRAINSIZE}" > $@; \
-	  echo "GPUJOB_HPC_MEM = 8g"       >> $@; \
+	  echo "GPUJOB_HPC_MEM = 12g"       >> $@; \
 	  echo "GPUJOB_SUBMIT  = "         >> $@; \
 	  echo "MARIAN_VALID_FREQ = 2500"  >> $@; \
 	  echo "SUBWORD_VOCAB_SIZE    = ${SUBWORD_VOCAB_SIZE}"    >> $@; \

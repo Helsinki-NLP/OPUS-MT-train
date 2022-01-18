@@ -80,7 +80,9 @@ train-and-start-bt-jobs: ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
 #------------------------------------------------------------------------
 
 .PHONY: all-job
-all-job: ${WORKDIR}/${MODELCONFIG}
+all-job: 
+	${MAKE} rawdata
+	${MAKE} ${WORKDIR}/${MODELCONFIG}
 	${MAKE} data
 	${MAKE} train-and-eval-job
 

@@ -311,15 +311,15 @@ ${BITEXT_BASE}.${SRC}.%.gz: ${BITEXT_BASE}.${SRC}.spm.%.gz
 
 ${OUTPUT_DIR}/latest/Tatoeba-train.%.${LANGPAIR}.${SRC}.gz: ${BITEXT_BASE}.${SRC}.%.gz
 	mkdir -p ${dir $@}
-	cp $< $@
+	rsync $< $@
 
 ${OUTPUT_DIR}/latest/Tatoeba-train.%.${LANGPAIR}.${TRG}.gz: ${BITEXT_BASE}.${TRG}.%.gz
 	mkdir -p ${dir $@}
-	cp $< $@
+	rsync $< $@
 
 ${BITEXT_LATEST_README}: ${LANGPAIR}/${MODELNAME}/README.md
 	mkdir -p ${dir $@}
-	cp $< $@
+	rsync $< $@
 
 
 ## translate

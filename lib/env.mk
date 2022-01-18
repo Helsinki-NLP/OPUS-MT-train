@@ -128,6 +128,15 @@ MARIAN_VOCAB   = ${MARIAN_HOME}marian-vocab
 
 TOKENIZER    = ${MOSESSCRIPTS}/tokenizer
 
+## browsermt branch of marian-nmt
+## https://github.com/browsermt/marian-dev
+
+BROWSERMT_HOME    ?= ${TOOLSDIR}/browsermt
+BROWSERMT_TRAIN    = ${BROWSERMT_HOME}/marian-dev/build/marian
+BROWSERMT_DECODE   = ${BROWSERMT_HOME}/marian-dev/build/marian-decoder
+BROWSERMT_CONVERT  = ${BROWSERMT_HOME}/marian-dev/build/marian-conv
+
+
 
 ## BPE
 SUBWORD_BPE  ?= ${shell which subword-nmt 2>/dev/null || echo ${TOOLSDIR}/subword-nmt/subword_nmt/subword_nmt.py}
