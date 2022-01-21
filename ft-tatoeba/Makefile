@@ -183,15 +183,14 @@ endif
 ## (Why? because we filter out some data from the original wiki text, see above)
 
 ${BITEXT_BASE}.${SRC}.%.gz: ${BITEXT_BASE}.${SRC}.spm.%.gz
-ifneq ($(wildcard ${patsubst ${BITEXT_BASE}.${SRC}.%.gz,${BITEXT_BASE}.${TRG}.%.gz,$@}),)
-	mkdir -p ${dir $@}
-	${GZCAT} $< |\
-	sed 's/ //g;s/▁/ /g' | \
-	sed 's/^ *//;s/ *$$//' |\
-	sed 's/^>>[a-z]*<< //' |\
-	gzip -c > $@
-endif
-
+	if [ -e ${patsubst ${BITEXT_BASE}.${SRC}.%.gz,${BITEXT_BASE}.${TRG}.%.gz,$@} ]; then \
+	  mkdir -p ${dir $@}; \
+	  ${GZCAT} $< |\
+	  sed 's/ //g;s/▁/ /g' | \
+	  sed 's/^ *//;s/ *$$//' |\
+	  sed 's/^>>[a-z]*<< //' |\
+	  gzip -c > $@; \
+	fi
 
 
 
