@@ -41,9 +41,10 @@
 #   --> need to adjust preprocess-scripts for those models
 #
 
-include ../lib/env.mk
-include ../lib/config.mk
-include ../lib/slurm.mk
+REPOHOME := ${PWD}/../
+include ${REPOHOME}lib/env.mk
+include ${REPOHOME}lib/config.mk
+include ${REPOHOME}lib/slurm.mk
 
 
 MODEL     = news

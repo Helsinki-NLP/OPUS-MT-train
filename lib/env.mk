@@ -6,20 +6,21 @@
 #
 
 SHELL := /bin/bash
+PWD   ?= ${shell pwd}
 
 # job-specific settings (overwrite if necessary)
 # HPC_EXTRA: additional SBATCH commands
 
 NR_GPUS      = 1
 HPC_NODES    = 1
-HPC_DISK     = 500
+# HPC_DISK   = 500
 HPC_QUEUE    = serial
 HPC_GPUQUEUE = gpu
 
 
-MEM          = 4g
-THREADS      = 1
-WALLTIME     = 72
+MEM          ?= 4g
+CORES        ?= 1
+WALLTIME     ?= 72
 
 GPUJOB_HPC_MEM ?= 4g
 
@@ -38,42 +39,73 @@ WORKHOME = ${PWD}/work
 ## anything that needs to be done to load
 ## the build environment for specific software
 
-LOAD_BUILD_ENV        = echo "nothing to load"
-LOAD_MARIAN_BUILD_ENV = echo "nothing to load"
+LOAD_BUILD_ENV            = echo "nothing to load"
+LOAD_MARIAN_BUILD_ENV     = echo "nothing to load"
+LOAD_EXTRACTLEX_BUILD_ENV = echo "nothing to load"
 
+
+## load system-specific environments
 
 ifeq (${shell hostname -d 2>/dev/null},mahti.csc.fi)
+  HPC_HOST = mahti
   include ${REPOHOME}lib/env/mahti.mk
 else ifeq (${shell hostname},dx6-ibs-p2)
+  HPC_HOST = dx6
   include ${REPOHOME}lib/env/dx6.mk
 else ifeq (${shell hostname},dx7-nkiel-4gpu)
+  HPC_HOST = dx7
   include ${REPOHOME}lib/env/dx7.mk
 else ifneq ($(wildcard /wrk/tiedeman/research),)
+  HPC_HOST = taito
   include ${REPOHOME}lib/env/taito.mk
 else ifeq (${shell hostname --domain 2>/dev/null},bullx)
+  HPC_HOST = puhti
   include ${REPOHOME}lib/env/puhti.mk
 endif
 
 
-## set variables with HPC prefix
+## default settings for CPU cores to be used
 
-HPC_TIME  ?= ${WALLTIME}:00
-HPC_CORES ?= ${THREADS}
-HPC_MEM   ?= ${MEM}
+CPU_CORES ?= ${CORES}
+THREADS   ?= ${CPU_CORES}
+
+## set variables with HPC prefix
+## (this is mostly for backwards compatibility)
+
+HPC_TIME    ?= ${WALLTIME}:00
+HPC_CORES   ?= ${CPU_CORES}
+HPC_THREADS ?= ${HPC_CORES}
+HPC_MEM     ?= ${MEM}
+
+## number parallel jobs in make
+## (for slurm jobs)
+
+ifdef JOBS
+  HPC_JOBS  ?= ${JOBS}
+else
+  JOBS      ?= ${THREADS}
+  HPC_JOBS  ?= ${HPC_THREADS}
+endif
 
 
 SUBMIT_PREFIX ?= submit
 
 ifdef LOCAL_SCRATCH
-  TMPDIR       = ${LOCAL_SCRATCH}
+  TMPDIR := ${LOCAL_SCRATCH}
 endif
 
-TMPDIR ?= /tmp
+ifndef TMPDIR
+  TMPDIR := /tmp
+endif
+
+TMPWORKDIR ?= ${shell mktemp -d -p ${TMPDIR}}
+export TMPWORKDIR
+
 
 ## tools and their locations
 
-SCRIPTDIR      ?= ${PWD}/scripts
-TOOLSDIR       ?= ${PWD}/tools
+SCRIPTDIR      ?= ${REPOHOME}scripts
+TOOLSDIR       ?= ${REPOHOME}tools
 
 ISO639         ?= ${shell which iso639    2>/dev/null || echo 'perl ${TOOLSDIR}/LanguageCodes/ISO-639-3/bin/iso639'}
 PIGZ           ?= ${shell which pigz      2>/dev/null || echo ${TOOLSDIR}/pigz/pigz}
@@ -83,13 +115,14 @@ PROTOC         ?= ${shell which protoc    2>/dev/null || echo ${TOOLSDIR}/protob
 MARIAN         ?= ${shell which marian    2>/dev/null || echo ${TOOLSDIR}/marian-dev/build/marian}
 MARIAN_HOME    ?= $(dir ${MARIAN})
 SPM_HOME       ?= ${dir ${MARIAN}}
-FASTALIGN      ?= ${shell which fast_align 2>/dev/null || echo ${TOOLSDIR}/fast_align/build/fast_align}
+FASTALIGN      ?= ${shell which fast_align  2>/dev/null || echo ${TOOLSDIR}/fast_align/build/fast_align}
 FASTALIGN_HOME ?= ${dir ${FASTALIGN}}
 ATOOLS         ?= ${FASTALIGN_HOME}atools
-EFLOMAL        ?= ${shell which eflomal   2>/dev/null || echo ${TOOLSDIR}/eflomal/eflomal}
+EFLOMAL        ?= ${shell which eflomal     2>/dev/null || echo ${TOOLSDIR}/eflomal/eflomal}
 EFLOMAL_HOME   ?= ${dir ${EFLOMAL}}
 WORDALIGN      ?= ${EFLOMAL_HOME}align.py
 EFLOMAL        ?= ${EFLOMAL_HOME}eflomal
+EXTRACT_LEX    ?= ${shell which extract_lex 2>/dev/null || echo ${TOOLSDIR}/extract-lex/build/extract_lex}
 MOSESSCRIPTS   ?= ${TOOLSDIR}/moses-scripts/scripts
 TMX2MOSES      ?= ${shell which tmx2moses 2>/dev/null || echo ${TOOLSDIR}/OpusTools-perl/scripts/convert/tmx2moses}
 
@@ -97,10 +130,25 @@ TMX2MOSES      ?= ${shell which tmx2moses 2>/dev/null || echo ${TOOLSDIR}/OpusTo
 
 MARIAN_TRAIN   = ${MARIAN_HOME}marian
 MARIAN_DECODER = ${MARIAN_HOME}marian-decoder
+MARIAN_SCORER  = ${MARIAN_HOME}marian-scorer
 MARIAN_VOCAB   = ${MARIAN_HOME}marian-vocab
 
 
 TOKENIZER    = ${MOSESSCRIPTS}/tokenizer
+
+
+##--------------------------------------------------------
+## Tools for creating efficient student models:
+##
+## browsermt branch of marian-nmt
+## https://github.com/browsermt/marian-dev
+##--------------------------------------------------------
+
+BROWSERMT_HOME    ?= ${TOOLSDIR}/browsermt
+BROWSERMT_TRAIN    = ${BROWSERMT_HOME}/marian-dev/build/marian
+BROWSERMT_DECODE   = ${BROWSERMT_HOME}/marian-dev/build/marian-decoder
+BROWSERMT_CONVERT  = ${BROWSERMT_HOME}/marian-dev/build/marian-conv
+
 
 
 ## BPE
@@ -137,6 +185,7 @@ ifeq (${shell nvidia-smi | grep failed | wc -l},1)
   MARIAN_BUILD_OPTIONS += -DCOMPILE_CUDA=off
   LOAD_ENV = ${LOAD_CPU_ENV}
 else
+  GPU_AVAILABLE = 1
   LOAD_ENV = ${LOAD_GPU_ENV}
 endif
 else
@@ -152,9 +201,10 @@ endif
 MULTEVALHOME = ${APPLHOME}/multeval
 
 
-
-
 ## install prerequisites
+## 
+## TODO: add EXTRACT_LEX, BROWSERMT_TRAIN, ..?
+## TODO: add OpusFilter?
 
 PREREQ_TOOLS := $(lastword ${ISO639}) ${ATOOLS} ${PIGZ} ${TERASHUF} ${JQ} ${MARIAN} ${EFLOMAL} ${TMX2MOSES}
 PREREQ_PERL  := ISO::639::3 ISO::639::5 OPUS::Tools XML::Parser
@@ -175,8 +225,8 @@ export PERL_MB_OPT         := --install_base "${HOME}/perl5"
 export PERL_MM_OPT         := INSTALL_BASE=${HOME}/perl5
 
 
-PHONY: install-prerequisites install-prereq install-requirements
-install-prerequisites install-prereq install-requirements:
+PHONY: install install-prerequisites install-prereq install-requirements
+install install-prerequisites install-prereq install-requirements:
 	${PIP} install --user -r requirements.txt
 	${MAKE} install-perl-modules
 	${MAKE} ${PREREQ_TOOLS}
@@ -222,7 +272,7 @@ ${TOOLSDIR}/marian-dev/build/marian: ${PROTOC}
 	cd ${TOOLSDIR} && git clone https://github.com/marian-nmt/marian-dev.git
 	mkdir -p ${dir $@}
 	cd ${dir $@} && ${LOAD_MARIAN_BUILD_ENV} && cmake -DUSE_SENTENCEPIECE=on ${MARIAN_BUILD_OPTIONS} ..
-	${MAKE} -C ${dir $@} -j8
+	${LOAD_MARIAN_BUILD_ENV} && ${MAKE} -C ${dir $@} -j8
 
 ${TOOLSDIR}/protobuf/bin/protoc:
 	mkdir -p ${TOOLSDIR}
@@ -231,6 +281,14 @@ ${TOOLSDIR}/protobuf/bin/protoc:
 	cd ${TOOLSDIR}/protobuf && ./autogen.sh
 	cd ${TOOLSDIR}/protobuf && ./configure --prefix=${TOOLSDIR}/protobuf
 	${MAKE} -C ${TOOLSDIR}/protobuf
+
+${TOOLSDIR}/extract-lex/build/extract_lex:
+	mkdir -p ${TOOLSDIR}
+	cd ${TOOLSDIR} && git clone https://github.com/marian-nmt/extract-lex
+	mkdir -p ${dir $@}
+	cd ${dir $@} && ${LOAD_EXTRACTLEX_BUILD_ENV} && cmake ..
+	${LOAD_EXTRACTLEX_BUILD_ENV} && ${MAKE} -C ${dir $@} -j4
+
 
 ## for Mac users: use gcc to compile eflomal
 ##
@@ -245,6 +303,8 @@ ${TOOLSDIR}/protobuf/bin/protoc:
 ## cd tools/efmoral
 ## sudo env python3 setup.py install
 
+.PHONY: install-eflomal
+install-eflomal:
 ${TOOLSDIR}/eflomal/eflomal:
 	${MAKE} -C ${dir $@} all
 	cd ${dir $@} && python3 setup.py install --user

@@ -136,7 +136,7 @@ simplewiki-v1-english-prepare: ${WORKHOME}/simplewiki/${SIMPLEWIKI_DATA1}
 %-simplewiki-v1-english: ${WORKHOME}/simplewiki/${SIMPLEWIKI_DATA1}
 	rm -f ${WORKDIR}/*.submit
 	${MAKE} DATASET=simplewiki_v1 \
-		BPEMODELNAME=simplewiki_v1 \
+		SUBWORD_MODEL_NAME=simplewiki_v1 \
 		TRAINSET=simplewiki_v1-training \
 		DEVSET=simplewiki_v1-tuning \
 		TESTSET=simplewiki_v1-testing \
@@ -147,7 +147,7 @@ simplewiki-v1-english-prepare: ${WORKHOME}/simplewiki/${SIMPLEWIKI_DATA1}
 %-simplewiki-v2sent-english: ${WORKHOME}/simplewiki/${SIMPLEWIKI_DATA2_SENT}
 	rm -f ${WORKDIR}/*.submit
 	${MAKE} DATASET=simplewiki_v2_sent \
-		BPEMODELNAME=simplewiki_v2_sent \
+		SUBWORD_MODEL_NAME=simplewiki_v2_sent \
 		TRAINSET=simplewiki_v2_sent-training \
 		DEVSET=simplewiki_v2_sent-tuning \
 		TESTSET=simplewiki_v2_sent-testing \
@@ -159,7 +159,7 @@ simplewiki-v1-english-prepare: ${WORKHOME}/simplewiki/${SIMPLEWIKI_DATA1}
 %-simplewiki-v2doc-english: simplewiki-docdata
 	rm -f ${WORKDIR}/*.submit
 	${MAKE} DATASET=simplewiki_v2_doc \
-		BPEMODELNAME=simplewiki_v2_doc${MARIAN_MAX_LENGTH} \
+		SUBWORD_MODEL_NAME=simplewiki_v2_doc${MARIAN_MAX_LENGTH} \
 		TRAINSET=simplewiki_v2_doc${MARIAN_MAX_LENGTH}-train \
 		DEVSET=simplewiki_v2_doc${MARIAN_MAX_LENGTH}-dev \
 		TESTSET=simplewiki_v2_doc${MARIAN_MAX_LENGTH}-test \
@@ -179,7 +179,7 @@ simplewiki-v1-english-prepare: ${WORKHOME}/simplewiki/${SIMPLEWIKI_DATA1}
 %-simplewiki-v2sent+doc-english: ${WORKHOME}/simplewiki/${SIMPLEWIKI_DATA2_SENT} simplewiki-docdata
 	rm -f ${WORKDIR}/*.submit
 	${MAKE} DATASET=simplewiki_v2_sent+doc${MARIAN_MAX_LENGTH} \
-		BPEMODELNAME=simplewiki_v2-sent+doc${MARIAN_MAX_LENGTH} \
+		SUBWORD_MODEL_NAME=simplewiki_v2-sent+doc${MARIAN_MAX_LENGTH} \
 		TRAINSET="simplewiki_v2_doc${MARIAN_MAX_LENGTH}-train simplewiki_v2_sent-training" \
 		DEVSET=simplewiki_v2_doc${MARIAN_MAX_LENGTH}-dev \
 		TESTSET=simplewiki_v2_doc${MARIAN_MAX_LENGTH}-test \
@@ -218,7 +218,7 @@ simplelarge-english-prepare: ${WORKHOME}/simplewiki/${SIMPLEWIKI_LARGE}
 %-simplewikilarge-english: ${WORKHOME}/simplewiki/${SIMPLEWIKI_LARGE}
 	rm -f ${WORKDIR}/*.submit
 	${MAKE} DATASET=simplewiki_large \
-		BPEMODELNAME=simplewiki_large \
+		SUBWORD_MODEL_NAME=simplewiki_large \
 		TRAINSET=simplewiki_large-train \
 		DEVSET=simplewiki_large-tune \
 		TESTSET=simplewiki_large-test \

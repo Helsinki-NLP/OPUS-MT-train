@@ -4,26 +4,38 @@
 #
 
 
-CSCPROJECT   = project_2003288
-# CSCPROJECT   = project_2002688
+# CSCPROJECT   = project_2003288
+CSCPROJECT   = project_2002688
 # CSCPROJECT   = project_2003093
 # CSCPROJECT   = project_2002982
 WORKHOME      = ${shell realpath ${PWD}/work}
-LOCAL_SCRATCH = /scratch/${CSCPROJECT}
 APPLHOME      = /projappl/project_2003093/
 OPUSHOME      = /projappl/nlpl/data/OPUS
 MOSESHOME     = ${APPLHOME}/install/mosesdecoder
 MOSESSCRIPTS  = ${MOSESHOME}/scripts
 EFLOMAL_HOME  = ${APPLHOME}/install/eflomal/
+BROWSERMT_HOME = ${APPLHOME}/install/browsermt
 MARIAN_HOME   = ${APPLHOME}/install/marian-dev/build/
 MARIAN        = ${MARIAN_HOME}
 SPM_HOME      = ${MARIAN_HOME}
 HPC_QUEUE     = medium
 SUBMIT_PREFIX = submitcpu
 GPU           = a100
-HPC_GPUQUEUE  = gpusmall
-# HPC_GPUQUEUE  = gpumedium
 WALLTIME      = 36
+
+## default local scratch if not set otherwise
+LOCAL_SCRATCH ?= /scratch/${CSCPROJECT}
+
+
+## select queue depending on the number of GPUs allocated
+ifeq (${NR_GPUS},1)
+ HPC_GPUQUEUE  = gpusmall
+else ifeq (${NR_GPUS},2)
+ HPC_GPUQUEUE  = gpusmall
+else
+ HPC_GPUQUEUE  = gpumedium
+endif 
+
 export PATH := ${APPLHOME}/bin:${PATH}
 
 
@@ -32,6 +44,9 @@ GPU_MODULES   = gcc/10.3.0 cuda/11.4.2 cudnn/8.0.4.30-11.0-linux-x64 openblas/0.
 LOAD_CPU_ENV  = module load ${CPU_MODULES}
 LOAD_GPU_ENV  = module load ${GPU_MODULES}
 
+ifneq (${HPC_DISK},)
+  HPC_GPU_ALLOCATION = --gres=gpu:${GPU}:${NR_GPUS},nvme:${HPC_DISK}
+endif
 
 ## extra SLURM directives (up to 5 variables)
 HPC_EXTRA1 = \#SBATCH --account=${CSCPROJECT}
@@ -62,3 +77,7 @@ MARIAN_BUILD_OPTIONS  = -DTcmalloc_INCLUDE_DIR=/appl/spack/v016/install-tree/gcc
 			-DUSE_FBGEMM=1 \
 			-DFBGEMM_STATIC=1
 
+
+## setup for compiling extract-lex from marian-nmt
+
+LOAD_EXTRACTLEX_BUILD_ENV = cmake gcc/9.3.0 boost/1.68.0

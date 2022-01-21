@@ -38,12 +38,12 @@ TRAINDATA_SIZE = ${shell \
 ## they should be executable and should basically read STDIN and print to STDOUT
 ## no further arguments are supported
 
-ifneq (${wildcard scripts/cleanup/${SRC}},)
-  SRC_CLEANUP_SCRIPTS = | ${subst ${SPACE}, | ,${shell find scripts/cleanup/${SRC} -executable -type f}}
+ifneq (${wildcard ${REPOHOME}scripts/cleanup/${SRC}},)
+  SRC_CLEANUP_SCRIPTS = | ${subst ${SPACE}, | ,${shell find ${REPOHOME}scripts/cleanup/${SRC} -executable -type f}}
 endif
 
-ifneq (${wildcard scripts/cleanup/${TRG}},)
-  TRG_CLEANUP_SCRIPTS = | ${subst ${SPACE}, | ,${shell find scripts/cleanup/${TRG} -executable -type f}}
+ifneq (${wildcard ${REPOHOME}scripts/cleanup/${TRG}},)
+  TRG_CLEANUP_SCRIPTS = | ${subst ${SPACE}, | ,${shell find ${REPOHOME}scripts/cleanup/${TRG} -executable -type f}}
 endif
 
 
@@ -55,8 +55,10 @@ endif
 ## - use only the latest backtranslations
 ##   if such a subdir exists
 
-BACKTRANS_HOME    = backtranslate
-FORWARDTRANS_HOME = ${BACKTRANS_HOME}
+BACKTRANS_HOME    ?= backtranslate
+FORWARDTRANS_HOME ?= ${BACKTRANS_HOME}
+PIVOTTRANS_HOME   ?= pivoting
+
 
 ifneq (${wildcard ${BACKTRANS_HOME}/${TRG}-${SRC}/latest},)
   BACKTRANS_DIR = ${BACKTRANS_HOME}/${TRG}-${SRC}/latest
@@ -64,32 +66,73 @@ else
   BACKTRANS_DIR = ${BACKTRANS_HOME}/${TRG}-${SRC}
 endif
 
-ifneq (${wildcard ${BACKTRANS_HOME}/${SRC}-${TRG}/latest},)
-  FORWARDTRANS_DIR = ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest
-else
-  FORWARDTRANS_DIR = ${FORWARDTRANS_HOME}/${SRC}-${TRG}
-endif
-
 
 ## TODO: make it possible to select only parts of the BT data
 ## ---> use TRAINDATA_SIZE to take max the same amount of all shuffled BT data
 
+# back-translation data (target-to-source)
 ifeq (${USE_BACKTRANS},1)
   BACKTRANS_SRC = ${sort ${wildcard ${BACKTRANS_DIR}/*.${SRCEXT}.gz}}
   BACKTRANS_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${BACKTRANS_SRC}}
 endif
 
+# forward-translation data (source-to-target)
 ifeq (${USE_FORWARDTRANS},1)
-  FORWARDTRANS_SRC = ${sort ${wildcard ${FORWARDTRANS_DIR}/*.${SRCEXT}.gz}}
+  FORWARDTRANS_SRC = ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.gz}}
   FORWARDTRANS_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${FORWARDTRANS_SRC}}
 endif
 
-ifeq (${USE_PIVOTING},1)
-  PIVOTING_SRC = ${sort ${wildcard pivoting/${SRC}-${TRG}/latest/*.${SRCEXT}.gz} \
-			${wildcard pivoting/${TRG}-${SRC}/latest/*.${SRCEXT}.gz}}
+# forward-translation data (source-to-target)
+# filtered by reconstruction scores (ce filter)
+ifneq (${USE_FORWARDTRANS_SELECTED},)
+  FORWARDTRANS_SRC += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.best${USE_FORWARDTRANS_SELECTED}.gz}}
+  FORWARDTRANS_TRG += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/*.${TRGEXT}.best${USE_FORWARDTRANS_SELECTED}.gz}}
+endif
+
+# forward-translation data of monolingual data (source-to-target)
+ifeq (${USE_FORWARDTRANSMONO},1)
+  FORWARDTRANSMONO_SRC = ${sort ${wildcard ${BACKTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.gz}}
+  FORWARDTRANSMONO_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${FORWARDTRANSMONO_SRC}}
+endif
+
+# forward translation using pivoting (target language is automatically created)
+ifeq (${USE_FORWARD_PIVOTING},1)
+  PIVOTING_SRC = ${sort ${wildcard ${PIVOTTRANS_HOME}/${TRG}-${SRC}/latest/*.${SRCEXT}.gz}}
   PIVOTING_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${PIVOTING_SRC}}
 endif
 
+# backward translation using pivoting (source language is automatically created)
+ifeq (${USE_BACKWARD_PIVOTING},1)
+  PIVOTING_SRC = ${sort ${wildcard ${PIVOTTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.gz}}
+  PIVOTING_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${PIVOTING_SRC}}
+endif
+
+# pivot-based data augmentation data (in both directions)
+ifeq (${USE_PIVOTING},1)
+  PIVOTING_SRC = ${sort ${wildcard ${PIVOTTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.gz} \
+			${wildcard ${PIVOTTRANS_HOME}/${TRG}-${SRC}/latest/*.${SRCEXT}.gz}}
+  PIVOTING_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${PIVOTING_SRC}}
+endif
+
+
+print-datasets:
+	@echo ${TATOEBA_TRAINSET}
+	@echo ${TRAINSET}
+	@echo "all data:"
+	@echo ${CLEAN_TRAIN_SRC}
+	@echo ${CLEAN_TRAIN_TRG}
+	@echo "back-translation data:"
+	@echo ${BACKTRANS_SRC} 
+	@echo ${BACKTRANS_TRG} 
+	@echo "forward translation data:"
+	@echo ${FORWARDTRANS_SRC} 
+	@echo ${FORWARDTRANS_TRG} 
+	@echo "monolingual forward translation data:"
+	@echo ${FORWARDTRANSMONO_SRC} 
+	@echo ${FORWARDTRANSMONO_TRG} 
+	@echo "pivot-based translation data:"
+	@echo ${PIVOTING_SRC}
+	@echo ${PIVOTING_TRG}
 
 ##-------------------------------------------------------------
 ## data sets (train/dev/test)
@@ -98,15 +141,20 @@ endif
 ## data sets to be included in the train/dev/test sets
 ## with some basic pre-processing (see lib/preprocess.mk)
 
-CLEAN_TRAIN_SRC    = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.clean.${SRCEXT}.gz,${TRAINSET}} \
-			${BACKTRANS_SRC} ${FORWARDTRANS_SRC} ${PIVOTING_SRC}
-CLEAN_TRAIN_TRG    = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_TRAIN_SRC}}
+CLEAN_TRAIN_SRC    = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.${CLEAN_TRAINDATA_TYPE}.${SRCEXT}.gz,${TRAINSET}} \
+			${BACKTRANS_SRC} ${FORWARDTRANS_SRC} ${FORWARDTRANSMONO_SRC} ${PIVOTING_SRC}
+CLEAN_TRAIN_TRG    = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.${CLEAN_TRAINDATA_TYPE}.${TRGEXT}.gz,${TRAINSET}} \
+			${BACKTRANS_TRG} ${FORWARDTRANS_TRG} ${FORWARDTRANSMONO_TRG} ${PIVOTING_TRG}
 
-CLEAN_DEV_SRC      = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.clean.${SRCEXT}.gz,${DEVSET}}
+CLEAN_DEV_SRC      = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.${CLEAN_DEVDATA_TYPE}.${SRCEXT}.gz,${DEVSET}}
 CLEAN_DEV_TRG      = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_DEV_SRC}}
 
-CLEAN_TEST_SRC     = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.clean.${SRCEXT}.gz,${TESTSET}}
+CLEAN_TEST_SRC     = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.${CLEAN_TESTDATA_TYPE}.${SRCEXT}.gz,${TESTSET}}
 CLEAN_TEST_TRG     = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_TEST_SRC}}
+
+CLEAN_TEST_SRC_STATS = ${CLEAN_TEST_SRC:.gz=.stats}
+CLEAN_TEST_TRG_STATS = ${CLEAN_TEST_TRG:.gz=.stats}
+
 
 DATA_SRC := ${sort ${CLEAN_TRAIN_SRC} ${CLEAN_DEV_SRC} ${CLEAN_TEST_SRC}}
 DATA_TRG := ${sort ${CLEAN_TRAIN_TRG} ${CLEAN_DEV_TRG} ${CLEAN_TEST_TRG}}
@@ -132,15 +180,13 @@ ifeq (${words ${TRGLANGS}},1)
 	  ln -s ${TRAIN_TRG}.clean.${PRE_TRG}.gz ${REV_WORKDIR}/train/${notdir ${TRAIN_SRC}.clean.${PRE_SRC}.gz}; \
 	  cp ${WORKDIR}/train/README.md ${REV_WORKDIR}/train/README.md; \
 	fi
-	-if [ -e ${SPMSRCMODEL} ]; then \
-	  ln -s ${SPMSRCMODEL} ${REV_WORKDIR}/train/${notdir ${SPMTRGMODEL}}; \
-	  ln -s ${SPMTRGMODEL} ${REV_WORKDIR}/train/${notdir ${SPMSRCMODEL}}; \
-	  ln -s ${SPMSRCMODEL}.vocab ${REV_WORKDIR}/train/${notdir ${SPMTRGMODEL}}.vocab; \
-	  ln -s ${SPMTRGMODEL}.vocab ${REV_WORKDIR}/train/${notdir ${SPMSRCMODEL}}.vocab; \
+	-if [ -e ${SUBWORD_SRC_MODEL} ]; then \
+	  ln -s ${SUBWORD_SRC_MODEL} ${REV_WORKDIR}/train/${notdir ${SUBWORD_TRG_MODEL}}; \
+	  ln -s ${SUBWORD_TRG_MODEL} ${REV_WORKDIR}/train/${notdir ${SUBWORD_SRC_MODEL}}; \
 	fi
-	if [ -e ${BPESRCMODEL} ]; then \
-	  ln -s ${BPESRCMODEL} ${REV_WORKDIR}/train/${notdir ${BPETRGMODEL}}; \
-	  ln -s ${BPETRGMODEL} ${REV_WORKDIR}/train/${notdir ${BPESRCMODEL}}; \
+	-if [ -e ${SUBWORD_SRC_MODEL}.vocab ]; then \
+	  ln -s ${SUBWORD_SRC_MODEL}.vocab ${REV_WORKDIR}/train/${notdir ${SUBWORD_TRG_MODEL}}.vocab; \
+	  ln -s ${SUBWORD_TRG_MODEL}.vocab ${REV_WORKDIR}/train/${notdir ${SUBWORD_SRC_MODEL}}.vocab; \
 	fi
 	-if [ -e ${TRAIN_ALG} ]; then \
 	  if [ ! -e ${REV_WORKDIR}/train/${notdir ${TRAIN_ALG}} ]; then \
@@ -165,6 +211,10 @@ ifeq (${words ${TRGLANGS}},1)
 	  ln -s ${TEST_TRG} ${REV_WORKDIR}/test/${notdir ${TEST_SRC}}; \
 	  cp ${WORKDIR}/test/README.md ${REV_WORKDIR}/test/README.md; \
 	fi
+	-if [ -e ${MODEL_SRCVOCAB} ]; then \
+	  ln -s ${MODEL_SRCVOCAB} ${REV_WORKDIR}/${notdir ${MODEL_TRGVOCAB}}; \
+	  ln -s ${MODEL_TRGVOCAB} ${REV_WORKDIR}/${notdir ${MODEL_SRCVOCAB}}; \
+	fi
 	-if [ -e ${MODEL_VOCAB} ]; then \
 	  ln -s ${MODEL_VOCAB} ${REV_WORKDIR}/${notdir ${MODEL_VOCAB}}; \
 	fi
@@ -172,11 +222,11 @@ ifeq (${words ${TRGLANGS}},1)
 ## this is a bit dangerous with some trick to 
 ## swap parameters between SRC and TRG
 ##
-	-if [ -e ${WORKDIR}/config.mk ]; then \
-	   if [ ! -e ${REV_WORKDIR}/config.mk ]; then \
-	     cat ${WORKDIR}/config.mk |\
+	-if [ -e ${WORKDIR}/${MODELCONFIG} ]; then \
+	   if [ ! -e ${REV_WORKDIR}/${MODELCONFIG} ]; then \
+	     cat ${WORKDIR}/${MODELCONFIG} |\
 	     sed -e 's/SRC/TTT/g;s/TRG/SRC/g;s/TTT/TRG/' |\
-	     grep -v LANGPAIRSTR > ${REV_WORKDIR}/config.mk; \
+	     grep -v LANGPAIRSTR > ${REV_WORKDIR}/$(notdir ${MODELCONFIG}); \
 	   fi \
 	fi
 endif
@@ -195,7 +245,10 @@ clean-data rawdata:
 	done
 
 .PHONY: clean-data-source
-clean-data-source: ${DATA_SRC} ${DATA_TRG}
+clean-data-source: 
+	@${MAKE} ${CLEAN_TEST_SRC} ${CLEAN_TEST_TRG}
+	@${MAKE} ${CLEAN_TEST_SRC_STATS} ${CLEAN_TEST_TRG_STATS}
+	@${MAKE} ${DATA_SRC} ${DATA_TRG}
 
 
 
@@ -230,6 +283,13 @@ MAX_WORDALIGN_SIZE = 5000000
 # MAX_WORDALIGN_SIZE = 10000000
 # MAX_WORDALIGN_SIZE = 25000000
 
+## nr of simultaneous word alignment jobs
+## (assuming that each of them occupies up to 6 cores
+NR_ALIGN_JOBS ?=  $$(( ${CPU_CORES} / 6 + 1 ))
+
+## job forcing doesn't work within recipes
+#	    ${MAKE} -j ${NR_ALIGN_JOBS} $$a
+
 ${TRAIN_ALG}: 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 		${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz
 	${MAKE} ${LOCAL_TRAIN_SRC}.algtmp ${LOCAL_TRAIN_TRG}.algtmp
@@ -238,27 +298,43 @@ ${TRAIN_ALG}: 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 	  mkdir -p $(LOCAL_TRAIN_TRG).algtmp.d; \
 	  split -l ${MAX_WORDALIGN_SIZE} $(LOCAL_TRAIN_SRC).algtmp $(LOCAL_TRAIN_SRC).algtmp.d/; \
 	  split -l ${MAX_WORDALIGN_SIZE} $(LOCAL_TRAIN_TRG).algtmp $(LOCAL_TRAIN_TRG).algtmp.d/; \
-	  for s in `ls $(LOCAL_TRAIN_SRC).algtmp.d`; do \
-	    echo "align part $$s"; \
-	    ${WORDALIGN} --overwrite \
-		-s $(LOCAL_TRAIN_SRC).algtmp.d/$$s \
-		-t $(LOCAL_TRAIN_TRG).algtmp.d/$$s \
-		-f $(LOCAL_TRAIN_SRC).algtmp.d/$$s.fwd \
-		-r $(LOCAL_TRAIN_TRG).algtmp.d/$$s.rev; \
-	  done; \
-	  echo "merge and symmetrize"; \
-	  cat $(LOCAL_TRAIN_SRC).algtmp.d/*.fwd > $(LOCAL_TRAIN_SRC).fwd; \
-	  cat $(LOCAL_TRAIN_TRG).algtmp.d/*.rev > $(LOCAL_TRAIN_TRG).rev; \
-	  ${ATOOLS} -c grow-diag-final -i $(LOCAL_TRAIN_SRC).fwd -j $(LOCAL_TRAIN_TRG).rev |\
-	  ${GZIP} -c > $@; \
-	  rm -f ${LOCAL_TRAIN_SRC}.algtmp.d/*; \
-	  rm -f ${LOCAL_TRAIN_TRG}.algtmp.d/*; \
+	  a=`ls $(LOCAL_TRAIN_SRC).algtmp.d/* | sed 's#$$#.alg#' | xargs`; \
+	  if [ "$$a" != "" ]; then \
+	    ${MAKE} $$a; \
+	    cat $(LOCAL_TRAIN_SRC).algtmp.d/*.alg | ${GZIP} -c > $@; \
+	    rm -f ${LOCAL_TRAIN_SRC}.algtmp.d/*; \
+	    rm -f ${LOCAL_TRAIN_TRG}.algtmp.d/*; \
+	  fi; \
 	  rmdir ${LOCAL_TRAIN_SRC}.algtmp.d; \
 	  rmdir ${LOCAL_TRAIN_TRG}.algtmp.d; \
-	  rm -f $(LOCAL_TRAIN_SRC).fwd $(LOCAL_TRAIN_TRG).rev; \
 	fi
 	rm -f ${LOCAL_TRAIN_SRC}.algtmp ${LOCAL_TRAIN_TRG}.algtmp
 
+
+## old: do this sequenctially
+## new: do this in parallel via make (see above)
+## disadvantage: may require more memory!
+
+#	  for s in `ls $(LOCAL_TRAIN_SRC).algtmp.d`; do \
+#	    echo "align part $$s"; \
+#	    ${WORDALIGN} --overwrite \
+#		-s $(LOCAL_TRAIN_SRC).algtmp.d/$$s \
+#		-t $(LOCAL_TRAIN_TRG).algtmp.d/$$s \
+#		-f $(LOCAL_TRAIN_SRC).algtmp.d/$$s.fwd \
+#		-r $(LOCAL_TRAIN_TRG).algtmp.d/$$s.rev; \
+#	  done;
+
+
+$(LOCAL_TRAIN_SRC).algtmp.d/%.alg: $(LOCAL_TRAIN_SRC).algtmp.d/% $(LOCAL_TRAIN_TRG).algtmp.d/%
+	echo "align part ${notdir $<}"
+	${WORDALIGN} --overwrite \
+		-s $(word 1,$^) \
+		-t $(word 2,$^) \
+		-f $(word 1,$^).fwd \
+		-r $(word 2,$^).rev
+	echo "merge and symmetrize part ${notdir $<}"
+	${ATOOLS} -c grow-diag-final -i $(word 1,$^).fwd -j $(word 2,$^).rev > $@
+	rm -f $(word 1,$^).fwd $(word 2,$^).rev
 
 
 
@@ -304,7 +380,7 @@ ${TRAIN_ALG}: 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 	    echo "============================================"; \
 	    echo "fetch $$c (${LANGPAIR}) from OPUS"; \
 	    echo "============================================"; \
-	    opus_read ${OPUSREAD_ARGS} -ln -q -dl ${TMPDIR} -d $$c -s ${SRC} -t ${TRG} \
+	    opus_read ${OPUSREAD_ARGS} -ln -q -dl ${TMPWORKDIR} -d $$c -s ${SRC} -t ${TRG} \
 			-wm moses -p raw -w $@ ${@:.${SRCEXT}.raw=.${TRGEXT}.raw}; \
 	  fi )
 
@@ -326,6 +402,7 @@ ifeq (${USE_REST_DEVDATA},1)
   LOCAL_TRAINDATA_DEPENDENCIES = ${DEV_SRC} ${DEV_TRG}
 endif
 
+
 ## add training data for each language combination
 ## and put it together in local space
 ${LOCAL_TRAIN_SRC}: ${LOCAL_TRAINDATA_DEPENDENCIES}
@@ -340,6 +417,7 @@ ${LOCAL_TRAIN_SRC}: ${LOCAL_TRAINDATA_DEPENDENCIES}
 	      if [ "${SKIP_SAME_LANG}" == "1" ] && [ "$$s" == "$$t" ]; then \
 	        echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
 	      else \
+	        echo "..... add data for $$s-$$t"; \
 	        ${MAKE} DATASET=${DATASET} SRC:=$$s TRG:=$$t add-to-local-train-data; \
 	      fi \
 	    else \
@@ -367,7 +445,7 @@ ${LOCAL_TRAIN_TRG}: ${LOCAL_TRAIN_SRC}
 ## cut the data sets immediately if we don't have 
 ## to shuffle first! This saves a lot of time!
 
-ifndef SHUFFLE_DATA
+ifneq (${SHUFFLE_DATA},1)
 ifdef FIT_DATA_SIZE
   CUT_DATA_SETS = | head -${FIT_DATA_SIZE}
 endif
@@ -399,6 +477,8 @@ ifdef CHECK_TRAINDATA_SIZE
 	  echo ${CLEAN_TRAIN_TRG}; \
 	fi
 endif
+	@echo "..... add info about training data"
+	@mkdir -p ${dir ${LOCAL_TRAIN_SRC}} ${dir ${LOCAL_TRAIN_TRG}}
 	@echo -n "* ${SRC}-${TRG}: "                          >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 	@for d in ${wildcard ${CLEAN_TRAIN_SRC}}; do \
 	  l=`${GZIP} -cd < $$d ${CUT_DATA_SETS} 2>/dev/null | wc -l`; \
@@ -410,10 +490,11 @@ endif
 	    echo -n "($$l) "                                  >> ${dir ${LOCAL_TRAIN_SRC}}README.md; \
 	  fi \
 	done
-	echo ""                                               >> ${dir ${LOCAL_TRAIN_SRC}}README.md
+	@echo ""                                              >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 ######################################
 # create local data files (add label if necessary)
 ######################################
+	@echo "..... create training data in local scratch space"
 	@${ZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} ${CUT_DATA_SETS} 2>/dev/null \
 		${LABEL_SOURCE_DATA} > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
 	@${ZCAT} ${wildcard ${CLEAN_TRAIN_TRG}} ${CUT_DATA_SETS} 2>/dev/null \
@@ -423,8 +504,8 @@ endif
 #    --> shuffle data for each langpair
 #    --> do this when FIT_DATA_SIZE is set!
 ######################################
-ifdef SHUFFLE_DATA
-	@echo "shuffle training data"
+ifeq (${SHUFFLE_DATA},1)
+	@echo "..... shuffle training data"
 	@paste ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg |\
 		${SHUFFLE} > ${LOCAL_TRAIN_SRC}.shuffled
 	@cut -f1 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
@@ -439,11 +520,11 @@ endif
 	@echo -n "* ${SRC}-${TRG}: total size = " >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 ifdef FIT_DATA_SIZE
 	@echo "sample data to fit size = ${FIT_DATA_SIZE}"
-	@scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
+	@${REPOHOME}scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
 		${LOCAL_TRAIN_SRC}.${LANGPAIR}.src | wc -l >> ${dir ${LOCAL_TRAIN_SRC}}README.md
-	@scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
+	@${REPOHOME}scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
 		${LOCAL_TRAIN_SRC}.${LANGPAIR}.src >> ${LOCAL_TRAIN_SRC}
-	@scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
+	@${REPOHOME}scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
 		${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg >> ${LOCAL_TRAIN_TRG}
 else
 	@cat ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src | wc -l >> ${dir ${LOCAL_TRAIN_SRC}}README.md
@@ -463,8 +544,8 @@ endif
 show-devdata:
 	@echo "${CLEAN_DEV_SRC}" 
 	@echo "${CLEAN_DEV_TRG}"
-	@echo ${SPMSRCMODEL}
-	@echo ${SPMTRGMODEL}
+	@echo ${SUBWORD_SRC_MODEL}
+	@echo ${SUBWORD_TRG_MODEL}
 	@echo "${DEV_SRC}.${PRE_SRC}"
 	@echo "${DEV_TRG}.${PRE_TRG}"
 
@@ -477,10 +558,10 @@ raw-devdata: ${DEV_SRC} ${DEV_TRG}
 ## maybe introduce over/undersampling of dev data like we have for train data?
 
 ${DEV_SRC}.shuffled.gz:
-	mkdir -p ${dir $@}
+	mkdir -p ${sort ${dir $@} ${dir ${DEV_SRC}} ${dir ${DEV_TRG}}}
 	rm -f ${DEV_SRC} ${DEV_TRG}
-	echo "# Validation data"                         > ${dir ${DEV_SRC}}/README.md
-	echo ""                                         >> ${dir ${DEV_SRC}}/README.md
+	echo "# Validation data"                         > ${dir ${DEV_SRC}}README.md
+	echo ""                                         >> ${dir ${DEV_SRC}}README.md
 	-for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
 	    if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
@@ -582,9 +663,9 @@ add-to-dev-data: ${CLEAN_DEV_SRC} ${CLEAN_DEV_TRG}
 #-----------------------------------------------------------------
 ifdef FIT_DEVDATA_SIZE
 	@echo "sample dev data to fit size = ${FIT_DEVDATA_SIZE}"
-	@scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DEVDATA_SIZE} \
+	@${REPOHOME}scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DEVDATA_SIZE} \
 		${CLEAN_DEV_SRC} 2>/dev/null ${LABEL_SOURCE_DATA} >> ${DEV_SRC}
-	@scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DEVDATA_SIZE} \
+	@${REPOHOME}scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DEVDATA_SIZE} \
 		${CLEAN_DEV_TRG} 2>/dev/null                      >> ${DEV_TRG}
 else
 	@${ZCAT} ${CLEAN_DEV_SRC} 2>/dev/null ${LABEL_SOURCE_DATA} >> ${DEV_SRC}
@@ -693,7 +774,7 @@ add-to-local-mono-data:
 	for c in ${MONOSET}; do \
 	  if [ -e ${OPUSHOME}/$$c/latest/mono/${LANGID}.txt.gz ]; then \
 	    ${GZIP} -cd < ${OPUSHOME}/$$c/latest/mono/${LANGID}.txt.gz |\
-	    scripts/filter/mono-match-lang.py -l ${LANGID} >> ${LOCAL_MONO_DATA}.raw; \
+	    ${REPOHOME}scripts/filter/mono-match-lang.py -l ${LANGID} >> ${LOCAL_MONO_DATA}.raw; \
 	  fi \
 	done
 
@@ -703,13 +784,13 @@ add-to-local-mono-data:
 ## get data from local space and compress ...
 ##----------------------------------------------
 
-${WORKDIR}/%.clean.${PRE_SRC}.gz: ${TMPDIR}/${LANGPAIRSTR}/%.clean.${PRE_SRC}
+${WORKDIR}/%.${PRE_SRC}.gz: ${TMPWORKDIR}/${LANGPAIRSTR}/%.${PRE_SRC}
 	mkdir -p ${dir $@}
 	${GZIP} -c < $< > $@
 	-cat ${dir $<}README.md >> ${dir $@}README.md
 
 ifneq (${PRE_SRC},${PRE_TRG})
-${WORKDIR}/%.clean.${PRE_TRG}.gz: ${TMPDIR}/${LANGPAIRSTR}/%.clean.${PRE_TRG}
+${WORKDIR}/%.${PRE_TRG}.gz: ${TMPWORKDIR}/${LANGPAIRSTR}/%.${PRE_TRG}
 	mkdir -p ${dir $@}
 	${GZIP} -c < $< > $@
 endif

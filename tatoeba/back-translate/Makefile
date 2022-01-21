@@ -5,7 +5,7 @@
 #
 
 PWD      := ${shell pwd}
-REPOHOME := ${PWD}/../
+REPOHOME := ${PWD}/../../
 TOOLSDIR := ${REPOHOME}tools
 
 include ${REPOHOME}lib/env.mk

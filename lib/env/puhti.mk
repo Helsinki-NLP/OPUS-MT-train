@@ -30,7 +30,7 @@ GPU_MODULES = gcc/8.3.0 cuda/10.1.168 cudnn/7.6.1.34-10.1 intel-mkl/2019.0.4 pyt
 LOAD_CPU_ENV = module load ${CPU_MODULES} && module list
 LOAD_GPU_ENV = module load ${GPU_MODULES} && module list
 
-ifdef HPC_DISK
+ifneq (${HPC_DISK},)
   HPC_GPU_ALLOCATION = --gres=gpu:${GPU}:${NR_GPUS},nvme:${HPC_DISK}
   HPC_CPU_EXTRA1     = \#SBATCH --gres=nvme:${HPC_DISK}
 endif

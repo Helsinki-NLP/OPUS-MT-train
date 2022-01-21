@@ -6,14 +6,12 @@
 
 ## testset dir for all test sets in this language pair
 ## and all trokenized test sets that can be found in that directory
-TESTSET_HOME    = ${PWD}/testsets
+TESTSET_HOME    = ${REPOHOME}testsets
 TESTSET_DIR     = ${TESTSET_HOME}/${SRC}-${TRG}
 TESTSETS        = $(sort $(patsubst ${TESTSET_DIR}/%.${SRCEXT}.gz,%,${wildcard ${TESTSET_DIR}/*.${SRCEXT}.gz}))
 TESTSETS_PRESRC = $(patsubst %,${TESTSET_DIR}/%.${SRCEXT}.${PRE}.gz,${TESTSETS})
 TESTSETS_PRETRG = $(patsubst %,${TESTSET_DIR}/%.${TRGEXT}.${PRE}.gz,${TESTSETS})
 
-# TESTSETS_PRESRC = $(patsubst %.gz,%.${PRE}.gz,${sort $(subst .${PRE},,${wildcard ${TESTSET_DIR}/*.${SRC}.gz})})
-# TESTSETS_PRETRG = $(patsubst %.gz,%.${PRE}.gz,${sort $(subst .${PRE},,${wildcard ${TESTSET_DIR}/*.${TRG}.gz})})
 
 ## eval all available test sets
 eval-testsets:
@@ -42,11 +40,9 @@ ${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.ensemble.${SRC}.${TRG}: ${
 	grep . $< > $@.input
 	${LOAD_ENV} && ${MARIAN_DECODER} -i $@.input \
 		--models ${ENSEMBLE} \
-		--vocabs ${WORKDIR}/${MODEL}.vocab.yml \
-			${WORKDIR}/${MODEL}.vocab.yml \
-			${WORKDIR}/${MODEL}.vocab.yml \
+		--vocabs ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB} \
 		${MARIAN_DECODER_FLAGS} > $@.output
-ifeq (${PRE_TRG},spm${TRGBPESIZE:000=}k)
+ifneq ($(findstring spm,${PRE_TRG}),)
 	sed 's/ //g;s/▁/ /g' < $@.output | sed 's/^ *//;s/ *$$//' > $@
 else
 	sed 's/\@\@ //g;s/ \@\@//g;s/ \@\-\@ /-/g' < $@.output |\
@@ -65,9 +61,8 @@ ${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}: ${TEST_SRC}
 	grep . $< > $@.input
 	${LOAD_ENV} && ${MARIAN_DECODER} -i $@.input \
 		-c ${word 2,$^}.decoder.yml \
-		-d ${MARIAN_GPUS} \
 		${MARIAN_DECODER_FLAGS} > $@.output
-ifeq (${PRE_TRG},spm${TRGBPESIZE:000=}k)
+ifneq ($(findstring spm,${PRE_TRG}),)
 	sed 's/ //g;s/▁/ /g' < $@.output | sed 's/^ *//;s/ *$$//' > $@
 else
 	sed 's/\@\@ //g;s/ \@\@//g;s/ \@\-\@ /-/g' < $@.output |\
@@ -81,10 +76,15 @@ ifneq ($(filter zh zho jp jpn cmn,${TRGLANGS}),)
   SACREBLEU_PARAMS = --tokenize zh
 endif
 
+## simple hack that makes chrF scores compatible with previous version
+## of sacrebleu (now: score in percentages)
+## --> this breaks easily if the score < 10 or = 100
+
 %.eval: % ${TEST_TRG}
 	paste ${TEST_SRC}.${PRE_SRC} ${TEST_TRG} | grep $$'.\t' | cut -f2 > $@.ref
-	cat $< | sacrebleu ${SACREBLEU_PARAMS} $@.ref > $@
-	cat $< | sacrebleu ${SACREBLEU_PARAMS} --metrics=chrf --width=3 $@.ref >> $@
+	cat $< | sacrebleu -f text ${SACREBLEU_PARAMS} $@.ref > $@
+	cat $< | sacrebleu -f text ${SACREBLEU_PARAMS} --metrics=chrf --width=3 $@.ref |\
+	sed 's/\([0-9][0-9]\)\.\([0-9]*\)$$/0.\1\2/'         >> $@
 	rm -f $@.ref
 
 

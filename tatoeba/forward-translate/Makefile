@@ -16,7 +16,7 @@
 #
 
 PWD      := ${shell pwd}
-REPOHOME := ${PWD}/../
+REPOHOME := ${PWD}/../../
 
 include ${REPOHOME}lib/env.mk
 include ${REPOHOME}lib/config.mk
@@ -30,11 +30,14 @@ TRG = eng
 ## change decoder settings
 ## TODO: do we need this?
 
-MARIAN_BEAM_SIZE=1
-MARIAN_MINI_BATCH=100
-MARIAN_MAXI_BATCH=100
-MARIAN_MAX_LENGTH=200
-MARIAN_WORKSPACE=12000
+MARIAN_BEAM_SIZE  = 1
+MARIAN_MINI_BATCH = 128
+MARIAN_MAXI_BATCH = 256
+MARIAN_MAX_LENGTH = 200
+MARIAN_WORKSPACE  = 12000
+
+# MARIAN_MINI_BATCH = 768
+# MARIAN_MAXI_BATCH = 2048
 
 
 TATOEBA_VERSION          ?= v2021-08-07
@@ -73,7 +76,7 @@ MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
 
 MULTI_TARGET_MODEL := ${shell wget -qq -O - ${MODELINFO} | grep 'use-target-labels' | wc -l}
 ifneq (${MULTI_TARGET_MODEL},0)
-  TARGET_LANG_LABEL := ${shell wget -qq -O - ${MODELINFO} | grep -o '>>${TRG}.*<<'}
+  TARGET_LANG_LABEL := ${shell wget -qq -O - ${MODELINFO} | grep -o '>>${TRG}.*<<' | head -1}
 endif
 
 RELEASED_BITEXTS := $(patsubst %.tar,%,${shell wget -qq -O - ${TATOEBA_GITRAW}/Wiki.md | \
@@ -85,10 +88,9 @@ RELEASED_BITEXTS_REV = ${shell (for d in ${RELEASED_BITEXTS}; do echo $$d; done)
 PART           ?= aa
 OUTPUT_DIR     ?= ${LANGPAIR}
 
-BITEXT_DATADIR = ${PWD}/../work-tatoeba/data/simple
-MODEL_WORKDIR  = ${PWD}/../work-tatoeba/${LANGPAIR}
-BITEXT_SRCRAW  = ${BITEXT_DATADIR}/Tatoeba-train-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${SRC}.gz
-BITEXT_SRCPRE  = ${wildcard ${MODEL_WORKDIR}/train/opusTC${TATOEBA_VERSION_NOHYPHEN}.src.clean.spm*.gz}
+BITEXT_DATADIR = ${PWD}/../work/data/simple
+MODEL_WORKDIR  = ${PWD}/../work/${LANGPAIR}
+BITEXT_SRCRAW  = ${BITEXT_DATADIR}/Tatoeba-train-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.${CLEAN_TRAINDATA_TYPE}.${SRC}.gz
 
 BITEXT_BASE    = ${OUTPUT_DIR}/Tatoeba-train.${MODELNAME}.${LANGPAIR}
 BITEXT_SRC     = ${BITEXT_BASE}.${SRC}.${PART}.gz
@@ -111,6 +113,9 @@ ALL_BITEXT_LATEST_TRG = ${patsubst %,${OUTPUT_DIR}/latest/Tatoeba-train.%.${LANG
 
 .PHONY: all
 all: translate
+
+.PHONY: mtmodel
+mtmodel: ${LANGPAIR}/${MODELNAME}/decoder.yml
 
 .PHONY: prepare
 prepare: ${LANGPAIR}/${MODELNAME}/decoder.yml ${BITEXT_PRE}
@@ -136,6 +141,123 @@ print-modelinfo:
 	@echo "multi-target model: ${MULTI_TARGET_MODEL}"
 	@echo "target language label: ${TARGET_LANG_LABEL}"
 
+print-modelname:
+	@echo ${MODELNAME}
+
+##-------------------------------------------
+## translation model in reverse direction
+## --> for scoring translations
+##-------------------------------------------
+
+REV_LANGPAIR  = ${TRG}-${SRC}
+REV_MODELZIP := ${shell wget -qq -O - ${TATOEBA_RELEASED} | grep '^${REV_LANGPAIR}' | head -1 | cut -f4}
+REV_MODELINFO = ${patsubst ${TATOEBA_MODEL_STORAGE}/%.zip,${TATOEBA_GITRAW}/models/%.yml,${REV_MODELZIP}}
+REV_MODELNAME = ${patsubst %.zip,%,${notdir ${REV_MODELZIP}}}
+
+REV_MULTI_TARGET_MODEL := ${shell wget -qq -O - ${REV_MODELINFO} | grep 'use-target-labels' | wc -l}
+ifeq (${REV_MULTI_TARGET_MODEL},1)
+  REV_SRC_PREPROCESS_ARGS = ${TRG} ${SRC} ${REV_LANGPAIR}/${REV_MODELNAME}/source.spm
+  REV_TRG_PREPROCESS_ARGS = ${SRC} ${TRG} ${REV_LANGPAIR}/${REV_MODELNAME}/target.spm noflags
+else
+  REV_SRC_PREPROCESS_ARGS = ${TRG} ${REV_LANGPAIR}/${REV_MODELNAME}/source.spm
+  REV_TRG_PREPROCESS_ARGS = ${SRC} ${REV_LANGPAIR}/${REV_MODELNAME}/target.spm
+endif
+
+
+## score translations with reverse translation model
+## normalize scores (see https://github.com/browsermt/students)
+
+SCOREFILES    = $(patsubst %.${SRC}.gz,%.${SRC}.scores.gz,$(wildcard ${OUTPUT_DIR}/latest/*.${SRC}.gz))
+RAWSCOREFILES = $(patsubst %.${SRC}.gz,%.${SRC}.raw-scores.gz,$(wildcard ${OUTPUT_DIR}/latest/*.${SRC}.gz))
+
+.PHONY: score-translation score-translations
+score-translation: ${BITEXT_LATEST_SRC:.gz=.scores.gz}
+score-translations: ${SCOREFILES}
+sort-scored-translations: ${OUTPUT_DIR}/latest/Tatoeba-train.sorted.gz
+sort-raw-scored-translations: ${OUTPUT_DIR}/latest/Tatoeba-train.sorted-raw.gz
+
+print-score-file:
+	echo ${BITEXT_LATEST_SRC:.gz=.scores.gz}
+
+${OUTPUT_DIR}/latest/%.${SRC}.scores.gz: ${OUTPUT_DIR}/latest/%.${SRC}.gz
+	${MAKE} SRC=${TRG} TRG=${SRC} mtmodel
+	${GZCAT} ${<:.${SRC}.gz=.${TRG}.gz} |\
+	${REV_LANGPAIR}/${REV_MODELNAME}/preprocess.sh ${REV_SRC_PREPROCESS_ARGS} | \
+	${GZIP} -c > $@.src.gz
+	${GZCAT} $< |\
+	${REV_LANGPAIR}/${REV_MODELNAME}/preprocess.sh ${REV_TRG_PREPROCESS_ARGS} | \
+	${GZIP} -c > $@.trg.gz
+	${LOAD_ENV} && \
+	cd ${REV_LANGPAIR}/${REV_MODELNAME} && \
+	${MARIAN_SCORER} \
+		-m `grep -A1 models decoder.yml | tail -1 | sed 's/ *- //'` \
+		-v `grep -A2 vocabs decoder.yml | tail -2 | sed 's/ *- //' | tr "\n" ' '` \
+		-t ${PWD}/$@.src.gz ${PWD}/$@.trg.gz \
+		${MARIAN_SCORER_FLAGS} |\
+	${GZIP} -c > ${PWD}/$(@:.scores.gz=.raw-scores.gz)
+	paste <(gzip -dc $(@:.scores.gz=.raw-scores.gz)) <(gzip -dc $@.trg.gz) | \
+	python3 ${SCRIPTDIR}/normalize-scores.py | cut -f1 | ${GZIP} -c > $@
+	rm -f $@.src.gz $@.trg.gz
+
+
+${OUTPUT_DIR}/latest/Tatoeba-train.sorted.gz: ${SCOREFILES}
+	${GZCAT} ${OUTPUT_DIR}/latest/*.${SRC}.scores.gz | ${GZIP} -c > $@.scores.gz
+	${GZCAT} ${OUTPUT_DIR}/latest/*.${SRC}.gz | ${GZIP} -c > $@.src.gz
+	${GZCAT} ${OUTPUT_DIR}/latest/*.${TRG}.gz | ${GZIP} -c > $@.trg.gz
+	paste <(gzip -cd $@.scores.gz) <(gzip -cd $@.src.gz) <(gzip -cd $@.trg.gz) |\
+	LC_ALL=C sort -n -k1,1 -S 10G | uniq -f1 | ${GZIP} -c > $@
+	rm -f $@.src.gz $@.trg.gz
+
+
+${OUTPUT_DIR}/latest/Tatoeba-train.sorted-raw.gz: ${RAWSCOREFILES}
+	${GZCAT} ${OUTPUT_DIR}/latest/*.${SRC}.raw-scores.gz | ${GZIP} -c > $@.raw-scores.gz
+	${GZCAT} ${OUTPUT_DIR}/latest/*.${SRC}.gz | ${GZIP} -c > $@.src.gz
+	${GZCAT} ${OUTPUT_DIR}/latest/*.${TRG}.gz | ${GZIP} -c > $@.trg.gz
+	paste <(gzip -cd $@.raw-scores.gz) <(gzip -cd $@.src.gz) <(gzip -cd $@.trg.gz) |\
+	LC_ALL=C sort -n -k1,1 -S 10G | uniq -f1 | ${GZIP} -c > $@
+	rm -f $@.src.gz $@.trg.gz
+
+
+# Part of the data to be removed (0.05 is 5%)
+# RETAIN - give a number in percent about how much to retain
+# REMOVE - 
+#
+# (see https://github.com/browsermt/students)
+
+# REMOVE = 0.05
+# RETAIN = ${shell echo "100-100*${REMOVE}/1;" | bc}
+RETAIN = 95
+REMOVE = ${shell echo "scale=2; (100-${RETAIN})/100" | bc}
+
+extract-best-translations: ${OUTPUT_DIR}/latest/Tatoeba-train.${SRC}.best${RETAIN}.gz
+extract-rawbest-translations: ${OUTPUT_DIR}/latest/Tatoeba-train.${SRC}.rawbest${RETAIN}.gz
+
+%.${SRC}.best${RETAIN}.gz: %.sorted.gz
+	$(eval STARTLINE := $(shell ${GZIP} -dc $< | wc -l | sed "s|$$|*$(REMOVE)|" | bc | cut -f1 -d.))
+	@echo Removing $(REMOVE) removes $(STARTLINE) lines
+	${GZIP} -dc $< | tail -n +$(STARTLINE) | cut -f2,3 | \
+	tee >(cut -f1 | gzip -c >$@) |\
+	cut -f2 | gzip -c > ${@:.${SRC}.best${RETAIN}.gz=.${TRG}.best${RETAIN}.gz}
+
+%.${TRG}.best${RETAIN}.gz: %.${SRC}.best${RETAIN}.gz
+	@echo "done!"
+
+%.${SRC}.rawbest${RETAIN}.gz: %.sorted-raw.gz
+	$(eval STARTLINE := $(shell ${GZIP} -dc $< | wc -l | sed "s|$$|*$(REMOVE)|" | bc | cut -f1 -d.))
+	@echo Removing $(REMOVE) removes $(STARTLINE) lines
+	${GZIP} -dc $< | tail -n +$(STARTLINE) | cut -f2,3 | \
+	tee >(cut -f1 | gzip -c >$@) |\
+	cut -f2 | gzip -c > ${@:.${SRC}.rawbest${RETAIN}.gz=.${TRG}.rawbest${RETAIN}.gz}
+
+%.${TRG}.raawbest${RETAIN}.gz: %.${SRC}.rawbest${RETAIN}.gz
+	@echo "done!"
+
+
+
+
+
+
+
 ## fetch the latest model
 
 ${LANGPAIR}/${MODELNAME}/decoder.yml:
@@ -160,10 +282,8 @@ else
 endif
 
 
-ifeq (${BITEXT_SRCPRE},)
-
 ${BITEXT_SRCRAW}:
-	${MAKE} -C .. SRCLANGS=${SRC} TRGLANGS=${TRG} clean-data-tatoeba
+	${MAKE} -C .. SRCLANGS=${SRC} TRGLANGS=${TRG} rawdata-tatoeba
 
 ${BITEXT_PRE}: ${BITEXT_SRCRAW}
 ifneq (${MODELZIP},)
@@ -173,19 +293,11 @@ ifneq (${MODELZIP},)
 	grep -v '[<>{}]' |\
 	${LANGPAIR}/${MODELNAME}/preprocess.sh ${PREPROCESS_ARGS} |\
 	perl -e 'while (<>){next if (split(/\s+/)>${MAX_LENGTH});print;}' |\
-	split -l ${SPLIT_SIZE} - ${patsubst %${PART}.gz,%,$@} |\
-	gzip -f > $@
-endif
-
-else
-
-${BITEXT_PRE}: ${BITEXT_SRCPRE}
-	${GZCAT} $< |\
-	perl -e 'while (<>){next if (split(/\s+/)>${MAX_LENGTH});print;}' |\
 	split -l ${SPLIT_SIZE} - ${patsubst %${PART}.gz,%,$@}
 	${GZIP} -f ${patsubst %${PART}.gz,%,$@}??
-
 endif
+
+
 
 
 
@@ -209,15 +321,15 @@ ${BITEXT_BASE}.${SRC}.%.gz: ${BITEXT_BASE}.${SRC}.spm.%.gz
 
 ${OUTPUT_DIR}/latest/Tatoeba-train.%.${LANGPAIR}.${SRC}.gz: ${BITEXT_BASE}.${SRC}.%.gz
 	mkdir -p ${dir $@}
-	cp $< $@
+	rsync $< $@
 
 ${OUTPUT_DIR}/latest/Tatoeba-train.%.${LANGPAIR}.${TRG}.gz: ${BITEXT_BASE}.${TRG}.%.gz
 	mkdir -p ${dir $@}
-	cp $< $@
+	rsync $< $@
 
 ${BITEXT_LATEST_README}: ${LANGPAIR}/${MODELNAME}/README.md
 	mkdir -p ${dir $@}
-	cp $< $@
+	rsync $< $@
 
 
 ## translate
@@ -230,7 +342,6 @@ ifneq (${MODELZIP},)
 	${MARIAN_DECODER} \
 		-c decoder.yml \
 		-i ${PWD}/$< \
-		-d ${MARIAN_GPUS} \
 		${MARIAN_DECODER_FLAGS} |\
 	sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' |\
 	gzip -c > ${PWD}/$@
@@ -313,4 +424,41 @@ remove-incomplete-latest:
 	    fi \
 	  done \
 	fi
+
+
+
+
+
+
+# ## for testing purposes
+
+# score2-translation: ${BITEXT_LATEST_SRC:.gz=.scores2}
+# score3-translation: ${BITEXT_LATEST_SRC:.gz=.scores3}
+
+# ${OUTPUT_DIR}/latest/%.${SRC}.scores2: ${OUTPUT_DIR}/latest/%.${SRC}.gz
+# 	${MAKE} SRC=${TRG} TRG=${SRC} mtmodel
+# 	${GZCAT} ${<:.${SRC}.gz=.${TRG}.gz} |\
+# 	${REV_LANGPAIR}/${REV_MODELNAME}/preprocess.sh ${REV_SRC_PREPROCESS_ARGS} | \
+# 	${GZIP} -c > $@.src.gz
+# 	${GZCAT} $< |\
+# 	${REV_LANGPAIR}/${REV_MODELNAME}/preprocess.sh ${REV_TRG_PREPROCESS_ARGS} | \
+# 	${GZIP} -c > $@.trg.gz
+# 	${LOAD_ENV} && \
+# 	cd ${REV_LANGPAIR}/${REV_MODELNAME} && \
+# 	${MARIAN_SCORER} \
+# 		-m `grep -A1 models decoder.yml | tail -1 | sed 's/ *- //'` \
+# 		-v `grep -A2 vocabs decoder.yml | tail -2 | sed 's/ *- //' | tr "\n" ' '` \
+# 		-t ${PWD}/$@.src.gz ${PWD}/$@.trg.gz \
+# 		-n1 -d 0 --mini-batch 1 --maxi-batch 1 --log ${PWD}/$@.log > ${PWD}/$@ 2>${PWD}/$@.err
+
+# ${OUTPUT_DIR}/latest/%.${SRC}.scores3: ${OUTPUT_DIR}/latest/%.${SRC}.gz
+# 	${LOAD_ENV} && \
+# 	cd ${REV_LANGPAIR}/${REV_MODELNAME} && \
+# 	${MARIAN_SCORER} \
+# 		-m `grep -A1 models decoder.yml | tail -1 | sed 's/ *- //'` \
+# 		-v `grep -A2 vocabs decoder.yml | tail -2 | sed 's/ *- //' | tr "\n" ' '` \
+# 		-t ${PWD}/$@.src.gz ${PWD}/$@.trg.gz \
+# 		-n1 -d 0 -w 10000 --mini-batch 128 \
+# 		--max-length 200 --max-length-crop \
+# 		--maxi-batch 256 --maxi-batch-sort src
 

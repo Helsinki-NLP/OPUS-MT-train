@@ -1,15 +1,44 @@
 # -*-makefile-*-
 #
-# model configurations
+# model and environment configurations
 #
 
 
+
+## some pre-defined language sets
+include ${REPOHOME}lib/langsets.mk
+
+
+## supported model types
+## configuration for each type is in lib/train.mk
+
+MODELTYPES   = 	transformer \
+		transformer-align \
+		transformer-base \
+		transformer-base-align \
+		transformer-big \
+		transformer-big-align \
+		transformer-small \
+		transformer-small-align \
+		transformer-tiny \
+		transformer-tiny-align \
+		transformer-tiny11 \
+		transformer-tiny11-align
+
+## default model type
+
+MODELTYPE    =  transformer-align
+NR           =  1
+
+
 ## name of the model-specific configuration file
-MODELCONFIG ?= config.mk
+## NEW: make it more model specific
+#
+# MODELCONFIG ?= config.mk
 
 
 ## various ways of setting the model languages
-
+##
 ## (1) explicitly set source and target languages, for example:
 ##     SRCLANGS="da no sv" TRGLANGS="fi da"
 ##
@@ -40,13 +69,6 @@ else
 endif
 
 
-## OLD: set to first and last lang
-## --> this makes the evaluation look like it is one lang-pair
-##
-# SRC ?= ${firstword ${SRCLANGS}}
-# TRG ?= ${lastword ${TRGLANGS}}
-
-
 ##----------------------------------------------------------------------
 ## SKIP_LANGPAIRS can be used to skip certain language pairs
 ## in data preparation for multilingual models
@@ -67,9 +89,15 @@ SKIP_SAME_LANG ?= 0
 ## set SHUFFLE_DATA if you want to shuffle data for 
 ## each language pair to be added to the training data
 ## --> especially useful in connection with FIT_DATA_SIZE
+## set DATA_IS_SHUFFLED=1 if the training data is already shuffled
+## --> useful to avoid shuffling when training sentence piece model
+## NEW (2021-12-16): SHUFFLE_DATA is now set by default
+## --> can now also avoid sqlite and data shuffling inside MarianNMT
+## --> is that a problem (would MarianNMT use different random shuffles / epoch?)
 ##----------------------------------------------------------------------
 
-# SHUFFLE_DATA = 1
+SHUFFLE_DATA = 1
+# DATA_IS_SHUFFLED = 1
 
 ## devtest data is shuffled by default
 SHUFFLE_DEVDATA = 1
@@ -111,7 +139,7 @@ MAX_OVER_SAMPLING ?= 50
 ## bitext has equal number of lines in source and target
 ## ---> this only prints a warning if not
 ##----------------------------------------------------------------------
-# CHECK_TRAINDATA_SIZE
+# CHECK_TRAINDATA_SIZE = 1
 
 
 # sorted languages and langpair used to match resources in OPUS
@@ -120,14 +148,14 @@ SORTSRC     = ${firstword ${SORTLANGS}}
 SORTTRG     = ${lastword ${SORTLANGS}}
 LANGPAIR    = ${SORTSRC}-${SORTTRG}
 SPACE       = $(empty) $(empty)
-LANGSRCSTR  = ${subst ${SPACE},+,$(SRCLANGS)}
-LANGTRGSTR  = ${subst ${SPACE},+,$(TRGLANGS)}
-LANGPAIRSTR = ${LANGSRCSTR}-${LANGTRGSTR}
+LANGSRCSTR  ?= ${subst ${SPACE},+,$(SRCLANGS)}
+LANGTRGSTR  ?= ${subst ${SPACE},+,$(TRGLANGS)}
+LANGPAIRSTR ?= ${LANGSRCSTR}-${LANGTRGSTR}
 
 
 ## for monolingual things
-LANGS ?= ${SRCLANGS}
-LANGID ?= ${firstword ${LANGS}}
+LANGS   ?= ${SRCLANGS}
+LANGID  ?= ${firstword ${LANGS}}
 LANGSTR ?= ${subst ${SPACE},+,$(LANGS)}
 
 
@@ -157,17 +185,17 @@ endif
 ## NEW default size = 2500 (keep more for training for small languages)
 ## NOTE: size will be increased to 5000 for Tatoeba
 
-DEVSIZE     = 2500
-TESTSIZE    = 2500
+DEVSIZE     ?= 2500
+TESTSIZE    ?= 2500
 
 ## set some additional thresholds for 
 ## the size of test and dev data
 ## DEVMINSIZE is the absolute minimum we require
 ## to run any training procedures
 
-DEVSMALLSIZE  = 1000
-TESTSMALLSIZE = 1000
-DEVMINSIZE    = 250
+DEVSMALLSIZE  ?= 1000
+TESTSMALLSIZE ?= 1000
+DEVMINSIZE    ?= 250
 
 
 ## set additional argument options for opus_read (if it is used)
@@ -232,16 +260,13 @@ OPUSLANGS := ${call get-opus-langs}
 ##   - BIGGER_BITEXTS lists all bitext with more than DEVSMALLSIZE sentence pairs
 ##   - SMALLER_BITEXTS lists potentially smaller bitexts but at least DEVMINSIZE big
 ##   - DEVSET is the first of the potential devset that exists with sufficient size
+## TODO: what do we do if there is no devset?
 
 POTENTIAL_DEVSETS = Tatoeba GlobalVoices infopankki JW300 bible-uedin
 BIGGER_BITEXTS   := ${call get-bigger-bitexts,${SRC},${TRG},${DEVSMALLSIZE}}
 SMALLER_BITEXTS  := ${call get-bigger-bitexts,${SRC},${TRG},${DEVMINSIZE}}
 DEVSET ?= ${firstword 	${filter ${POTENTIAL_DEVSETS},${BIGGER_BITEXTS}} \
 			${filter ${POTENTIAL_DEVSETS},${SMALLER_BITEXTS}}}
-
-## why would we need foreach?
-#DEVSET ?= ${firstword 	${foreach c,${POTENTIAL_DEVSETS},${filter ${c},${BIGGER_BITEXTS}}} \
-# 			${foreach c,${POTENTIAL_DEVSETS},${filter ${c},${SMALLER_BITEXTS}}}}
 
 
 
@@ -282,8 +307,8 @@ TUNE_GPUJOB_SUBMIT  ?=
 
 
 ## existing projects in WORKHOME
-ALL_LANG_PAIRS := ${shell ls ${WORKHOME} 2>/dev/null | grep -- '-' | grep -v old}
-ALL_BILINGUAL_MODELS := ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" |  grep -v -- '\+'}
+ALL_LANG_PAIRS          := ${shell ls ${WORKHOME} 2>/dev/null | grep -- '-' | grep -v old}
+ALL_BILINGUAL_MODELS    := ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" |  grep -v -- '\+'}
 ALL_MULTILINGUAL_MODELS := ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" | grep -- '\+'}
 
 
@@ -292,36 +317,67 @@ ALL_MULTILINGUAL_MODELS := ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" | grep
 ##----------------------------------------------------------------------------
 
 ## type of subword segmentation (bpe|spm)
-## model size (NOTE: BPESIZE is also used for sentencepiece!)
-SUBWORDS   ?= spm
-BPESIZE    ?= 32000
-SRCBPESIZE ?= ${BPESIZE}
-TRGBPESIZE ?= ${BPESIZE}
+## model vocabulary size (NOTE: BPESIZE is used as default)
+SUBWORDS              ?= spm
+BPESIZE               ?= 32000
+SRCBPESIZE            ?= ${BPESIZE}
+TRGBPESIZE            ?= ${BPESIZE}
+SUBWORD_VOCAB_SIZE    ?= ${BPESIZE}
+SUBWORD_SRCVOCAB_SIZE ?= ${SUBWORD_VOCAB_SIZE}
+SUBWORD_TRGVOCAB_SIZE ?= ${SUBWORD_VOCAB_SIZE}
 
-BPEMODELNAME ?= opus
+## joint source+target sentencepiece model
+ifeq (${USE_JOINT_SUBWORD_MODEL},1)
+  SUBWORDS = jointspm
+endif
 
-BPESRCMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.src.bpe${SRCBPESIZE:000=}k-model
-BPETRGMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.trg.bpe${TRGBPESIZE:000=}k-model
+SUBWORD_MODEL_NAME ?= opus
 
-SPMSRCMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.src.spm${SRCBPESIZE:000=}k-model
-SPMTRGMODEL  ?= ${WORKDIR}/train/${BPEMODELNAME}.trg.spm${TRGBPESIZE:000=}k-model
+ifeq (${SUBWORDS},bpe)
+  BPESRCMODEL      ?= ${WORKDIR}/train/${SUBWORD_MODEL_NAME}.src.bpe${SUBWORD_SRCVOCAB_SIZE:000=}k-model
+  BPETRGMODEL      ?= ${WORKDIR}/train/${SUBWORD_MODEL_NAME}.trg.bpe${SUBWORD_TRGVOCAB_SIZE:000=}k-model
+  BPE_MODEL        ?= ${WORKDIR}/train/${SUBWORD_MODEL_NAME}.bpe${SUBWORD_VOCAB_SIZE:000=}k-model
+  SUBWORD_SRC_MODEL = ${BPESRCMODEL}
+  SUBWORD_TRG_MODEL = ${BPETRGMODEL}
+else
+  SPMSRCMODEL      ?= ${WORKDIR}/train/${SUBWORD_MODEL_NAME}.src.${SUBWORDS}${SUBWORD_SRCVOCAB_SIZE:000=}k-model
+  SPMTRGMODEL      ?= ${WORKDIR}/train/${SUBWORD_MODEL_NAME}.trg.${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k-model
+  SPM_MODEL        ?= ${WORKDIR}/train/${SUBWORD_MODEL_NAME}.${SUBWORDS}${SUBWORD_VOCAB_SIZE:000=}k-model
+  SUBWORD_SRC_MODEL = ${SPMSRCMODEL}
+  SUBWORD_TRG_MODEL = ${SPMTRGMODEL}
+  SUBWORD_SRC_VOCAB = ${SPMSRCMODEL}.vocab
+  SUBWORD_TRG_VOCAB = ${SPMTRGMODEL}.vocab
+endif
 
-## don't delete BPE/sentencepiece models!
-.PRECIOUS: ${BPESRCMODEL} ${BPETRGMODEL}
-.PRECIOUS: ${SPMSRCMODEL} ${SPMTRGMODEL}
+
+## don't delete subword models!
+.PRECIOUS: ${SUBWORD_SRC_MODEL} ${SUBWORD_TRG_MODEL}
 
 ## size of the joined vocabulary
 ## TODO: heuristically add 1,000 to cover language labels is a bit ad-hoc
-VOCABSIZE  ?= $$((${SRCBPESIZE} + ${TRGBPESIZE} + 1000))
+VOCABSIZE  ?= $$((${SUBWORD_SRCVOCAB_SIZE} + ${SUBWORD_TRGVOCAB_SIZE} + 1000))
 
 ## for document-level models
 CONTEXT_SIZE = 100
 
-## pre-processing type
-# PRE     = norm
-PRE       = simple
-PRE_SRC   = ${SUBWORDS}${SRCBPESIZE:000=}k
-PRE_TRG   = ${SUBWORDS}${TRGBPESIZE:000=}k
+
+## pre-processing/data-cleanup type
+## PRE .......... apply basic normalisation scripts
+## CLEAN_TYPE ... clean = simple noise filtering
+##                strict = some additional cleanup based on test set stats
+## CLEAN_TESTDATA_TYPE should stay as 'clean' because
+## we need those data sets to get the parameters
+## for the strict mode
+
+PRE                  = simple
+CLEAN_TRAINDATA_TYPE = strict
+CLEAN_DEVDATA_TYPE   = strict
+CLEAN_TESTDATA_TYPE  = clean
+
+
+## subword splitting type
+PRE_SRC   = ${SUBWORDS}${SUBWORD_SRCVOCAB_SIZE:000=}k
+PRE_TRG   = ${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k
 
 
 ##-------------------------------------
@@ -360,6 +416,8 @@ TRAIN_BASE = ${WORKDIR}/train/${DATASET}
 TRAIN_SRC  = ${TRAIN_BASE}.src
 TRAIN_TRG  = ${TRAIN_BASE}.trg
 TRAIN_ALG  = ${TRAIN_BASE}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}.src-trg.alg.gz
+TRAIN_S2T  = ${TRAIN_BASE}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}.s2t.gz
+TRAIN_T2S  = ${TRAIN_BASE}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}.t2s.gz
 
 ## data sets that are pre-processed and ready to be used
 TRAINDATA_SRC = ${TRAIN_SRC}.clean.${PRE_SRC}.gz 
@@ -370,9 +428,10 @@ TESTDATA_SRC  = ${TEST_SRC}.${PRE_SRC}
 TESTDATA_TRG  = ${TEST_TRG}
 
 ## training data in local space
-LOCAL_TRAIN_SRC = ${TMPDIR}/${LANGPAIRSTR}/train/${DATASET}.src
-LOCAL_TRAIN_TRG = ${TMPDIR}/${LANGPAIRSTR}/train/${DATASET}.trg
-LOCAL_MONO_DATA = ${TMPDIR}/${LANGSTR}/train/${DATASET}.mono
+LOCAL_TRAIN_SRC = ${TMPWORKDIR}/${LANGPAIRSTR}/train/${DATASET}.src
+LOCAL_TRAIN_TRG = ${TMPWORKDIR}/${LANGPAIRSTR}/train/${DATASET}.trg
+LOCAL_TRAIN     = ${TMPWORKDIR}/${LANGPAIRSTR}/train/${DATASET}
+LOCAL_MONO_DATA = ${TMPWORKDIR}/${LANGSTR}/train/${DATASET}.mono
 
 ## dev and test data
 DEV_SRC   ?= ${WORKDIR}/val/${DEVSET_NAME}.src
@@ -384,22 +443,9 @@ TEST_TRG  ?= ${WORKDIR}/test/${TESTSET_NAME}.trg
 
 ## model basename and optional sub-dir
 
-MODEL_SUBDIR =
-MODEL        =  ${MODEL_SUBDIR}${DATASET}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
-
-
-## supported model types
-## configuration for each type is in lib/train.mk
-
-MODELTYPES   = 	transformer \
-		transformer-big \
-		transformer-align \
-		transformer-big-align \
-		transformer-small-align \
-		transformer-tiny-align \
-		transformer-tiny
-MODELTYPE    =  transformer-align
-NR           =  1
+# MODEL_SUBDIR  =
+# MODEL_VARIANT = 
+MODEL         =  ${MODEL_SUBDIR}${DATASET}${MODEL_VARIANT}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
 
 MODEL_BASENAME   = ${MODEL}.${MODELTYPE}.model${NR}
 MODEL_VALIDLOG   = ${MODEL}.${MODELTYPE}.valid${NR}.log
@@ -407,6 +453,22 @@ MODEL_TRAINLOG   = ${MODEL}.${MODELTYPE}.train${NR}.log
 MODEL_START      = ${WORKDIR}/${MODEL_BASENAME}.npz
 MODEL_FINAL      = ${WORKDIR}/${MODEL_BASENAME}.npz.best-perplexity.npz
 MODEL_DECODER    = ${MODEL_FINAL}.decoder.yml
+
+## quantized models
+MODEL_BIN           = ${WORKDIR}/${MODEL_BASENAME}.intgemm8.bin
+MODEL_INTGEMM8TUNED = ${WORKDIR}/${MODEL_BASENAME}.intgemm8tuned.npz
+MODEL_BIN_ALPHAS    = ${WORKDIR}/${MODEL_BASENAME}.intgemm8.alphas.bin
+
+## lexical short-lists
+SHORTLIST_NRVOC     = 100
+SHORTLIST_NRTRANS   = 100
+MODEL_BIN_SHORTLIST = ${WORKDIR}/${MODEL}.lex-s2t-${SHORTLIST_NRVOC}-${SHORTLIST_NRTRANS}.bin
+
+
+
+
+.PRECIOUS: ${MODEL_FINAL} ${MODEL_BIN}
+
 
 ## for sentence-piece models: get plain text vocabularies
 ## for others: extract vocabulary from training data with MarianNMT
@@ -438,7 +500,6 @@ endif
 ## also allow models that are of the same type but with/without guided alignment
 ## --> this will be used if the flag CONTINUE_EXISTING is set on
 
-# ifdef CONTINUE_EXISTING
 ifeq (${CONTINUE_EXISTING},1)
   MODEL_LATEST = $(firstword \
 	${shell ls -t 	${WORKDIR}/*.${PRE_SRC}-${PRE_TRG}.*.model[0-9].npz \
@@ -450,9 +511,6 @@ ifeq (${CONTINUE_EXISTING},1)
   MODEL_LATEST_OPTIMIZER = $(shell echo "${MODEL_LATEST}" | \
 		sed 's|.best-perplexity.npz|.optimizer.npz|')
 endif
-
-## old:
-#	${shell ls -t ${WORKDIR}/*.${PRE_SRC}-${PRE_TRG}.*.best-perplexity.npz \
 
 
 
@@ -480,53 +538,74 @@ MARIAN_ENC_DEPTH        ?= 6
 MARIAN_DEC_DEPTH        ?= 6
 MARIAN_ATT_HEADS        ?= 8
 MARIAN_DIM_EMB          ?= 512
+MARIAN_CLIP_NORM        ?= 5
+
+## default = shuffle data and batches 
+## (set to batches or none to change this)
+# MARIAN_SHUFFLE        ?= data
+MARIAN_SHUFFLE          ?= batches
+
+## default: use sqlite database to store data
+## remove this to use regular temp data
+## set to --shuffle-in-ram to keep all shuffled data in RAM
+# MARIAN_DATA_STORAGE     ?= --sqlite
 
 
+## set to global for lower memory usage in multiprocess training
+## TODO: does this parameter really work?
+MARIAN_SHARDING         ?= local
 
-## TODO: currently marianNMT crashes with workspace > 26000
+
+## TODO: currently marianNMT crashes with workspace > 26000 (does it?)
 ## TODO: move this to individual env settings?
+##       problem: we need to know MODELTYPE before we can set this
 ifeq (${GPU},p100)
   MARIAN_WORKSPACE = 13000
+
 else ifeq (${GPU},a100)
-  MARIAN_WORKSPACE = 30000
-else ifeq (${GPU},v100)
 ifeq ($(subst -align,,${MODELTYPE}),transformer-big)
-  MARIAN_WORKSPACE = 20000
+  MARIAN_WORKSPACE = 15000
 else ifeq ($(subst -align,,${MODELTYPE}),transformer-small)
   MARIAN_WORKSPACE = 10000
 else ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny)
   MARIAN_WORKSPACE = 10000
+else ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny11)
+  MARIAN_WORKSPACE = 10000
 else
-  # MARIAN_WORKSPACE = 30000
-  # MARIAN_WORKSPACE = 26000
-  MARIAN_WORKSPACE = 24000
+  MARIAN_WORKSPACE = 20000
 endif
+
+else ifeq (${GPU},v100)
+ifeq ($(subst -align,,${MODELTYPE}),transformer-big)
+  MARIAN_WORKSPACE = 15000
+else ifeq ($(subst -align,,${MODELTYPE}),transformer-small)
+  MARIAN_WORKSPACE = 10000
+else ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny)
+  MARIAN_WORKSPACE = 10000
+else ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny11)
+  MARIAN_WORKSPACE = 10000
+else
+  MARIAN_WORKSPACE = 20000
+endif
+
 else
   MARIAN_WORKSPACE = 10000
 endif
 
-## check whether we have GPUs available
-## if not: use CPU mode for decoding
-ifneq ($(wildcard ${NVIDIA_SMI}),)
-ifeq (${shell nvidia-smi | grep failed | wc -l},1)
-  MARIAN_DECODER_FLAGS = ${MARIAN_DECODER_CPU}
-  MARIAN_EXTRA = --cpu-threads ${HPC_CORES}
-endif
-else
-  MARIAN_DECODER_FLAGS = ${MARIAN_DECODER_CPU}
-  MARIAN_EXTRA = --cpu-threads ${HPC_CORES}
-endif
+
+## TODO: do we need to reduce workspace for decoding?
+# MARIAN_DECODER_WORKSPACE = $$((${MARIAN_WORKSPACE} / 2))
+MARIAN_DECODER_WORKSPACE = 10000
+
 
 ## weights associated with training examples
 ifneq ("$(wildcard ${TRAIN_WEIGHTS})","")
 	MARIAN_TRAIN_WEIGHTS = --data-weighting ${TRAIN_WEIGHTS}
 endif
 
-### training a model with Marian NMT
-##
+
 ## NR allows to train several models for proper ensembling
 ## (with shared vocab)
-##
 ## DANGER: if several models are started at the same time
 ## then there is some racing issue with creating the vocab!
 
@@ -543,13 +622,37 @@ MARIAN_BEAM_SIZE = 4
 MARIAN_MINI_BATCH = 768
 MARIAN_MAXI_BATCH = 2048
 
-MARIAN_DECODER_GPU    = -b ${MARIAN_BEAM_SIZE} -n1 -d ${MARIAN_GPUS} -w ${MARIAN_WORKSPACE} \
+ifeq ($(GPU_AVAILABLE),1)
+  MARIAN_SCORER_FLAGS = -n1 -d ${MARIAN_GPUS} \
+			--quiet-translation -w ${MARIAN_DECODER_WORKSPACE} \
+			--mini-batch ${MARIAN_MINI_BATCH} --maxi-batch ${MARIAN_MAXI_BATCH} --maxi-batch-sort src
+  MARIAN_DECODER_FLAGS = -b ${MARIAN_BEAM_SIZE} -n1 -d ${MARIAN_GPUS} \
+			--quiet-translation -w ${MARIAN_DECODER_WORKSPACE} \
 			--mini-batch ${MARIAN_MINI_BATCH} --maxi-batch ${MARIAN_MAXI_BATCH} --maxi-batch-sort src \
-			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop --fp16 --quiet-translation
-MARIAN_DECODER_CPU    = -b ${MARIAN_BEAM_SIZE} -n1 --cpu-threads ${HPC_CORES} \
+			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop
+# --fp16
+else
+  MARIAN_SCORER_FLAGS = -n1 --cpu-threads ${HPC_CORES} \
+			--quiet-translation \
+			--mini-batch ${HPC_CORES} --maxi-batch 100 --maxi-batch-sort src
+  MARIAN_DECODER_FLAGS = -b ${MARIAN_BEAM_SIZE} -n1 --cpu-threads ${HPC_CORES} \
+			--quiet-translation \
 			--mini-batch ${HPC_CORES} --maxi-batch 100 --maxi-batch-sort src \
-			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop --fp16 --quiet-translation
-MARIAN_DECODER_FLAGS  = ${MARIAN_DECODER_GPU}
+			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop
+  MARIAN_EXTRA = --cpu-threads ${HPC_CORES}
+endif
+
+
+
+# load model-specific configuration parameters
+# if they exist in the work directory
+
+# MODELCONFIG ?= ${MODEL}.${MODELTYPE}.mk
+MODELCONFIG = ${DATASET}.${MODELTYPE}.mk
+ifneq ($(wildcard ${WORKDIR}/${MODELCONFIG}),)
+  include ${WORKDIR}/${MODELCONFIG}
+endif
+
 
 
 
@@ -559,15 +662,16 @@ MARIAN_DECODER_FLAGS  = ${MARIAN_DECODER_GPU}
 .PHONY: config local-config
 config local-config: ${WORKDIR}/${MODELCONFIG}
 
-SMALLEST_TRAINSIZE = 10000
-SMALL_TRAINSIZE    = 100000
-MEDIUM_TRAINSIZE   = 500000
-LARGE_TRAINSIZE    = 1000000
-LARGEST_TRAINSIZE  = 10000000
+SMALLEST_TRAINSIZE ?= 10000
+SMALL_TRAINSIZE    ?= 100000
+MEDIUM_TRAINSIZE   ?= 500000
+LARGE_TRAINSIZE    ?= 1000000
+LARGEST_TRAINSIZE  ?= 10000000
 
 ${WORKDIR}/${MODELCONFIG}:
-	mkdir -p ${dir $@}
-	if [ -e ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz ]; then \
+	@echo ".... create model configuration file '$@'"
+	@mkdir -p ${dir $@}
+	@if [ -e ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz ]; then \
 	  ${MAKE} ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.charfreq \
 		  ${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.charfreq; \
 	  s=`${ZCAT} ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz | head -10000001 | wc -l`; \
@@ -582,28 +686,28 @@ ${WORKDIR}/${MODELCONFIG}:
 	fi; \
 	if [ $$s -gt ${LARGEST_TRAINSIZE} ]; then \
 	  echo "# ${LANGPAIRSTR} training data bigger than ${LARGEST_TRAINSIZE}" > $@; \
-	  echo "GPUJOB_HPC_MEM = 8g"       >> $@; \
-	  echo "GPUJOB_SUBMIT  = -multigpu" >> $@; \
-	  echo "BPESIZE    = ${BPESIZE}"    >> $@; \
+	  echo "GPUJOB_HPC_MEM = 16g"        >> $@; \
+	  echo "GPUJOB_SUBMIT  = -gpu01" >> $@; \
+	  echo "SUBWORD_VOCAB_SIZE    = ${SUBWORD_VOCAB_SIZE}"    >> $@; \
 	  echo "DEVSIZE    = ${DEVSIZE}"    >> $@; \
 	  echo "TESTSIZE   = ${TESTSIZE}"   >> $@; \
 	  echo "DEVMINSIZE = ${DEVMINSIZE}" >> $@; \
 	elif [ $$s -gt ${LARGE_TRAINSIZE} ]; then \
 	  echo "# ${LANGPAIRSTR} training data bigger than ${LARGE_TRAINSIZE}" > $@; \
-	  echo "GPUJOB_HPC_MEM = 8g"       >> $@; \
+	  echo "GPUJOB_HPC_MEM = 12g"       >> $@; \
 	  echo "GPUJOB_SUBMIT  = "         >> $@; \
 	  echo "MARIAN_VALID_FREQ = 2500"  >> $@; \
-	  echo "BPESIZE    = ${BPESIZE}"    >> $@; \
+	  echo "SUBWORD_VOCAB_SIZE    = ${SUBWORD_VOCAB_SIZE}"    >> $@; \
 	  echo "DEVSIZE    = ${DEVSIZE}"    >> $@; \
 	  echo "TESTSIZE   = ${TESTSIZE}"   >> $@; \
 	  echo "DEVMINSIZE = ${DEVMINSIZE}" >> $@; \
 	elif [ $$s -gt ${MEDIUM_TRAINSIZE} ]; then \
 	  echo "# ${LANGPAIRSTR} training data bigger than ${MEDIUM_TRAINSIZE}" > $@; \
-	  echo "GPUJOB_HPC_MEM = 4g"       >> $@; \
+	  echo "GPUJOB_HPC_MEM = 8g"       >> $@; \
 	  echo "GPUJOB_SUBMIT  = "         >> $@; \
 	  echo "MARIAN_VALID_FREQ = 2500"  >> $@; \
 	  echo "MARIAN_WORKSPACE  = 10000" >> $@; \
-	  echo "BPESIZE    = 12000"         >> $@; \
+	  echo "SUBWORD_VOCAB_SIZE    = 12000"         >> $@; \
 	  echo "DEVSIZE    = ${DEVSIZE}"    >> $@; \
 	  echo "TESTSIZE   = ${TESTSIZE}"   >> $@; \
 	  echo "DEVMINSIZE = ${DEVMINSIZE}" >> $@; \
@@ -614,7 +718,7 @@ ${WORKDIR}/${MODELCONFIG}:
 	  echo "MARIAN_VALID_FREQ = 1000"  >> $@; \
 	  echo "MARIAN_WORKSPACE  = 5000"  >> $@; \
 	  echo "MARIAN_VALID_MINI_BATCH = 8" >> $@; \
-	  echo "BPESIZE     = 4000"        >> $@; \
+	  echo "SUBWORD_VOCAB_SIZE     = 4000"        >> $@; \
 	  echo "DEVSIZE     = 1000"        >> $@; \
 	  echo "TESTSIZE    = 1000"        >> $@; \
 	  echo "DEVMINSIZE  = 250"         >> $@; \
@@ -626,7 +730,7 @@ ${WORKDIR}/${MODELCONFIG}:
 	  echo "MARIAN_WORKSPACE  = 3500"  >> $@; \
 	  echo "MARIAN_DROPOUT    = 0.5"   >> $@; \
 	  echo "MARIAN_VALID_MINI_BATCH = 4" >> $@; \
-	  echo "BPESIZE     = 1000"        >> $@; \
+	  echo "SUBWORD_VOCAB_SIZE     = 1000"        >> $@; \
 	  echo "DEVSIZE     = 500"         >> $@; \
 	  echo "TESTSIZE    = 1000"        >> $@; \
 	  echo "DEVMINSIZE  = 100"         >> $@; \
@@ -635,39 +739,46 @@ ${WORKDIR}/${MODELCONFIG}:
 	fi; \
 	if [ -e $@ ]; then \
 	  if [ $$S -gt 1000 ]; then \
-	    echo "SRCBPESIZE  = 32000"     >> $@; \
+	    echo "SUBWORD_SRCVOCAB_SIZE  = 32000"     >> $@; \
 	  fi; \
 	  if [ $$T -gt 1000 ]; then \
-	    echo "TRGBPESIZE  = 32000"     >> $@; \
+	    echo "SUBWORD_TRGVOCAB_SIZE  = 32000"     >> $@; \
 	  fi; \
 	fi
-	echo "SRCLANGS    = ${SRCLANGS}"    >> $@
-	echo "TRGLANGS    = ${TRGLANGS}"    >> $@
-	echo "SKIPLANGS   = ${SKIPLANGS}"   >> $@
-	echo "LANGPAIRSTR = ${LANGPAIRSTR}" >> $@
-	echo "DATASET     = ${DATASET}"     >> $@
-	echo "TRAINSET    = ${TRAINSET}"    >> $@
-	echo "DEVSET      = ${DEVSET}"      >> $@
-	echo "TESTSET     = ${TESTSET}"     >> $@
-	echo "PRE         = ${PRE}"         >> $@
-	echo "SUBWORDS    = ${SUBWORDS}"    >> $@
+	@echo "SRCLANGS    = ${SRCLANGS}"    >> $@
+	@echo "TRGLANGS    = ${TRGLANGS}"    >> $@
+	@echo "SKIPLANGS   = ${SKIPLANGS}"   >> $@
+	@echo "LANGPAIRSTR = ${LANGPAIRSTR}" >> $@
+	@echo "DATASET     = ${DATASET}"     >> $@
+	@echo "TRAINSET    = ${TRAINSET}"    >> $@
+	@echo "DEVSET      = ${DEVSET}"      >> $@
+	@echo "TESTSET     = ${TESTSET}"     >> $@
+	@echo "PRE         = ${PRE}"         >> $@
+	@echo "SUBWORDS    = ${SUBWORDS}"    >> $@
+	@echo "MODEL_SRCVOCAB = ${MODEL_SRCVOCAB}" >> $@
+	@echo "MODEL_TRGVOCAB = ${MODEL_TRGVOCAB}" >> $@
 ifdef SHUFFLE_DATA
-	echo "SHUFFLE_DATA      = ${SHUFFLE_DATA}"       >> $@
+	@echo "SHUFFLE_DATA      = ${SHUFFLE_DATA}"       >> $@
 endif
 ifdef FIT_DATA_SIZE
-	echo "FIT_DATA_SIZE     = ${FIT_DATA_SIZE}"      >> $@
+	@echo "FIT_DATA_SIZE     = ${FIT_DATA_SIZE}"      >> $@
 endif
 ifdef FIT_DEVDATA_SIZE
-	echo "FIT_DEVDATA_SIZE  = ${FIT_DEVDATA_SIZE}"   >> $@
+	@echo "FIT_DEVDATA_SIZE  = ${FIT_DEVDATA_SIZE}"   >> $@
 endif
-	echo "MAX_OVER_SAMPLING = ${MAX_OVER_SAMPLING}"  >> $@
-	echo "USE_REST_DEVDATA  = ${USE_REST_DEVDATA}"   >> $@
+	@echo "MAX_OVER_SAMPLING = ${MAX_OVER_SAMPLING}"  >> $@
+	@echo "USE_REST_DEVDATA  = ${USE_REST_DEVDATA}"   >> $@
 ifdef USE_TARGET_LABELS
-	echo "USE_TARGET_LABELS = ${USE_TARGET_LABELS}"  >> $@
+	@echo "USE_TARGET_LABELS = ${USE_TARGET_LABELS}"  >> $@
 endif
 ifdef USE_SPM_VOCAB
-	echo "USE_SPM_VOCAB = ${USE_SPM_VOCAB}"  >> $@
+	@echo "USE_SPM_VOCAB = ${USE_SPM_VOCAB}"  >> $@
 endif
+ifdef USE_JOINT_SUBWORD_MODEL
+	@echo "USE_JOINT_SUBWORD_MODEL = ${USE_JOINT_SUBWORD_MODEL}"  >> $@
+endif
+
+
 
 
 
@@ -702,6 +813,5 @@ opus-langpairs.txt:
 	tr ' ' "\n" < $@.all |\
 	sed 's/ //g' | sort -u | tr "\n" ' ' > $@
 	rm -f $@.all
-
 
 

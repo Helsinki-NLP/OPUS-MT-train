@@ -20,6 +20,9 @@ endif
 
 SLURM_JOBNAME ?= $(subst -,,${LANGPAIRSTR})
 
+## comma separated nodes to be excluded
+# BROKEN_NODES = g6301
+
 %.submit:
 	mkdir -p ${WORKDIR}
 	echo '#!/bin/bash -l' > $@
@@ -36,6 +39,9 @@ endif
 	echo '#SBATCH -p ${HPC_GPUQUEUE}' >> $@
 	echo '#SBATCH ${HPC_GPU_ALLOCATION}' >> $@
 	echo '#SBATCH -t ${HPC_TIME}:00' >> $@
+ifdef BROKEN_NODES
+	echo '#SBATCH --exclude=${BROKEN_NODES}' >> $@
+endif
 	echo '${HPC_EXTRA}' >> $@
 	echo '${HPC_EXTRA1}' >> $@
 	echo '${HPC_EXTRA2}' >> $@
@@ -73,6 +79,9 @@ endif
 	echo '#SBATCH -N ${HPC_NODES}' >> $@
 	echo '#SBATCH -p ${HPC_QUEUE}' >> $@
 	echo '#SBATCH -t ${HPC_TIME}:00' >> $@
+ifdef BROKEN_NODES
+	echo '#SBATCH --exclude=${BROKEN_NODES}' >> $@
+endif
 	echo '${HPC_EXTRA}' >> $@
 	echo '${HPC_EXTRA1}' >> $@
 	echo '${HPC_EXTRA2}' >> $@
@@ -84,7 +93,7 @@ endif
 	echo 'cd $${SLURM_SUBMIT_DIR:-.}' >> $@
 	echo 'pwd' >> $@
 	echo 'echo "Starting at `date`"' >> $@
-	echo '${MAKE} -j ${HPC_CORES} ${MAKEARGS} ${@:.submitcpu=}' >> $@
+	echo '${MAKE} -j ${HPC_JOBS} ${MAKEARGS} ${@:.submitcpu=}' >> $@
 	echo 'echo "Finishing at `date`"' >> $@
 	sbatch $@
 	mkdir -p ${WORKDIR}

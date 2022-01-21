@@ -255,16 +255,18 @@ BT_CONTINUE_EXISTING = 1
 ifneq (${wildcard ${MODEL_FINAL}},)
 ifeq (${wildcard ${BT_MODEL_START}},)
 	cp ${MODEL_FINAL} ${BT_MODEL_START}
+ifeq (${wildcard ${MODEL_VOCAB}},)
 	cp ${MODEL_VOCAB} ${BT_MODEL_VOCAB}
 endif
 endif
-	rm -f ${WORKHOME}/${LANGPAIRSTR}/train.submit
+endif
 	${MAKE} DATASET=${DATASET}+bt \
 		USE_BACKTRANS=1 \
-		MODELCONFIG=config-bt.mk \
 		CONTINUE_EXISTING=${BT_CONTINUE_EXISTING} \
 		MARIAN_EARLY_STOPPING=${BT_MARIAN_EARLY_STOPPING} \
 	${@:-bt=}
+
+#		MODELCONFIG=config-bt.mk \
 
 
 ## adding a pivot language to the model
@@ -274,22 +276,22 @@ endif
 ## --> make a new BPE/sentencepiece model
 ## --> make a new config file
 
-DEFAULT_PIVOT_LANG = en
-PIVOT_LANG ?= ${DEFAULT_PIVOT_LANG}
+DEFAULT_PIVOT_LANG ?= en
+PIVOT_LANG         ?= ${DEFAULT_PIVOT_LANG}
 
 %-pivotlang:
 	if [ "$(sort ${SRCLANGS} ${TRGLANGS} ${PIVOT_LANG})" != "$(sort ${SRCLANGS} ${TRGLANGS})" ]; then \
 	  ${MAKE} DATASET=${DATASET}+${PIVOT_LANG} \
-		MODELCONFIG=${MODELCONFIG:.mk=+${PIVOT_LANG}.mk} \
 		SRCLANGS="$(sort ${SRCLANGS} ${PIVOT_LANG})" \
 		TRGLANGS="$(sort ${TRGLANGS} ${PIVOT_LANG})" \
 		SKIP_LANGPAIRS=${PIVOT_LANG}-${PIVOT_LANG} \
 		MODEL_LATEST_VOCAB= \
 		PIVOT=${PIVOT_LANG} \
-		BPEMODELNAME=opus+${PIVOT_LANG} \
+		SUBWORD_MODEL_NAME=opus+${PIVOT_LANG} \
 	  ${@:-pivotlang=}; \
 	fi
 
+#		MODELCONFIG=${MODELCONFIG:.mk=+${PIVOT_LANG}.mk} \
 
 
 ## add forward translations
@@ -305,81 +307,138 @@ FT_MARIAN_EARLY_STOPPING = 15
 ifneq (${wildcard ${MODEL_FINAL}},)
 ifeq (${wildcard ${FT_MODEL_START}},)
 	cp ${MODEL_FINAL} ${FT_MODEL_START}
+ifeq (${wildcard ${MODEL_VOCAB}},)
 	cp ${MODEL_VOCAB} ${FT_MODEL_VOCAB}
 endif
 endif
-	rm -f ${WORKHOME}/${LANGPAIRSTR}/train.submit
+endif
 	${MAKE} DATASET=${DATASET}+ft \
 		USE_FORWARDTRANS=1 \
 		CONTINUE_EXISTING=1 \
-		MODELCONFIG=config-ft.mk \
 		MARIAN_EARLY_STOPPING=${FT_MARIAN_EARLY_STOPPING} \
 	${@:-ft=}
 
+#		MODELCONFIG=config-ft.mk \
 
 
-## train on back-translations only
-%-btonly:
-	rm -f ${WORKHOME}/${LANGPAIRSTR}/train.submit
-	${MAKE} DATASET=${DATASET}+btonly \
-		USE_BACKTRANS=1 \
-		MODELCONFIG=config-bt.mk \
-		TRAINSET= TATOEBA_TRAINSET= \
-	${@:-btonly=}
 
-## train on forward-translations only
+# use a selected set of forward translation
+
+# default for ce-filter
+FT_SELECTED ?= 95
+
+%-ftbest:
+	for s in ${SRCLANGS}; do \
+	  for t in ${TRGLANGS}; do \
+	    if [ -e ${FORWARDTRANS_HOME}/$$s-$$t/latest ]; then \
+	      ${MAKE} -C ${FORWARDTRANS_HOME} SRC=$$s TRG=$$t \
+			RETAIN=${FT_SELECTED} extract-best-translations; \
+	    fi \
+	  done \
+	done
+	${MAKE} DATASET=${DATASET}+ft${FT_SELECTED} \
+		USE_FORWARDTRANS_SELECTED=${FT_SELECTED} \
+	${@:-ftbest=}
+
+
+
+
+
+## add forward translation of monolingual data
+%-ftmono:
+	${MAKE} DATASET=${DATASET}+ftmono USE_FORWARDTRANSMONO=1 ${@:-ftmono=}
+
+## pivot-based backward translation
+%-pbt:
+	${MAKE} DATASET=${DATASET}+pbt USE_BACKWARD_PIVOTING=1 ${@:-pbt=}
+
+## pivot-based backward translation
+%-pft:
+	${MAKE} DATASET=${DATASET}+pft USE_FORWARD_PIVOTING=1 ${@:-pft=}
+
+## pivot-based backward translation
+%-pivot:
+	${MAKE} DATASET=${DATASET}+pivot USE_PIVOTING=1 ${@:-pivot=}
+
+## don't use the regular parallel training data
+## (only makes sense if bt, ft, or pivot-based data are activated)
+%-nopar:
+	${MAKE} DATASET=${DATASET}+nopar TRAINSET= ${@:-nopar=}
+
+# TATOEBA_TRAINSET=
+
+##-------------------------------------------------------------
+## default: make separate sentencepiece models
+## but create a joint vocabulary for training with
+## tied embeddings
+## alternatives:
+## * joint-spm: create a joint sentencepiece model
+## * separate-spm: create separate SPMs and use them directly
+##-------------------------------------------------------------
+
+## joint sentencepiece model and joint vocabulary
+%-joint-spm:
+	${MAKE} USE_JOINT_SUBWORD_MODEL=1 USE_SPM_VOCAB=1 ${@:-joint-spm=}
+
+## use sentenceopiece models directly as separate vocabularies
+%-separate-spm:
+	${MAKE} USE_SPM_VOCAB=1 MODEL_VARIANT=-sepvoc ${@:-separate-spm=}
+
+
+
+
+
+
+## for compatibility reasons: train on forward translated data and no regular train data
 %-ftonly:
-	rm -f ${WORKHOME}/${LANGPAIRSTR}/train.submit
 	${MAKE} DATASET=${DATASET}+ftonly \
 		USE_FORWARDTRANS=1 \
-		MODELCONFIG=config-ft.mk \
-		TRAINSET= TATOEBA_TRAINSET= \
+		CONTINUE_EXISTING=1 \
+		MARIAN_EARLY_STOPPING=${FT_MARIAN_EARLY_STOPPING} \
+		TRAINSET= \
 	${@:-ftonly=}
 
-
-## only forward translated training data
-## (for knowledge distillation)
-## TODO: better have a separate set for those data sets
-##       to make it possible to combine with other forward translations
-%-ft-train-only:
-	rm -f ${WORKHOME}/${LANGPAIRSTR}/train.submit
-	${MAKE} DATASET=${DATASET}+ft-train-only \
-		USE_FORWARDTRANS=1 \
-		FORWARDTRANS_HOME=${PWD}/ft-tatoeba \
-		MODELCONFIG=config-ft-train.mk \
-		TRAINSET= TATOEBA_TRAINSET= \
-	${@:-ft-train-only=}
+# TATOEBA_TRAINSET= \
+#		MODELCONFIG=config-ft.mk \
 
 
+## NEW: don't continue from existing models when including pivot data
+## TODO: should we do that?
+#
+# PIVOT_MODEL       = ${MODEL_SUBDIR}${DATASET}+pivot${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
+# PIVOT_MODEL_BASE  = ${PIVOT_MODEL}.${MODELTYPE}.model${NR}
+# PIVOT_MODEL_START = ${WORKDIR}/${PIVOT_MODEL_BASE}.npz
+# PIVOT_MODEL_VOCAB = ${WORKDIR}/${PIVOT_MODEL}.vocab.yml
 
-PIVOT_MODEL       = ${MODEL_SUBDIR}${DATASET}+pivot${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
-PIVOT_MODEL_BASE  = ${PIVOT_MODEL}.${MODELTYPE}.model${NR}
-PIVOT_MODEL_START = ${WORKDIR}/${PIVOT_MODEL_BASE}.npz
-PIVOT_MODEL_VOCAB = ${WORKDIR}/${PIVOT_MODEL}.vocab.yml
+# %-pivot:
+# ifneq (${wildcard ${MODEL_FINAL}},)
+# ifeq (${wildcard ${PIVOT_MODEL_START}},)
+# 	cp ${MODEL_FINAL} ${PIVOT_MODEL_START}
+# 	cp ${MODEL_VOCAB} ${PIVOT_MODEL_VOCAB}
+# endif
+# endif
+# 	rm -f ${WORKHOME}/${LANGPAIRSTR}/train.submit
+# 	${MAKE} DATASET=${DATASET}+pivot \
+# 		USE_PIVOTING=1 \
+# 		CONTINUE_EXISTING=1 \
+# 		MARIAN_EARLY_STOPPING=10 \
+# 	${@:-pivot=}
 
-%-pivot:
-ifneq (${wildcard ${MODEL_FINAL}},)
-ifeq (${wildcard ${PIVOT_MODEL_START}},)
-	cp ${MODEL_FINAL} ${PIVOT_MODEL_START}
-	cp ${MODEL_VOCAB} ${PIVOT_MODEL_VOCAB}
-endif
-endif
-	rm -f ${WORKHOME}/${LANGPAIRSTR}/train.submit
-	${MAKE} DATASET=${DATASET}+pivot \
-		USE_PIVOTING=1 \
-		CONTINUE_EXISTING=1 \
-		MARIAN_EARLY_STOPPING=10 \
-	${@:-pivot=}
 
+# OLD: start with parameters from the standard transformer model
+# NOW: big-align is not compatible with the dimensions settings anymore
+#
+# %-big-align:
+# ifneq (${wildcard ${MODEL_FINAL}},)
+# 	${MAKE} PRE_TRAINED_MODEL=${MODEL_FINAL} MODELTYPE=transformer-big-align ${@:-big-align=}
+# else ifneq (${wildcard ${MODEL_START}},)
+# 	${MAKE} PRE_TRAINED_MODEL=${MODEL_START} MODELTYPE=transformer-big-align ${@:-big-align=}
+# else
+# 	${MAKE} MODELTYPE=transformer-big-align ${@:-big-align=}
+# endif
 
 %-big-align:
-ifneq (${wildcard ${MODEL_FINAL}},)
-	${MAKE} PRE_TRAINED_MODEL=${MODEL_FINAL} MODELTYPE=transformer-big-align ${@:-big-align=}
-else ifneq (${wildcard ${MODEL_START}},)
-	${MAKE} PRE_TRAINED_MODEL=${MODEL_START} MODELTYPE=transformer-big-align ${@:-big-align=}
-else
 	${MAKE} MODELTYPE=transformer-big-align ${@:-big-align=}
-endif
 
 
 
@@ -395,18 +454,11 @@ endif
 	${MAKE} NR_GPUS=2 MARIAN_GPUS='2 3' ${@:-gpu23=}
 
 
-## run on CPUs (translate-cpu, eval-cpu, translate-ensemble-cpu, ...)
-%-cpu:
-	${MAKE} LOAD_ENV='${LOAD_CPU_ENV}' \
-		MARIAN_DECODER_FLAGS="${MARIAN_DECODER_CPU}" \
-	${@:-cpu=}
-
-
 ## document level models
 ## devtest data should not be shuffled
 %-doc:
-	${MAKE} PRE_SRC=spm${SRCBPESIZE:000=}k.doc${CONTEXT_SIZE} \
-		PRE_TRG=spm${TRGBPESIZE:000=}k.doc${CONTEXT_SIZE} \
+	${MAKE} PRE_SRC=${SUBWORDS}${SUBWORD_SRCVOCAB_SIZE:000=}k.doc${CONTEXT_SIZE} \
+		PRE_TRG=${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k.doc${CONTEXT_SIZE} \
 		SHUFFLE_DEVDATA=0 \
 	${@:-doc=}
 
@@ -414,7 +466,7 @@ endif
 ## sentence-piece models
 %-spm:
 	${MAKE} WORKHOME=${shell realpath ${PWD}/work-spm} \
-		PRE=norm SUBWORDS=spm \
+		PRE=simple SUBWORDS=spm \
 	${@:-spm=}
 
 ## sentence-piece models with space-separated strings
@@ -432,27 +484,11 @@ endif
 		SPMTRGMODEL=${SPMTRGMONO} \
 	${@:-monospm=}
 
-
-%-spm-noalign:
-	${MAKE} WORKHOME=${shell realpath ${PWD}/work-spm-noalign} \
-		MODELTYPE=transformer \
-		PRE=norm SUBWORDS=spm \
-	${@:-spm-noalign=}
-
-
 ## sentence-piece models with langid-filtering (new default)
 %-langid:
 	${MAKE} WORKHOME=${shell realpath ${PWD}/work-langid} \
 		PRE=simple \
 	${@:-langid=}
-
-## sentence-piece models with langid-filtering (new default)
-%-langid-noalign:
-	${MAKE} WORKHOME=${shell realpath ${PWD}/work-langid-noalign} \
-		MODELTYPE=transformer \
-		PRE=simple \
-	${@:-langid-noalign=}
-
 
 
 ## BPE models
@@ -462,23 +498,8 @@ endif
 		MODELTYPE=transformer \
 	${@:-bpe=}
 
-%-bpe-align:
-	${MAKE} WORKHOME=${shell realpath ${PWD}/work-bpe-align} \
-		PRE=tok SUBWORDS=bpe \
-	${@:-bpe-align=}
-
 %-bpe-memad:
 	${MAKE} WORKHOME=${shell realpath ${PWD}/work-bpe-memad} \
 		PRE=tok SUBWORDS=bpe \
 		MODELTYPE=transformer \
 	${@:-bpe-memad=}
-
-%-bpe-old:
-	${MAKE} WORKHOME=${shell realpath ${PWD}/work-bpe-old} \
-		PRE=tok SUBWORDS=bpe \
-		MODELTYPE=transformer \
-	${@:-bpe-old=}
-
-
-
-
