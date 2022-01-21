@@ -76,10 +76,15 @@ ifneq ($(filter zh zho jp jpn cmn,${TRGLANGS}),)
   SACREBLEU_PARAMS = --tokenize zh
 endif
 
+## simple hack that makes chrF scores compatible with previous version
+## of sacrebleu (now: score in percentages)
+## --> this breaks easily if the score < 10 or = 100
+
 %.eval: % ${TEST_TRG}
 	paste ${TEST_SRC}.${PRE_SRC} ${TEST_TRG} | grep $$'.\t' | cut -f2 > $@.ref
 	cat $< | sacrebleu -f text ${SACREBLEU_PARAMS} $@.ref > $@
-	cat $< | sacrebleu -f text ${SACREBLEU_PARAMS} --metrics=chrf --width=3 $@.ref >> $@
+	cat $< | sacrebleu -f text ${SACREBLEU_PARAMS} --metrics=chrf --width=3 $@.ref |\
+	sed 's/\([0-9][0-9]\)\.\([0-9]*\)$$/0.\1\2/'         >> $@
 	rm -f $@.ref
 
 

@@ -151,6 +151,8 @@ include ${REPOHOME}lib/env.mk
 include ${REPOHOME}lib/config.mk
 include ${REPOHOME}lib/tasks.mk
 
+include ${REPOHOME}lib/projects/distill.mk
+
 
 
 ## general parameters for Tatoeba models

@@ -416,6 +416,8 @@ TRAIN_BASE = ${WORKDIR}/train/${DATASET}
 TRAIN_SRC  = ${TRAIN_BASE}.src
 TRAIN_TRG  = ${TRAIN_BASE}.trg
 TRAIN_ALG  = ${TRAIN_BASE}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}.src-trg.alg.gz
+TRAIN_S2T  = ${TRAIN_BASE}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}.s2t.gz
+TRAIN_T2S  = ${TRAIN_BASE}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}.t2s.gz
 
 ## data sets that are pre-processed and ready to be used
 TRAINDATA_SRC = ${TRAIN_SRC}.clean.${PRE_SRC}.gz 
@@ -452,9 +454,17 @@ MODEL_START      = ${WORKDIR}/${MODEL_BASENAME}.npz
 MODEL_FINAL      = ${WORKDIR}/${MODEL_BASENAME}.npz.best-perplexity.npz
 MODEL_DECODER    = ${MODEL_FINAL}.decoder.yml
 
+## quantized models
 MODEL_BIN           = ${WORKDIR}/${MODEL_BASENAME}.intgemm8.bin
 MODEL_INTGEMM8TUNED = ${WORKDIR}/${MODEL_BASENAME}.intgemm8tuned.npz
 MODEL_BIN_ALPHAS    = ${WORKDIR}/${MODEL_BASENAME}.intgemm8.alphas.bin
+
+## lexical short-lists
+SHORTLIST_NRVOC     = 100
+SHORTLIST_NRTRANS   = 100
+MODEL_BIN_SHORTLIST = ${WORKDIR}/${MODEL}.lex-s2t-${SHORTLIST_NRVOC}-${SHORTLIST_NRTRANS}.bin
+
+
 
 
 .PRECIOUS: ${MODEL_FINAL} ${MODEL_BIN}
@@ -615,8 +625,7 @@ MARIAN_MAXI_BATCH = 2048
 ifeq ($(GPU_AVAILABLE),1)
   MARIAN_SCORER_FLAGS = -n1 -d ${MARIAN_GPUS} \
 			--quiet-translation -w ${MARIAN_DECODER_WORKSPACE} \
-			--mini-batch ${MARIAN_MINI_BATCH} --maxi-batch ${MARIAN_MAXI_BATCH} --maxi-batch-sort src \
-			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop
+			--mini-batch ${MARIAN_MINI_BATCH} --maxi-batch ${MARIAN_MAXI_BATCH} --maxi-batch-sort src
   MARIAN_DECODER_FLAGS = -b ${MARIAN_BEAM_SIZE} -n1 -d ${MARIAN_GPUS} \
 			--quiet-translation -w ${MARIAN_DECODER_WORKSPACE} \
 			--mini-batch ${MARIAN_MINI_BATCH} --maxi-batch ${MARIAN_MAXI_BATCH} --maxi-batch-sort src \
@@ -625,8 +634,7 @@ ifeq ($(GPU_AVAILABLE),1)
 else
   MARIAN_SCORER_FLAGS = -n1 --cpu-threads ${HPC_CORES} \
 			--quiet-translation \
-			--mini-batch ${HPC_CORES} --maxi-batch 100 --maxi-batch-sort src \
-			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop
+			--mini-batch ${HPC_CORES} --maxi-batch 100 --maxi-batch-sort src
   MARIAN_DECODER_FLAGS = -b ${MARIAN_BEAM_SIZE} -n1 --cpu-threads ${HPC_CORES} \
 			--quiet-translation \
 			--mini-batch ${HPC_CORES} --maxi-batch 100 --maxi-batch-sort src \

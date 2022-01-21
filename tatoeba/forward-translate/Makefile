@@ -30,11 +30,14 @@ TRG = eng
 ## change decoder settings
 ## TODO: do we need this?
 
-MARIAN_BEAM_SIZE=1
-MARIAN_MINI_BATCH=100
-MARIAN_MAXI_BATCH=100
-MARIAN_MAX_LENGTH=200
-MARIAN_WORKSPACE=12000
+MARIAN_BEAM_SIZE  = 1
+MARIAN_MINI_BATCH = 128
+MARIAN_MAXI_BATCH = 256
+MARIAN_MAX_LENGTH = 200
+MARIAN_WORKSPACE  = 12000
+
+# MARIAN_MINI_BATCH = 768
+# MARIAN_MAXI_BATCH = 2048
 
 
 TATOEBA_VERSION          ?= v2021-08-07
@@ -138,6 +141,9 @@ print-modelinfo:
 	@echo "multi-target model: ${MULTI_TARGET_MODEL}"
 	@echo "target language label: ${TARGET_LANG_LABEL}"
 
+print-modelname:
+	@echo ${MODELNAME}
+
 ##-------------------------------------------
 ## translation model in reverse direction
 ## --> for scoring translations
@@ -150,9 +156,11 @@ REV_MODELNAME = ${patsubst %.zip,%,${notdir ${REV_MODELZIP}}}
 
 REV_MULTI_TARGET_MODEL := ${shell wget -qq -O - ${REV_MODELINFO} | grep 'use-target-labels' | wc -l}
 ifeq (${REV_MULTI_TARGET_MODEL},1)
-  REV_PREPROCESS_ARGS = ${TRG} ${SRC} ${REV_LANGPAIR}/${REV_MODELNAME}/source.spm
+  REV_SRC_PREPROCESS_ARGS = ${TRG} ${SRC} ${REV_LANGPAIR}/${REV_MODELNAME}/source.spm
+  REV_TRG_PREPROCESS_ARGS = ${SRC} ${TRG} ${REV_LANGPAIR}/${REV_MODELNAME}/target.spm noflags
 else
-  REV_PREPROCESS_ARGS = ${TRG} ${REV_LANGPAIR}/${REV_MODELNAME}/source.spm
+  REV_SRC_PREPROCESS_ARGS = ${TRG} ${REV_LANGPAIR}/${REV_MODELNAME}/source.spm
+  REV_TRG_PREPROCESS_ARGS = ${SRC} ${REV_LANGPAIR}/${REV_MODELNAME}/target.spm
 endif
 
 
@@ -174,21 +182,23 @@ print-score-file:
 ${OUTPUT_DIR}/latest/%.${SRC}.scores.gz: ${OUTPUT_DIR}/latest/%.${SRC}.gz
 	${MAKE} SRC=${TRG} TRG=${SRC} mtmodel
 	${GZCAT} ${<:.${SRC}.gz=.${TRG}.gz} |\
-	${REV_LANGPAIR}/${REV_MODELNAME}/preprocess.sh ${REV_PREPROCESS_ARGS} |\
+	${REV_LANGPAIR}/${REV_MODELNAME}/preprocess.sh ${REV_SRC_PREPROCESS_ARGS} | \
 	${GZIP} -c > $@.src.gz
 	${GZCAT} $< |\
-	${SPM_ENCODE} --model=${REV_LANGPAIR}/${REV_MODELNAME}/target.spm |\
+	${REV_LANGPAIR}/${REV_MODELNAME}/preprocess.sh ${REV_TRG_PREPROCESS_ARGS} | \
 	${GZIP} -c > $@.trg.gz
-	${LOAD_ENV} && cd ${LANGPAIR}/${MODELNAME} && ${MARIAN_SCORER} \
+	${LOAD_ENV} && \
+	cd ${REV_LANGPAIR}/${REV_MODELNAME} && \
+	${MARIAN_SCORER} \
 		-m `grep -A1 models decoder.yml | tail -1 | sed 's/ *- //'` \
 		-v `grep -A2 vocabs decoder.yml | tail -2 | sed 's/ *- //' | tr "\n" ' '` \
 		-t ${PWD}/$@.src.gz ${PWD}/$@.trg.gz \
-		-d ${MARIAN_GPUS} \
 		${MARIAN_SCORER_FLAGS} |\
 	${GZIP} -c > ${PWD}/$(@:.scores.gz=.raw-scores.gz)
 	paste <(gzip -dc $(@:.scores.gz=.raw-scores.gz)) <(gzip -dc $@.trg.gz) | \
 	python3 ${SCRIPTDIR}/normalize-scores.py | cut -f1 | ${GZIP} -c > $@
 	rm -f $@.src.gz $@.trg.gz
+
 
 ${OUTPUT_DIR}/latest/Tatoeba-train.sorted.gz: ${SCOREFILES}
 	${GZCAT} ${OUTPUT_DIR}/latest/*.${SRC}.scores.gz | ${GZIP} -c > $@.scores.gz
@@ -332,7 +342,6 @@ ifneq (${MODELZIP},)
 	${MARIAN_DECODER} \
 		-c decoder.yml \
 		-i ${PWD}/$< \
-		-d ${MARIAN_GPUS} \
 		${MARIAN_DECODER_FLAGS} |\
 	sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' |\
 	gzip -c > ${PWD}/$@
@@ -415,4 +424,41 @@ remove-incomplete-latest:
 	    fi \
 	  done \
 	fi
+
+
+
+
+
+
+# ## for testing purposes
+
+# score2-translation: ${BITEXT_LATEST_SRC:.gz=.scores2}
+# score3-translation: ${BITEXT_LATEST_SRC:.gz=.scores3}
+
+# ${OUTPUT_DIR}/latest/%.${SRC}.scores2: ${OUTPUT_DIR}/latest/%.${SRC}.gz
+# 	${MAKE} SRC=${TRG} TRG=${SRC} mtmodel
+# 	${GZCAT} ${<:.${SRC}.gz=.${TRG}.gz} |\
+# 	${REV_LANGPAIR}/${REV_MODELNAME}/preprocess.sh ${REV_SRC_PREPROCESS_ARGS} | \
+# 	${GZIP} -c > $@.src.gz
+# 	${GZCAT} $< |\
+# 	${REV_LANGPAIR}/${REV_MODELNAME}/preprocess.sh ${REV_TRG_PREPROCESS_ARGS} | \
+# 	${GZIP} -c > $@.trg.gz
+# 	${LOAD_ENV} && \
+# 	cd ${REV_LANGPAIR}/${REV_MODELNAME} && \
+# 	${MARIAN_SCORER} \
+# 		-m `grep -A1 models decoder.yml | tail -1 | sed 's/ *- //'` \
+# 		-v `grep -A2 vocabs decoder.yml | tail -2 | sed 's/ *- //' | tr "\n" ' '` \
+# 		-t ${PWD}/$@.src.gz ${PWD}/$@.trg.gz \
+# 		-n1 -d 0 --mini-batch 1 --maxi-batch 1 --log ${PWD}/$@.log > ${PWD}/$@ 2>${PWD}/$@.err
+
+# ${OUTPUT_DIR}/latest/%.${SRC}.scores3: ${OUTPUT_DIR}/latest/%.${SRC}.gz
+# 	${LOAD_ENV} && \
+# 	cd ${REV_LANGPAIR}/${REV_MODELNAME} && \
+# 	${MARIAN_SCORER} \
+# 		-m `grep -A1 models decoder.yml | tail -1 | sed 's/ *- //'` \
+# 		-v `grep -A2 vocabs decoder.yml | tail -2 | sed 's/ *- //' | tr "\n" ' '` \
+# 		-t ${PWD}/$@.src.gz ${PWD}/$@.trg.gz \
+# 		-n1 -d 0 -w 10000 --mini-batch 128 \
+# 		--max-length 200 --max-length-crop \
+# 		--maxi-batch 256 --maxi-batch-sort src
 

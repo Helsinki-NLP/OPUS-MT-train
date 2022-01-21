@@ -4,8 +4,8 @@
 #
 
 
-CSCPROJECT   = project_2003288
-# CSCPROJECT   = project_2002688
+# CSCPROJECT   = project_2003288
+CSCPROJECT   = project_2002688
 # CSCPROJECT   = project_2003093
 # CSCPROJECT   = project_2002982
 WORKHOME      = ${shell realpath ${PWD}/work}
@@ -77,3 +77,7 @@ MARIAN_BUILD_OPTIONS  = -DTcmalloc_INCLUDE_DIR=/appl/spack/v016/install-tree/gcc
 			-DUSE_FBGEMM=1 \
 			-DFBGEMM_STATIC=1
 
+
+## setup for compiling extract-lex from marian-nmt
+
+LOAD_EXTRACTLEX_BUILD_ENV = cmake gcc/9.3.0 boost/1.68.0

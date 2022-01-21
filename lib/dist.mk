@@ -311,18 +311,18 @@ endif
 ## - ugly perl script that does some tansformation of language codes
 ##-----------------------------
 ifneq ("$(wildcard ${TEST_EVALUATION})","")
-	@grep -H BLEU ${WORKDIR}/*.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | \
-	sed 's#^${WORKDIR}/\(.*\)\.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}\.\(.*\)\.eval:.*$$#\1.\2#' | \
+	@grep -H BLEU ${WORKDIR}/*.${MODEL}${NR}.${MODELTYPE}.*.eval | \
+	sed 's#^${WORKDIR}/\(.*\)\.${MODEL}${NR}.${MODELTYPE}\.\(.*\)\.eval:.*$$#\1.\2#' | \
 	perl -pe 'if (/\.([^\.]+)\.([^\.\s]+)$$/){$$s=$$1;$$t=$$2;s/[\-\.]$$s?\-?$$t\.$$s\.$$t?$$/.$$s.$$t/;s/\.$$s\.$$t$$/.$$s-$$t/}' > $@.1
-	@grep BLEU ${WORKDIR}/*.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | \
+	@grep BLEU ${WORKDIR}/*.${MODEL}${NR}.${MODELTYPE}.*.eval | \
 	cut -f3 -d ' ' > $@.2
-	@grep chrF ${WORKDIR}/*.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | \
+	@grep chrF ${WORKDIR}/*.${MODEL}${NR}.${MODELTYPE}.*.eval | \
 	cut -f3 -d ' ' > $@.3
-	@ls ${WORKDIR}/*.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | \
+	@ls ${WORKDIR}/*.${MODEL}${NR}.${MODELTYPE}.*.eval | \
 	sed 's/\.eval//' | xargs wc -l | grep -v total | sed 's/^ *//' | cut -f1 -d' ' > $@.4
-	@grep BLEU ${WORKDIR}/*.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | \
+	@grep BLEU ${WORKDIR}/*.${MODEL}${NR}.${MODELTYPE}.*.eval | \
 	cut -f16 -d ' ' | sed 's/)//' > $@.5
-	@grep BLEU ${WORKDIR}/*.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | \
+	@grep BLEU ${WORKDIR}/*.${MODEL}${NR}.${MODELTYPE}.*.eval | \
 	cut -f7 -d ' ' > $@.6
 	@paste -d '/' $@.4 $@.5                                      > $@.7
 	@echo "test-data:"                                          >> $@
@@ -381,18 +381,18 @@ ifneq ("$(wildcard ${TEST_EVALUATION})","")
 	@echo ''                                                    >> $@
 ## grep and normalise test set names
 ## ugly perl script that does some tansformation of language codes
-	@grep -H BLEU ${WORKDIR}/*.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | \
-	sed 's#^${WORKDIR}/\(.*\)\.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}\.\(.*\)\.eval:.*$$#\1.\2#' | \
+	@grep -H BLEU ${WORKDIR}/*.${MODEL}${NR}.${MODELTYPE}.*.eval | \
+	sed 's#^${WORKDIR}/\(.*\)\.${MODEL}${NR}.${MODELTYPE}\.\(.*\)\.eval:.*$$#\1.\2#' | \
 	perl -pe 'if (/\.([^\.]+)\.([^\.\s]+)$$/){$$s=$$1;$$t=$$2;s/[\-\.]$$s?\-?$$t\.$$s\.$$t?$$/.$$s.$$t/;s/\.$$s\.$$t$$/.$$s-$$t/}' > $@.1
-	@grep BLEU ${WORKDIR}/*.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | \
+	@grep BLEU ${WORKDIR}/*.${MODEL}${NR}.${MODELTYPE}.*.eval | \
 	cut -f3 -d ' ' > $@.2
-	@grep chrF ${WORKDIR}/*.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | \
+	@grep chrF ${WORKDIR}/*.${MODEL}${NR}.${MODELTYPE}.*.eval | \
 	cut -f3 -d ' ' > $@.3
-	@ls ${WORKDIR}/*.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | \
+	@ls ${WORKDIR}/*.${MODEL}${NR}.${MODELTYPE}.*.eval | \
 	sed 's/\.eval//' | xargs wc -l | grep -v total | sed 's/^ *//' | cut -f1 -d' ' > $@.4
-	@grep BLEU ${WORKDIR}/*.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | \
+	@grep BLEU ${WORKDIR}/*.${MODEL}${NR}.${MODELTYPE}.*.eval | \
 	cut -f16 -d ' ' | sed 's/)//' > $@.5
-	@grep BLEU ${WORKDIR}/*.${DATASET}.${PRE_SRC}-${PRE_TRG}${NR}.${MODELTYPE}.*.eval | \
+	@grep BLEU ${WORKDIR}/*.${MODEL}${NR}.${MODELTYPE}.*.eval | \
 	cut -f7 -d ' ' > $@.6
 	@paste -d '/' $@.4 $@.5                                      > $@.7
 	@echo '| testset | BLEU  | chr-F | #sent | #words | BP |'   >> $@
@@ -409,6 +409,7 @@ endif
 
 link-latest-model:
 	if [ `ls ${patsubst %.zip,%-*,${DIST_PACKAGE}} 2>/dev/null | wc -l` -gt 0 ]; then \
+	  rm -f ${DIST_PACKAGE}; \
 	  cd ${dir ${DIST_PACKAGE}}; \
 	  ln -s `ls -t ${patsubst %.zip,%-*.zip,$(notdir ${DIST_PACKAGE})} | head -1` \
 		${notdir ${DIST_PACKAGE}}; \
@@ -425,7 +426,6 @@ endif
 ##-----------------------------
 	@${MAKE} ${MODEL_README}
 	@${MAKE} ${MODEL_YML}
-	@touch ${WORKDIR}/source.tcmodel
 	@cp ${PREPROCESS_SRCMODEL} ${WORKDIR}/source.${SUBWORD_TYPE}
 	@cp ${PREPROCESS_TRGMODEL} ${WORKDIR}/target.${SUBWORD_TYPE}
 	@cp ${PREPROCESS_SCRIPT} ${WORKDIR}/preprocess.sh
@@ -433,7 +433,7 @@ endif
 	@chmod +x ${WORKDIR}/preprocess.sh
 	@cp models/LICENSE ${WORKDIR}/
 	@sed -e 's# - .*/\([^/]*\)$$# - \1#' \
-	     -e 's/beam-size: [0-9]*$$/beam-size: 6/' \
+	     -e 's/beam-size: [0-9]*$$/beam-size: 4/' \
 	     -e 's/mini-batch: [0-9]*$$/mini-batch: 1/' \
 	     -e 's/maxi-batch: [0-9]*$$/maxi-batch: 1/' \
 	     -e 's/relative-paths: false/relative-paths: true/' \
@@ -451,8 +451,17 @@ endif
 		${notdir ${MODEL_TRAINLOG}} \
 		source.* target.* decoder.yml \
 		preprocess.sh postprocess.sh
-ifneq ("$(wildcard ${WORKDIR}/${MODELCONFIG})","")
-	@cd ${WORKDIR} && zip -u ${notdir $@} ${MODELCONFIG}
+## add lexical shortlists if they exist
+ifneq ($(wildcard ${MODEL_BIN_SHORTLIST}),)
+	cd ${WORKDIR} && zip ${notdir $@} $(notdir ${MODEL_BIN_SHORTLIST})
+endif
+## even other ones that may not match the current one
+ifneq ($(wildcard ${WORKDIR}/${MODEL}.lex-s2t-*.bin),)
+	cd ${WORKDIR} && zip ${notdir $@} $(notdir $(wildcard ${WORKDIR}/${MODEL}.lex-s2t-*.bin))
+endif
+## add the config file
+ifneq ($(wildcard ${WORKDIR}/${MODELCONFIG}),)
+	cd ${WORKDIR} && zip ${notdir $@} ${MODELCONFIG}
 endif
 ##-----------------------------
 ## move files to release dir and cleanup
@@ -467,7 +476,7 @@ endif
 	@mv -f ${WORKDIR}/${notdir $@} ${RELEASE_PACKAGE}
 	@${MAKE} ${RELEASE_YML}
 	@${MAKE} ${RELEASE_README}
-ifneq ("$(wildcard ${TEST_EVALUATION})","")
+ifneq ($(wildcard ${TEST_EVALUATION}),)
 	@cp $(TEST_EVALUATION) ${@:.zip=}-${DATE}.eval.txt
 	@cp $(TEST_COMPARISON) ${@:.zip=}-${DATE}.test.txt
 endif

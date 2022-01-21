@@ -39,20 +39,27 @@ WORKHOME = ${PWD}/work
 ## anything that needs to be done to load
 ## the build environment for specific software
 
-LOAD_BUILD_ENV        = echo "nothing to load"
-LOAD_MARIAN_BUILD_ENV = echo "nothing to load"
+LOAD_BUILD_ENV            = echo "nothing to load"
+LOAD_MARIAN_BUILD_ENV     = echo "nothing to load"
+LOAD_EXTRACTLEX_BUILD_ENV = echo "nothing to load"
+
 
 ## load system-specific environments
 
 ifeq (${shell hostname -d 2>/dev/null},mahti.csc.fi)
+  HPC_HOST = mahti
   include ${REPOHOME}lib/env/mahti.mk
 else ifeq (${shell hostname},dx6-ibs-p2)
+  HPC_HOST = dx6
   include ${REPOHOME}lib/env/dx6.mk
 else ifeq (${shell hostname},dx7-nkiel-4gpu)
+  HPC_HOST = dx7
   include ${REPOHOME}lib/env/dx7.mk
 else ifneq ($(wildcard /wrk/tiedeman/research),)
+  HPC_HOST = taito
   include ${REPOHOME}lib/env/taito.mk
 else ifeq (${shell hostname --domain 2>/dev/null},bullx)
+  HPC_HOST = puhti
   include ${REPOHOME}lib/env/puhti.mk
 endif
 
@@ -108,13 +115,14 @@ PROTOC         ?= ${shell which protoc    2>/dev/null || echo ${TOOLSDIR}/protob
 MARIAN         ?= ${shell which marian    2>/dev/null || echo ${TOOLSDIR}/marian-dev/build/marian}
 MARIAN_HOME    ?= $(dir ${MARIAN})
 SPM_HOME       ?= ${dir ${MARIAN}}
-FASTALIGN      ?= ${shell which fast_align 2>/dev/null || echo ${TOOLSDIR}/fast_align/build/fast_align}
+FASTALIGN      ?= ${shell which fast_align  2>/dev/null || echo ${TOOLSDIR}/fast_align/build/fast_align}
 FASTALIGN_HOME ?= ${dir ${FASTALIGN}}
 ATOOLS         ?= ${FASTALIGN_HOME}atools
-EFLOMAL        ?= ${shell which eflomal   2>/dev/null || echo ${TOOLSDIR}/eflomal/eflomal}
+EFLOMAL        ?= ${shell which eflomal     2>/dev/null || echo ${TOOLSDIR}/eflomal/eflomal}
 EFLOMAL_HOME   ?= ${dir ${EFLOMAL}}
 WORDALIGN      ?= ${EFLOMAL_HOME}align.py
 EFLOMAL        ?= ${EFLOMAL_HOME}eflomal
+EXTRACT_LEX    ?= ${shell which extract_lex 2>/dev/null || echo ${TOOLSDIR}/extract-lex/build/extract_lex}
 MOSESSCRIPTS   ?= ${TOOLSDIR}/moses-scripts/scripts
 TMX2MOSES      ?= ${shell which tmx2moses 2>/dev/null || echo ${TOOLSDIR}/OpusTools-perl/scripts/convert/tmx2moses}
 
@@ -128,8 +136,13 @@ MARIAN_VOCAB   = ${MARIAN_HOME}marian-vocab
 
 TOKENIZER    = ${MOSESSCRIPTS}/tokenizer
 
+
+##--------------------------------------------------------
+## Tools for creating efficient student models:
+##
 ## browsermt branch of marian-nmt
 ## https://github.com/browsermt/marian-dev
+##--------------------------------------------------------
 
 BROWSERMT_HOME    ?= ${TOOLSDIR}/browsermt
 BROWSERMT_TRAIN    = ${BROWSERMT_HOME}/marian-dev/build/marian
@@ -189,6 +202,9 @@ MULTEVALHOME = ${APPLHOME}/multeval
 
 
 ## install prerequisites
+## 
+## TODO: add EXTRACT_LEX, BROWSERMT_TRAIN, ..?
+## TODO: add OpusFilter?
 
 PREREQ_TOOLS := $(lastword ${ISO639}) ${ATOOLS} ${PIGZ} ${TERASHUF} ${JQ} ${MARIAN} ${EFLOMAL} ${TMX2MOSES}
 PREREQ_PERL  := ISO::639::3 ISO::639::5 OPUS::Tools XML::Parser
@@ -256,7 +272,7 @@ ${TOOLSDIR}/marian-dev/build/marian: ${PROTOC}
 	cd ${TOOLSDIR} && git clone https://github.com/marian-nmt/marian-dev.git
 	mkdir -p ${dir $@}
 	cd ${dir $@} && ${LOAD_MARIAN_BUILD_ENV} && cmake -DUSE_SENTENCEPIECE=on ${MARIAN_BUILD_OPTIONS} ..
-	${MAKE} -C ${dir $@} -j8
+	${LOAD_MARIAN_BUILD_ENV} && ${MAKE} -C ${dir $@} -j8
 
 ${TOOLSDIR}/protobuf/bin/protoc:
 	mkdir -p ${TOOLSDIR}
@@ -265,6 +281,14 @@ ${TOOLSDIR}/protobuf/bin/protoc:
 	cd ${TOOLSDIR}/protobuf && ./autogen.sh
 	cd ${TOOLSDIR}/protobuf && ./configure --prefix=${TOOLSDIR}/protobuf
 	${MAKE} -C ${TOOLSDIR}/protobuf
+
+${TOOLSDIR}/extract-lex/build/extract_lex:
+	mkdir -p ${TOOLSDIR}
+	cd ${TOOLSDIR} && git clone https://github.com/marian-nmt/extract-lex
+	mkdir -p ${dir $@}
+	cd ${dir $@} && ${LOAD_EXTRACTLEX_BUILD_ENV} && cmake ..
+	${LOAD_EXTRACTLEX_BUILD_ENV} && ${MAKE} -C ${dir $@} -j4
+
 
 ## for Mac users: use gcc to compile eflomal
 ##

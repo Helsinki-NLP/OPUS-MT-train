@@ -7,6 +7,7 @@
 include ${REPOHOME}lib/data.mk
 include ${REPOHOME}lib/train.mk
 include ${REPOHOME}lib/test.mk
+include ${REPOHOME}lib/quantize.mk
 
 include ${REPOHOME}lib/slurm.mk
 include ${REPOHOME}lib/generic.mk

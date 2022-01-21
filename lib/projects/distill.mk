@@ -1,5 +1,36 @@
 # -*-makefile-*-
+#
+#
 
+
+STUDENT_MODELTYPE = transformer-tiny11-align
+
+ifeq (${HPC_HOST},mahti)
+  STUDENT_HPCPARAMS_CPU = HPC_CORES=128 HPC_MEM=128g HPC_JOBS=20
+else
+  STUDENT_HPCPARAMS_CPU = HPC_CORES=4 HPC_MEM=64g
+endif
+
+train-student:
+	make ${STUDENT_HPCPARAMS_CPU} MODELTYPE=${STUDENT_MODELTYPE} \
+	all-job-ftbest-nopar-separate-spm-tatoeba.submitcpu
+
+fineng-student:
+	make SRCLANGS=fin TRGLANGS=eng train-student
+
+finswe-student:
+	make SRCLANGS=fin TRGLANGS=swe train-student
+
+swefin-student:
+	make SRCLANGS=swe TRGLANGS=fin train-student
+
+
+
+
+
+
+
+### OLD #####
 
 ## train Afrikaans-English
 ## - only with forward-translated data
