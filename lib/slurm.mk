@@ -16,12 +16,25 @@ endif
 
 
 ## submit job to gpu queue
-##	echo '#SBATCH --exclude=r18g08' >> $@
+##
+## default resources for GPU jobs
+## (most of them relate to CPU resources like MEM, CORES, ...)
+## typically we model single node jobs, which can still have multiple GPUs!
+GPUJOB_HPC_QUEUE   ?= ${HPC_GPUQUEUE}
+GPUJOB_HPC_MEM     ?= 4g
+GPUJOB_HPC_NODES   ?= 1
+GPUJOB_HPC_CORES   ?= 1
+GPUJOB_HPC_THREADS ?= ${GPUJOB_HPC_CORES}
+GPUJOB_HPC_JOBS    ?= ${GPUJOB_HPC_THREADS}
+GPUJOB_HPC_TIME    ?= ${HPC_TIME}
+
 
 SLURM_JOBNAME ?= $(subst -,,${LANGPAIRSTR})
 
-## comma separated nodes to be excluded
+## exclude broken nodes:
+## list comma separated nodes to be excluded
 # BROKEN_NODES = g6301
+
 
 %.submit:
 	mkdir -p ${WORKDIR}
@@ -29,16 +42,16 @@ SLURM_JOBNAME ?= $(subst -,,${LANGPAIRSTR})
 	echo '#SBATCH -J "$(SLURM_JOBNAME)${@:.submit=}"' >>$@
 	echo '#SBATCH -o $(SLURM_JOBNAME)${@:.submit=}.out.%j' >> $@
 	echo '#SBATCH -e $(SLURM_JOBNAME)${@:.submit=}.err.%j' >> $@
-	echo '#SBATCH --mem=${HPC_MEM}' >> $@
 ifdef EMAIL
 	echo '#SBATCH --mail-type=END' >> $@
 	echo '#SBATCH --mail-user=${EMAIL}' >> $@
 endif
-	echo '#SBATCH -n 1' >> $@
-	echo '#SBATCH -N 1' >> $@
-	echo '#SBATCH -p ${HPC_GPUQUEUE}' >> $@
+	echo '#SBATCH --mem=${GPUJOB_HPC_MEM}' >> $@
+	echo '#SBATCH -n ${GPUJOB_HPC_CORES}' >> $@
+	echo '#SBATCH -N ${GPUJOB_HPC_NODES}' >> $@
+	echo '#SBATCH -t ${GPUJOB_HPC_TIME}:00' >> $@
+	echo '#SBATCH -p ${GPUJOB_HPC_QUEUE}' >> $@
 	echo '#SBATCH ${HPC_GPU_ALLOCATION}' >> $@
-	echo '#SBATCH -t ${HPC_TIME}:00' >> $@
 ifdef BROKEN_NODES
 	echo '#SBATCH --exclude=${BROKEN_NODES}' >> $@
 endif
@@ -53,7 +66,7 @@ endif
 	echo 'cd $${SLURM_SUBMIT_DIR:-.}' >> $@
 	echo 'pwd' >> $@
 	echo 'echo "Starting at `date`"' >> $@
-	echo 'srun ${MAKE} ${MAKEARGS} ${@:.submit=}' >> $@
+	echo 'srun ${MAKE} -j ${GPUJOB_HPC_JOBS} ${MAKEARGS} ${@:.submit=}' >> $@
 	echo 'echo "Finishing at `date`"' >> $@
 	sbatch $@
 	mkdir -p ${WORKDIR}
@@ -63,6 +76,15 @@ endif
 
 
 ## submit job to cpu queue
+## copy resources to CPUjob-specific variables
+
+CPUJOB_HPC_QUEUE   ?= ${HPC_QUEUE}
+CPUJOB_HPC_MEM     ?= ${HPC_MEM}
+CPUJOB_HPC_NODES   ?= ${HPC_NODES}
+CPUJOB_HPC_TIME    ?= ${HPC_TIME}
+CPUJOB_HPC_CORES   ?= ${HPC_CORES}
+CPUJOB_HPC_THREADS ?= ${CPUJOB_HPC_CORES}
+CPUJOB_HPC_JOBS    ?= ${CPUJOB_HPC_THREADS}
 
 %.submitcpu:
 	mkdir -p ${WORKDIR}
@@ -70,15 +92,15 @@ endif
 	echo '#SBATCH -J "$(SLURM_JOBNAME)${@:.submitcpu=}"'      >>$@
 	echo '#SBATCH -o $(SLURM_JOBNAME)${@:.submitcpu=}.out.%j' >> $@
 	echo '#SBATCH -e $(SLURM_JOBNAME)${@:.submitcpu=}.err.%j' >> $@
-	echo '#SBATCH --mem=${HPC_MEM}'                           >> $@
 ifdef EMAIL
 	echo '#SBATCH --mail-type=END'                            >> $@
 	echo '#SBATCH --mail-user=${EMAIL}'                       >> $@
 endif
-	echo '#SBATCH -n ${HPC_CORES}' >> $@
-	echo '#SBATCH -N ${HPC_NODES}' >> $@
-	echo '#SBATCH -p ${HPC_QUEUE}' >> $@
-	echo '#SBATCH -t ${HPC_TIME}:00' >> $@
+	echo '#SBATCH --mem=${CPUJOB_HPC_MEM}'                    >> $@
+	echo '#SBATCH -n ${CPUJOB_HPC_CORES}' >> $@
+	echo '#SBATCH -N ${CPUJOB_HPC_NODES}' >> $@
+	echo '#SBATCH -p ${CPUJOB_HPC_QUEUE}' >> $@
+	echo '#SBATCH -t ${CPUJOB_HPC_TIME}:00' >> $@
 ifdef BROKEN_NODES
 	echo '#SBATCH --exclude=${BROKEN_NODES}' >> $@
 endif

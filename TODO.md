@@ -1,6 +1,14 @@
 
 # Things to do
 
+## slurm job pipelines
+
+Create slurm jobs with dependencies to create pipelines of jobs.
+(add --dependencies to sbatch)
+see https://hpc.nih.gov/docs/job_dependencies.html
+https://hpc.nih.gov/docs/userguide.html#depend
+grep for job is (pattern: 'Submitted batch job 946074')
+
 
 ## Issues
 

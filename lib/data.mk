@@ -238,8 +238,9 @@ endif
 
 .PHONY: clean-data rawdata
 clean-data rawdata:
-	for s in ${SRCLANGS}; do \
+	@for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
+	    echo "..... create raw data for $$s-$$t"; \
 	    ${MAKE} SRC=$$s TRG=$$t clean-data-source; \
 	  done \
 	done
@@ -465,7 +466,7 @@ endif
 .PHONY: add-to-local-train-data
 add-to-local-train-data: ${CLEAN_TRAIN_SRC} ${CLEAN_TRAIN_TRG}
 ifdef CHECK_TRAINDATA_SIZE
-	@if [ `${ZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} | wc -l` != `${ZCAT} ${wildcard ${CLEAN_TRAIN_TRG}} | wc -l` ]; then \
+	@if [ `${GZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} | wc -l` != `${GZCAT} ${wildcard ${CLEAN_TRAIN_TRG}} | wc -l` ]; then \
 	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
 	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
 	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
@@ -495,9 +496,9 @@ endif
 # create local data files (add label if necessary)
 ######################################
 	@echo "..... create training data in local scratch space"
-	@${ZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} ${CUT_DATA_SETS} 2>/dev/null \
+	@${GZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} ${CUT_DATA_SETS} 2>/dev/null \
 		${LABEL_SOURCE_DATA} > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
-	@${ZCAT} ${wildcard ${CLEAN_TRAIN_TRG}} ${CUT_DATA_SETS} 2>/dev/null \
+	@${GZCAT} ${wildcard ${CLEAN_TRAIN_TRG}} ${CUT_DATA_SETS} 2>/dev/null \
 		> ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
 ######################################
 #  SHUFFLE_DATA is set?
@@ -656,7 +657,7 @@ add-to-dev-data: ${CLEAN_DEV_SRC} ${CLEAN_DEV_TRG}
 	@echo "add to devset: ${CLEAN_DEV_SRC}"
 	@mkdir -p ${dir ${DEV_SRC}}
 	@echo -n "* ${LANGPAIR}: ${DEVSET}, "         >> ${dir ${DEV_SRC}}README.md
-	@${ZCAT} ${CLEAN_DEV_SRC} 2>/dev/null | wc -l >> ${dir ${DEV_SRC}}README.md
+	@${GZCAT} ${CLEAN_DEV_SRC} 2>/dev/null | wc -l >> ${dir ${DEV_SRC}}README.md
 #-----------------------------------------------------------------
 # sample devdata to balance size between different language pairs
 # (only if FIT_DEVDATA_SIZE is set)
@@ -668,8 +669,8 @@ ifdef FIT_DEVDATA_SIZE
 	@${REPOHOME}scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DEVDATA_SIZE} \
 		${CLEAN_DEV_TRG} 2>/dev/null                      >> ${DEV_TRG}
 else
-	@${ZCAT} ${CLEAN_DEV_SRC} 2>/dev/null ${LABEL_SOURCE_DATA} >> ${DEV_SRC}
-	@${ZCAT} ${CLEAN_DEV_TRG} 2>/dev/null                      >> ${DEV_TRG}
+	@${GZCAT} ${CLEAN_DEV_SRC} 2>/dev/null ${LABEL_SOURCE_DATA} >> ${DEV_SRC}
+	@${GZCAT} ${CLEAN_DEV_TRG} 2>/dev/null                      >> ${DEV_TRG}
 endif
 
 
@@ -740,8 +741,8 @@ ${TEST_TRG}: ${TEST_SRC}
 add-to-test-data: ${CLEAN_TEST_SRC}
 	@echo "add to testset: ${CLEAN_TEST_SRC}"
 	@echo "* ${LANGPAIR}: ${TESTSET}" >> ${dir ${TEST_SRC}}README.md
-	@${ZCAT} ${CLEAN_TEST_SRC} 2>/dev/null ${LABEL_SOURCE_DATA} >> ${TEST_SRC}
-	@${ZCAT} ${CLEAN_TEST_TRG} 2>/dev/null                      >> ${TEST_TRG}
+	@${GZCAT} ${CLEAN_TEST_SRC} 2>/dev/null ${LABEL_SOURCE_DATA} >> ${TEST_SRC}
+	@${GZCAT} ${CLEAN_TEST_TRG} 2>/dev/null                      >> ${TEST_TRG}
 
 
 

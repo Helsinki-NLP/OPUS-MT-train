@@ -18,11 +18,26 @@ RELEASEDIR          ?= ${PWD}/models
 ## TODO: better create a recipe for the yaml file and not the zip file
 ##       becaue we can keep the yaml files in the repo but not the zip files!
 ## --> better dependency in case we need to update and create new distributions!
-DIST_PACKAGE      = ${MODELSHOME}/${LANGPAIRSTR}/${DATASET}.zip
-DIST_YML          = ${MODELSHOME}/${LANGPAIRSTR}/${DATASET}.yml
+#
+# new, longer name (TODO: how much will this break?)
+#
+DIST_PACKAGE      = ${MODELSHOME}/${LANGPAIRSTR}/${DATASET}${MODEL_VARIANT}_${MODELTYPE}.zip
+DIST_YML          = ${DIST_PACKAGE:.zip=.yml}
 RELEASE_README    = ${MODELSHOME}/${LANGPAIRSTR}/README.md
-RELEASE_PACKAGE   = ${MODELSHOME}/${LANGPAIRSTR}/${DATASET}-${DATE}.zip
-RELEASE_YML       = ${MODELSHOME}/${LANGPAIRSTR}/${DATASET}-${DATE}.yml
+RELEASE_PACKAGE   = ${basename ${DIST_PACKAGE}}_${DATE}.zip
+RELEASE_YML       = ${basename ${DIST_PACKAGE}}_${DATE}.yml
+
+
+# previous name conventions:
+#
+# DIST_PACKAGE      = ${MODELSHOME}/${LANGPAIRSTR}/${DATASET}.zip
+# DIST_YML          = ${MODELSHOME}/${LANGPAIRSTR}/${DATASET}.yml
+# RELEASE_README    = ${MODELSHOME}/${LANGPAIRSTR}/README.md
+# RELEASE_PACKAGE   = ${MODELSHOME}/${LANGPAIRSTR}/${DATASET}-${DATE}.zip
+# RELEASE_YML       = ${MODELSHOME}/${LANGPAIRSTR}/${DATASET}-${DATE}.yml
+
+
+
 
 MODEL_README      = ${WORKDIR}/README.md
 MODEL_YML         = ${patsubst %.npz,%.yml,${MODEL_FINAL}}

@@ -132,14 +132,14 @@ test-skip:
 
 
 
-## extension -all: run something over all language pairs, e.g.
-##   make wordalign-all
+## extension -all-langpairs: run something over all language pairs, e.g.
+##   make wordalign-all-langpairs
 ## this goes sequentially over all language pairs
 ## for the parallelizable version of this: look at %-all-parallel
-%-all:
+%-all-langpairs:
 	for l in ${ALL_LANG_PAIRS}; do \
 	    ${MAKE} SRCLANGS="`echo $$l | cut -f1 -d'-' | sed 's/\\+/ /g'`" \
-		    TRGLANGS="`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`" ${@:-all=}; \
+		    TRGLANGS="`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`" ${@:-all-langpairs=}; \
 	done
 
 # run something over all language pairs that have trained models
@@ -328,7 +328,7 @@ endif
 FT_SELECTED ?= 95
 
 %-ftbest:
-	for s in ${SRCLANGS}; do \
+	@for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
 	    if [ -e ${FORWARDTRANS_HOME}/$$s-$$t/latest ]; then \
 	      ${MAKE} -C ${FORWARDTRANS_HOME} SRC=$$s TRG=$$t \
@@ -378,7 +378,7 @@ FT_SELECTED ?= 95
 
 ## joint sentencepiece model and joint vocabulary
 %-joint-spm:
-	${MAKE} USE_JOINT_SUBWORD_MODEL=1 USE_SPM_VOCAB=1 ${@:-joint-spm=}
+	${MAKE} USE_JOINT_SUBWORD_MODEL=1 USE_SPM_VOCAB=1 MODEL_VARIANT=-jointvoc ${@:-joint-spm=}
 
 ## use sentenceopiece models directly as separate vocabularies
 %-separate-spm:
@@ -402,40 +402,6 @@ FT_SELECTED ?= 95
 #		MODELCONFIG=config-ft.mk \
 
 
-## NEW: don't continue from existing models when including pivot data
-## TODO: should we do that?
-#
-# PIVOT_MODEL       = ${MODEL_SUBDIR}${DATASET}+pivot${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
-# PIVOT_MODEL_BASE  = ${PIVOT_MODEL}.${MODELTYPE}.model${NR}
-# PIVOT_MODEL_START = ${WORKDIR}/${PIVOT_MODEL_BASE}.npz
-# PIVOT_MODEL_VOCAB = ${WORKDIR}/${PIVOT_MODEL}.vocab.yml
-
-# %-pivot:
-# ifneq (${wildcard ${MODEL_FINAL}},)
-# ifeq (${wildcard ${PIVOT_MODEL_START}},)
-# 	cp ${MODEL_FINAL} ${PIVOT_MODEL_START}
-# 	cp ${MODEL_VOCAB} ${PIVOT_MODEL_VOCAB}
-# endif
-# endif
-# 	rm -f ${WORKHOME}/${LANGPAIRSTR}/train.submit
-# 	${MAKE} DATASET=${DATASET}+pivot \
-# 		USE_PIVOTING=1 \
-# 		CONTINUE_EXISTING=1 \
-# 		MARIAN_EARLY_STOPPING=10 \
-# 	${@:-pivot=}
-
-
-# OLD: start with parameters from the standard transformer model
-# NOW: big-align is not compatible with the dimensions settings anymore
-#
-# %-big-align:
-# ifneq (${wildcard ${MODEL_FINAL}},)
-# 	${MAKE} PRE_TRAINED_MODEL=${MODEL_FINAL} MODELTYPE=transformer-big-align ${@:-big-align=}
-# else ifneq (${wildcard ${MODEL_START}},)
-# 	${MAKE} PRE_TRAINED_MODEL=${MODEL_START} MODELTYPE=transformer-big-align ${@:-big-align=}
-# else
-# 	${MAKE} MODELTYPE=transformer-big-align ${@:-big-align=}
-# endif
 
 %-big-align:
 	${MAKE} MODELTYPE=transformer-big-align ${@:-big-align=}
@@ -484,11 +450,6 @@ FT_SELECTED ?= 95
 		SPMTRGMODEL=${SPMTRGMONO} \
 	${@:-monospm=}
 
-## sentence-piece models with langid-filtering (new default)
-%-langid:
-	${MAKE} WORKHOME=${shell realpath ${PWD}/work-langid} \
-		PRE=simple \
-	${@:-langid=}
 
 
 ## BPE models
@@ -498,8 +459,56 @@ FT_SELECTED ?= 95
 		MODELTYPE=transformer \
 	${@:-bpe=}
 
-%-bpe-memad:
-	${MAKE} WORKHOME=${shell realpath ${PWD}/work-bpe-memad} \
-		PRE=tok SUBWORDS=bpe \
-		MODELTYPE=transformer \
-	${@:-bpe-memad=}
+
+
+
+
+
+# ## sentence-piece models with langid-filtering (new default)
+# %-langid:
+# 	${MAKE} WORKHOME=${shell realpath ${PWD}/work-langid} \
+# 		PRE=simple \
+# 	${@:-langid=}
+
+
+# %-bpe-memad:
+# 	${MAKE} WORKHOME=${shell realpath ${PWD}/work-bpe-memad} \
+# 		PRE=tok SUBWORDS=bpe \
+# 		MODELTYPE=transformer \
+# 	${@:-bpe-memad=}
+
+
+## NEW: don't continue from existing models when including pivot data
+## TODO: should we do that?
+#
+# PIVOT_MODEL       = ${MODEL_SUBDIR}${DATASET}+pivot${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
+# PIVOT_MODEL_BASE  = ${PIVOT_MODEL}.${MODELTYPE}.model${NR}
+# PIVOT_MODEL_START = ${WORKDIR}/${PIVOT_MODEL_BASE}.npz
+# PIVOT_MODEL_VOCAB = ${WORKDIR}/${PIVOT_MODEL}.vocab.yml
+
+# %-pivot:
+# ifneq (${wildcard ${MODEL_FINAL}},)
+# ifeq (${wildcard ${PIVOT_MODEL_START}},)
+# 	cp ${MODEL_FINAL} ${PIVOT_MODEL_START}
+# 	cp ${MODEL_VOCAB} ${PIVOT_MODEL_VOCAB}
+# endif
+# endif
+# 	rm -f ${WORKHOME}/${LANGPAIRSTR}/train.submit
+# 	${MAKE} DATASET=${DATASET}+pivot \
+# 		USE_PIVOTING=1 \
+# 		CONTINUE_EXISTING=1 \
+# 		MARIAN_EARLY_STOPPING=10 \
+# 	${@:-pivot=}
+
+
+# OLD: start with parameters from the standard transformer model
+# NOW: big-align is not compatible with the dimensions settings anymore
+#
+# %-big-align:
+# ifneq (${wildcard ${MODEL_FINAL}},)
+# 	${MAKE} PRE_TRAINED_MODEL=${MODEL_FINAL} MODELTYPE=transformer-big-align ${@:-big-align=}
+# else ifneq (${wildcard ${MODEL_START}},)
+# 	${MAKE} PRE_TRAINED_MODEL=${MODEL_START} MODELTYPE=transformer-big-align ${@:-big-align=}
+# else
+# 	${MAKE} MODELTYPE=transformer-big-align ${@:-big-align=}
+# endif

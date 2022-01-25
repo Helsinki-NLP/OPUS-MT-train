@@ -24,6 +24,7 @@ include ${REPOHOME}lib/dist.mk
 .PHONY: data
 data:	
 	@${MAKE} rawdata
+	@${MAKE} ${WORKDIR}/${MODELCONFIG}
 	@${MAKE} ${TRAINDATA_SRC} ${TRAINDATA_TRG}
 	@${MAKE} ${DEVDATA_SRC} ${DEVDATA_TRG}
 	@${MAKE} ${TESTDATA_SRC} ${TESTDATA_TRG}
@@ -38,6 +39,43 @@ devdata:	${DEVDATA_SRC} ${DEVDATA_TRG}
 devdata-raw:	${DEV_SRC} ${DEV_TRG}
 
 wordalign:	${TRAIN_ALG}
+
+
+## just report whether all necessary data sets exist
+## --> usefule for the data-and-train-job recipe that
+##     decides whether to start a CPU job for creating 
+##     data first before starting a GPU job for training
+data-done:
+	if [ -e ${TESTDATA_SRC} ]; then \
+	  if [ -e ${TESTDATA_TRG} ]; then \
+	    if [ -e ${DEVDATA_SRC} ]; then \
+	      if [ -e ${DEVDATA_TRG} ]; then \
+	        if [ -e ${TRAINDATA_SRC} ]; then \
+	          if [ -e ${TRAINDATA_TRG} ]; then \
+	            if [ "$(filter align,${subst -, ,${MODELTYPE}})" == "align" ]; then \
+	              if [ -e ${TRAIN_ALG} ]; then \
+			echo "all data sets exist"; \
+	              fi \
+	            else \
+			echo "all data sets exist"; \
+	            fi \
+	          fi \
+	        fi \
+	      fi \
+	    fi \
+	  fi \
+	fi
+
+data-needed:
+	@echo ${SUBWORDS}
+	@echo ${USE_JOINT_SUBWORD_MODEL}
+	@echo ${TRAINDATA_SRC} ${TRAINDATA_TRG}
+	@echo ${DEVDATA_SRC} ${DEVDATA_TRG}
+	@echo ${TESTDATA_SRC} ${TESTDATA_TRG}
+	@echo ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB}
+ifeq ($(filter align,${subst -, ,${MODELTYPE}}),align)
+	@echo ${TRAIN_ALG}
+endif
 
 #------------------------------------------------------------------------
 # train, translate and evaluate
@@ -57,8 +95,6 @@ eval-ensemble: ${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.ensemble.${
 
 
 ## combined tasks:
-
-
 ## train and evaluate
 train-and-eval: ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
 	${MAKE} ${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}.compare
@@ -66,6 +102,7 @@ train-and-eval: ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
 
 ## train model and start back-translation jobs once the model is ready
 ## (requires to create a dist package)
+## TODO: does this still work?
 train-and-start-bt-jobs: ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
 	${MAKE} ${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}.compare
 	${MAKE} local-dist
@@ -80,20 +117,54 @@ train-and-start-bt-jobs: ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
 # create slurm jobs
 #------------------------------------------------------------------------
 
+# all-job:
+#  - check whether data files exist
+#  - if not: create a CPU job that makes the data and starts a training job after that
+#  - if yes: create the GPU training job (after checking that data sets are alright)
+#
+# TODO: should we rather submit both jobs with dependencies between them?
+#       (see sbatch --dependencies)
 .PHONY: all-job
 all-job: 
-	${MAKE} rawdata
-	${MAKE} ${WORKDIR}/${MODELCONFIG}
+	${MAKE} -s data-needed
+	@if [ "`${MAKE} -s data-done 2>/dev/null | grep 'data sets'`" == "all data sets exist" ]; then \
+	  echo "........ all data files exist already!"; \
+	  echo "........ let's check that everything is OK!"; \
+	  echo "........ and create a job for training the model!"; \
+	  ${MAKE} data-and-train-job; \
+	else \
+	  echo "........ create a job for making data files first!"; \
+	  echo "........ start trainnig job later!"; \
+	  ${MAKE} data-and-train-job.submitcpu; \
+	fi
+
+all-job-test: 
+	@if [ "`${MAKE} -s data-done 2>/dev/null | grep 'data sets'`" == "all data sets exist" ]; then \
+	  echo "exist!"; \
+	else \
+	  echo "does not exist!"; \
+	fi
+
+# data-and-train job:
+#  - prepare data sets
+#  - create/submit the training job
+.PHONY: data-and-train-job
+data-and-train-job:
 	${MAKE} data
 	${MAKE} train-and-eval-job
 
+# train-job:
+#  - create/submit a jobb for training only (no evaluation!)
 .PHONY: train-job
 train-job:
-	${MAKE} HPC_CORES=1 HPC_MEM=${GPUJOB_HPC_MEM} train.submit${GPUJOB_SUBMIT}
+	${MAKE} train.submit${GPUJOB_SUBMIT}
 
+# train-and-eval-job:
+#  - create/submit a jobb for training (+ evaluation)
 .PHONY: train-and-eval-job
 train-and-eval-job:
-	${MAKE} HPC_CORES=1 HPC_MEM=${GPUJOB_HPC_MEM} train-and-eval.submit${GPUJOB_SUBMIT}
+	${MAKE} train-and-eval.submit${GPUJOB_SUBMIT}
+
 
 
 
