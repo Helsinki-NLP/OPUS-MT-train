@@ -67,8 +67,6 @@ data-done:
 	fi
 
 data-needed:
-	@echo ${SUBWORDS}
-	@echo ${USE_JOINT_SUBWORD_MODEL}
 	@echo ${TRAINDATA_SRC} ${TRAINDATA_TRG}
 	@echo ${DEVDATA_SRC} ${DEVDATA_TRG}
 	@echo ${TESTDATA_SRC} ${TESTDATA_TRG}
@@ -126,7 +124,6 @@ train-and-start-bt-jobs: ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
 #       (see sbatch --dependencies)
 .PHONY: all-job
 all-job: 
-	${MAKE} -s data-needed
 	@if [ "`${MAKE} -s data-done 2>/dev/null | grep 'data sets'`" == "all data sets exist" ]; then \
 	  echo "........ all data files exist already!"; \
 	  echo "........ let's check that everything is OK!"; \
@@ -138,12 +135,6 @@ all-job:
 	  ${MAKE} data-and-train-job.submitcpu; \
 	fi
 
-all-job-test: 
-	@if [ "`${MAKE} -s data-done 2>/dev/null | grep 'data sets'`" == "all data sets exist" ]; then \
-	  echo "exist!"; \
-	else \
-	  echo "does not exist!"; \
-	fi
 
 # data-and-train job:
 #  - prepare data sets

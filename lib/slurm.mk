@@ -115,7 +115,7 @@ endif
 	echo 'cd $${SLURM_SUBMIT_DIR:-.}' >> $@
 	echo 'pwd' >> $@
 	echo 'echo "Starting at `date`"' >> $@
-	echo '${MAKE} -j ${HPC_JOBS} ${MAKEARGS} ${@:.submitcpu=}' >> $@
+	echo '${MAKE} -j ${CPUJOB_HPC_JOBS} ${MAKEARGS} ${@:.submitcpu=}' >> $@
 	echo 'echo "Finishing at `date`"' >> $@
 	sbatch $@
 	mkdir -p ${WORKDIR}
