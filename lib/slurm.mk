@@ -68,7 +68,7 @@ endif
 	echo 'echo "Starting at `date`"' >> $@
 	echo 'srun ${MAKE} -j ${GPUJOB_HPC_JOBS} ${MAKEARGS} ${@:.submit=}' >> $@
 	echo 'echo "Finishing at `date`"' >> $@
-	sbatch $@
+	sbatch ${SBATCH_ARGS} $@
 	mkdir -p ${WORKDIR}
 	mv $@ ${WORKDIR}/$@
 
@@ -117,7 +117,7 @@ endif
 	echo 'echo "Starting at `date`"' >> $@
 	echo '${MAKE} -j ${CPUJOB_HPC_JOBS} ${MAKEARGS} ${@:.submitcpu=}' >> $@
 	echo 'echo "Finishing at `date`"' >> $@
-	sbatch $@
+	sbatch ${SBATCH_ARGS} $@
 	mkdir -p ${WORKDIR}
 	mv $@ ${WORKDIR}/$@
 
