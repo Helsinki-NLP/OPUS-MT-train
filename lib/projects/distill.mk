@@ -3,6 +3,7 @@
 #
 
 
+STUDENT_DATA = ftbest-nopar
 STUDENT_CEFILTER  = 95
 STUDENT_VOCAB = separate-spm
 # STUDENT_VOCAB = joint-spm
@@ -41,37 +42,46 @@ fineng-test-student:
 
 train-student:
 	make ${STUDENT_HPCPARAMS} FT_SELECTED=${STUDENT_CEFILTER} \
-		all-job-ftbest-nopar-${STUDENT_VOCAB}-tatoeba
+		all-job-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba
 
 test-student:
 	make FT_SELECTED=${STUDENT_CEFILTER} HPC_MEM=20g WALLTIME=2 \
-		eval-ftbest-nopar-${STUDENT_VOCAB}-tatoeba.submit \
-		eval-testsets-ftbest-nopar-${STUDENT_VOCAB}-tatoeba.submit
+		eval-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba.submit \
+		eval-testsets-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba.submit
 
 release-student:
 	make ${STUDENT_HPCPARAMS} FT_SELECTED=${STUDENT_CEFILTER} \
-		release-ftbest-nopar-${STUDENT_VOCAB}-tatoeba
+		release-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba
+
+quantizeonly-student:
+	make FT_SELECTED=${STUDENT_CEFILTER} quantize-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba
 
 quantize-student:
 	make FT_SELECTED=${STUDENT_CEFILTER} HPC_MEM=20g WALLTIME=2 \
-		lexical-shortlist-ftbest-nopar-${STUDENT_VOCAB}-tatoeba \
-		quantize-ftbest-nopar-${STUDENT_VOCAB}-tatoeba \
-		quantize-alphas-ftbest-nopar-${STUDENT_VOCAB}-tatoeba
+		lexical-shortlist-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba \
+		quantize-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba \
+		quantize-alphas-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba
 
 quantize-finetuned-student:
 	make FT_SELECTED=${STUDENT_CEFILTER} HPC_MEM=20g WALLTIME=2 \
-		quantize-tuned-alphas-ftbest-nopar-${STUDENT_VOCAB}-tatoeba
+		quantize-tuned-alphas-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba
+
 
 
 test-quantized-student:
 	make FT_SELECTED=${STUDENT_CEFILTER} HPC_MEM=20g WALLTIME=2 \
-		test-intgemm8-all-ftbest-nopar-${STUDENT_VOCAB}-tatoeba \
-		test-intgemm8-all-shortlist-ftbest-nopar-${STUDENT_VOCAB}-tatoeba
+		test-intgemm8-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba \
+		test-intgemm8-shortlist-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba
 
-test-quantized-finetuned-student:
+test-quantized-all-student:
 	make FT_SELECTED=${STUDENT_CEFILTER} HPC_MEM=20g WALLTIME=2 \
-		test-intgemm8-alltuned-ftbest-nopar-${STUDENT_VOCAB}-tatoeba \
-		test-intgemm8-alltuned-shortlist-ftbest-nopar-${STUDENT_VOCAB}-tatoeba
+		test-intgemm8-all-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba \
+		test-intgemm8-all-shortlist-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba
+
+test-quantized-all-finetuned-student:
+	make FT_SELECTED=${STUDENT_CEFILTER} HPC_MEM=20g WALLTIME=2 \
+		test-intgemm8-alltuned-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba \
+		test-intgemm8-alltuned-shortlist-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba
 
 
 
