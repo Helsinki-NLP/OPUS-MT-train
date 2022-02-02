@@ -165,10 +165,10 @@ endif
 ## - line 4: length-of-longest-word
 
 %.stats: %.gz
-	${ZCAT} $< | wc -lwmc > $@
-	${ZCAT} $< | sed 's/./& /g' | tr ' ' "\n" | sort -u | wc -l >> $@
-	${ZCAT} $< | wc -L >> $@
-	${ZCAT} $< | tr ' ' "\n" | wc -L >> $@
+	${GZCAT} $< | wc -lwmc > $@
+	${GZCAT} $< | sed 's/./& /g' | tr ' ' "\n" | sort -u | wc -l >> $@
+	${GZCAT} $< | wc -L >> $@
+	${GZCAT} $< | tr ' ' "\n" | wc -L >> $@
 
 
 ##----------------------------------------------

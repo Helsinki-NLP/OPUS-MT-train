@@ -112,7 +112,11 @@ ALL_BITEXT_LATEST_TRG = ${patsubst %,${OUTPUT_DIR}/latest/Tatoeba-train.%.${LANG
 .PRECIOUS: ${BITEXT_BASE}.${TRG}.%.gz
 
 .PHONY: all
-all: translate
+all: prepare
+	${MAKE} translate-all-parts
+	${MAKE} score-translations
+	${MAKE} sort-scored-translations
+
 
 .PHONY: mtmodel
 mtmodel: ${LANGPAIR}/${MODELNAME}/decoder.yml
@@ -362,6 +366,21 @@ check-latest:
 	    fi \
 	  done \
 	fi
+
+check-scores:
+	@if [ -d ${LANGPAIR}/latest ]; then \
+	  for T in `ls ${LANGPAIR}/latest/*.${TRG}.gz`; do \
+	    S=`echo $$T | sed 's/.${TRG}.gz/.${SRC}.scores.gz/'`; \
+	    a=`${GZCAT} $$S | wc -l`; \
+	    b=`${GZCAT} $$T | wc -l`; \
+	    if [ $$a != $$b ]; then \
+	      echo "$$a != $$b	$$S	$$T"; \
+	    else \
+	      echo "$$a	$$S	$$T"; \
+	    fi \
+	  done \
+	fi
+
 
 check-translated:
 	@for S in `ls ${LANGPAIR}/*.${SRC}.spm.gz`; do \

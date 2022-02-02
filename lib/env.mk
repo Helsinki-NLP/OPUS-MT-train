@@ -22,7 +22,6 @@ MEM          ?= 4g
 CORES        ?= 1
 WALLTIME     ?= 72
 
-GPUJOB_HPC_MEM ?= 4g
 
 GPU          = v100
 DEVICE       = cuda
@@ -33,7 +32,7 @@ LOAD_GPU_ENV = echo "nothing to load"
 HPC_GPU_ALLOCATION = --gres=gpu:${GPU}:${NR_GPUS}
 
 
-WORKHOME = ${PWD}/work
+WORKHOME ?= ${PWD}/work
 
 
 ## anything that needs to be done to load

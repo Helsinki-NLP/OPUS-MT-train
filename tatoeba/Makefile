@@ -86,6 +86,7 @@
 SHELL    := bash
 PWD      := ${shell pwd}
 REPOHOME := ${PWD}/../
+# WORKHOME := ${PWD}/work-tatoeba
 
 
 ifeq (${SRCLANGS},)
@@ -268,6 +269,7 @@ OPUS_LANGS3            := ${sort ${filter-out xxx,${shell ${GET_ISO_CODE} ${OPUS
 OPUS_LANG_PARENTS      := ${sort ${shell langgroup -p -n ${OPUS_LANGS3} 2>/dev/null}}
 OPUS_LANG_GRANDPARENTS := ${sort ${shell langgroup -p -n ${OPUS_LANG_PARENTS} 2>/dev/null}}
 OPUS_LANG_GROUPS       := ${sort ${OPUS_LANG_PARENTS} ${OPUS_LANG_GRANDPARENTS}}
+
 
 
 .PHONY: all
@@ -1706,7 +1708,7 @@ KEEP_LANGIDS         = bos_Cyrl cmn cnr cnr_Latn csb diq dnj dty fas fqs ful fur
 			syr syr_Syrc tgk_Latn thy tlh tmh toi tuk_Cyrl urd_Deva xal_Latn yid_Latn zho zlm
 SKIP_LANGIDS         = ${filter-out ${KEEP_LANGIDS},${TRAIN_ONLY_LANGIDS}} \
 			ang ara_Latn arq_Latn apc_Latn bul_Latn ell_Latn eng_Tibt \
-			eng_Zinh heb_Latn hun_Zinh nob_Hebr rus_Latn \
+			eng_Zinh eng_.... heb_Latn hun_Zinh nob_Hebr rus_Latn \
 			..._Qa[ab][a-x] ..._Zinh ..._Zmth ..._Zsym ..._Zxxx ..._Zyyy ..._Zzzz
 SKIP_LANGIDS_PATTERN = ^\(${subst ${SPACE},\|,${SKIP_LANGIDS}}\)$$
 

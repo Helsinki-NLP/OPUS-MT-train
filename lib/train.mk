@@ -314,9 +314,9 @@ lex-t2s: ${TRAIN_T2S}
 
 ${TRAIN_S2T}: ${TRAIN_ALG} ${TRAINDATA_SRC} ${TRAINDATA_TRG}
 	mkdir -p ${LOCAL_TRAIN}.algtmp
-	${ZCAT} $< > ${LOCAL_TRAIN}.algtmp/corpus.aln
-	${ZCAT} ${word 2,$^} > ${LOCAL_TRAIN}.algtmp/corpus.src
-	${ZCAT} ${word 3,$^} > ${LOCAL_TRAIN}.algtmp/corpus.trg
+	${GZCAT} $< > ${LOCAL_TRAIN}.algtmp/corpus.aln
+	${GZCAT} ${word 2,$^} > ${LOCAL_TRAIN}.algtmp/corpus.src
+	${GZCAT} ${word 3,$^} > ${LOCAL_TRAIN}.algtmp/corpus.trg
 	${EXTRACT_LEX} 	${LOCAL_TRAIN}.algtmp/corpus.trg \
 			${LOCAL_TRAIN}.algtmp/corpus.src \
 			${LOCAL_TRAIN}.algtmp/corpus.aln \

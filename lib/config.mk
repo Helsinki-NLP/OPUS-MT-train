@@ -316,6 +316,11 @@ ALL_MULTILINGUAL_MODELS := ${shell echo '${ALL_LANG_PAIRS}' | tr ' ' "\n" | grep
 ## pre-processing and vocabulary
 ##----------------------------------------------------------------------------
 
+## joint source+target sentencepiece model
+ifeq (${USE_JOINT_SUBWORD_MODEL},1)
+  SUBWORDS = jointspm
+endif
+
 ## type of subword segmentation (bpe|spm)
 ## model vocabulary size (NOTE: BPESIZE is used as default)
 SUBWORDS              ?= spm
@@ -326,23 +331,18 @@ SUBWORD_VOCAB_SIZE    ?= ${BPESIZE}
 SUBWORD_SRCVOCAB_SIZE ?= ${SUBWORD_VOCAB_SIZE}
 SUBWORD_TRGVOCAB_SIZE ?= ${SUBWORD_VOCAB_SIZE}
 
-## joint source+target sentencepiece model
-ifeq (${USE_JOINT_SUBWORD_MODEL},1)
-  SUBWORDS = jointspm
-endif
-
 SUBWORD_MODEL_NAME ?= opus
 
 ifeq (${SUBWORDS},bpe)
-  BPESRCMODEL      ?= ${WORKDIR}/train/${SUBWORD_MODEL_NAME}.src.bpe${SUBWORD_SRCVOCAB_SIZE:000=}k-model
-  BPETRGMODEL      ?= ${WORKDIR}/train/${SUBWORD_MODEL_NAME}.trg.bpe${SUBWORD_TRGVOCAB_SIZE:000=}k-model
-  BPE_MODEL        ?= ${WORKDIR}/train/${SUBWORD_MODEL_NAME}.bpe${SUBWORD_VOCAB_SIZE:000=}k-model
+  BPESRCMODEL       = ${WORKDIR}/train/${SUBWORD_MODEL_NAME}.src.bpe${SUBWORD_SRCVOCAB_SIZE:000=}k-model
+  BPETRGMODEL       = ${WORKDIR}/train/${SUBWORD_MODEL_NAME}.trg.bpe${SUBWORD_TRGVOCAB_SIZE:000=}k-model
+  BPE_MODEL         = ${WORKDIR}/train/${SUBWORD_MODEL_NAME}.bpe${SUBWORD_VOCAB_SIZE:000=}k-model
   SUBWORD_SRC_MODEL = ${BPESRCMODEL}
   SUBWORD_TRG_MODEL = ${BPETRGMODEL}
 else
-  SPMSRCMODEL      ?= ${WORKDIR}/train/${SUBWORD_MODEL_NAME}.src.${SUBWORDS}${SUBWORD_SRCVOCAB_SIZE:000=}k-model
-  SPMTRGMODEL      ?= ${WORKDIR}/train/${SUBWORD_MODEL_NAME}.trg.${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k-model
-  SPM_MODEL        ?= ${WORKDIR}/train/${SUBWORD_MODEL_NAME}.${SUBWORDS}${SUBWORD_VOCAB_SIZE:000=}k-model
+  SPMSRCMODEL       = ${WORKDIR}/train/${SUBWORD_MODEL_NAME}.src.${SUBWORDS}${SUBWORD_SRCVOCAB_SIZE:000=}k-model
+  SPMTRGMODEL       = ${WORKDIR}/train/${SUBWORD_MODEL_NAME}.trg.${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k-model
+  SPM_MODEL         = ${WORKDIR}/train/${SUBWORD_MODEL_NAME}.${SUBWORDS}${SUBWORD_VOCAB_SIZE:000=}k-model
   SUBWORD_SRC_MODEL = ${SPMSRCMODEL}
   SUBWORD_TRG_MODEL = ${SPMTRGMODEL}
   SUBWORD_SRC_VOCAB = ${SPMSRCMODEL}.vocab
@@ -445,7 +445,7 @@ TEST_TRG  ?= ${WORKDIR}/test/${TESTSET_NAME}.trg
 
 # MODEL_SUBDIR  =
 # MODEL_VARIANT = 
-MODEL         =  ${MODEL_SUBDIR}${DATASET}${MODEL_VARIANT}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
+MODEL         =  ${MODEL_SUBDIR}${DATASET}${TRAINSIZE}${MODEL_VARIANT}.${PRE_SRC}-${PRE_TRG}
 
 MODEL_BASENAME   = ${MODEL}.${MODELTYPE}.model${NR}
 MODEL_VALIDLOG   = ${MODEL}.${MODELTYPE}.valid${NR}.log
@@ -455,9 +455,11 @@ MODEL_FINAL      = ${WORKDIR}/${MODEL_BASENAME}.npz.best-perplexity.npz
 MODEL_DECODER    = ${MODEL_FINAL}.decoder.yml
 
 ## quantized models
-MODEL_BIN           = ${WORKDIR}/${MODEL_BASENAME}.intgemm8.bin
-MODEL_INTGEMM8TUNED = ${WORKDIR}/${MODEL_BASENAME}.intgemm8tuned.npz
-MODEL_BIN_ALPHAS    = ${WORKDIR}/${MODEL_BASENAME}.intgemm8.alphas.bin
+MODEL_BIN              = ${WORKDIR}/${MODEL_BASENAME}.intgemm8.bin
+MODEL_BIN_ALPHAS       = ${WORKDIR}/${MODEL_BASENAME}.intgemm8.alphas.bin
+MODEL_BIN_TUNED        = ${WORKDIR}/${MODEL_BASENAME}.intgemm8tuned.bin
+MODEL_BIN_TUNED_ALPHAS = ${WORKDIR}/${MODEL_BASENAME}.intgemm8tuned.alphas.bin
+MODEL_INTGEMM8TUNED    = ${WORKDIR}/${MODEL_BASENAME}.intgemm8tuned.npz
 
 ## lexical short-lists
 SHORTLIST_NRVOC     = 100
@@ -495,21 +497,23 @@ endif
 
 
 
-## latest model with the same pre-processing but any data or modeltype
-## except for models that include the string 'tuned4' (fine-tuned models)
-## also allow models that are of the same type but with/without guided alignment
-## --> this will be used if the flag CONTINUE_EXISTING is set on
+# find the latest model that has the same modeltype/modelvariant with or without guided alignment
+# to be used if the flag CONTINUE_EXISTING is set to 1
+# - without guided alignment (remove if part of the current): ${subst -align,,${MODELTYPE}}
+# - with guided alignment (remove and add again):             ${subst -align,,${MODELTYPE}}-align
+#
+# Don't use the ones that are tuned for a specific language pair or domain!
 
 ifeq (${CONTINUE_EXISTING},1)
   MODEL_LATEST = $(firstword \
-	${shell ls -t 	${WORKDIR}/*.${PRE_SRC}-${PRE_TRG}.*.model[0-9].npz \
-			${WORKDIR}/*.${PRE_SRC}-${PRE_TRG}.*.best-perplexity.npz \
-		2>/dev/null | grep -v 'tuned4' | \
-		egrep '${MODELTYPE}|${MODELTYPE}-align|${subst -align,,${MODELTYPE}}' })
+	${shell ls -t 	${WORKDIR}/*${MODEL_VARIANT}.${PRE_SRC}-${PRE_TRG}.${subst -align,,${MODELTYPE}}.model[0-9].npz \
+			${WORKDIR}/*${MODEL_VARIANT}.${PRE_SRC}-${PRE_TRG}.${subst -align,,${MODELTYPE}}-align.model[0-9].npz \
+			${WORKDIR}/*${MODEL_VARIANT}.${PRE_SRC}-${PRE_TRG}.${subst -align,,${MODELTYPE}}.best-perplexity.npz \
+			${WORKDIR}/*${MODEL_VARIANT}.${PRE_SRC}-${PRE_TRG}.${subst -align,,${MODELTYPE}}-align.best-perplexity.npz \
+		2>/dev/null | grep -v 'tuned4' })
   MODEL_LATEST_VOCAB     = $(shell echo "${MODEL_LATEST}" | \
 		sed 's|\.${PRE_SRC}-${PRE_TRG}\..*$$|.${PRE_SRC}-${PRE_TRG}.vocab.yml|')
-  MODEL_LATEST_OPTIMIZER = $(shell echo "${MODEL_LATEST}" | \
-		sed 's|.best-perplexity.npz|.optimizer.npz|')
+  MARIAN_EARLY_STOPPING = 15
 endif
 
 
@@ -648,7 +652,7 @@ endif
 # if they exist in the work directory
 
 # MODELCONFIG ?= ${MODEL}.${MODELTYPE}.mk
-MODELCONFIG = ${DATASET}.${MODELTYPE}.mk
+MODELCONFIG = ${DATASET}${MODEL_VARIANT}.${MODELTYPE}.mk
 ifneq ($(wildcard ${WORKDIR}/${MODELCONFIG}),)
   include ${WORKDIR}/${MODELCONFIG}
 endif
@@ -674,7 +678,7 @@ ${WORKDIR}/${MODELCONFIG}:
 	@if [ -e ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz ]; then \
 	  ${MAKE} ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.charfreq \
 		  ${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.charfreq; \
-	  s=`${ZCAT} ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz | head -10000001 | wc -l`; \
+	  s=`${GZCAT} ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz | head -10000001 | wc -l`; \
 	  S=`cat ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.charfreq | wc -l`; \
 	  T=`cat ${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.charfreq | wc -l`; \
 	else \
