@@ -89,6 +89,13 @@ ifneq (${USE_FORWARDTRANS_SELECTED},)
   FORWARDTRANS_TRG += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/*.${TRGEXT}.best${USE_FORWARDTRANS_SELECTED}.gz}}
 endif
 
+## selected by "raw" (unnormalised) scores
+ifneq (${USE_FORWARDTRANS_SELECTED_RAW},)
+  FORWARDTRANS_SRC += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.rawbest${USE_FORWARDTRANS_SELECTED_RAW}.gz}}
+  FORWARDTRANS_TRG += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/*.${TRGEXT}.rawbest${USE_FORWARDTRANS_SELECTED_RAW}.gz}}
+endif
+
+
 # forward-translation data of monolingual data (source-to-target)
 ifeq (${USE_FORWARDTRANSMONO},1)
   FORWARDTRANSMONO_SRC = ${sort ${wildcard ${BACKTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.gz}}

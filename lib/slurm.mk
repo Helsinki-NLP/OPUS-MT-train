@@ -21,7 +21,7 @@ endif
 ## (most of them relate to CPU resources like MEM, CORES, ...)
 ## typically we model single node jobs, which can still have multiple GPUs!
 GPUJOB_HPC_QUEUE   ?= ${HPC_GPUQUEUE}
-GPUJOB_HPC_MEM     ?= 4g
+GPUJOB_HPC_MEM     ?= 8g
 GPUJOB_HPC_NODES   ?= 1
 GPUJOB_HPC_CORES   ?= 1
 GPUJOB_HPC_THREADS ?= ${GPUJOB_HPC_CORES}
@@ -111,7 +111,7 @@ endif
 	echo '${HPC_CPU_EXTRA1}' >> $@
 	echo '${HPC_CPU_EXTRA2}' >> $@
 	echo '${HPC_CPU_EXTRA3}' >> $@
-	echo '${LOAD_GPU_ENV}'           >> $@
+	echo '${LOAD_CPU_ENV}'           >> $@
 	echo 'cd $${SLURM_SUBMIT_DIR:-.}' >> $@
 	echo 'pwd' >> $@
 	echo 'echo "Starting at `date`"' >> $@

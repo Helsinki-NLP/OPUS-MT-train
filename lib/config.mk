@@ -445,7 +445,7 @@ TEST_TRG  ?= ${WORKDIR}/test/${TESTSET_NAME}.trg
 
 # MODEL_SUBDIR  =
 # MODEL_VARIANT = 
-MODEL         =  ${MODEL_SUBDIR}${DATASET}${MODEL_VARIANT}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
+MODEL         =  ${MODEL_SUBDIR}${DATASET}${TRAINSIZE}${MODEL_VARIANT}.${PRE_SRC}-${PRE_TRG}
 
 MODEL_BASENAME   = ${MODEL}.${MODELTYPE}.model${NR}
 MODEL_VALIDLOG   = ${MODEL}.${MODELTYPE}.valid${NR}.log
@@ -497,21 +497,23 @@ endif
 
 
 
-## latest model with the same pre-processing but any data or modeltype
-## except for models that include the string 'tuned4' (fine-tuned models)
-## also allow models that are of the same type but with/without guided alignment
-## --> this will be used if the flag CONTINUE_EXISTING is set on
+# find the latest model that has the same modeltype/modelvariant with or without guided alignment
+# to be used if the flag CONTINUE_EXISTING is set to 1
+# - without guided alignment (remove if part of the current): ${subst -align,,${MODELTYPE}}
+# - with guided alignment (remove and add again):             ${subst -align,,${MODELTYPE}}-align
+#
+# Don't use the ones that are tuned for a specific language pair or domain!
 
 ifeq (${CONTINUE_EXISTING},1)
   MODEL_LATEST = $(firstword \
-	${shell ls -t 	${WORKDIR}/*.${PRE_SRC}-${PRE_TRG}.*.model[0-9].npz \
-			${WORKDIR}/*.${PRE_SRC}-${PRE_TRG}.*.best-perplexity.npz \
-		2>/dev/null | grep -v 'tuned4' | \
-		egrep '${MODELTYPE}|${MODELTYPE}-align|${subst -align,,${MODELTYPE}}' })
+	${shell ls -t 	${WORKDIR}/*${MODEL_VARIANT}.${PRE_SRC}-${PRE_TRG}.${subst -align,,${MODELTYPE}}.model[0-9].npz \
+			${WORKDIR}/*${MODEL_VARIANT}.${PRE_SRC}-${PRE_TRG}.${subst -align,,${MODELTYPE}}-align.model[0-9].npz \
+			${WORKDIR}/*${MODEL_VARIANT}.${PRE_SRC}-${PRE_TRG}.${subst -align,,${MODELTYPE}}.best-perplexity.npz \
+			${WORKDIR}/*${MODEL_VARIANT}.${PRE_SRC}-${PRE_TRG}.${subst -align,,${MODELTYPE}}-align.best-perplexity.npz \
+		2>/dev/null | grep -v 'tuned4' })
   MODEL_LATEST_VOCAB     = $(shell echo "${MODEL_LATEST}" | \
 		sed 's|\.${PRE_SRC}-${PRE_TRG}\..*$$|.${PRE_SRC}-${PRE_TRG}.vocab.yml|')
-  MODEL_LATEST_OPTIMIZER = $(shell echo "${MODEL_LATEST}" | \
-		sed 's|.best-perplexity.npz|.optimizer.npz|')
+  MARIAN_EARLY_STOPPING = 15
 endif
 
 

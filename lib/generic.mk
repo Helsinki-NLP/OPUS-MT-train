@@ -240,33 +240,9 @@ listallmodels:
 
 
 ## include all backtranslation data as well in training
-## start from the pre-trained opus model if it exists
 
-BT_MODEL       = ${MODEL_SUBDIR}${DATASET}+bt${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
-BT_MODEL_BASE  = ${BT_MODEL}.${MODELTYPE}.model${NR}
-BT_MODEL_START = ${WORKDIR}/${BT_MODEL_BASE}.npz
-BT_MODEL_VOCAB = ${WORKDIR}/${BT_MODEL}.vocab.yml
-
-BT_MARIAN_EARLY_STOPPING = 15
-BT_CONTINUE_EXISTING = 1
-
-# %-add-backtranslations:
 %-bt:
-ifneq (${wildcard ${MODEL_FINAL}},)
-ifeq (${wildcard ${BT_MODEL_START}},)
-	cp ${MODEL_FINAL} ${BT_MODEL_START}
-ifeq (${wildcard ${MODEL_VOCAB}},)
-	cp ${MODEL_VOCAB} ${BT_MODEL_VOCAB}
-endif
-endif
-endif
-	${MAKE} DATASET=${DATASET}+bt \
-		USE_BACKTRANS=1 \
-		CONTINUE_EXISTING=${BT_CONTINUE_EXISTING} \
-		MARIAN_EARLY_STOPPING=${BT_MARIAN_EARLY_STOPPING} \
-	${@:-bt=}
-
-#		MODELCONFIG=config-bt.mk \
+	${MAKE} DATASET=${DATASET}+bt USE_BACKTRANS=1 ${@:-bt=}
 
 
 ## adding a pivot language to the model
@@ -291,36 +267,11 @@ PIVOT_LANG         ?= ${DEFAULT_PIVOT_LANG}
 	  ${@:-pivotlang=}; \
 	fi
 
-#		MODELCONFIG=${MODELCONFIG:.mk=+${PIVOT_LANG}.mk} \
-
 
 ## add forward translations
 
-FT_MODEL       = ${MODEL_SUBDIR}${DATASET}+ft${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}
-FT_MODEL_BASE  = ${FT_MODEL}.${MODELTYPE}.model${NR}
-FT_MODEL_START = ${WORKDIR}/${FT_MODEL_BASE}.npz
-FT_MODEL_VOCAB = ${WORKDIR}/${FT_MODEL}.vocab.yml
-
-FT_MARIAN_EARLY_STOPPING = 15
-
 %-ft:
-ifneq (${wildcard ${MODEL_FINAL}},)
-ifeq (${wildcard ${FT_MODEL_START}},)
-	cp ${MODEL_FINAL} ${FT_MODEL_START}
-ifeq (${wildcard ${MODEL_VOCAB}},)
-	cp ${MODEL_VOCAB} ${FT_MODEL_VOCAB}
-endif
-endif
-endif
-	${MAKE} DATASET=${DATASET}+ft \
-		USE_FORWARDTRANS=1 \
-		CONTINUE_EXISTING=1 \
-		MARIAN_EARLY_STOPPING=${FT_MARIAN_EARLY_STOPPING} \
-	${@:-ft=}
-
-#		MODELCONFIG=config-ft.mk \
-
-
+	${MAKE} DATASET=${DATASET}+ft USE_FORWARDTRANS=1 ${@:-ft=}
 
 # use a selected set of forward translation
 
@@ -340,8 +291,18 @@ FT_SELECTED ?= 95
 		USE_FORWARDTRANS_SELECTED=${FT_SELECTED} \
 	${@:-ftbest=}
 
-
-
+%-ftrawbest:
+	@for s in ${SRCLANGS}; do \
+	  for t in ${TRGLANGS}; do \
+	    if [ -e ${FORWARDTRANS_HOME}/$$s-$$t/latest ]; then \
+	      ${MAKE} -C ${FORWARDTRANS_HOME} SRC=$$s TRG=$$t \
+			RETAIN=${FT_SELECTED} extract-rawbest-translations; \
+	    fi \
+	  done \
+	done
+	${MAKE} DATASET=${DATASET}+ftraw${FT_SELECTED} \
+		USE_FORWARDTRANS_SELECTED_RAW=${FT_SELECTED} \
+	${@:-ftrawbest=}
 
 
 ## add forward translation of monolingual data
