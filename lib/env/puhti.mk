@@ -4,9 +4,12 @@
 #
 
 
+DATAJOB_HPCPARAMS = CPUJOB_HPC_CORES=4 CPUJOB_HPC_MEM=64g CPUJOB_HPC_JOBS=2 CPUJOB_HPC_DISK=500
+ALLJOB_HPCPARAMS  = ${DATAJOB_HPCPARAMS}
 
-CSCPROJECT   = project_2003288
-# CSCPROJECT   = project_2002688
+
+# CSCPROJECT   = project_2003288
+CSCPROJECT   = project_2002688
 # CSCPROJECT   = project_2000309
 # CSCPROJECT   = project_2002982
 WORKHOME     = ${shell realpath ${PWD}/work}
@@ -15,14 +18,17 @@ OPUSHOME     = /projappl/nlpl/data/OPUS
 MOSESHOME    = ${APPLHOME}/mosesdecoder
 MOSESSCRIPTS = ${MOSESHOME}/scripts
 EFLOMAL_HOME = ${APPLHOME}/eflomal/
-# MARIAN_HOME  = ${APPLHOME}/marian-dev/build/
-# MARIAN       = ${APPLHOME}/marian-dev/build
-MARIAN_HOME  = ${APPLHOME}/marian/build/
-MARIAN       = ${APPLHOME}/marian/build
+MARIAN_HOME  = ${APPLHOME}/marian-dev/build/
+MARIAN       = ${APPLHOME}/marian-dev/build
+# MARIAN_HOME  = ${APPLHOME}/marian/build/
+# MARIAN       = ${APPLHOME}/marian/build
 SPM_HOME     = ${MARIAN_HOME}
 GPU          = v100
 HPC_QUEUE    = small
 export PATH := ${APPLHOME}/bin:${PATH}
+
+
+LOCAL_SCRATCH ?= /scratch/${CSCPROJECT}
 
 
 CPU_MODULES = gcc/8.3.0 cuda/10.1.168 cudnn/7.6.1.34-10.1 intel-mkl/2019.0.4 python-env 
@@ -34,6 +40,16 @@ ifneq (${HPC_DISK},)
   HPC_GPU_ALLOCATION = --gres=gpu:${GPU}:${NR_GPUS},nvme:${HPC_DISK}
   HPC_CPU_EXTRA1     = \#SBATCH --gres=nvme:${HPC_DISK}
 endif
+
+ifneq (${GPUJOB_HPC_DISK},)
+  HPC_GPU_ALLOCATION = --gres=gpu:${GPU}:${NR_GPUS},nvme:${GPUJOB_HPC_DISK}
+endif
+
+ifneq (${CPUJOB_HPC_DISK},)
+  HPC_CPU_EXTRA1  = \#SBATCH --gres=nvme:${CPUJOB_HPC_DISK}
+  MAKEARGS       += HPC_DISK=${CPUJOB_HPC_DISK}
+endif
+
 
 ## extra SLURM directives (up to 3 numbered variables)
 HPC_EXTRA1 = \#SBATCH --account=${CSCPROJECT}

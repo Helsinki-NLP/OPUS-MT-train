@@ -169,11 +169,11 @@ all-job:
 	@if [ "`${MAKE} -s data-done 2>/dev/null | grep 'data sets'`" == "all data sets exist" ]; then \
 	  echo "........ all data files exist already!"; \
 	  echo "........ submit a job for training the model!"; \
-	  ${MAKE} train-and-eval.submit${GPUJOB_SUBMIT}; \
+	  ${MAKE} ${TRAINJOB_HPCPARAMS} train-and-eval.submit${GPUJOB_SUBMIT}; \
 	else \
 	  echo "........ submit a CPU job for making data files first!"; \
 	  echo "........ submit training job later!"; \
-	  ${MAKE} data-and-train-job.submitcpu; \
+	  ${MAKE} ${ALLJOB_HPCPARAMS} data-and-train-job.submitcpu; \
 	fi
 
 
@@ -189,24 +189,24 @@ all-job:
 data-and-train-job:
 ifdef SLURM_JOBID
 	echo "submit training job after data creation job (${SLURM_JOBID})"
-	make SBATCH_ARGS="-d afterok:${SLURM_JOBID}" train-and-eval.submit${GPUJOB_SUBMIT}
+	make ${TRAINJOB_HPCPARAMS} SBATCH_ARGS="-d afterok:${SLURM_JOBID}" train-and-eval.submit${GPUJOB_SUBMIT}
 endif
 	${MAKE} data
 ifndef SLURM_JOBID
-	${MAKE} train-and-eval.submit${GPUJOB_SUBMIT}
+	${MAKE} ${TRAINJOB_HPCPARAMS} train-and-eval.submit${GPUJOB_SUBMIT}
 endif
 
 # train-job:
 #  - create/submit a jobb for training only (no evaluation!)
 .PHONY: train-job
 train-job:
-	${MAKE} train.submit${GPUJOB_SUBMIT}
+	${MAKE} ${TRAINJOB_HPCPARAMS} train.submit${GPUJOB_SUBMIT}
 
 # train-and-eval-job:
 #  - create/submit a jobb for training (+ evaluation)
 .PHONY: train-and-eval-job
 train-and-eval-job:
-	${MAKE} train-and-eval.submit${GPUJOB_SUBMIT}
+	${MAKE} ${TRAINJOB_HPCPARAMS} train-and-eval.submit${GPUJOB_SUBMIT}
 
 
 

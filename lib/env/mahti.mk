@@ -4,6 +4,10 @@
 #
 
 
+DATAJOB_HPCPARAMS = CPUJOB_HPC_CORES=128 CPUJOB_HPC_MEM=128g CPUJOB_HPC_JOBS=20
+ALLJOB_HPCPARAMS  = ${DATAJOB_HPCPARAMS}
+
+
 # CSCPROJECT   = project_2003288
 CSCPROJECT   = project_2002688
 # CSCPROJECT   = project_2003093
@@ -44,9 +48,15 @@ GPU_MODULES   = gcc/10.3.0 cuda/11.4.2 cudnn/8.0.4.30-11.0-linux-x64 openblas/0.
 LOAD_CPU_ENV  = module load ${CPU_MODULES}
 LOAD_GPU_ENV  = module load ${GPU_MODULES}
 
+
 ifneq (${HPC_DISK},)
   HPC_GPU_ALLOCATION = --gres=gpu:${GPU}:${NR_GPUS},nvme:${HPC_DISK}
 endif
+
+ifneq (${GPUJOB_HPC_DISK},)
+  HPC_GPU_ALLOCATION = --gres=gpu:${GPU}:${NR_GPUS},nvme:${GPUJOB_HPC_DISK}
+endif
+
 
 ## extra SLURM directives (up to 5 variables)
 HPC_EXTRA1 = \#SBATCH --account=${CSCPROJECT}
