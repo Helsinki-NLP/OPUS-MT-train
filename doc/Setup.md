@@ -35,6 +35,16 @@ Optional (recommended) software:
 * [fast_align](https://github.com/clab/fast_align)
 
 
+## Adjust environment setup
+
+Environment variables are mostly specified in `lib/env.mk`. Adjust the settings to match your environment! You maye have to re-run `make install` after the adjustments or compile/install tools manually.
+
+
+## CSC users
+
+OPUS-MT-train is developed to run on the CSC HPC infrastructure and supports `puhti` and `mahti`. There are some hard-coded settings that match our particular environment in our CSC project. You need to adjust those settings in `lib/env/puhti.mk` and `lib/env/puhti.mk`. This includes at least the paths to important tools such as Marian-NMT and others. You also need to set the CSC project identifier (`CSCPROJECT`) to match the project that you use for requestion billing units!
+
+
 
 ## Mac OSX
 
