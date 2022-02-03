@@ -19,7 +19,7 @@ make install
 ```
 
 Look into `lib/env.mk` and adust any settings that you need in your environment.
-For CSC-users: adjust `lib/env/puhti.mk` and `lib/env/puhti.mk` to match yoursetup (especially the locations where Marian-NMT and other tools are installed and the CSC project that you are using).
+For CSC-users: adjust `lib/env/puhti.mk` and `lib/env/mahti.mk` to match yoursetup (especially the locations where Marian-NMT and other tools are installed and the CSC project that you are using).
 
 Training a multilingual NMT model (Finnish and Estonian to Danish, Swedish and English):
 
