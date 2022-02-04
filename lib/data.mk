@@ -181,18 +181,22 @@ reverse-data:
 ifeq (${PRE_SRC},${PRE_TRG})
 ifeq (${words ${SRCLANGS}},1)
 ifeq (${words ${TRGLANGS}},1)
+	mkdir -p ${REV_WORKDIR}/train
 	-if [ -e ${TRAIN_SRC}.clean.${PRE_SRC}.gz ]; then \
-	  mkdir -p ${REV_WORKDIR}/train; \
 	  ln -s ${TRAIN_SRC}.clean.${PRE_SRC}.gz ${REV_WORKDIR}/train/${notdir ${TRAIN_TRG}.clean.${PRE_TRG}.gz}; \
 	  ln -s ${TRAIN_TRG}.clean.${PRE_TRG}.gz ${REV_WORKDIR}/train/${notdir ${TRAIN_SRC}.clean.${PRE_SRC}.gz}; \
 	  cp ${WORKDIR}/train/README.md ${REV_WORKDIR}/train/README.md; \
 	fi
 	-if [ -e ${SUBWORD_SRC_MODEL} ]; then \
 	  ln -s ${SUBWORD_SRC_MODEL} ${REV_WORKDIR}/train/${notdir ${SUBWORD_TRG_MODEL}}; \
+	fi
+	-if [ -e ${SUBWORD_TRG_MODEL} ]; then \
 	  ln -s ${SUBWORD_TRG_MODEL} ${REV_WORKDIR}/train/${notdir ${SUBWORD_SRC_MODEL}}; \
 	fi
 	-if [ -e ${SUBWORD_SRC_MODEL}.vocab ]; then \
 	  ln -s ${SUBWORD_SRC_MODEL}.vocab ${REV_WORKDIR}/train/${notdir ${SUBWORD_TRG_MODEL}}.vocab; \
+	fi
+	-if [ -e ${SUBWORD_TRG_MODEL}.vocab ]; then \
 	  ln -s ${SUBWORD_TRG_MODEL}.vocab ${REV_WORKDIR}/train/${notdir ${SUBWORD_SRC_MODEL}}.vocab; \
 	fi
 	-if [ -e ${TRAIN_ALG} ]; then \
@@ -220,6 +224,8 @@ ifeq (${words ${TRGLANGS}},1)
 	fi
 	-if [ -e ${MODEL_SRCVOCAB} ]; then \
 	  ln -s ${MODEL_SRCVOCAB} ${REV_WORKDIR}/${notdir ${MODEL_TRGVOCAB}}; \
+	fi
+	-if [ -e ${MODEL_TRGVOCAB} ]; then \
 	  ln -s ${MODEL_TRGVOCAB} ${REV_WORKDIR}/${notdir ${MODEL_SRCVOCAB}}; \
 	fi
 	-if [ -e ${MODEL_VOCAB} ]; then \

@@ -190,11 +190,12 @@ data-and-train-job:
 ifdef SLURM_JOBID
 	echo "submit training job after data creation job (${SLURM_JOBID})"
 	make ${TRAINJOB_HPCPARAMS} SBATCH_ARGS="-d afterok:${SLURM_JOBID}" train-and-eval.submit${GPUJOB_SUBMIT}
-endif
 	${MAKE} data
-ifndef SLURM_JOBID
+else
 	${MAKE} ${TRAINJOB_HPCPARAMS} train-and-eval.submit${GPUJOB_SUBMIT}
+	${MAKE} data
 endif
+
 
 # train-job:
 #  - create/submit a jobb for training only (no evaluation!)
