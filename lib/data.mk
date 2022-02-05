@@ -519,12 +519,16 @@ endif
 #    --> do this when FIT_DATA_SIZE is set!
 ######################################
 ifeq (${SHUFFLE_DATA},1)
-	@echo "..... shuffle training data"
-	@paste ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg |\
-		${SHUFFLE} > ${LOCAL_TRAIN_SRC}.shuffled
-	@cut -f1 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
-	@cut -f2 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
-	@rm -f ${LOCAL_TRAIN_SRC}.shuffled
+	@if [ -s ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src ]; then \
+	  echo "..... shuffle training data"; \
+	  paste ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg |\
+		${SHUFFLE} > ${LOCAL_TRAIN_SRC}.shuffled; \
+	  cut -f1 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src; \
+	  cut -f2 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg; \
+	  rm -f ${LOCAL_TRAIN_SRC}.shuffled; \
+	else \
+	  echo "..... empty training data: ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src"; \
+	fi
 endif
 ######################################
 #  FIT_DATA_SIZE is set?

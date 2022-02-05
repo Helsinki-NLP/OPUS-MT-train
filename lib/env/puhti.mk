@@ -7,24 +7,26 @@
 DATAJOB_HPCPARAMS = CPUJOB_HPC_CORES=4 CPUJOB_HPC_MEM=64g CPUJOB_HPC_JOBS=2 CPUJOB_HPC_DISK=500
 ALLJOB_HPCPARAMS  = ${DATAJOB_HPCPARAMS}
 
-# CSCPROJECT   = project_2003288
 CSCPROJECT   = project_2002688
-# CSCPROJECT   = project_2000309
-# CSCPROJECT   = project_2002982
 WORKHOME     = ${shell realpath ${PWD}/work}
-APPLHOME     = /projappl/project_2001194
-OPUSHOME     = /projappl/nlpl/data/OPUS
-MOSESHOME    = ${APPLHOME}/mosesdecoder
-MOSESSCRIPTS = ${MOSESHOME}/scripts
-EFLOMAL_HOME = ${APPLHOME}/eflomal/
-MARIAN_HOME  = ${APPLHOME}/marian-dev/build/
-MARIAN       = ${APPLHOME}/marian-dev/build
-# MARIAN_HOME  = ${APPLHOME}/marian/build/
-# MARIAN       = ${APPLHOME}/marian/build
-SPM_HOME     = ${MARIAN_HOME}
 GPU          = v100
 HPC_QUEUE    = small
-export PATH := ${APPLHOME}/bin:${PATH}
+
+ifneq (${wildcard /projappl/project_2001194/bin},)
+  APPLHOME     = /projappl/project_2001194
+  OPUSHOME     = /projappl/nlpl/data/OPUS
+  MOSESHOME    = ${APPLHOME}/mosesdecoder
+  MOSESSCRIPTS = ${MOSESHOME}/scripts
+  EFLOMAL_HOME = ${APPLHOME}/eflomal/
+  MARIAN_HOME  = ${APPLHOME}/marian-dev/build/
+  MARIAN       = ${APPLHOME}/marian-dev/build
+# MARIAN_HOME  = ${APPLHOME}/marian/build/
+# MARIAN       = ${APPLHOME}/marian/build
+  SPM_HOME     = ${MARIAN_HOME}
+  export PATH := ${APPLHOME}/bin:${PATH}
+endif
+
+
 
 
 LOCAL_SCRATCH ?= /scratch/${CSCPROJECT}

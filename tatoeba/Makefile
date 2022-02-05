@@ -143,6 +143,9 @@ all:
 	${MAKE} eval-testsets-tatoeba
 
 
+ttt:
+	echo "--${TATOEBA_LANGPAIRS}--"
+
 ## start unidirectional training job
 ## - make data first, then submit a job
 .PHONY: tatoeba-job job slurmjob

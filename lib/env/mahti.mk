@@ -8,24 +8,28 @@ DATAJOB_HPCPARAMS = CPUJOB_HPC_CORES=128 CPUJOB_HPC_MEM=128g CPUJOB_HPC_JOBS=20
 ALLJOB_HPCPARAMS  = ${DATAJOB_HPCPARAMS}
 
 
-# CSCPROJECT   = project_2003288
-CSCPROJECT   = project_2002688
-# CSCPROJECT   = project_2003093
-# CSCPROJECT   = project_2002982
+CSCPROJECT    = project_2002688
 WORKHOME      = ${shell realpath ${PWD}/work}
-APPLHOME      = /projappl/project_2003093/
 OPUSHOME      = /projappl/nlpl/data/OPUS
-MOSESHOME     = ${APPLHOME}/install/mosesdecoder
-MOSESSCRIPTS  = ${MOSESHOME}/scripts
-EFLOMAL_HOME  = ${APPLHOME}/install/eflomal/
-BROWSERMT_HOME = ${APPLHOME}/install/browsermt
-MARIAN_HOME   = ${APPLHOME}/install/marian-dev/build/
-MARIAN        = ${MARIAN_HOME}
-SPM_HOME      = ${MARIAN_HOME}
 HPC_QUEUE     = medium
 SUBMIT_PREFIX = submitcpu
 GPU           = a100
 WALLTIME      = 36
+
+
+## test whether we have permissions to see pre-installed software
+ifneq (${wildcard /projappl/project_2003093/install},)
+  APPLHOME       = /projappl/project_2003093/
+  MOSESHOME      = ${APPLHOME}/install/mosesdecoder
+  MOSESSCRIPTS   = ${MOSESHOME}/scripts
+  EFLOMAL_HOME   = ${APPLHOME}/install/eflomal/
+  BROWSERMT_HOME = ${APPLHOME}/install/browsermt
+  MARIAN_HOME    = ${APPLHOME}/install/marian-dev/build/
+  MARIAN         = ${MARIAN_HOME}
+  SPM_HOME       = ${MARIAN_HOME}
+  export PATH   := ${APPLHOME}/bin:${PATH}
+endif
+
 
 ## default local scratch if not set otherwise
 LOCAL_SCRATCH ?= /scratch/${CSCPROJECT}
@@ -40,7 +44,7 @@ else
  HPC_GPUQUEUE  = gpumedium
 endif 
 
-export PATH := ${APPLHOME}/bin:${PATH}
+
 
 
 CPU_MODULES   = gcc/10.3.0 cuda/11.4.2 cudnn/8.0.4.30-11.0-linux-x64 openblas/0.3.14-omp openmpi/4.0.5-cuda

@@ -27,5 +27,6 @@ while ($count < $size){
     }
     close F;
     $repeated++;
+    last unless ($count);
     last if ($opt_m && $repeated > $opt_m);
 }

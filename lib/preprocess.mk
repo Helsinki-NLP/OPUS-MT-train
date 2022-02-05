@@ -2,11 +2,13 @@
 
 
 ## clean-corpus script parameters
+## (for filtering subword-segmented bitexts)
 ##
-## increase max number of tokens to 250
 ## (TODO: should MIN_NTOKENS be 1?)
-MIN_NR_TOKENS    = 0
-MAX_NR_TOKENS    = 250
+# MIN_NR_TOKENS    = 0
+# MAX_NR_TOKENS    = 250
+MIN_NR_TOKENS    = 1
+MAX_NR_TOKENS    = 500
 NR_TOKEN_RATIO   = 2
 MAX_TOKEN_LENGTH = 100
 
@@ -72,14 +74,14 @@ endif
 ifdef LONGEST_LINE_RAWSRCTEST
 ifdef LONGEST_LINE_RAWTRGTEST
   LONGEST_LINE_RAWTEST = ${shell printf "%s\n" ${LONGEST_LINE_RAWSRCTEST} ${LONGEST_LINE_RAWTRGTEST} | sort -nr | head -1}
-  LONGEST_LINE_THRESHOLD = $$(( ${LONGEST_LINE_RAWTEST} * 3 ))
+  LONGEST_LINE_THRESHOLD = $$(( 1 + ${LONGEST_LINE_RAWTEST} * 4 ))
 endif
 endif
 
 ifdef LONGEST_WORD_RAWSRCTEST
 ifdef LONGEST_WORD_RAWTRGTEST
   LONGEST_WORD_RAWTEST = ${shell printf "%s\n" ${LONGEST_WORD_RAWSRCTEST} ${LONGEST_WORD_RAWTRGTEST} | sort -nr | head -1}
-  LONGEST_WORD_THRESHOLD = $$(( ${LONGEST_WORD_RAWTEST} * 3 ))
+  LONGEST_WORD_THRESHOLD = $$(( 1 + ${LONGEST_WORD_RAWTEST} * 4 ))
 endif
 endif
 
@@ -94,8 +96,8 @@ print_data_thresholds:
 	@echo "   word ratio: ${WORD_RATIO_THRESHOLD} (${NR_WORDS_RAWSRCTEST},${NR_WORDS_RAWTRGTEST})"
 	@echo "   char ratio: ${CHAR_RATIO_THRESHOLD} (${NR_CHARS_RAWSRCTEST},${NR_CHARS_RAWTRGTEST})"
 	@echo "charset ratio: ${CHARSET_RATIO_THRESHOLD} (${UNIQUE_CHARS_RAWSRCTEST},${UNIQUE_CHARS_RAWTRGTEST})"
-	@echo "  line length: ${LONGEST_LINE_THRESHOLD} (3 * max(${LONGEST_LINE_RAWSRCTEST},${LONGEST_LINE_RAWTRGTEST}))"
-	@echo "  word length: ${LONGEST_WORD_THRESHOLD} (3 * max(${LONGEST_WORD_RAWSRCTEST},${LONGEST_WORD_RAWTRGTEST}))"
+	@echo "  line length: ${LONGEST_LINE_THRESHOLD} (1 + 4 * max(${LONGEST_LINE_RAWSRCTEST},${LONGEST_LINE_RAWTRGTEST}))"
+	@echo "  word length: ${LONGEST_WORD_THRESHOLD} (1 + 4 * max(${LONGEST_WORD_RAWSRCTEST},${LONGEST_WORD_RAWTRGTEST}))"
 
 
 STRICT_TRAIN_SRC = $(patsubst %.clean.${SRCEXT}.gz,%.strict.${SRCEXT}.gz,${CLEAN_TRAIN_SRC})

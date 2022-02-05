@@ -54,9 +54,9 @@ else ifeq (${shell hostname},dx6-ibs-p2)
 else ifeq (${shell hostname},dx7-nkiel-4gpu)
   HPC_HOST = dx7
   include ${REPOHOME}lib/env/dx7.mk
-else ifneq ($(wildcard /wrk/tiedeman/research),)
-  HPC_HOST = taito
-  include ${REPOHOME}lib/env/taito.mk
+# else ifneq ($(wildcard /wrk/tiedeman/research),)
+#   HPC_HOST = taito
+#   include ${REPOHOME}lib/env/taito.mk
 else ifeq (${shell hostname --domain 2>/dev/null},bullx)
   HPC_HOST = puhti
   include ${REPOHOME}lib/env/puhti.mk
@@ -197,7 +197,7 @@ endif
 
 
 # TODO: delete those?
-MULTEVALHOME = ${APPLHOME}/multeval
+# MULTEVALHOME = ${APPLHOME}/multeval
 
 
 ## install prerequisites

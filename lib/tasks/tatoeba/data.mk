@@ -15,6 +15,10 @@ ${WORKHOME}/${LANGPAIRSTR}/${DATASET}-languages.%: ${WORKHOME}/${LANGPAIRSTR}/${
 	sed 's/ *$$//;s/^ *//' | tr "\n" ' '  > $@
 
 
+## a file with all released data sets in the current Tatoeba TC release
+${RELEASED_TATOEBA_DATA_FILE}:
+	wget -O $@ ${RELEASED_TATOEBA_DATA_URL}
+
 
 ## don't delete intermediate label files
 .PRECIOUS: 	${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}.gz \
@@ -204,6 +208,8 @@ TATOEBADATA = data/release/${TATOEBA_VERSION}/${LANGPAIR}
 
 ## fetch and convert the data and check whether we should extract
 ## sub-language pairs from the collection
+## TDOD: this creates empty files for languages that don't have released data sets
+##       --> should we rather skip those somehow? (without breaking anything)
 %/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}.gz:
 	${MAKE} $@.d/source.labels $@.d/target.labels
 	@if [ `cat $@.d/source.labels $@.d/target.labels | wc -w` -gt 1 ]; then \
@@ -289,15 +295,20 @@ TATOEBADATA = data/release/${TATOEBA_VERSION}/${LANGPAIR}
 	    mv $@.trg.gz ${dir $@}${TATOEBADATA}/train.trg.gz; \
 	    mv $@.id.gz  ${dir $@}${TATOEBADATA}/train.id.gz; \
 	  fi; \
-	  mv $@.dev.src ${dir $@}${TATOEBADATA}/dev.src; \
-	  mv $@.dev.trg ${dir $@}${TATOEBADATA}/dev.trg; \
-	  mv $@.dev.id  ${dir $@}${TATOEBADATA}/dev.id; \
+	  if [ -e $@.dev.src ]; then \
+	    mv $@.dev.src ${dir $@}${TATOEBADATA}/dev.src; \
+	    mv $@.dev.trg ${dir $@}${TATOEBADATA}/dev.trg; \
+	    mv $@.dev.id  ${dir $@}${TATOEBADATA}/dev.id; \
+	  fi; \
 	  touch $@; \
 	fi
 
 ## fix language IDs and make sure that dev/test/train exist
+## TODO: is it good to create empty files?
+##       --> should we rather skip those language pairs?
 %.gz.d/data.fixed: %.gz.d/devdata.created
 	@echo ".... fix language codes"
+	@mkdir -p ${dir $@}${TATOEBADATA}
 	@if [ -e ${dir $@}${TATOEBADATA}/train.id.gz ]; then \
 	  ${GZCAT} ${dir $@}${TATOEBADATA}/train.id.gz | cut -f2,3 $(FIXLANGIDS) | ${GZIP} -c > ${dir $@}train.id.gz; \
 	  ${GZCAT} ${dir $@}${TATOEBADATA}/train.id.gz | cut -f1 | ${GZIP} -c > ${dir $@}train.domain.gz; \
@@ -305,7 +316,7 @@ TATOEBADATA = data/release/${TATOEBA_VERSION}/${LANGPAIR}
 	else \
 	  touch ${dir $@}${TATOEBADATA}/train.src ${dir $@}${TATOEBADATA}/train.trg; \
 	  touch ${dir $@}${TATOEBADATA}/train.id ${dir $@}${TATOEBADATA}/train.domain; \
-	  ${GZIP} -cd ${dir $@}${TATOEBADATA}/train.*; \
+	  ${GZIP} -f ${dir $@}${TATOEBADATA}/train.*; \
 	fi
 	@touch ${dir $@}${TATOEBADATA}/test.id ${dir $@}${TATOEBADATA}/test.src ${dir $@}${TATOEBADATA}/test.trg
 	@touch ${dir $@}${TATOEBADATA}/dev.id ${dir $@}${TATOEBADATA}/dev.src ${dir $@}${TATOEBADATA}/dev.trg
