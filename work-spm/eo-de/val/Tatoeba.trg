@@ -1,1 +1,0 @@
-/scratch/project_2001194/Opus-MT-train/work-spm/de-eo/val/Tatoeba.src
