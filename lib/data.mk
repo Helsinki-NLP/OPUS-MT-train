@@ -446,6 +446,15 @@ ifeq (${USE_REST_DEVDATA},1)
 	  ${GZIP} -cd < ${DEV_TRG}.notused.gz >> ${LOCAL_TRAIN_TRG}; \
 	fi
 endif
+ifeq (${SHUFFLE_MULTILINGUAL_DATA},1)
+ifneq ($(words ${SRCLANGS} ${TRGLANGS}),2)
+	@echo ".... shuffle multilingual data"
+	@paste ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG} | ${SHUFFLE} > ${LOCAL_TRAIN_SRC}.shuffled
+	@cut -f1 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_SRC}
+	@cut -f2 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_TRG}
+	@rm -f ${LOCAL_TRAIN_SRC}.shuffled
+endif
+endif
 
 
 ## everything is done in the target above

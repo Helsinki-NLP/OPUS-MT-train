@@ -102,6 +102,8 @@ SHUFFLE_DATA = 1
 ## devtest data is shuffled by default
 SHUFFLE_DEVDATA = 1
 
+## shuffle multilingual training data to mix language examples
+SHUFFLE_MULTILINGUAL_DATA = 1
 
 ##----------------------------------------------------------------------
 ## set FIT_DATA_SIZE to a specific value to fit the training data

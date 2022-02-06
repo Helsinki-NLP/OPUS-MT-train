@@ -129,6 +129,7 @@ include ${REPOHOME}lib/tasks/tatoeba/tune.mk
 include ${REPOHOME}lib/tasks/tatoeba/misc.mk
 
 include ${REPOHOME}lib/projects/distill.mk
+include ${REPOHOME}lib/projects/elg.mk
 
 
 
@@ -137,14 +138,12 @@ include ${REPOHOME}lib/projects/distill.mk
 .PHONY: all
 all: 
 	${MAKE} prepare
+	${MAKE} data-tatoeba
 	${MAKE} train-tatoeba
 	${MAKE} eval-tatoeba
 	${MAKE} compare-tatoeba
 	${MAKE} eval-testsets-tatoeba
 
-
-ttt:
-	echo "--${TATOEBA_LANGPAIRS}--"
 
 ## start unidirectional training job
 ## - make data first, then submit a job
@@ -177,12 +176,19 @@ endif
 	${@:-tatoeba=}
 
 
-## prepare data (config, train.dev.test data, labels)
+## prepare data (fetch data and extract language labesl)
 .PHONY: prepare tatoeba-prepare
 prepare tatoeba-prepare: ${TATOEBA_LANGIDS_TRAINONLY}
 	${MAKE} fetch-datasets
 	${MAKE} langlabel-files
-	${MAKE} local-config
+
+
+## prepare and make all data files (dev/test/train)
+.PHONY: prepare-and-data tatoeba-prepare-and-data
+prepare-and-data tatoeba-prepare-and-data: ${TATOEBA_LANGIDS_TRAINONLY}
+	${MAKE} fetch-datasets
+	${MAKE} langlabel-files
+	${MAKE} local-config-tatoeba
 	${MAKE} data-tatoeba
 
 
@@ -256,9 +262,13 @@ MIN_TRGLANGS ?= 1
 MAX_SRCLANGS ?= 7000
 MAX_TRGLANGS ?= 7000
 
-find-langgroup = $(filter ${OPUS_LANGS3},\
-		$(sort ${shell langgroup $(1) | xargs iso639 -m -n} ${1} ${2}))
+# find-langgroup = $(filter ${OPUS_LANGS3},\
+# 		$(sort ${shell langgroup $(1) | xargs iso639 -m -n} ${1} ${2}))
 
+# find-langgroup = $(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(1)} ${1} ${2}))
+# find-langgroup = $(sort ${shell langgroup $(1)} ${1} ${2})
+
+find-langgroup = $(filter $(sort ${shell langgroup $(1) | xargs iso639 -m -n} ${1} ${2}),${TATOEBA_LANGS})
 find-srclanggroup = $(call find-langgroup,$(firstword ${subst -, ,${subst 2, ,${1}}}),${2})
 find-trglanggroup = $(call find-langgroup,$(lastword ${subst -, ,${subst 2, ,${1}}}),${2})
 
@@ -296,7 +306,7 @@ tatoeba-%-data:
 		SRCLANGS="$$S" TRGLANGS="$$T" \
 		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
 		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
-	   tatoeba-prepare-groupsize-limits; )
+	   tatoeba-prepare-and-data-groupsize-limits; )
 
 
 ## train a tatoeba model
@@ -311,11 +321,7 @@ tatoeba-%-train:
 	   ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" \
 			TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
 			TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
-			tatoeba-prepare-groupsize-limits; \
-	   ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" \
-			TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
-			TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
-			all-tatoeba-groupsize-limits; )
+			all-groupsize-limits; )
 
 
 ## start the training job

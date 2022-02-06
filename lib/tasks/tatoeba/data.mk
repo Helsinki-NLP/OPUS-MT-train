@@ -26,24 +26,31 @@ ${RELEASED_TATOEBA_DATA_FILE}:
 
 
 ## fetch data for all language combinations
-## TODO: should we check whether we are supposed to skip some language pairs?
+## - only if they don't exist already
+## - skip certain language pairs (if specified in SKIP_LANGPAIRS)
+## - skip same language pairs (if SKIP_SAME_LANG is set to 1)
+## (need to convert to macro-languages to match Tatoeba TC releases!)
 
 .PHONY: fetch-tatoeba-datasets fetch-datasets
 fetch-datasets fetch-tatoeba-datasets:
-	-for s in ${sort ${SRCLANGS}}; do \
-	  for t in ${sort ${TRGLANGS}}; do \
+	-for s in ${MACRO_SRCLANGS}; do \
+	  for t in ${MACRO_TRGLANGS}; do \
 	    if [ `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
 	        echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
 	    else \
 	      if [ "$$s" \< "$$t" ]; then \
-	        ${MAKE} SRCLANGS=$$s TRGLANGS=$$t \
-		  ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$s-$$t.clean.$$s.gz; \
+	        if [ ! -e ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$s-$$t.clean.$$s.gz ]; then \
+	          ${MAKE} SRCLANGS=$$s TRGLANGS=$$t \
+		      ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$s-$$t.clean.$$s.gz; \
+	        fi \
 	      else \
 	        if [ "${SKIP_SAME_LANG}" == "1" ] && [ "$$s" == "$$t" ]; then \
 	          echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
 	        else \
-	          ${MAKE} SRCLANGS=$$t TRGLANGS=$$s \
-		    ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$t-$$s.clean.$$t.gz; \
+	          if [ ! -e ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$t-$$s.clean.$$t.gz ]; then \
+	            ${MAKE} SRCLANGS=$$t TRGLANGS=$$s \
+		        ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$t-$$s.clean.$$t.gz; \
+	          fi \
 	        fi \
 	      fi \
 	    fi \
@@ -210,26 +217,38 @@ TATOEBADATA = data/release/${TATOEBA_VERSION}/${LANGPAIR}
 ## sub-language pairs from the collection
 ## TDOD: this creates empty files for languages that don't have released data sets
 ##       --> should we rather skip those somehow? (without breaking anything)
+
+ifneq ($(filter ${LANGPAIR},${TATOEBA_LANGPAIRS}),${LANGPAIR})
+
 %/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}.gz:
-	${MAKE} $@.d/source.labels $@.d/target.labels
-	@if [ `cat $@.d/source.labels $@.d/target.labels | wc -w` -gt 1 ]; then \
+	@echo ".... no package released for ${LANGPAIR}!"
+
+else
+
+%/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}.gz:
+	${MAKE} ${TMPWORKDIR}/$@.d/source.labels ${TMPWORKDIR}/$@.d/target.labels
+	@if [ `cat ${TMPWORKDIR}/$@.d/source.labels ${TMPWORKDIR}/$@.d/target.labels | wc -w` -gt 1 ]; then \
 	  echo ".... found sublanguages in the data"; \
-	  b="$@.d/${TATOEBADATA}"; \
-	  for s in `cat $@.d/source.labels`; do \
-	    for t in `cat $@.d/target.labels`; do \
+	  b="${TMPWORKDIR}/$@.d/${TATOEBADATA}"; \
+	  for s in `cat ${TMPWORKDIR}/$@.d/source.labels`; do \
+	    for t in `cat ${TMPWORKDIR}/$@.d/target.labels`; do \
 	      if [ "$$s" \< "$$t" ]; then \
 	        echo ".... extract $$s-$$t data"; \
 	        for d in dev test train; do \
 	          paste <(gzip -cd $$b/$$d.id.gz) <(gzip -cd $$b/$$d.src.gz) <(gzip -cd $$b/$$d.trg.gz) | \
-			grep -P "^$$s\t$$t\t" > $@.d/$$d; \
-	          if [ -s $@.d/$$d ]; then \
-	            cut -f1,2 $@.d/$$d | ${GZIP} -c > ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t.clean.id.gz; \
-	            cut -f3 $@.d/$$d | ${GZIP} -c > ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t.clean.$$s.gz; \
-	            cut -f4 $@.d/$$d | ${GZIP} -c > ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t.clean.$$t.gz; \
+			grep -P "^$$s\t$$t\t" > ${TMPWORKDIR}/$@.d/$$d; \
+	          if [ -s ${TMPWORKDIR}/$@.d/$$d ]; then \
+	            cut -f1,2 ${TMPWORKDIR}/$@.d/$$d | ${GZIP} -c \
+			> ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t.clean.id.gz; \
+	            cut -f3 ${TMPWORKDIR}/$@.d/$$d | ${GZIP} -c \
+			> ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t.clean.$$s.gz; \
+	            cut -f4 ${TMPWORKDIR}/$@.d/$$d | ${GZIP} -c \
+			> ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t.clean.$$t.gz; \
 	          fi \
 	        done; \
 	        if [ -e ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.$$s-$$t.clean.id.gz ]; then \
-	          paste <(gzip -cd $$b/$$d.id.gz) <(gzip -cd $$b/$$d.domain.gz) | grep -P "^$$s\t$$t\t" | cut -f3 | \
+	          paste <(gzip -cd $$b/$$d.id.gz) <(gzip -cd $$b/$$d.domain.gz) | \
+		  grep -P "^$$s\t$$t\t" | cut -f3 | \
 	          ${GZIP} -c > ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.$$s-$$t.clean.domain.gz; \
 	          ${ZCAT} ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.$$s-$$t.clean.domain.gz |\
 	          sort -u > ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.$$s-$$t.clean.domains; \
@@ -242,7 +261,7 @@ TATOEBADATA = data/release/${TATOEBA_VERSION}/${LANGPAIR}
 	fi
 	@if [ ! -e ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SRCEXT}.gz ]; then \
 	  echo ".... move data files"; \
-	  b="$@.d/${TATOEBADATA}"; \
+	  b="${TMPWORKDIR}/$@.d/${TATOEBADATA}"; \
 	  for d in dev test train; do \
 	    mv $$b/$$d.src.gz ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SORTSRCEXT}.gz; \
 	    mv $$b/$$d.trg.gz ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SORTTRGEXT}.gz; \
@@ -251,12 +270,15 @@ TATOEBADATA = data/release/${TATOEBA_VERSION}/${LANGPAIR}
 	  ${ZCAT} $$b/train.domain.gz | sort -u | tr "\n" ' ' | sed 's/ *$$//' \
 		> ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${LANGPAIR}.clean.domains; \
 	  mv $$b/train.domain.gz ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${LANGPAIR}.clean.domain.gz; \
-	  mv $@.d/source.labels ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SORTSRCEXT}.labels; \
-	  mv $@.d/target.labels ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SORTTRGEXT}.labels; \
+	  mv ${TMPWORKDIR}/$@.d/source.labels \
+		${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SORTSRCEXT}.labels; \
+	  mv ${TMPWORKDIR}/$@.d/target.labels \
+		${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SORTTRGEXT}.labels; \
 	fi
 	@echo ".... cleanup of temporary files"
-	@rm -fr $@.d
+	@rm -fr ${TMPWORKDIR}/$@.d
 
+endif
 
 ## fetch data
 ## don't break if this fails!

@@ -159,6 +159,16 @@ endif
 # create slurm jobs
 #------------------------------------------------------------------------
 
+## copy different HPC params for jobs that need to wordalign data or not
+ifeq ($(findstring align,${MODELTYPE}),)
+  DATAJOB_HPCPARAMS = ${DATA_ALIGN_HPCPARAMS}
+  ALLJOB_HPCPARAMS = ${DATA_ALIGN_HPCPARAMS} ${TRAINJOB_HPCPARAMS}
+else
+  DATAJOB_HPCPARAMS = ${DATA_PREPARE_HPCPARAMS}
+  ALLJOB_HPCPARAMS = ${DATA_PREPARE_HPCPARAMS} ${TRAINJOB_HPCPARAMS}
+endif
+
+
 # all-job:
 #  - check whether data files exist
 #  - if not: create a CPU job that makes the data and starts a training job after that

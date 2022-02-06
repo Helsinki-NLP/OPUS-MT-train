@@ -89,10 +89,6 @@ endif
 
 SUBMIT_PREFIX ?= submit
 
-ifdef LOCAL_SCRATCH
-  TMPDIR := ${LOCAL_SCRATCH}
-endif
-
 ifndef TMPDIR
   TMPDIR := /tmp
 endif

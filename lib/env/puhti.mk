@@ -4,8 +4,9 @@
 #
 
 
-DATAJOB_HPCPARAMS = CPUJOB_HPC_CORES=4 CPUJOB_HPC_MEM=64g CPUJOB_HPC_JOBS=2 CPUJOB_HPC_DISK=500
-ALLJOB_HPCPARAMS  = ${DATAJOB_HPCPARAMS}
+DATA_PREPARE_HPCPARAMS = CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=8g CPUJOB_HPC_DISK=500
+DATA_ALIGN_HPCPARAMS = CPUJOB_HPC_CORES=4 CPUJOB_HPC_JOBS=2 CPUJOB_HPC_MEM=64g CPUJOB_HPC_DISK=500
+
 
 CSCPROJECT   = project_2002688
 WORKHOME     = ${shell realpath ${PWD}/work}
@@ -27,9 +28,19 @@ ifneq (${wildcard /projappl/project_2001194/bin},)
 endif
 
 
+# set LOCAL_SCRATCH to nvme disk if it exists
+ifdef SLURM_JOBID
+ifneq ($(wildcard /run/nvme/job_${SLURM_JOBID}/tmp),)
+  LOCAL_SCRATCH = /run/nvme/job_${SLURM_JOBID}/tmp
+endif
+endif
 
-
-LOCAL_SCRATCH ?= /scratch/${CSCPROJECT}
+# set tmpdir
+ifdef LOCAL_SCRATCH
+  TMPDIR := ${LOCAL_SCRATCH}
+else
+  TMPDIR := /scratch/${CSCPROJECT}
+endif
 
 
 CPU_MODULES = gcc/8.3.0 cuda/10.1.168 cudnn/7.6.1.34-10.1 intel-mkl/2019.0.4 python-env 

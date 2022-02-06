@@ -1,11 +1,11 @@
 # -*-makefile-*-
 #
-# environment on mathi@CSC
+# environment on mahti@CSC
 #
 
 
-DATAJOB_HPCPARAMS = CPUJOB_HPC_CORES=128 CPUJOB_HPC_MEM=128g CPUJOB_HPC_JOBS=20
-ALLJOB_HPCPARAMS  = ${DATAJOB_HPCPARAMS}
+DATA_PREPARE_HPCPARAMS = CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=8g
+DATA_ALIGN_HPCPARAMS = CPUJOB_HPC_CORES=128 CPUJOB_HPC_JOBS=20 CPUJOB_HPC_MEM=128g
 
 
 CSCPROJECT    = project_2002688
@@ -33,6 +33,13 @@ endif
 
 ## default local scratch if not set otherwise
 LOCAL_SCRATCH ?= /scratch/${CSCPROJECT}
+
+# set tmpdir
+ifdef LOCAL_SCRATCH
+  TMPDIR := ${LOCAL_SCRATCH}
+else
+  TMPDIR := /scratch/${CSCPROJECT}
+endif
 
 
 ## select queue depending on the number of GPUs allocated
