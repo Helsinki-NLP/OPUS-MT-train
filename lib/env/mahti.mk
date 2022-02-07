@@ -31,12 +31,10 @@ ifneq (${wildcard /projappl/project_2003093/install},)
 endif
 
 
-## default local scratch if not set otherwise
-LOCAL_SCRATCH ?= /scratch/${CSCPROJECT}
-
 # set tmpdir
 ifdef LOCAL_SCRATCH
-  TMPDIR := ${LOCAL_SCRATCH}
+  TMPDIR      := ${LOCAL_SCRATCH}
+  TMPWORKDIR  := ${LOCAL_SCRATCH}
 else
   TMPDIR := /scratch/${CSCPROJECT}
 endif

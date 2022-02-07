@@ -31,13 +31,14 @@ endif
 # set LOCAL_SCRATCH to nvme disk if it exists
 ifdef SLURM_JOBID
 ifneq ($(wildcard /run/nvme/job_${SLURM_JOBID}/tmp),)
-  LOCAL_SCRATCH = /run/nvme/job_${SLURM_JOBID}/tmp
+  LOCAL_SCRATCH := /run/nvme/job_${SLURM_JOBID}/tmp
 endif
 endif
 
 # set tmpdir
 ifdef LOCAL_SCRATCH
-  TMPDIR := ${LOCAL_SCRATCH}
+  TMPDIR     := ${LOCAL_SCRATCH}
+  TMPWORKDIR := ${LOCAL_SCRATCH}
 else
   TMPDIR := /scratch/${CSCPROJECT}
 endif
