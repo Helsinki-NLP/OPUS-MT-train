@@ -3,7 +3,6 @@
 TATOEBA_VERSION          ?= v2021-08-07
 TATOEBA_VERSION_NOHYPHEN  = $(subst -,,${TATOEBA_VERSION})
 
-
 ifeq (${SRCLANGS},)
 ifdef SRC
   SRCLANGS = ${SRC}
@@ -17,34 +16,43 @@ endif
 
 # WORKHOME := ${PWD}/work-tatoeba
 
+SMALLEST_TRAINSIZE  = 1000
+USE_REST_DEVDATA    = 0
+DATA_IS_SHUFFLED    = 1
+DEVSIZE             = 5000
+TESTSIZE            = 10000
+DEVMINSIZE          = 200
 
-SMALLEST_TRAINSIZE  ?= 1000
-DEVSIZE             ?= 5000
-TESTSIZE            ?= 10000
-DEVMINSIZE          ?= 200
+# by default skip aligned data of the same language
+# don't use anything from dev-data
+# don't shuffle data because they are already shuffled
+# but shuffle multilingual data to mix languages
 
+SKIP_SAME_LANG            = 1
 USE_REST_DEVDATA          = 0
 SHUFFLE_DATA              = 0
 SHUFFLE_DEVDATA           = 1
 SHUFFLE_MULTILINGUAL_DATA = 1
 DATA_IS_SHUFFLED          = 1
 
-## this will be the base name of the model file
-TATOEBA_DATASET    := opusTC${TATOEBA_VERSION_NOHYPHEN}
 
-TATOEBA_TRAINSET   := Tatoeba-train-${TATOEBA_VERSION}
-TATOEBA_DEVSET     := Tatoeba-dev-${TATOEBA_VERSION}
-TATOEBA_TESTSET    := Tatoeba-test-${TATOEBA_VERSION}
+## Tatoeba specific data sets
+TATOEBA_DATASET     := opusTC${TATOEBA_VERSION_NOHYPHEN}
+TATOEBA_TRAINSET    := Tatoeba-train-${TATOEBA_VERSION}
+TATOEBA_DEVSET      := Tatoeba-dev-${TATOEBA_VERSION}
+TATOEBA_TESTSET     := Tatoeba-test-${TATOEBA_VERSION}
 
-DATASET             = ${TATOEBA_DATASET}
-TRAINSET            = ${TATOEBA_TRAINSET}
-DEVSET              = ${TATOEBA_DEVSET}
-TESTSET             = ${TATOEBA_TESTSET}
-DEVSET_NAME         = ${TATOEBA_DEVSET}
-TESTSET_NAME        = ${TATOEBA_TESTSET}
-TRAINSET_NAME       = ${TATOEBA_TRAINSET}
+## change data set names
+## DATASET will also be the base name of the model file
+DATASET             := ${TATOEBA_DATASET}
+TRAINSET            := ${TATOEBA_TRAINSET}
+DEVSET              := ${TATOEBA_DEVSET}
+TESTSET             := ${TATOEBA_TESTSET}
+DEVSET_NAME         := ${TATOEBA_DEVSET}
+TESTSET_NAME        := ${TATOEBA_TESTSET}
+TRAINSET_NAME       := ${TATOEBA_TRAINSET}
 
-
+## 
 BACKTRANS_HOME      = ${PWD}/back-translate
 FORWARDTRANS_HOME   = ${PWD}/forward-translate
 MODELSHOME          = ${PWD}/models
@@ -93,14 +101,14 @@ RELEASED_TATOEBA_DATA_FILE = tatoeba/released-bitexts-${TATOEBA_VERSION}.txt
 ## also extract all source languages that are available for a give target language
 ## and vice versa
 TATOEBA_RELEASED_DATA := $(shell wget -qq -O - ${TATOEBA_DATA_COUNT_BASE}-min200.txt | cut -f1)
-TATOEBA_AVAILABLE_TRG := ${sort ${filter-out ${SRC},${subst -, ,${filter %-${SRC} ${SRC}-%,${TATOEBA_RELEASED_DATA}}}}}
-TATOEBA_AVAILABLE_SRC := ${sort ${filter-out ${TRG},${subst -, ,${filter %-${TRG} ${TRG}-%,${TATOEBA_RELEASED_DATA}}}}}
+TATOEBA_AVAILABLE_TRG  = ${sort ${filter-out ${SRC},${subst -, ,${filter %-${SRC} ${SRC}-%,${TATOEBA_RELEASED_DATA}}}}}
+TATOEBA_AVAILABLE_SRC  = ${sort ${filter-out ${TRG},${subst -, ,${filter %-${TRG} ${TRG}-%,${TATOEBA_RELEASED_DATA}}}}}
 
 ## extract language pairs for a specific subset
 TATOEBA_SUBSET               := lower
 TATOEBA_RELEASED_SUBSET      := $(shell wget -qq -O - ${TATOEBA_DATA_COUNT_BASE}-${TATOEBA_SUBSET}.txt | cut -f1)
-TATOEBA_AVAILABLE_SUBSET_TRG := ${sort ${filter-out ${SRC},${subst -, ,${filter %-${SRC} ${SRC}-%,${TATOEBA_RELEASED_SUBSET}}}}}
-TATOEBA_AVAILABLE_SUBSET_SRC := ${sort ${filter-out ${TRG},${subst -, ,${filter %-${TRG} ${TRG}-%,${TATOEBA_RELEASED_SUBSET}}}}}
+TATOEBA_AVAILABLE_SUBSET_TRG  = ${sort ${filter-out ${SRC},${subst -, ,${filter %-${SRC} ${SRC}-%,${TATOEBA_RELEASED_SUBSET}}}}}
+TATOEBA_AVAILABLE_SUBSET_SRC  = ${sort ${filter-out ${TRG},${subst -, ,${filter %-${TRG} ${TRG}-%,${TATOEBA_RELEASED_SUBSET}}}}}
 
 
 
@@ -117,8 +125,8 @@ TATOEBA_LANGS := $(sort $(subst -, ,${TATOEBA_LANGPAIRS}))
 
 ## SRCLANGS converted to macro languages used in tatoeba releases
 ## and all non-available languages filtered out
-MACRO_SRCLANGS := $(filter ${sort ${shell iso639 -m -n ${SRCLANGS}}},${TATOEBA_LANGS})
-MACRO_TRGLANGS := $(filter ${sort ${shell iso639 -m -n ${TRGLANGS}}},${TATOEBA_LANGS})
+MACRO_SRCLANGS = $(filter ${sort ${shell iso639 -m -n ${SRCLANGS}}},${TATOEBA_LANGS})
+MACRO_TRGLANGS = $(filter ${sort ${shell iso639 -m -n ${TRGLANGS}}},${TATOEBA_LANGS})
 
 
 
@@ -138,14 +146,14 @@ TATOEBA_TRGLABELFILE = ${WORKHOME}/${LANGPAIRSTR}/${DATASET}-langlabels.trg
 ## get source and target languages from the label files
 
 ifneq (${wildcard ${TATOEBA_SRCLABELFILE}},)
-  TATOEBA_SRCLANGS := ${shell cat ${TATOEBA_SRCLABELFILE}}
+  TATOEBA_SRCLANGS = ${shell cat ${TATOEBA_SRCLABELFILE}}
 else
-  TATOEBA_SRCLANGS := ${SRCLANGS}
+  TATOEBA_SRCLANGS = ${SRCLANGS}
 endif
 ifneq (${wildcard ${TATOEBA_TRGLABELFILE}},)
-  TATOEBA_TRGLANGS := ${shell cat ${TATOEBA_TRGLABELFILE}}
+  TATOEBA_TRGLANGS = ${shell cat ${TATOEBA_TRGLABELFILE}}
 else
-  TATOEBA_TRGLANGS := ${TRGLANGS}
+  TATOEBA_TRGLANGS = ${TRGLANGS}
 endif
 
 ifdef TATOEBA_TRGLANGS

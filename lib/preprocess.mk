@@ -46,8 +46,8 @@ endif
 
 ifdef NR_WORDS_RAWSRCTEST
 ifdef NR_WORDS_RAWTRGTEST
-  WORD_RATIO_SRCTRG_RAWTEST = $$(( ${NR_WORDS_RAWSRCTEST} / ${NR_WORDS_RAWTRGTEST} )) 
-  WORD_RATIO_TRGSRC_RAWTEST = $$(( ${NR_WORDS_RAWTRGTEST} / ${NR_WORDS_RAWSRCTEST} )) 
+  WORD_RATIO_SRCTRG_RAWTEST = $$(( (${NR_WORDS_RAWSRCTEST} + 1) / (${NR_WORDS_RAWTRGTEST} + 1) )) 
+  WORD_RATIO_TRGSRC_RAWTEST = $$(( (${NR_WORDS_RAWTRGTEST} + 1) / (${NR_WORDS_RAWSRCTEST} + 1) )) 
   WORD_RATIO_RAWTEST = ${shell printf "%s\n" ${WORD_RATIO_SRCTRG_RAWTEST} ${WORD_RATIO_TRGSRC_RAWTEST} | sort -nr | head -1}
   WORD_RATIO_THRESHOLD = $$(( ${WORD_RATIO_RAWTEST} + 1 ))
 endif
@@ -55,8 +55,8 @@ endif
 
 ifdef NR_CHARS_RAWSRCTEST
 ifdef NR_CHARS_RAWTRGTEST
-  CHAR_RATIO_SRCTRG_RAWTEST = $$(( ${NR_CHARS_RAWSRCTEST} / ${NR_CHARS_RAWTRGTEST} )) 
-  CHAR_RATIO_TRGSRC_RAWTEST = $$(( ${NR_CHARS_RAWTRGTEST} / ${NR_CHARS_RAWSRCTEST} )) 
+  CHAR_RATIO_SRCTRG_RAWTEST = $$(( (${NR_CHARS_RAWSRCTEST} + 1) / (${NR_CHARS_RAWTRGTEST} + 1) )) 
+  CHAR_RATIO_TRGSRC_RAWTEST = $$(( (${NR_CHARS_RAWTRGTEST} + 1) / (${NR_CHARS_RAWSRCTEST} + 1) )) 
   CHAR_RATIO_RAWTEST = ${shell printf "%s\n" ${CHAR_RATIO_SRCTRG_RAWTEST} ${CHAR_RATIO_TRGSRC_RAWTEST} | sort -nr | head -1}
   CHAR_RATIO_THRESHOLD = $$(( ${CHAR_RATIO_RAWTEST} + 1 ))
 endif
@@ -64,8 +64,8 @@ endif
 
 ifdef UNIQUE_CHARS_RAWSRCTEST
 ifdef UNIQUE_CHARS_RAWTRGTEST
-  CHARSET_RATIO_SRCTRG_RAWTEST = $$(( ${UNIQUE_CHARS_RAWSRCTEST} / ${UNIQUE_CHARS_RAWTRGTEST} )) 
-  CHARSET_RATIO_TRGSRC_RAWTEST = $$(( ${UNIQUE_CHARS_RAWTRGTEST} / ${UNIQUE_CHARS_RAWSRCTEST} )) 
+  CHARSET_RATIO_SRCTRG_RAWTEST = $$(( (${UNIQUE_CHARS_RAWSRCTEST} + 1) / ( ${UNIQUE_CHARS_RAWTRGTEST} + 1) )) 
+  CHARSET_RATIO_TRGSRC_RAWTEST = $$(( (${UNIQUE_CHARS_RAWTRGTEST} + 1) / ( ${UNIQUE_CHARS_RAWSRCTEST} + 1) )) 
   CHARSET_RATIO_RAWTEST = ${shell printf "%s\n" ${CHARSET_RATIO_SRCTRG_RAWTEST} ${CHARSET_RATIO_TRGSRC_RAWTEST} | sort -nr | head -1}
   CHARSET_RATIO_THRESHOLD = $$(( ${CHARSET_RATIO_RAWTEST} + 1 ))
 endif
@@ -102,26 +102,56 @@ print_data_thresholds:
 
 STRICT_TRAIN_SRC = $(patsubst %.clean.${SRCEXT}.gz,%.strict.${SRCEXT}.gz,${CLEAN_TRAIN_SRC})
 
+
 strict-clean-data: ${STRICT_TRAIN_SRC}
 
 %.strict.${SRCEXT}.gz: %.clean.${SRCEXT}.gz
 ifdef WORD_RATIO_THRESHOLD
-	$(MOSESSCRIPTS)/training/clean-corpus-n.perl \
+	if [ -e $< ]; then \
+	  $(MOSESSCRIPTS)/training/clean-corpus-n.perl \
 		-ratio ${WORD_RATIO_THRESHOLD} \
 		-max-word-length ${LONGEST_WORD_THRESHOLD} \
 		$(<:.${SRCEXT}.gz=) \
 		$(SRCEXT) $(TRGEXT) \
 		$(@:.${SRCEXT}.gz=) \
-		${MIN_NR_TOKENS} ${MAX_NR_TOKENS}
-	${GZIP} -f $(@:.gz=) $(@:.${SRCEXT}.gz=.${TRGEXT})
+		${MIN_NR_TOKENS} ${MAX_NR_TOKENS}; \
+	  ${GZIP} -f $(@:.gz=) $(@:.${SRCEXT}.gz=.${TRGEXT}); \
+	fi
 else
-	-ln -s $< $@
-	-ln -s $(<:.${SRCEXT}.gz=.${TRGEXT}.gz) $(@:.${SRCEXT}.gz=.${TRGEXT}.gz)
+	-if [ -e $< ]; then \
+	  ln -s $< $@; \
+	  ln -s $(<:.${SRCEXT}.gz=.${TRGEXT}.gz) $(@:.${SRCEXT}.gz=.${TRGEXT}.gz); \
+	fi
 endif
 
 %.strict.${TRGEXT}.gz: %.strict.${SRCEXT}.gz
 	@echo "done!"
 
+
+## yet another filter
+
+STRICT2_TRAIN_SRC = $(patsubst %.clean.${SRCEXT}.gz,%.strict2.${SRCEXT}.gz,${CLEAN_TRAIN_SRC})
+strict2-clean-data: ${STRICT2_TRAIN_SRC}
+
+%.strict2.${SRCEXT}.gz: %.strict.${SRCEXT}.gz
+ifdef CHAR_RATIO_THRESHOLD
+	if [ -e $< ]; then \
+	  $(SCRIPTDIR)/bitext_filter.pl \
+		-l ${CHAR_RATIO_THRESHOLD} \
+		-c ${CHARSET_RATIO_THRESHOLD} \
+		$(SRCEXT) $(TRGEXT) \
+		$(<:.${SRCEXT}.gz=) \
+		$(@:.${SRCEXT}.gz=); \
+	fi
+else
+	-if [ -e $< ]; then \
+	  ln -s $< $@; \
+	  ln -s $(<:.${SRCEXT}.gz=.${TRGEXT}.gz) $(@:.${SRCEXT}.gz=.${TRGEXT}.gz); \
+	fi
+endif
+
+%.strict2.${TRGEXT}.gz: %.strict2.${SRCEXT}.gz
+	@echo "done!"
 
 
 
@@ -167,10 +197,13 @@ endif
 ## - line 4: length-of-longest-word
 
 %.stats: %.gz
-	${GZCAT} $< | wc -lwmc > $@
-	${GZCAT} $< | sed 's/./& /g' | tr ' ' "\n" | sort -u | wc -l >> $@
-	${GZCAT} $< | wc -L >> $@
-	${GZCAT} $< | tr ' ' "\n" | wc -L >> $@
+	@if [ -e $< ]; then \
+	  echo ".... create some stats for $<"; \
+	  ${GZCAT} $< | wc -lwmc > $@; \
+	  ${GZCAT} $< | sed 's/./& /g' | tr ' ' "\n" | sort -u | wc -l >> $@; \
+	  ${GZCAT} $< | wc -L >> $@; \
+	  ${GZCAT} $< | tr ' ' "\n" | wc -L >> $@; \
+	fi
 
 
 ##----------------------------------------------

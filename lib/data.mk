@@ -55,9 +55,6 @@ endif
 ## - use only the latest backtranslations
 ##   if such a subdir exists
 
-BACKTRANS_HOME    ?= backtranslate
-FORWARDTRANS_HOME ?= ${BACKTRANS_HOME}
-PIVOTTRANS_HOME   ?= pivoting
 
 
 ifneq (${wildcard ${BACKTRANS_HOME}/${TRG}-${SRC}/latest},)

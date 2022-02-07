@@ -149,7 +149,7 @@ include lib/projects.mk
 .PHONY: all
 all: 
 	${MAKE} rawdata
-	${MAKE} ${WORKDIR}/${MODELCONFIG}
+	${MAKE} local-config
 	${MAKE} data
 	${MAKE} train
 	${MAKE} eval

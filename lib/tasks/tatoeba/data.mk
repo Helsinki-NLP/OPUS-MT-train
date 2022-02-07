@@ -226,42 +226,56 @@ ifneq ($(filter ${LANGPAIR},${TATOEBA_LANGPAIRS}),${LANGPAIR})
 else
 
 %/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}.gz:
-	${MAKE} ${TMPWORKDIR}/$@.d/source.labels ${TMPWORKDIR}/$@.d/target.labels
-	@if [ `cat ${TMPWORKDIR}/$@.d/source.labels ${TMPWORKDIR}/$@.d/target.labels | wc -w` -gt 1 ]; then \
+	mkdir -p ${dir $@} ${TMPWORKDIR}/${notdir $@}.d
+	ln -s ${TMPWORKDIR}/${notdir $@}.d $@.d
+	@${MAKE} $@.d/source.labels $@.d/target.labels
+	@if [ `cat $@.d/source.labels $@.d/target.labels | wc -w` -gt 1 ]; then \
 	  echo ".... found sublanguages in the data"; \
-	  b="${TMPWORKDIR}/$@.d/${TATOEBADATA}"; \
-	  for s in `cat ${TMPWORKDIR}/$@.d/source.labels`; do \
-	    for t in `cat ${TMPWORKDIR}/$@.d/target.labels`; do \
-	      if [ "$$s" \< "$$t" ]; then \
-	        echo ".... extract $$s-$$t data"; \
-	        for d in dev test train; do \
-	          paste <(gzip -cd $$b/$$d.id.gz) <(gzip -cd $$b/$$d.src.gz) <(gzip -cd $$b/$$d.trg.gz) | \
-			grep -P "^$$s\t$$t\t" > ${TMPWORKDIR}/$@.d/$$d; \
-	          if [ -s ${TMPWORKDIR}/$@.d/$$d ]; then \
-	            cut -f1,2 ${TMPWORKDIR}/$@.d/$$d | ${GZIP} -c \
-			> ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t.clean.id.gz; \
-	            cut -f3 ${TMPWORKDIR}/$@.d/$$d | ${GZIP} -c \
-			> ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t.clean.$$s.gz; \
-	            cut -f4 ${TMPWORKDIR}/$@.d/$$d | ${GZIP} -c \
-			> ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t.clean.$$t.gz; \
-	          fi \
-	        done; \
-	        if [ -e ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.$$s-$$t.clean.id.gz ]; then \
-	          paste <(gzip -cd $$b/$$d.id.gz) <(gzip -cd $$b/$$d.domain.gz) | \
-		  grep -P "^$$s\t$$t\t" | cut -f3 | \
-	          ${GZIP} -c > ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.$$s-$$t.clean.domain.gz; \
-	          ${ZCAT} ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.$$s-$$t.clean.domain.gz |\
-	          sort -u > ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.$$s-$$t.clean.domains; \
-	          echo "$$s" >> ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.$$s-$$t.clean.$$s.labels; \
-	          echo "$$t" >> ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.$$s-$$t.clean.$$t.labels; \
+	  b="$@.d/${TATOEBADATA}"; \
+	  for s in `cat $@.d/source.labels`; do \
+	    for t in `cat $@.d/target.labels`; do \
+	      echo ".... extract $$s-$$t data"; \
+	      for d in dev test train; do \
+	        paste <(gzip -cd $$b/$$d.id.gz) <(gzip -cd $$b/$$d.src.gz) <(gzip -cd $$b/$$d.trg.gz) | \
+			grep -P "^$$s\t$$t\t" > $@.d/$$d; \
+	        if [ -s $@.d/$$d ]; then \
+		  if [ "$$s" \< "$$t" ]; then \
+		    c="${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t.clean"; \
+	            cut -f1,2 $@.d/$$d | ${GZIP} -c > $$c.id.gz; \
+		  else \
+		    c="${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$t-$$s.clean"; \
+	            cut -f1,2 $@.d/$$d | \
+		    awk ' { t = $$1; $$1 = $$2; $$2 = t; print; } ' FS='\t' OFS='\t' |\
+		    ${GZIP} -c > $$c.id.gz; \
+		  fi; \
+	          cut -f3 $@.d/$$d | ${GZIP} -c > $$c.$$s.gz; \
+	          cut -f4 $@.d/$$d | ${GZIP} -c > $$c.$$t.gz; \
 	        fi \
+	      done; \
+	      if [ -e ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.$$s-$$t.clean.id.gz ]; then \
+	        paste <(gzip -cd $$b/$$d.id.gz) <(gzip -cd $$b/$$d.domain.gz) | \
+		grep -P "^$$s\t$$t\t" | cut -f3 | \
+	        ${GZIP} -c > ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.$$s-$$t.clean.domain.gz; \
+	        ${ZCAT} ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.$$s-$$t.clean.domain.gz |\
+	        sort -u > ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.$$s-$$t.clean.domains; \
+	        echo "$$s" >> ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.$$s-$$t.clean.$$s.labels; \
+	        echo "$$t" >> ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.$$s-$$t.clean.$$t.labels; \
 	      fi \
 	    done \
 	  done \
 	fi
+## NOTE: always need to copy label files to keep all sublanguages
+##       --> this is confusing if a sublanguage has the same ID as the macro-language
+##       --> example: ron includes ron and mol
+##       --> the label file for ron will include mol but the data files will not
+## TODO: can we do that in a better way somehow?
+	@mv $@.d/source.labels \
+		${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SORTSRCEXT}.labels
+	@mv $@.d/target.labels \
+		${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SORTTRGEXT}.labels
 	@if [ ! -e ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SRCEXT}.gz ]; then \
 	  echo ".... move data files"; \
-	  b="${TMPWORKDIR}/$@.d/${TATOEBADATA}"; \
+	  b="$@.d/${TATOEBADATA}"; \
 	  for d in dev test train; do \
 	    mv $$b/$$d.src.gz ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SORTSRCEXT}.gz; \
 	    mv $$b/$$d.trg.gz ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SORTTRGEXT}.gz; \
@@ -270,13 +284,9 @@ else
 	  ${ZCAT} $$b/train.domain.gz | sort -u | tr "\n" ' ' | sed 's/ *$$//' \
 		> ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${LANGPAIR}.clean.domains; \
 	  mv $$b/train.domain.gz ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${LANGPAIR}.clean.domain.gz; \
-	  mv ${TMPWORKDIR}/$@.d/source.labels \
-		${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SORTSRCEXT}.labels; \
-	  mv ${TMPWORKDIR}/$@.d/target.labels \
-		${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SORTTRGEXT}.labels; \
 	fi
 	@echo ".... cleanup of temporary files"
-	@rm -fr ${TMPWORKDIR}/$@.d
+	@rm -fr ${TMPWORKDIR}/${notdir $@}.d $@.d
 
 endif
 
@@ -332,7 +342,8 @@ endif
 	@echo ".... fix language codes"
 	@mkdir -p ${dir $@}${TATOEBADATA}
 	@if [ -e ${dir $@}${TATOEBADATA}/train.id.gz ]; then \
-	  ${GZCAT} ${dir $@}${TATOEBADATA}/train.id.gz | cut -f2,3 $(FIXLANGIDS) | ${GZIP} -c > ${dir $@}train.id.gz; \
+	  ${GZCAT} ${dir $@}${TATOEBADATA}/train.id.gz | cut -f2,3 $(FIXLANGIDS) | \
+	  ${GZIP} -c > ${dir $@}train.id.gz; \
 	  ${GZCAT} ${dir $@}${TATOEBADATA}/train.id.gz | cut -f1 | ${GZIP} -c > ${dir $@}train.domain.gz; \
 	  mv ${dir $@}train.id.gz ${dir $@}train.domain.gz ${dir $@}${TATOEBADATA}/; \
 	else \

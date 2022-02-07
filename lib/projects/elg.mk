@@ -40,3 +40,8 @@ elg-eng2all:
 	for l in ${ELG_EU_SELECTED}; do \
 	  ${MAKE} MODELTYPE=transformer-big tatoeba-eng2$${l}-trainjob-bt; \
 	done
+
+elg-eng2missing:
+	for l in est lav ron hbs sqi spa fra ita por zlw ara heb deu fin; do \
+	  ${MAKE} MODELTYPE=transformer-big tatoeba-eng2$${l}-trainjob-bt; \
+	done

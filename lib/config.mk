@@ -4,6 +4,52 @@
 #
 
 
+# load model-specific configuration parameters
+# if they exist in the work directory
+
+##---------------------------------------------------------------
+## default name of the data set (and the model)
+##---------------------------------------------------------------
+
+TRAINSET_NAME ?= opus
+DATASET       ?= ${TRAINSET_NAME}
+
+## various ways of setting the model languages
+##
+## (1) explicitly set source and target languages, for example:
+##     SRCLANGS="da no sv" TRGLANGS="fi da"
+##
+## (2) specify language pairs, for example:
+##     LANGPAIRS="de-en fi-sv da-es"
+##     this will set SRCLANGS="de fi da" TRGLANGS="en sv es"
+##
+
+## if LANGPAIRS are set and the model is not supposed to be SYMMETRIC
+## then set SRCLANGS and TRGLANGS to the languages in LANGPAIRS
+ifdef LANGPAIRS
+  SRCLANGS ?= ${sort ${shell echo "${LANGPAIRS}" | tr ' ' "\n" | cut -f1 -d '-'}}
+  TRGLANGS ?= ${sort ${shell echo "${LANGPAIRS}" | tr ' ' "\n" | cut -f2 -d '-'}}
+endif
+
+
+## LANGPAISTR is used as a sub-dir in WORKHOME
+SPACE         := $(empty) $(empty)
+LANGSRCSTR    ?= ${subst ${SPACE},+,$(SRCLANGS)}
+LANGTRGSTR    ?= ${subst ${SPACE},+,$(TRGLANGS)}
+LANGPAIRSTR   ?= ${LANGSRCSTR}-${LANGTRGSTR}
+WORKDIR        = ${WORKHOME}/${LANGPAIRSTR}
+
+## default model type
+MODELTYPE    =  transformer-align
+
+
+
+MODELCONFIG = ${DATASET}${MODEL_VARIANT}.${MODELTYPE}.mk
+ifneq ($(wildcard ${WORKDIR}/${MODELCONFIG}),)
+  include ${WORKDIR}/${MODELCONFIG}
+endif
+
+
 
 ## some pre-defined language sets
 include ${REPOHOME}lib/langsets.mk
@@ -25,10 +71,6 @@ MODELTYPES   = 	transformer \
 		transformer-tiny11 \
 		transformer-tiny11-align
 
-## default model type
-
-MODELTYPE    =  transformer-align
-NR           =  1
 
 
 ## name of the model-specific configuration file
@@ -37,35 +79,18 @@ NR           =  1
 # MODELCONFIG ?= config.mk
 
 
-## various ways of setting the model languages
-##
-## (1) explicitly set source and target languages, for example:
-##     SRCLANGS="da no sv" TRGLANGS="fi da"
-##
-## (2) specify language pairs, for example:
-##     LANGPAIRS="de-en fi-sv da-es"
-##     this will set SRCLANGS="de fi da" TRGLANGS="en sv es"
-##
-
-
-## if LANGPAIRS are set and the model is not supposed to be SYMMETRIC
-## then set SRCLANGS and TRGLANGS to the languages in LANGPAIRS
-ifdef LANGPAIRS
-  SRCLANGS ?= ${sort ${shell echo "${LANGPAIRS}" | tr ' ' "\n" | cut -f1 -d '-'}}
-  TRGLANGS ?= ${sort ${shell echo "${LANGPAIRS}" | tr ' ' "\n" | cut -f2 -d '-'}}
-endif
 
 
 ## set SRC and TRG unless they are specified already
 ifneq (${words ${SRCLANGS}},1)
   SRC ?= multi
 else
-  SRC = ${SRCLANGS}
+  SRC ?= ${SRCLANGS}
 endif
 ifneq (${words ${TRGLANGS}},1)
   TRG ?= multi
 else
-  TRG = ${TRGLANGS}
+  TRG ?= ${TRGLANGS}
 endif
 
 
@@ -96,14 +121,14 @@ SKIP_SAME_LANG ?= 0
 ## --> is that a problem (would MarianNMT use different random shuffles / epoch?)
 ##----------------------------------------------------------------------
 
-SHUFFLE_DATA = 1
-# DATA_IS_SHUFFLED = 1
+SHUFFLE_DATA ?= 1
+# DATA_IS_SHUFFLED ?= 1
 
 ## devtest data is shuffled by default
-SHUFFLE_DEVDATA = 1
+SHUFFLE_DEVDATA ?= 1
 
 ## shuffle multilingual training data to mix language examples
-SHUFFLE_MULTILINGUAL_DATA = 1
+SHUFFLE_MULTILINGUAL_DATA ?= 1
 
 ##----------------------------------------------------------------------
 ## set FIT_DATA_SIZE to a specific value to fit the training data
@@ -113,7 +138,7 @@ SHUFFLE_MULTILINGUAL_DATA = 1
 ## the script does both, over- and undersampling
 ##----------------------------------------------------------------------
 
-# FIT_DATA_SIZE = 100000
+# FIT_DATA_SIZE ?= 100000
 
 ## similar for the dev data: set FIT_DEVDATA_SIZE to
 ## balance the size of the devdata for each language pair
@@ -149,10 +174,6 @@ SORTLANGS   = $(sort ${SRC} ${TRG})
 SORTSRC     = ${firstword ${SORTLANGS}}
 SORTTRG     = ${lastword ${SORTLANGS}}
 LANGPAIR    = ${SORTSRC}-${SORTTRG}
-SPACE       = $(empty) $(empty)
-LANGSRCSTR  ?= ${subst ${SPACE},+,$(SRCLANGS)}
-LANGTRGSTR  ?= ${subst ${SPACE},+,$(TRGLANGS)}
-LANGPAIRSTR ?= ${LANGSRCSTR}-${LANGTRGSTR}
 
 
 ## for monolingual things
@@ -360,7 +381,7 @@ endif
 VOCABSIZE  ?= $$((${SUBWORD_SRCVOCAB_SIZE} + ${SUBWORD_TRGVOCAB_SIZE} + 1000))
 
 ## for document-level models
-CONTEXT_SIZE = 100
+CONTEXT_SIZE ?= 100
 
 
 ## pre-processing/data-cleanup type
@@ -371,10 +392,10 @@ CONTEXT_SIZE = 100
 ## we need those data sets to get the parameters
 ## for the strict mode
 
-PRE                  = simple
-CLEAN_TRAINDATA_TYPE = strict
-CLEAN_DEVDATA_TYPE   = strict
-CLEAN_TESTDATA_TYPE  = clean
+PRE                  ?= simple
+CLEAN_TRAINDATA_TYPE ?= strict
+CLEAN_DEVDATA_TYPE   ?= strict
+CLEAN_TESTDATA_TYPE  ?= clean
 
 
 ## subword splitting type
@@ -382,12 +403,6 @@ PRE_SRC   = ${SUBWORDS}${SUBWORD_SRCVOCAB_SIZE:000=}k
 PRE_TRG   = ${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k
 
 
-##-------------------------------------
-## default name of the data set (and the model)
-##-------------------------------------
-
-TRAINSET_NAME ?= opus
-DATASET       ?= ${TRAINSET_NAME}
 
 ## dev and test data come from one specific data set
 ## if we have a bilingual model
@@ -406,10 +421,10 @@ TESTSET_NAME ?= opus-test
 
 
 ## DATADIR = directory where the train/dev/test data are
-## WORKDIR = directory used for training
+## TODO: MODELDIR still in use?
+## TODO: SPMDIR still in use? (monolingual sp models)
 
 DATADIR  = ${WORKHOME}/data
-WORKDIR  = ${WORKHOME}/${LANGPAIRSTR}
 MODELDIR = ${WORKHOME}/models/${LANGPAIRSTR}
 SPMDIR   = ${WORKHOME}/SentencePieceModels
 
@@ -443,11 +458,19 @@ TEST_SRC  ?= ${WORKDIR}/test/${TESTSET_NAME}.src
 TEST_TRG  ?= ${WORKDIR}/test/${TESTSET_NAME}.trg
 
 
-## model basename and optional sub-dir
+## home directories for back and forward translation
+BACKTRANS_HOME    ?= backtranslate
+FORWARDTRANS_HOME ?= ${BACKTRANS_HOME}
+PIVOTTRANS_HOME   ?= pivoting
 
-# MODEL_SUBDIR  =
-# MODEL_VARIANT = 
-MODEL         =  ${MODEL_SUBDIR}${DATASET}${TRAINSIZE}${MODEL_VARIANT}.${PRE_SRC}-${PRE_TRG}
+
+
+## model basename and optional sub-dir
+## NR is used to create model ensembles
+## NR is also used to generate a seed value for initialisation
+
+MODEL            =  ${MODEL_SUBDIR}${DATASET}${TRAINSIZE}${MODEL_VARIANT}.${PRE_SRC}-${PRE_TRG}
+NR               =  1
 
 MODEL_BASENAME   = ${MODEL}.${MODELTYPE}.model${NR}
 MODEL_VALIDLOG   = ${MODEL}.${MODELTYPE}.valid${NR}.log
@@ -650,23 +673,11 @@ endif
 
 
 
-# load model-specific configuration parameters
-# if they exist in the work directory
-
-# MODELCONFIG ?= ${MODEL}.${MODELTYPE}.mk
-MODELCONFIG = ${DATASET}${MODEL_VARIANT}.${MODELTYPE}.mk
-ifneq ($(wildcard ${WORKDIR}/${MODELCONFIG}),)
-  include ${WORKDIR}/${MODELCONFIG}
-endif
-
 
 
 
 ## make some data size-specific configuration parameters
 ## TODO: is it OK to delete LOCAL_TRAIN data?
-
-.PHONY: config local-config
-config local-config: ${WORKDIR}/${MODELCONFIG}
 
 SMALLEST_TRAINSIZE ?= 10000
 SMALL_TRAINSIZE    ?= 100000
@@ -761,8 +772,6 @@ ${WORKDIR}/${MODELCONFIG}:
 	@echo "TESTSET     = ${TESTSET}"     >> $@
 	@echo "PRE         = ${PRE}"         >> $@
 	@echo "SUBWORDS    = ${SUBWORDS}"    >> $@
-	@echo "MODEL_SRCVOCAB = ${MODEL_SRCVOCAB}" >> $@
-	@echo "MODEL_TRGVOCAB = ${MODEL_TRGVOCAB}" >> $@
 ifdef SHUFFLE_DATA
 	@echo "SHUFFLE_DATA      = ${SHUFFLE_DATA}"       >> $@
 endif

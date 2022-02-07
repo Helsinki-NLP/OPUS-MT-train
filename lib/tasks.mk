@@ -18,19 +18,26 @@ include ${REPOHOME}lib/dist.mk
 
 
 #------------------------------------------------------------------------
+# create a model-specific config file
+#------------------------------------------------------------------------
+
+.PHONY: config local-config
+config local-config: ${WORKDIR}/${MODELCONFIG}
+
+#------------------------------------------------------------------------
 # make various data sets (and word alignment)
 #------------------------------------------------------------------------
 
 .PHONY: data
-data:	
+data: 	
 	@${MAKE} rawdata
-	@${MAKE} ${WORKDIR}/${MODELCONFIG}
-	@${MAKE} ${TRAINDATA_SRC} ${TRAINDATA_TRG}
-	@${MAKE} ${DEVDATA_SRC} ${DEVDATA_TRG}
-	@${MAKE} ${TESTDATA_SRC} ${TESTDATA_TRG}
-	@${MAKE} ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB}
+	@${MAKE} local-config
+	@${MAKE} traindata
+	@${MAKE} devdata
+	@${MAKE} testdata
+	@${MAKE} vocab
 ifeq ($(filter align,${subst -, ,${MODELTYPE}}),align)
-	@${MAKE} ${TRAIN_ALG}
+	@${MAKE} wordalign
 endif
 
 traindata: 	${TRAINDATA_SRC} ${TRAINDATA_TRG}
@@ -160,14 +167,13 @@ endif
 #------------------------------------------------------------------------
 
 ## copy different HPC params for jobs that need to wordalign data or not
-ifeq ($(findstring align,${MODELTYPE}),)
+ifeq ($(findstring align,${MODELTYPE}),align)
   DATAJOB_HPCPARAMS = ${DATA_ALIGN_HPCPARAMS}
   ALLJOB_HPCPARAMS = ${DATA_ALIGN_HPCPARAMS} ${TRAINJOB_HPCPARAMS}
 else
   DATAJOB_HPCPARAMS = ${DATA_PREPARE_HPCPARAMS}
   ALLJOB_HPCPARAMS = ${DATA_PREPARE_HPCPARAMS} ${TRAINJOB_HPCPARAMS}
 endif
-
 
 # all-job:
 #  - check whether data files exist
@@ -202,8 +208,8 @@ ifdef SLURM_JOBID
 	make ${TRAINJOB_HPCPARAMS} SBATCH_ARGS="-d afterok:${SLURM_JOBID}" train-and-eval.submit${GPUJOB_SUBMIT}
 	${MAKE} data
 else
-	${MAKE} ${TRAINJOB_HPCPARAMS} train-and-eval.submit${GPUJOB_SUBMIT}
 	${MAKE} data
+	${MAKE} ${TRAINJOB_HPCPARAMS} train-and-eval.submit${GPUJOB_SUBMIT}
 endif
 
 

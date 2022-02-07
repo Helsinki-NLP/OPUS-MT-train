@@ -108,21 +108,10 @@ REPOHOME := ${PWD}/../
 # TATOEBA_VERSION    = v2020-07-28
 TATOEBA_VERSION      = v2021-08-07
 
-SMALLEST_TRAINSIZE  = 1000
-USE_REST_DEVDATA    = 0
-DATA_IS_SHUFFLED    = 1
-DEVSIZE             = 5000
-TESTSIZE            = 10000
-DEVMINSIZE          = 200
-
-# by default skip aligned data of the same language
-SKIP_SAME_LANG      = 1
-
-
 
 include ${REPOHOME}lib/env.mk
-include ${REPOHOME}lib/config.mk
 include ${REPOHOME}lib/config/tatoeba.mk
+include ${REPOHOME}lib/config.mk
 include ${REPOHOME}lib/tasks.mk
 include ${REPOHOME}lib/tasks/tatoeba/data.mk
 include ${REPOHOME}lib/tasks/tatoeba/tune.mk
@@ -133,11 +122,9 @@ include ${REPOHOME}lib/projects/elg.mk
 
 
 
-
-
 .PHONY: all
 all: 
-	${MAKE} prepare
+	${MAKE} tatoeba-prepare
 	${MAKE} data-tatoeba
 	${MAKE} train-tatoeba
 	${MAKE} eval-tatoeba
@@ -188,7 +175,6 @@ prepare tatoeba-prepare: ${TATOEBA_LANGIDS_TRAINONLY}
 prepare-and-data tatoeba-prepare-and-data: ${TATOEBA_LANGIDS_TRAINONLY}
 	${MAKE} fetch-datasets
 	${MAKE} langlabel-files
-	${MAKE} local-config-tatoeba
 	${MAKE} data-tatoeba
 
 
