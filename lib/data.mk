@@ -417,12 +417,12 @@ endif
 ## add training data for each language combination
 ## and put it together in local space
 ${LOCAL_TRAIN_SRC}: ${LOCAL_TRAINDATA_DEPENDENCIES}
-	mkdir -p ${dir $@}
-	echo ""                           > ${dir $@}README.md
-	echo "# ${notdir ${TRAIN_BASE}}" >> ${dir $@}README.md
-	echo ""                          >> ${dir $@}README.md
-	rm -f ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG}
-	-for s in ${SRCLANGS}; do \
+	@mkdir -p ${dir $@}
+	@echo ""                           > ${dir $@}README.md
+	@echo "# ${notdir ${TRAIN_BASE}}" >> ${dir $@}README.md
+	@echo ""                          >> ${dir $@}README.md
+	@rm -f ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG}
+	-@for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
 	    if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
 	      if [ "${SKIP_SAME_LANG}" == "1" ] && [ "$$s" == "$$t" ]; then \
@@ -437,7 +437,8 @@ ${LOCAL_TRAIN_SRC}: ${LOCAL_TRAINDATA_DEPENDENCIES}
 	  done \
 	done
 ifeq (${USE_REST_DEVDATA},1)
-	if [ -e ${DEV_SRC}.notused.gz ]; then \
+	@if [ -e ${DEV_SRC}.notused.gz ]; then \
+	  echo "..... add unused devdata to training data"; \
 	  echo "* unused dev/test data is added to training data" >> ${dir $@}README.md; \
 	  ${GZIP} -cd < ${DEV_SRC}.notused.gz >> ${LOCAL_TRAIN_SRC}; \
 	  ${GZIP} -cd < ${DEV_TRG}.notused.gz >> ${LOCAL_TRAIN_TRG}; \

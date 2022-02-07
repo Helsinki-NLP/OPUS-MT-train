@@ -45,3 +45,6 @@ elg-eng2missing:
 	for l in est lav ron hbs sqi spa fra ita por zlw ara heb deu fin; do \
 	  ${MAKE} MODELTYPE=transformer-big tatoeba-eng2$${l}-trainjob-bt; \
 	done
+
+elg-eng2slv:
+	  ${MAKE} MODELTYPE=transformer-big tatoeba-eng2slv-trainjob-bt-separate-spm; \

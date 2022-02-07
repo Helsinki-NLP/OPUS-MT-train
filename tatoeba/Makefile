@@ -132,17 +132,18 @@ all:
 	${MAKE} eval-testsets-tatoeba
 
 
+
 ## start unidirectional training job
 ## - make data first, then submit a job
-.PHONY: tatoeba-job job slurmjob
-job slurmjob tatoeba-job:
+.PHONY: tatoeba-job
+tatoeba-job:
 	rm -f train-and-eval.submit
 	${MAKE} tatoeba-prepare
 	${MAKE} all-job-tatoeba
 
 ## start jobs in both translation directions
-.PHONY: tatoeba-bidirectional-job bidirectional-job
-bidirectional-job tatoeba-bidirectional-job:
+.PHONY: tatoeba-bidirectional-job
+tatoeba-bidirectional-job:
 	${MAKE} tatoeba-prepare
 	${MAKE} all-job-tatoeba
 ifneq (${SRCLANGS},${TRGLANGS})
@@ -164,8 +165,8 @@ endif
 
 
 ## prepare data (fetch data and extract language labesl)
-.PHONY: prepare tatoeba-prepare
-prepare tatoeba-prepare: ${TATOEBA_LANGIDS_TRAINONLY}
+.PHONY: tatoeba-prepare
+tatoeba-prepare: ${TATOEBA_LANGIDS_TRAINONLY}
 	${MAKE} fetch-datasets
 	${MAKE} langlabel-files
 
@@ -185,14 +186,16 @@ tatoeba-train: train
 tatoeba-eval: eval
 tatoeba-compare: compare
 
-## a file that contains langids without test data
-.PHONY: trainonly_langids
-trainonly_langids: ${TATOEBA_LANGIDS_TRAINONLY}
 
 ## fetch the essential data and get labels for language variants
 .PHONY: tatoeba-data tatoeba-labels
 tatoeba-labels: ${WORKHOME}/${LANGPAIRSTR}/${DATASET}-langlabels.src \
 		${WORKHOME}/${LANGPAIRSTR}/${DATASET}-langlabels.trg
+
+
+## a file that contains langids without test data
+.PHONY: trainonly_langids
+trainonly_langids: ${TATOEBA_LANGIDS_TRAINONLY}
 
 print-langgroups:
 	@echo ${OPUS_LANG_GROUPS}
@@ -251,9 +254,6 @@ MAX_TRGLANGS ?= 7000
 # find-langgroup = $(filter ${OPUS_LANGS3},\
 # 		$(sort ${shell langgroup $(1) | xargs iso639 -m -n} ${1} ${2}))
 
-# find-langgroup = $(filter ${OPUS_LANGS3},$(sort ${shell langgroup $(1)} ${1} ${2}))
-# find-langgroup = $(sort ${shell langgroup $(1)} ${1} ${2})
-
 find-langgroup = $(filter $(sort ${shell langgroup $(1) | xargs iso639 -m -n} ${1} ${2}),${TATOEBA_LANGS})
 find-srclanggroup = $(call find-langgroup,$(firstword ${subst -, ,${subst 2, ,${1}}}),${2})
 find-trglanggroup = $(call find-langgroup,$(lastword ${subst -, ,${subst 2, ,${1}}}),${2})
@@ -272,15 +272,15 @@ tatoeba-%-langs:
 ## shortcut to start a target only if certain language group limits are met
 ## (maximum and minimum number of languages)
 %-groupsize-limits:
-	     if [ ${words ${SRCLANGS}} -ge ${MIN_SRCLANGS} ]; then \
-	       if [ ${words ${TRGLANGS}} -ge ${MIN_TRGLANGS} ]; then \
-	         if [ ${words ${SRCLANGS}} -le ${MAX_SRCLANGS} ]; then \
-	           if [ ${words ${TRGLANGS}} -le ${MAX_TRGLANGS} ]; then \
-			${MAKE} ${@:-groupsize-limits=}; \
-	           fi \
-	         fi \
-	       fi \
-	     fi
+	@if [ ${words ${SRCLANGS}} -ge ${MIN_SRCLANGS} ]; then \
+	  if [ ${words ${TRGLANGS}} -ge ${MIN_TRGLANGS} ]; then \
+	    if [ ${words ${SRCLANGS}} -le ${MAX_SRCLANGS} ]; then \
+	      if [ ${words ${TRGLANGS}} -le ${MAX_TRGLANGS} ]; then \
+		${MAKE} ${@:-groupsize-limits=}; \
+	      fi \
+	    fi \
+	  fi \
+	fi
 
 ## create data sets (also works for language groups)
 tatoeba-%-data:
