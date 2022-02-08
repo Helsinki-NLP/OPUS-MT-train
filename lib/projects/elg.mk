@@ -48,3 +48,10 @@ elg-eng2missing:
 
 elg-eng2slv:
 	  ${MAKE} MODELTYPE=transformer-big tatoeba-eng2slv-trainjob-bt-separate-spm; \
+
+
+elg-missing:
+	  ${MAKE} MODELTYPE=transformer-big SRCLANGS=eng TRGLANGS="ces slk" tatoeba-job-bt
+	  ${MAKE} MODELTYPE=transformer-big SRCLANGS=zlw TRGLANGS=gmq tatoeba-job-bt
+	  ${MAKE} MODELTYPE=transformer-big SRCLANGS=zlw TRGLANGS=gmq tatoeba-zlw2gmq-trainjob-bt-pivotlang
+

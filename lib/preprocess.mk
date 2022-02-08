@@ -191,13 +191,19 @@ endif
 
 
 ## store some file size statistics 
+## (only create those for files that have at least STATS_MIN_NROFLINES lines)
 ## - line 1:  nr-of-lines  nr-of-words  nr-of-characters  nr-of-bytes
 ## - line 2: nr-of-unique-characters
 ## - line 3: length-of-longest-line
 ## - line 4: length-of-longest-word
 
+STATS_MIN_NROFLINES ?= 100
+
+## alternatively: check for non-empty gzip files:
+##    gzip -l tt2.gz | awk 'NR==2 {print $2}'
+
 %.stats: %.gz
-	@if [ -e $< ]; then \
+	if [ `${ZCAT} $< | head -${STATS_MIN_NROFLINES} | wc -l` -eq ${STATS_MIN_NROFLINES} ]; then \
 	  echo ".... create some stats for $<"; \
 	  ${GZCAT} $< | wc -lwmc > $@; \
 	  ${GZCAT} $< | sed 's/./& /g' | tr ' ' "\n" | sort -u | wc -l >> $@; \
