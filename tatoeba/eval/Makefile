@@ -104,8 +104,10 @@ ${MODEL_EVALZIPS}: ${TESTSET_INDEX}
 #-------------------------------------------------
 .PHONY: eval-model
 eval-model: ${MODEL_SCORES}
-	${MAKE} register-scores
-	${MAKE} sort-leaderboards
+	if [ -e $< ]; then \
+	  ${MAKE} register-scores; \
+	  ${MAKE} sort-leaderboards; \
+	fi
 	if [ -d ${MODEL_DIR} ]; then \
 	  cd ${MODEL_DIR} && zip ${MODEL_EVALZIP} *.eval *.compare; \
 	  rm -f ${MODEL_DIR}/*.eval; \
@@ -277,9 +279,10 @@ ${MODEL_DIR}/${TESTSET}.${LANGPAIR}.eval:
 	  if [ -s ${WORK_DIR}/${TESTSET}.${LANGPAIR}.output ]; then \
 		mkdir -p ${dir $@}; \
 		cat ${WORK_DIR}/${TESTSET}.${LANGPAIR}.output | \
-		sacrebleu ${SACREBLEU_PARAMS} ${TESTSET_DIR}/${TESTSET}.${TRG} > $@; \
+		sacrebleu -f text ${SACREBLEU_PARAMS} ${TESTSET_DIR}/${TESTSET}.${TRG} > $@; \
 		cat ${WORK_DIR}/${TESTSET}.${LANGPAIR}.output | \
-		sacrebleu ${SACREBLEU_PARAMS} --metrics=chrf --width=3 ${TESTSET_DIR}/${TESTSET}.${TRG} >> $@; \
+		sacrebleu -f text ${SACREBLEU_PARAMS} --metrics=chrf --width=3 ${TESTSET_DIR}/${TESTSET}.${TRG} |\
+		sed 's/\([0-9][0-9]\)\.\([0-9]*\)$$/0.\1\2/' >> $@; \
 		paste -d "\n" \
 			${TESTSET_DIR}/${TESTSET}.${SRC} \
 			${TESTSET_DIR}/${TESTSET}.${TRG} \
@@ -366,13 +369,13 @@ sort-leaderboards: ${LEADERBOARDS_BLEU} ${LEADERBOARDS_CHRF}
 
 ${LEADERBOARDS_BLEU}: ${UPDATE_SCORE_DIRS}
 	@echo "sort ${patsubst ${LEADERBOARD_DIR}/%,%,$@}"
-	@cat $(dir $@)bleu-scores*.txt | sort -u -k1,1nr > $@.sorted
+	@cat $(dir $@)bleu-scores*.txt | grep '^[0-9]' | sort -u -k1,1nr > $@.sorted
 	@rm -f $(dir $@)bleu-scores*.txt
 	@mv $@.sorted $@
 
 ${LEADERBOARDS_CHRF}: ${UPDATE_SCORE_DIRS}
 	@echo "sort ${patsubst ${LEADERBOARD_DIR}/%,%,$@}"
-	@cat $(dir $@)chrf-scores*.txt | sort -u -k1,1nr > $@.sorted
+	@cat $(dir $@)chrf-scores*.txt | grep '^[0-9]' | sort -u -k1,1nr > $@.sorted
 	@rm -f $(dir $@)chrf-scores*.txt
 	@mv $@.sorted $@
 
