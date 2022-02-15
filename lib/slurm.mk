@@ -38,39 +38,40 @@ SLURM_JOBNAME ?= $(subst -,,${LANGPAIRSTR})
 
 %.submit:
 	mkdir -p ${WORKDIR}
-	echo '#!/bin/bash -l' > $@
-	echo '#SBATCH -J "$(SLURM_JOBNAME)${@:.submit=}"' >>$@
-	echo '#SBATCH -o $(SLURM_JOBNAME)${@:.submit=}.out.%j' >> $@
-	echo '#SBATCH -e $(SLURM_JOBNAME)${@:.submit=}.err.%j' >> $@
+	mkdir -p ${dir ${TMPWORKDIR}/$@}
+	echo '#!/bin/bash -l' > ${TMPWORKDIR}/$@
+	echo '#SBATCH -J "$(SLURM_JOBNAME)${@:.submit=}"' >>${TMPWORKDIR}/$@
+	echo '#SBATCH -o $(SLURM_JOBNAME)${@:.submit=}.out.%j' >> ${TMPWORKDIR}/$@
+	echo '#SBATCH -e $(SLURM_JOBNAME)${@:.submit=}.err.%j' >> ${TMPWORKDIR}/$@
 ifdef EMAIL
-	echo '#SBATCH --mail-type=END' >> $@
-	echo '#SBATCH --mail-user=${EMAIL}' >> $@
+	echo '#SBATCH --mail-type=END' >> ${TMPWORKDIR}/$@
+	echo '#SBATCH --mail-user=${EMAIL}' >> ${TMPWORKDIR}/$@
 endif
-	echo '#SBATCH --mem=${GPUJOB_HPC_MEM}' >> $@
-	echo '#SBATCH -n ${GPUJOB_HPC_CORES}' >> $@
-	echo '#SBATCH -N ${GPUJOB_HPC_NODES}' >> $@
-	echo '#SBATCH -t ${GPUJOB_HPC_TIME}:00' >> $@
-	echo '#SBATCH -p ${GPUJOB_HPC_QUEUE}' >> $@
-	echo '#SBATCH ${HPC_GPU_ALLOCATION}' >> $@
+	echo '#SBATCH --mem=${GPUJOB_HPC_MEM}' >> ${TMPWORKDIR}/$@
+	echo '#SBATCH -n ${GPUJOB_HPC_CORES}' >> ${TMPWORKDIR}/$@
+	echo '#SBATCH -N ${GPUJOB_HPC_NODES}' >> ${TMPWORKDIR}/$@
+	echo '#SBATCH -t ${GPUJOB_HPC_TIME}:00' >> ${TMPWORKDIR}/$@
+	echo '#SBATCH -p ${GPUJOB_HPC_QUEUE}' >> ${TMPWORKDIR}/$@
+	echo '#SBATCH ${HPC_GPU_ALLOCATION}' >> ${TMPWORKDIR}/$@
 ifdef BROKEN_NODES
-	echo '#SBATCH --exclude=${BROKEN_NODES}' >> $@
+	echo '#SBATCH --exclude=${BROKEN_NODES}' >> ${TMPWORKDIR}/$@
 endif
-	echo '${HPC_EXTRA}' >> $@
-	echo '${HPC_EXTRA1}' >> $@
-	echo '${HPC_EXTRA2}' >> $@
-	echo '${HPC_EXTRA3}' >> $@
-	echo '${HPC_GPU_EXTRA1}' >> $@
-	echo '${HPC_GPU_EXTRA2}' >> $@
-	echo '${HPC_GPU_EXTRA3}' >> $@
-	echo '${LOAD_GPU_ENV}'           >> $@
-	echo 'cd $${SLURM_SUBMIT_DIR:-.}' >> $@
-	echo 'pwd' >> $@
-	echo 'echo "Starting at `date`"' >> $@
-	echo 'srun ${MAKE} -j ${GPUJOB_HPC_JOBS} ${MAKEARGS} ${@:.submit=}' >> $@
-	echo 'echo "Finishing at `date`"' >> $@
-	sbatch ${SBATCH_ARGS} $@
+	echo '${HPC_EXTRA}' >> ${TMPWORKDIR}/$@
+	echo '${HPC_EXTRA1}' >> ${TMPWORKDIR}/$@
+	echo '${HPC_EXTRA2}' >> ${TMPWORKDIR}/$@
+	echo '${HPC_EXTRA3}' >> ${TMPWORKDIR}/$@
+	echo '${HPC_GPU_EXTRA1}' >> ${TMPWORKDIR}/$@
+	echo '${HPC_GPU_EXTRA2}' >> ${TMPWORKDIR}/$@
+	echo '${HPC_GPU_EXTRA3}' >> ${TMPWORKDIR}/$@
+	echo '${LOAD_GPU_ENV}'           >> ${TMPWORKDIR}/$@
+	echo 'cd $${SLURM_SUBMIT_DIR:-.}' >> ${TMPWORKDIR}/$@
+	echo 'pwd' >> ${TMPWORKDIR}/$@
+	echo 'echo "Starting at `date`"' >> ${TMPWORKDIR}/$@
+	echo 'srun ${MAKE} -j ${GPUJOB_HPC_JOBS} ${MAKEARGS} ${@:.submit=}' >> ${TMPWORKDIR}/$@
+	echo 'echo "Finishing at `date`"' >> ${TMPWORKDIR}/$@
+	sbatch ${SBATCH_ARGS} ${TMPWORKDIR}/$@
 	mkdir -p ${WORKDIR}
-	mv $@ ${WORKDIR}/$@
+	mv ${TMPWORKDIR}/$@ ${WORKDIR}/$@
 
 # 	echo 'srun ${MAKE} NR=${NR} MODELTYPE=${MODELTYPE} DATASET=${DATASET} SRC=${SRC} TRG=${TRG} PRE_SRC=${PRE_SRC} PRE_TRG=${PRE_TRG} ${MAKEARGS} ${@:.submit=}' >> $@
 
@@ -88,38 +89,39 @@ CPUJOB_HPC_JOBS    ?= ${CPUJOB_HPC_THREADS}
 
 %.submitcpu:
 	mkdir -p ${WORKDIR}
-	echo '#!/bin/bash -l' > $@
-	echo '#SBATCH -J "$(SLURM_JOBNAME)${@:.submitcpu=}"'      >>$@
-	echo '#SBATCH -o $(SLURM_JOBNAME)${@:.submitcpu=}.out.%j' >> $@
-	echo '#SBATCH -e $(SLURM_JOBNAME)${@:.submitcpu=}.err.%j' >> $@
+	mkdir -p ${dir ${TMPWORKDIR}/$@}
+	echo '#!/bin/bash -l' > ${TMPWORKDIR}/$@
+	echo '#SBATCH -J "$(SLURM_JOBNAME)${@:.submitcpu=}"'      >>${TMPWORKDIR}/$@
+	echo '#SBATCH -o $(SLURM_JOBNAME)${@:.submitcpu=}.out.%j' >> ${TMPWORKDIR}/$@
+	echo '#SBATCH -e $(SLURM_JOBNAME)${@:.submitcpu=}.err.%j' >> ${TMPWORKDIR}/$@
 ifdef EMAIL
-	echo '#SBATCH --mail-type=END'                            >> $@
-	echo '#SBATCH --mail-user=${EMAIL}'                       >> $@
+	echo '#SBATCH --mail-type=END'                            >> ${TMPWORKDIR}/$@
+	echo '#SBATCH --mail-user=${EMAIL}'                       >> ${TMPWORKDIR}/$@
 endif
-	echo '#SBATCH --mem=${CPUJOB_HPC_MEM}'                    >> $@
-	echo '#SBATCH -n ${CPUJOB_HPC_CORES}' >> $@
-	echo '#SBATCH -N ${CPUJOB_HPC_NODES}' >> $@
-	echo '#SBATCH -p ${CPUJOB_HPC_QUEUE}' >> $@
-	echo '#SBATCH -t ${CPUJOB_HPC_TIME}:00' >> $@
+	echo '#SBATCH --mem=${CPUJOB_HPC_MEM}'                    >> ${TMPWORKDIR}/$@
+	echo '#SBATCH -n ${CPUJOB_HPC_CORES}' >> ${TMPWORKDIR}/$@
+	echo '#SBATCH -N ${CPUJOB_HPC_NODES}' >> ${TMPWORKDIR}/$@
+	echo '#SBATCH -p ${CPUJOB_HPC_QUEUE}' >> ${TMPWORKDIR}/$@
+	echo '#SBATCH -t ${CPUJOB_HPC_TIME}:00' >> ${TMPWORKDIR}/$@
 ifdef BROKEN_NODES
-	echo '#SBATCH --exclude=${BROKEN_NODES}' >> $@
+	echo '#SBATCH --exclude=${BROKEN_NODES}' >> ${TMPWORKDIR}/$@
 endif
-	echo '${HPC_EXTRA}' >> $@
-	echo '${HPC_EXTRA1}' >> $@
-	echo '${HPC_EXTRA2}' >> $@
-	echo '${HPC_EXTRA3}' >> $@
-	echo '${HPC_CPU_EXTRA1}' >> $@
-	echo '${HPC_CPU_EXTRA2}' >> $@
-	echo '${HPC_CPU_EXTRA3}' >> $@
-	echo '${LOAD_CPU_ENV}'           >> $@
-	echo 'cd $${SLURM_SUBMIT_DIR:-.}' >> $@
-	echo 'pwd' >> $@
-	echo 'echo "Starting at `date`"' >> $@
-	echo '${MAKE} -j ${CPUJOB_HPC_JOBS} ${MAKEARGS} ${@:.submitcpu=}' >> $@
-	echo 'echo "Finishing at `date`"' >> $@
-	sbatch ${SBATCH_ARGS} $@
+	echo '${HPC_EXTRA}' >> ${TMPWORKDIR}/$@
+	echo '${HPC_EXTRA1}' >> ${TMPWORKDIR}/$@
+	echo '${HPC_EXTRA2}' >> ${TMPWORKDIR}/$@
+	echo '${HPC_EXTRA3}' >> ${TMPWORKDIR}/$@
+	echo '${HPC_CPU_EXTRA1}' >> ${TMPWORKDIR}/$@
+	echo '${HPC_CPU_EXTRA2}' >> ${TMPWORKDIR}/$@
+	echo '${HPC_CPU_EXTRA3}' >> ${TMPWORKDIR}/$@
+	echo '${LOAD_CPU_ENV}'           >> ${TMPWORKDIR}/$@
+	echo 'cd $${SLURM_SUBMIT_DIR:-.}' >> ${TMPWORKDIR}/$@
+	echo 'pwd' >> ${TMPWORKDIR}/$@
+	echo 'echo "Starting at `date`"' >> ${TMPWORKDIR}/$@
+	echo '${MAKE} -j ${CPUJOB_HPC_JOBS} ${MAKEARGS} ${@:.submitcpu=}' >> ${TMPWORKDIR}/$@
+	echo 'echo "Finishing at `date`"' >> ${TMPWORKDIR}/$@
+	sbatch ${SBATCH_ARGS} ${TMPWORKDIR}/$@
 	mkdir -p ${WORKDIR}
-	mv $@ ${WORKDIR}/$@
+	mv ${TMPWORKDIR}/$@ ${WORKDIR}/$@
 
 
 #	echo '${MAKE} -j ${HPC_CORES} DATASET=${DATASET} SRC=${SRC} TRG=${TRG} PRE_SRC=${PRE_SRC} PRE_TRG=${PRE_TRG} ${MAKEARGS} ${@:.submitcpu=}' >> $@

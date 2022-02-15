@@ -100,3 +100,42 @@ endif
 		-e 's/&amp;/&/g' |\
 	sed 'n;n;G;' > $@
 	rm -f $@.1 $@.2 $@.3
+
+
+# print-bleu-scores:
+# 	grep BLEU ${WORKHOME}/*/*.eval |\
+# 	sed 's#^${WORKHOME}/##' |\
+# 	sed 's/\.\([^\.]*\)\.\([^\.]*\)\.\([^\.]*\)\.eval[^ ]* = \([0-9\.]*\).*$$/	\1	\2-\3	\4/' |\
+# 	sed 's#^\([^/]*\)/\([^\.]*\)\.[^	]*	#\1	\2	#'
+
+
+
+print-bleu-scores:
+	grep BLEU ${WORKHOME}/*/*.eval |\
+	perl -pe 's#^${WORKHOME}/([^/]*)/([^\.]+)\.(.*?-.*?\.)?([^\.]+\.[^\.]+\.[^\.]+)\.([^\.]+)\.([^\.]+)\.eval:.*? = ([0-9\.]+) .*$$#$$5-$$6\t$$7\t$$2\t$$1\t$$4#' |\
+	perl -pe '@a=split(/\t/);if($$a[0]=~/multi/){$$a[0]=$$a[3];};$$_=join("\t",@a);' |\
+	sort -k3,3 -k1,1 -k2,2nr
+
+
+
+pretty-print-bleu-scores:
+	grep BLEU ${WORKHOME}/*/*.eval |\
+	perl -pe 's#^${WORKHOME}/([^/]*)/([^\.]+)\.(.*?-.*?\.)?([^\.]+\.[^\.]+\.[^\.]+)\.([^\.]+)\.([^\.]+)\.eval:.*? = ([0-9\.]+) .*$$#$$5-$$6\t$$7\t$$2\t$$1\t$$4#' |\
+	perl -pe '@a=split(/\t/);if($$a[0]=~/multi/){$$a[0]=$$a[3];};$$_=join("\t",@a);' |\
+	sort -k3,3 -k1,1 -k2,2nr |\
+	perl -e 'while (<>){@a=split(/\t/);printf "%15s  %5.2f  %-25s  %-15ss  %s",@a;}'
+
+
+print-bleu-scores2:
+	grep BLEU ${WORKHOME}/*/*.eval |\
+	perl -pe 's#^${WORKHOME}/([^/]*)/([^\.]+)\.(.*?-.*?\.)?([^\.]+)\.[^\.]+\.([^\.]+)\.([^\.]+)\.([^\.]+)\.eval:.*? = ([0-9\.]+) .*$$#$$6-$$7\t$$8\t$$2\t$$1\t$$4\t$$5#' |\
+	perl -pe '@a=split(/\t/);if($$a[0]=~/multi/){$$a[0]=$$a[3];};$$_=join("\t",@a);' |\
+	sort -k3,3 -k1,1 -k2,2nr
+
+pretty-print-bleu-scores2:
+	grep BLEU ${WORKHOME}/*/*.eval |\
+	perl -pe 's#^${WORKHOME}/([^/]*)/([^\.]+)\.(.*?-.*?\.)?([^\.]+)\.[^\.]+\.([^\.]+)\.([^\.]+)\.([^\.]+)\.eval:.*? = ([0-9\.]+) .*$$#$$6-$$7\t$$8\t$$2\t$$1\t$$4\t$$5#' |\
+	perl -pe '@a=split(/\t/);if($$a[0]=~/multi/){$$a[0]=$$a[3];};$$_=join("\t",@a);' |\
+	sort -k3,3 -k1,1 -k2,2nr |\
+	perl -e 'while (<>){@a=split(/\t/);printf "%15s  %5.2f  %-25s  %-15s  %-25s  %s",@a;}'
+

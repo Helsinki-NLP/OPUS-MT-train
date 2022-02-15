@@ -18,7 +18,7 @@ include ${REPOHOME}lib/slurm.mk
 
 
 MODEL_STORAGE  := https://object.pouta.csc.fi/Tatoeba-MT-models
-MODEL_DISTS    := ${shell wget -q -O - ${MODEL_STORAGE}/index.txt | grep '.zip$$'}
+MODEL_DISTS    := ${shell wget -q -O - ${MODEL_STORAGE}/index.txt | grep '.zip$$' | grep -v '.eval.zip$$'}
 MODEL_DIST     = ${firstword ${MODEL_DISTS}}
 MODEL          = ${MODEL_DIST:.zip=}
 MODEL_LANGPAIR = ${firstword ${subst /, ,${MODEL_DIST}}}
@@ -34,10 +34,13 @@ WORK_DIR       = ${WORK_HOME}/${MODEL}
 
 ## model directory (for test results)
 ## model score file and zipfile with evaluation results
-MODEL_HOME     = ${REPOHOME}models-tatoeba
+# MODEL_HOME     = ${REPOHOME}models-tatoeba
+MODEL_HOME     = ${REPOHOME}tatoeba/models
 MODEL_DIR      = ${MODEL_HOME}/${MODEL}
 MODEL_SCORES   = ${MODEL_DIR}.scores.txt
 MODEL_EVALZIP  = ${MODEL_DIR}.eval.zip
+
+LEADERBOARD_DIR = ${REPOHOME}scores
 
 ## all zip files with benchmark results
 MODEL_EVALZIPS := ${patsubst %.zip,${MODEL_HOME}/%.eval.zip,${MODEL_DISTS}}
@@ -63,8 +66,13 @@ ${MODEL_EVALZIPS}: ${TESTSET_INDEX}
 	fi
 	${MAKE} MODEL_DIST=${patsubst ${MODEL_HOME}/%.eval.zip,%.zip,$@} eval-model
 
+## evaluate tge model with all benchmarks
+## register the scores and update the leaderboard
+## final cleanup
 .PHONY: eval-model
 eval-model: ${MODEL_SCORES}
+	${MAKE} register-scores
+	${MAKE} sort-leaderboards
 	if [ -d ${MODEL_DIR} ]; then \
 	  cd ${MODEL_DIR} && zip ${MODEL_EVALZIP} *.eval *.compare; \
 	  rm -f ${MODEL_DIR}/*.eval; \
@@ -277,4 +285,50 @@ ${MODEL_SCORES}: ${TESTSET_INDEX}
 		$@.chrf-scores $@.bleu-scores \
 		$@.urls $@.nrlines $@.nrwords; \
 	fi
+
+
+
+##-------------------------------------------------------------------
+## uodate leader boards with score from score files
+## LEADERBOARDS = list of leader boards that need to be sorted
+## SCOREFILES = all score files in the model directories
+## SCOREFILES_DONE = a flag that shows that the scores are registered
+##-------------------------------------------------------------------
+
+SCOREFILES := ${wildcard ${MODEL_HOME}/*/*.scores.txt}
+SCOREFILES_DONE = ${SCOREFILES:.txt=.registered}
+SCOREFILE_DONE = ${MODEL_SCORES:.txt=.registered}
+
+## update all leader boards with all scores
+update-leaderboards: ${SCOREFILES_DONE}
+	${MAKE} sort-leaderboards
+
+## register the scores for the current model
+## (scores will be added to some temporary files sorted by language pair and benchmark)
+register-scores: ${SCOREFILE_DONE}
+
+${SCOREFILES_DONE}: %.registered: %.txt
+	@echo "register scores from ${patsubst ${MODEL_HOME}/%,%,$<}"
+	@cat $< | perl -e 'while (<>){ @a=split(/\t/); system "mkdir -p ${LEADERBOARD_DIR}/$$a[0]/$$a[1]"; open B,">>${LEADERBOARD_DIR}/$$a[0]/$$a[1]/bleu-scores.$(subst /,.,${patsubst ${MODEL_HOME}/%,%,$<}).unsorted.txt"; open C,">>${LEADERBOARD_DIR}/$$a[0]/$$a[1]/chrf-scores.$(subst /,.,${patsubst ${MODEL_HOME}/%,%,$<}).unsorted.txt"; print B "$$a[3]\t$$a[4]\n"; print C "$$a[2]\t$$a[4]\n"; close B; close C; }'
+	touch $@
+
+
+UPDATE_SCORE_DIRS := $(sort $(dir ${wildcard ${LEADERBOARD_DIR}/*/*/*.unsorted.txt}))
+LEADERBOARDS_BLEU := $(patsubst %,%bleu-scores.txt,${UPDATE_SCORE_DIRS})
+LEADERBOARDS_CHRF := $(patsubst %,%chrf-scores.txt,${UPDATE_SCORE_DIRS})
+
+## sort all leaderboards for which we have new unsorted scores
+sort-leaderboards: ${LEADERBOARDS_BLEU} ${LEADERBOARDS_CHRF}
+
+${LEADERBOARDS_BLEU}: ${UPDATE_SCORE_DIRS}
+	@echo "sort ${patsubst ${LEADERBOARD_DIR}/%,%,$@}"
+	@cat $(dir $@)bleu-scores*.txt | sort -u -k1,1nr > $@.sorted
+	@rm -f $(dir $@)bleu-scores*.txt
+	@mv $@.sorted $@
+
+${LEADERBOARDS_CHRF}: ${UPDATE_SCORE_DIRS}
+	@echo "sort ${patsubst ${LEADERBOARD_DIR}/%,%,$@}"
+	@cat $(dir $@)chrf-scores*.txt | sort -u -k1,1nr > $@.sorted
+	@rm -f $(dir $@)chrf-scores*.txt
+	@mv $@.sorted $@
 

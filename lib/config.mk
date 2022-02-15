@@ -285,7 +285,7 @@ OPUSLANGS := ${call get-opus-langs}
 ##   - DEVSET is the first of the potential devset that exists with sufficient size
 ## TODO: what do we do if there is no devset?
 
-POTENTIAL_DEVSETS = Tatoeba GlobalVoices infopankki JW300 bible-uedin
+POTENTIAL_DEVSETS = Tatoeba GlobalVoices infopankki wikimedia JW300 bible-uedin
 BIGGER_BITEXTS   := ${call get-bigger-bitexts,${SRC},${TRG},${DEVSMALLSIZE}}
 SMALLER_BITEXTS  := ${call get-bigger-bitexts,${SRC},${TRG},${DEVMINSIZE}}
 DEVSET ?= ${firstword 	${filter ${POTENTIAL_DEVSETS},${BIGGER_BITEXTS}} \
