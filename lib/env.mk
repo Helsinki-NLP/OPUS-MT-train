@@ -93,7 +93,9 @@ ifndef TMPDIR
   TMPDIR := /tmp
 endif
 
-TMPWORKDIR ?= ${shell mktemp -d -p ${TMPDIR}}
+ifndef TMPWORKDIR
+  TMPWORKDIR := ${shell mktemp -d -p ${TMPDIR}}
+endif
 export TMPWORKDIR
 
 

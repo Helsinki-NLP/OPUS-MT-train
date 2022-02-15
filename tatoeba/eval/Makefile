@@ -16,6 +16,8 @@ include ${REPOHOME}lib/env.mk
 include ${REPOHOME}lib/config.mk
 include ${REPOHOME}lib/slurm.mk
 
+GPUJOB_HPC_MEM = 20g
+
 
 MODEL_STORAGE  := https://object.pouta.csc.fi/Tatoeba-MT-models
 MODEL_DISTS    := ${shell wget -q -O - ${MODEL_STORAGE}/index.txt | grep '.zip$$' | grep -v '.eval.zip$$'}
@@ -45,20 +47,48 @@ LEADERBOARD_DIR = ${REPOHOME}scores
 ## all zip files with benchmark results
 MODEL_EVALZIPS := ${patsubst %.zip,${MODEL_HOME}/%.eval.zip,${MODEL_DISTS}}
 
-
+#-------------------------------------------------
 ## make all evaluation zip-files
+#-------------------------------------------------
 .PHONY: all
 all: ${MODEL_EVALZIPS}
+
 
 ## test: make the first evaluation zip-file
 .PHONY: first
 first: $(firstword ${MODEL_EVALZIPS})
 
 
-## zip-files with all evaluation files
-## if the zip file already exists: unpack first
-## to avoid re-doing things
+## check models that still need to be evaluated
+## (i.e. *.eval.zip does not exist)
+MODEL_EVALCHECK := ${patsubst %.zip,${MODEL_HOME}/%.eval.check,${MODEL_DISTS}}
+
+.PNONY: print-eval-needed ${MODEL_EVALCHECK}
+print-eval-needed: ${MODEL_EVALCHECK}
+${MODEL_EVALCHECK}:
+	@if [ ! -e $(@:.check=.zip) ]; then \
+	  echo "need to make $(@:.check=.zip)"; \
+	fi
+
+#-------------------------------------------------
+## phony targets to evaluate only new models
+## (no dependency on testset index)
+#-------------------------------------------------
+MODEL_EVALNEW := ${patsubst %.zip,${MODEL_HOME}/%.eval.new,${MODEL_DISTS}}
+
+.PNONY: eval-new eval-new-models ${MODEL_EVALNEW}
+eval-new eval-new-models: ${MODEL_EVALNEW}
+${MODEL_EVALNEW}:
+	@if [ ! -e $(@:.new=.zip) ]; then \
+	  ${MAKE} MODEL_DIST=${patsubst ${MODEL_HOME}/%.eval.new,%.zip,$@} eval-model; \
+	fi
+
+#-------------------------------------------------
+## create zip-files with all evaluation files
+## --> need to add scores if the TESTSET_INDEX has changed!
+## if the zip file already exists: unpack first to avoid re-doing things
 ## TODO: should also fetch from ObjectStorage if it exists there!
+#-------------------------------------------------
 ${MODEL_EVALZIPS}: ${TESTSET_INDEX}
 	if [ -e $@ ]; then \
 	  mkdir -p ${@:.eval.zip=}; \
@@ -66,9 +96,12 @@ ${MODEL_EVALZIPS}: ${TESTSET_INDEX}
 	fi
 	${MAKE} MODEL_DIST=${patsubst ${MODEL_HOME}/%.eval.zip,%.zip,$@} eval-model
 
-## evaluate tge model with all benchmarks
+
+#-------------------------------------------------
+## evaluate the model with all benchmarks available
 ## register the scores and update the leaderboard
 ## final cleanup
+#-------------------------------------------------
 .PHONY: eval-model
 eval-model: ${MODEL_SCORES}
 	${MAKE} register-scores
@@ -117,7 +150,9 @@ ${WORK_DIR}/model/decoder.yml:
 	chmod +x ${dir $@}preprocess.sh
 
 
-## get supported source and target languages
+#-------------------------------------------------
+# get supported source and target languages
+#-------------------------------------------------
 MODELINFO = ${WORK_DIR}/model/README.md
 ifneq (${wildcard ${MODELINFO}},)
   SRCLANGS = ${shell grep '\* source language(s)' ${MODELINFO} | cut -f2 -d: | xargs}
@@ -129,7 +164,10 @@ endif
 
 
 
-## all language pairs that the model supports
+#-------------------------------------------------
+# all language pairs that the model supports
+# find all test sets that we need to consider
+#-------------------------------------------------
 MODEL_LANGPAIRS = ${MODEL_LANGPAIR} \
 	${shell for s in ${SRCLANGS}; do for t in ${TRGLANGS}; do echo "$$s-$$t"; done done}
 
@@ -290,7 +328,6 @@ ${MODEL_SCORES}: ${TESTSET_INDEX}
 
 ##-------------------------------------------------------------------
 ## uodate leader boards with score from score files
-## LEADERBOARDS = list of leader boards that need to be sorted
 ## SCOREFILES = all score files in the model directories
 ## SCOREFILES_DONE = a flag that shows that the scores are registered
 ##-------------------------------------------------------------------
@@ -313,11 +350,18 @@ ${SCOREFILES_DONE}: %.registered: %.txt
 	touch $@
 
 
+##-------------------------------------------------------------------
+## UPDATE_SCORE_DIRS = directory that contains new scores
+## LEADERBOARDS_BLEU = list of BLEU leader boards that need to be sorted
+## LEADERBOARDS_BLEU = list of chr-F leader boards that need to be sorted
+##-------------------------------------------------------------------
+
 UPDATE_SCORE_DIRS := $(sort $(dir ${wildcard ${LEADERBOARD_DIR}/*/*/*.unsorted.txt}))
 LEADERBOARDS_BLEU := $(patsubst %,%bleu-scores.txt,${UPDATE_SCORE_DIRS})
 LEADERBOARDS_CHRF := $(patsubst %,%chrf-scores.txt,${UPDATE_SCORE_DIRS})
 
 ## sort all leaderboards for which we have new unsorted scores
+.PHONY: sort-leaderboards
 sort-leaderboards: ${LEADERBOARDS_BLEU} ${LEADERBOARDS_CHRF}
 
 ${LEADERBOARDS_BLEU}: ${UPDATE_SCORE_DIRS}
