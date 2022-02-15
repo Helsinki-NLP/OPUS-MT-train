@@ -1,0 +1,9 @@
+0.465	https://object.pouta.csc.fi/Tatoeba-MT-models/fiu-fiu/opus-2020-10-04.zip
+0.464	https://object.pouta.csc.fi/Tatoeba-MT-models/urj-urj/opus-2020-10-04.zip
+0.462	https://object.pouta.csc.fi/Tatoeba-MT-models/urj-urj/opus-2020-09-26.zip
+0.442	https://object.pouta.csc.fi/Tatoeba-MT-models/fiu-fiu/opus-2020-07-26.zip
+0.430	https://object.pouta.csc.fi/Tatoeba-MT-models/urj-urj/opus-2020-07-21.zip
+0.428	https://object.pouta.csc.fi/Tatoeba-MT-models/urj-urj/opus-2020-07-27.zip
+0.427	https://object.pouta.csc.fi/Tatoeba-MT-models/fiu-urj/opus-2021-02-16.zip
+0.413	https://object.pouta.csc.fi/Tatoeba-MT-models/urj-fiu/opus-2021-02-10.zip
+0.354	https://object.pouta.csc.fi/Tatoeba-MT-models/fiu-fiu/opus4m+btTCv20210807-2021-09-30.zip

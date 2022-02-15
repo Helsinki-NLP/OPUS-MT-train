@@ -1,0 +1,1 @@
+0.271	https://object.pouta.csc.fi/Tatoeba-MT-models/jpn-dan/opus-2021-02-18.zip

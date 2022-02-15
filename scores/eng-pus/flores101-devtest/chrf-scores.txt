@@ -1,0 +1,13 @@
+0.283	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-ira/opus4m+btTCv20210807-2021-09-30.zip
+0.160	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-mul/opus2m-2020-08-01.zip
+0.159	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-mul/opus-2020-07-27.zip
+0.156	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-mul/opus-2020-07-20.zip
+0.152	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-ine/opus2m-2020-08-01.zip
+0.151	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-ine/opus-2020-07-14.zip
+0.146	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-ine/opus-2020-07-27.zip
+0.144	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-ine/opus-2020-07-19.zip
+0.133	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-iir/opus-2020-07-26.zip
+0.128	https://object.pouta.csc.fi/Tatoeba-MT-models/ira-ira/opus-2020-10-04.zip
+0.126	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-iir/opus-2020-07-19.zip
+0.118	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-iir/opus-2020-07-14.zip
+0.115	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-21.zip

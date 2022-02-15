@@ -1,0 +1,7 @@
+0.343	https://object.pouta.csc.fi/Tatoeba-MT-models/inc-inc/opus-2020-10-04.zip
+0.340	https://object.pouta.csc.fi/Tatoeba-MT-models/inc-inc/opus-2020-09-26.zip
+0.324	https://object.pouta.csc.fi/Tatoeba-MT-models/iir-iir/opus-2020-07-27.zip
+0.310	https://object.pouta.csc.fi/Tatoeba-MT-models/inc-inc/opus-2020-07-27.zip
+0.252	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-27.zip
+0.240	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-21.zip
+0.238	https://object.pouta.csc.fi/Tatoeba-MT-models/hin-urd/opus-2020-06-16.zip

@@ -1,0 +1,2 @@
+18.7	https://object.pouta.csc.fi/Tatoeba-MT-models/ara-deu/opus-2020-09-10.zip
+9.8	https://object.pouta.csc.fi/Tatoeba-MT-models/afa-deu/opus1m-2021-05-15.zip

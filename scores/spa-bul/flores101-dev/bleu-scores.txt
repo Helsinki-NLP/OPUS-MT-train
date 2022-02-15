@@ -1,0 +1,4 @@
+22.1	https://object.pouta.csc.fi/Tatoeba-MT-models/spa-bul/opus-2020-07-03.zip
+21.9	https://object.pouta.csc.fi/Tatoeba-MT-models/spa-bul/opus-2021-02-19.zip
+11.7	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-27.zip
+11.2	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-21.zip

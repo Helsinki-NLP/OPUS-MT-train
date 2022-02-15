@@ -1,0 +1,4 @@
+54.8	https://object.pouta.csc.fi/Tatoeba-MT-models/nor-fra/opus-2021-02-23.zip
+39.2	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-27.zip
+37.4	https://object.pouta.csc.fi/Tatoeba-MT-models/nor-fra/opus-2020-06-17.zip
+36.2	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-21.zip

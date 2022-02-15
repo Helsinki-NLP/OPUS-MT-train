@@ -1,0 +1,2 @@
+49.6	https://object.pouta.csc.fi/Tatoeba-MT-models/pol-nor/opus-2021-02-24.zip
+26.8	https://object.pouta.csc.fi/Tatoeba-MT-models/pol-nor/opus-2020-06-17.zip

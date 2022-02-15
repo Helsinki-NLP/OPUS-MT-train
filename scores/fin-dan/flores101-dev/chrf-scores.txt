@@ -1,0 +1,2 @@
+0.545	https://object.pouta.csc.fi/Tatoeba-MT-models/fin-dan/opus-2021-02-18.zip
+0.509	https://object.pouta.csc.fi/Tatoeba-MT-models/fiu-gmq/opus-2021-02-16.zip

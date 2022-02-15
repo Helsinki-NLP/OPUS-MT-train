@@ -1,0 +1,2 @@
+0.7	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-phi/opus4m+btTCv20210807-2021-09-30.zip
+0.5	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-phi/opus1m+bt-2021-04-10.zip

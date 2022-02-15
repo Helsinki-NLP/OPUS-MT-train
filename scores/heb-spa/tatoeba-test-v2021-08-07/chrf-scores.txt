@@ -1,0 +1,2 @@
+0.689	https://object.pouta.csc.fi/Tatoeba-MT-models/heb-spa/opus-2021-02-19.zip
+0.447	https://object.pouta.csc.fi/Tatoeba-MT-models/tatoeba-lowest/opus-2020-06-15.zip

@@ -1,0 +1,5 @@
+0.440	https://object.pouta.csc.fi/Tatoeba-MT-models/tur-fin/opus-2021-03-08.zip
+0.330	https://object.pouta.csc.fi/Tatoeba-MT-models/tut-fiu/opus-2021-02-10.zip
+0.323	https://object.pouta.csc.fi/Tatoeba-MT-models/trk-fiu/opus-2021-02-10.zip
+0.296	https://object.pouta.csc.fi/Tatoeba-MT-models/tatoeba-zero/opus-2020-06-19.zip
+0.293	https://object.pouta.csc.fi/Tatoeba-MT-models/tatoeba-zero/opus-2020-06-21.zip

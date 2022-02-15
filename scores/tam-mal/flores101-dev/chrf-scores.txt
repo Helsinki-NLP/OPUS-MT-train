@@ -1,0 +1,1 @@
+0.205	https://object.pouta.csc.fi/Tatoeba-MT-models/dra-dra/opus-2020-10-04.zip

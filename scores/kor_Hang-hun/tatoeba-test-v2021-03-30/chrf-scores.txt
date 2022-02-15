@@ -1,0 +1,1 @@
+0.514	https://object.pouta.csc.fi/Tatoeba-MT-models/kor-hun/opus-2020-06-17.zip

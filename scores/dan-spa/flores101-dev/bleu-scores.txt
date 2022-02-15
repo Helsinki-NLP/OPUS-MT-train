@@ -1,0 +1,3 @@
+22.4	https://object.pouta.csc.fi/Tatoeba-MT-models/dan-spa/opus-2021-02-18.zip
+14.2	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-27.zip
+13.7	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-21.zip

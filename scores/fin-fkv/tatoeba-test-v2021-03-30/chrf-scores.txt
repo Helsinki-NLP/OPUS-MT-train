@@ -1,0 +1,2 @@
+0.141	https://object.pouta.csc.fi/Tatoeba-MT-models/fiu-urj/opus-2021-02-16.zip
+0.130	https://object.pouta.csc.fi/Tatoeba-MT-models/urj-fiu/opus-2021-02-10.zip

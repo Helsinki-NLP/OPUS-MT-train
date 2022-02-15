@@ -1,0 +1,2 @@
+0.705	https://object.pouta.csc.fi/Tatoeba-MT-models/fra-nor/opus-2021-02-23.zip
+0.555	https://object.pouta.csc.fi/Tatoeba-MT-models/fra-nor/opus-2020-06-17.zip

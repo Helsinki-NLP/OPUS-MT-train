@@ -1,0 +1,4 @@
+30.8	https://object.pouta.csc.fi/Tatoeba-MT-models/bul-fra/opus-2021-02-19.zip
+30.2	https://object.pouta.csc.fi/Tatoeba-MT-models/bul-fra/opus-2020-06-18.zip
+17.2	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-27.zip
+16.0	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-21.zip

@@ -1,0 +1,3 @@
+0.370	https://object.pouta.csc.fi/Tatoeba-MT-models/rus-hye/opus-2021-02-18.zip
+0.295	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-27.zip
+0.287	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-21.zip

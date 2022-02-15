@@ -1,0 +1,3 @@
+0.626	https://object.pouta.csc.fi/Tatoeba-MT-models/heb-fin/opus-2021-05-16.zip
+0.584	https://object.pouta.csc.fi/Tatoeba-MT-models/sem-fiu/opus-2021-02-13.zip
+0.576	https://object.pouta.csc.fi/Tatoeba-MT-models/afa-fiu/opus-2021-02-12.zip

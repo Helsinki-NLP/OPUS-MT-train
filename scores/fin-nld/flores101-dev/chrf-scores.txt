@@ -1,0 +1,4 @@
+0.504	https://object.pouta.csc.fi/Tatoeba-MT-models/fin-nld/opus-2021-02-16.zip
+0.472	https://object.pouta.csc.fi/Tatoeba-MT-models/deu+eng+fin+fra+nld+swe-deu+eng+fin+fra+nld+swe/opus1m-2021-02-22.zip
+0.465	https://object.pouta.csc.fi/Tatoeba-MT-models/fiu-gmw/opus-2021-02-16.zip
+0.374	https://object.pouta.csc.fi/Tatoeba-MT-models/tatoeba-zero/opus-2020-06-19.zip
