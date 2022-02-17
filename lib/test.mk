@@ -102,40 +102,46 @@ endif
 	rm -f $@.1 $@.2 $@.3
 
 
-# print-bleu-scores:
-# 	grep BLEU ${WORKHOME}/*/*.eval |\
-# 	sed 's#^${WORKHOME}/##' |\
-# 	sed 's/\.\([^\.]*\)\.\([^\.]*\)\.\([^\.]*\)\.eval[^ ]* = \([0-9\.]*\).*$$/	\1	\2-\3	\4/' |\
-# 	sed 's#^\([^/]*\)/\([^\.]*\)\.[^	]*	#\1	\2	#'
 
+##--------------------------------------------------------------------------------------------
+## some tools for reporting current scores in the work directory
+##
+##   make print-bleu-scores ......... print all bleu scores for all tested benchmarks and models
+##   make compare-bleu-scores ....... compare scores with best BLEU scores in leaderboard
+##   make print-improved-models ..... print model scores that are better than best reported score
+##   make print-decreased-models .... print model scores that are worse than best reported score
+##--------------------------------------------------------------------------------------------
 
+print-bleu-score-table:
+	@grep BLEU ${WORKHOME}/*/*.eval |\
+	perl -pe 's#^${WORKHOME}/([^/]*)/([^\.]+)\.(.*?-.*?\.)?([^\.]+\.[^\.]+\.[^\.]+)\.([^\.]+)\.([^\.]+)\.eval:.*? = ([0-9\.]+) .*$$#$$5-$$6\t$$7\t$$2\t$$1\t$$4#' |\
+	perl -pe '@a=split(/\t/);if($$a[0]=~/multi/){$$a[0]=$$a[3];};$$_=join("\t",@a);' |\
+	sort -k3,3 -k1,1 -k2,2nr
 
 print-bleu-scores:
-	grep BLEU ${WORKHOME}/*/*.eval |\
+	@make -s print-bleu-score-table |\
+	perl -e 'while (<>){@a=split(/\t/);printf "%15s  %5.2f  %-25s  %-15s  %s",@a;}'
+
+
+
+LEADERBOARD_DIR = ${REPOHOME}scores
+
+compare-bleu-score-table:
+	@grep BLEU ${WORKHOME}/*/*.eval |\
 	perl -pe 's#^${WORKHOME}/([^/]*)/([^\.]+)\.(.*?-.*?\.)?([^\.]+\.[^\.]+\.[^\.]+)\.([^\.]+)\.([^\.]+)\.eval:.*? = ([0-9\.]+) .*$$#$$5-$$6\t$$7\t$$2\t$$1\t$$4#' |\
 	perl -pe '@a=split(/\t/);if($$a[0]=~/multi/){$$a[0]=$$a[3];};$$_=join("\t",@a);' |\
-	sort -k3,3 -k1,1 -k2,2nr
+	perl -pe '@a=split(/\t/);$$a[2]=lc($$a[2]);$$a[2]=~s/^(news.*)\-[a-z]{6}/$$1/;$$a[2]=~s/^(news.*)\-[a-z]{4}/$$1/;if (-e "${LEADERBOARD_DIR}/$$a[0]/$$a[2]/bleu-scores.txt"){$$b=`head -1 ${LEADERBOARD_DIR}/$$a[0]/$$a[2]/bleu-scores.txt | cut -f1`;$$b+=0;}else{$$b=0;}$$d=$$a[1]-$$b;splice(@a,2,0,$$b,$$d);$$_=join("\t",@a);' |\
+	sort -k5,5 -k1,1 -k2,2nr
 
+compare-bleu-scores:
+	@make -s compare-bleu-score-table |\
+	perl -e 'printf "%15s  %5s  %5s  %6s  %-25s  %-15s  %s","langpair","BLEU","best","diff","testset","dir","model\n";while (<>){@a=split(/\t/);printf "%15s  %5.2f  %5.2f  %6.2f  %-25s  %-15s  %s",@a;}'
 
+print-improved-models:
+	@make -s compare-bleu-scores |\
+	grep -v ' 0.00' | grep -v ' -[0-9]'
 
-pretty-print-bleu-scores:
-	grep BLEU ${WORKHOME}/*/*.eval |\
-	perl -pe 's#^${WORKHOME}/([^/]*)/([^\.]+)\.(.*?-.*?\.)?([^\.]+\.[^\.]+\.[^\.]+)\.([^\.]+)\.([^\.]+)\.eval:.*? = ([0-9\.]+) .*$$#$$5-$$6\t$$7\t$$2\t$$1\t$$4#' |\
-	perl -pe '@a=split(/\t/);if($$a[0]=~/multi/){$$a[0]=$$a[3];};$$_=join("\t",@a);' |\
-	sort -k3,3 -k1,1 -k2,2nr |\
-	perl -e 'while (<>){@a=split(/\t/);printf "%15s  %5.2f  %-25s  %-15ss  %s",@a;}'
-
-
-print-bleu-scores2:
-	grep BLEU ${WORKHOME}/*/*.eval |\
-	perl -pe 's#^${WORKHOME}/([^/]*)/([^\.]+)\.(.*?-.*?\.)?([^\.]+)\.[^\.]+\.([^\.]+)\.([^\.]+)\.([^\.]+)\.eval:.*? = ([0-9\.]+) .*$$#$$6-$$7\t$$8\t$$2\t$$1\t$$4\t$$5#' |\
-	perl -pe '@a=split(/\t/);if($$a[0]=~/multi/){$$a[0]=$$a[3];};$$_=join("\t",@a);' |\
-	sort -k3,3 -k1,1 -k2,2nr
-
-pretty-print-bleu-scores2:
-	grep BLEU ${WORKHOME}/*/*.eval |\
-	perl -pe 's#^${WORKHOME}/([^/]*)/([^\.]+)\.(.*?-.*?\.)?([^\.]+)\.[^\.]+\.([^\.]+)\.([^\.]+)\.([^\.]+)\.eval:.*? = ([0-9\.]+) .*$$#$$6-$$7\t$$8\t$$2\t$$1\t$$4\t$$5#' |\
-	perl -pe '@a=split(/\t/);if($$a[0]=~/multi/){$$a[0]=$$a[3];};$$_=join("\t",@a);' |\
-	sort -k3,3 -k1,1 -k2,2nr |\
-	perl -e 'while (<>){@a=split(/\t/);printf "%15s  %5.2f  %-25s  %-15s  %-25s  %s",@a;}'
+print-decreased-models:
+	@make -s compare-bleu-scores |\
+	grep ' -[0-9]'
 

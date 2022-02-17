@@ -1,3 +1,4 @@
+0.49804	https://object.pouta.csc.fi/Tatoeba-MT-models/rus-fin/opus+bt-2022-01-19.zip
 0.438	https://object.pouta.csc.fi/Tatoeba-MT-models/sla-fiu/opus-2021-02-10.zip
 0.425	https://object.pouta.csc.fi/Tatoeba-MT-models/zle-fiu/opus-2021-02-10.zip
 0.348	https://object.pouta.csc.fi/Tatoeba-MT-models/tatoeba-zero/opus-2020-06-21.zip

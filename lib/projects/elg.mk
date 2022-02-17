@@ -59,7 +59,7 @@ elg-all2eng:
 		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=16g CPUJOB_HPC_DISK=1000' \
 		tatoeba-job-bt; \
 	done
-	for l in $(filter-out hun mlt,${ELG_EU_SELECTED}); do \
+	for l in ${ELG_EU_SELECTED}; do \
 	  ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2eng-trainjob-bt; \
 	done
 	for l in ${ELG_EU_SELECTED_BIG}; do \
@@ -67,12 +67,6 @@ elg-all2eng:
 		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=16g CPUJOB_HPC_DISK=1000' \
 		tatoeba-$${l}2eng-trainjob-bt; \
 	done
-
-
-elg-all2spa:
-	${MAKE} MODELTYPE=transformer-big TRGLANGS=eng SRCLANGS="cat oci spa" \
-		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=16g CPUJOB_HPC_DISK=1000' \
-		tatoeba-job-bt
 
 
 
@@ -85,58 +79,31 @@ elg-eng2all-eval1:
 	done
 
 elg-eng2all-eval2:
-	for l in ${ELG_EU_SELECTED}; do \
+	for l in ${ELG_EU_SELECTED} ${ELG_EU_SELECTED_BIG}; do \
 	  if [ -e ${wildcard work/eng-$$l/*.npz} ]; then \
-	    ${MAKE} MODELTYPE=transformer-big tatoeba-eng2$${l}-evalall-bt.submit; \
+	    ${MAKE} GPUJOB_HPC_MEM=20g WALLTIME=1 MODELTYPE=transformer-big tatoeba-eng2$${l}-evalall-bt.submit; \
+	  fi \
+	done
+
+elg-all2eng-eval:
+	for l in ${ELG_EU_SELECTED} ${ELG_EU_SELECTED_BIG}; do \
+	  if [ -e ${wildcard work/$${l}-eng/*.npz} ]; then \
+	    ${MAKE} GPUJOB_HPC_MEM=20g WALLTIME=1 MODELTYPE=transformer-big tatoeba-$${l}2eng-evalall-bt.submit; \
 	  fi \
 	done
 
 
 
 
-elg-eng2xxx-eval:
-	${MAKE} WALLTIME=2 MODELTYPE=transformer-big SRCLANGS=eng TRGLANGS="fry ltz nds afr" tatoeba-sublang-eval-bt.submit
-	${MAKE} WALLTIME=2 MODELTYPE=transformer-big tatoeba-eng2cel-multieval-bt.submit
-	${MAKE} GPUJOB_HPC_MEM=32g WALLTIME=2 MODELTYPE=transformer-big tatoeba-eng2lit-eval-testsets-bt.submit
-
-
-elg-eng2missing:
-	for l in est lav ron hbs sqi spa fra ita por zlw ara heb deu fin; do \
-	  ${MAKE} MODELTYPE=transformer-big tatoeba-eng2$${l}-trainjob-bt; \
-	done
-
+## test with separate vocabs
 elg-eng2slv:
 	  ${MAKE} MODELTYPE=transformer-big tatoeba-eng2slv-trainjob-bt-separate-spm; \
 
 
-elg-missing:
-	  ${MAKE} MODELTYPE=transformer-big SRCLANGS=zlw TRGLANGS=gmq \
-		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=16g CPUJOB_HPC_DISK=1000' \
-		tatoeba-zlw2gmq-trainjob-bt-pivotlang
-
-elg-missing2:
-	  ${MAKE} MODELTYPE=transformer-big SRCLANGS=eng TRGLANGS="ces slk" tatoeba-job-bt
-	  ${MAKE} MODELTYPE=transformer-big SRCLANGS=zlw TRGLANGS=gmq \
-		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=16g CPUJOB_HPC_DISK=1000' \
-		tatoeba-zlw2gmq-trainjob-bt
-
-
+## more temp disk and no-restore
 elg-eng2fra:
 	${MAKE} MODELTYPE=transformer-big SRCLANGS=eng TRGLANGS=fra \
 		MARIAN_EXTRA=--no-restore-corpus \
 		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=16g CPUJOB_HPC_DISK=1000' \
 	tatoeba-job-bt
 
-elg-eng2zls:
-	${MAKE} MODELTYPE=transformer-big SRCLANGS=eng TRGLANGS=zls \
-		MARIAN_EXTRA=--no-restore-corpus \
-	tatoeba-job-bt
-
-elg-eng2heb:
-	${MAKE} MODELTYPE=transformer-big SRCLANGS=eng TRGLANGS=heb MARIAN_EXTRA=--no-restore-corpus tatoeba-job-bt
-
-elg-eng2spa:
-	${MAKE} MODELTYPE=transformer-big SRCLANGS=eng TRGLANGS=spa \
-		MARIAN_EXTRA=--no-restore-corpus \
-		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=16g CPUJOB_HPC_DISK=1000' \
-	tatoeba-job-bt

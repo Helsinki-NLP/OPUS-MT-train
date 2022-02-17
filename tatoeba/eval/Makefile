@@ -345,11 +345,12 @@ update-leaderboards: ${SCOREFILES_DONE}
 
 ## register the scores for the current model
 ## (scores will be added to some temporary files sorted by language pair and benchmark)
+## NOTE: this removes langIDs from newstest sets to avoid confusion and duplicates
 register-scores: ${SCOREFILE_DONE}
 
 ${SCOREFILES_DONE}: %.registered: %.txt
 	@echo "register scores from ${patsubst ${MODEL_HOME}/%,%,$<}"
-	@cat $< | perl -e 'while (<>){ @a=split(/\t/); system "mkdir -p ${LEADERBOARD_DIR}/$$a[0]/$$a[1]"; open B,">>${LEADERBOARD_DIR}/$$a[0]/$$a[1]/bleu-scores.$(subst /,.,${patsubst ${MODEL_HOME}/%,%,$<}).unsorted.txt"; open C,">>${LEADERBOARD_DIR}/$$a[0]/$$a[1]/chrf-scores.$(subst /,.,${patsubst ${MODEL_HOME}/%,%,$<}).unsorted.txt"; print B "$$a[3]\t$$a[4]\n"; print C "$$a[2]\t$$a[4]\n"; close B; close C; }'
+	@cat $< | perl -e 'while (<>){ @a=split(/\t/); $$a[1]=~s/^(news.*)\-[a-z]{4}/$$1/; system "mkdir -p ${LEADERBOARD_DIR}/$$a[0]/$$a[1]"; open B,">>${LEADERBOARD_DIR}/$$a[0]/$$a[1]/bleu-scores.$(subst /,.,${patsubst ${MODEL_HOME}/%,%,$<}).unsorted.txt"; open C,">>${LEADERBOARD_DIR}/$$a[0]/$$a[1]/chrf-scores.$(subst /,.,${patsubst ${MODEL_HOME}/%,%,$<}).unsorted.txt"; print B "$$a[3]\t$$a[4]\n"; print C "$$a[2]\t$$a[4]\n"; close B; close C; }'
 	touch $@
 
 

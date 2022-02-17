@@ -1,2 +1,3 @@
+0.58192	https://object.pouta.csc.fi/Tatoeba-MT-models/fin-sem/opus4m+btTCv20210807-2022-01-19.zip
 0.547	https://object.pouta.csc.fi/Tatoeba-MT-models/fiu-sem/opus-2021-02-18.zip
 0.527	https://object.pouta.csc.fi/Tatoeba-MT-models/fiu-afa/opus-2021-02-18.zip
