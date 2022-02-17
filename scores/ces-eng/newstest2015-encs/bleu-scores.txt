@@ -1,2 +1,0 @@
-30.9	https://object.pouta.csc.fi/Tatoeba-MT-models/ces-eng/opus+bt-2021-04-30.zip
-30.5	https://object.pouta.csc.fi/Tatoeba-MT-models/ces-eng/opus-2021-01-03.zip

@@ -11,8 +11,8 @@ move:
 	for o in ${NEWS}; do \
 	  n=`echo $$o | sed 's/\-[a-z][a-z][a-z][a-z]$$//'`; \
 	  b=`basename $$o`; \
-	  echo "mkdir -p $$n"; \
-	  echo "mv $$o/bleu-scores.txt $$n/bleu-scores.$$b.unsorted.txt"; \
-	  echo "mv $$o/chrf-scores.txt $$n/chrf-scores.$$b.unsorted.txt"; \
-	  echo "rmdir $$o"; \
+	  mkdir -p $$n; \
+	  mv $$o/bleu-scores.txt $$n/bleu-scores.$$b.unsorted.txt; \
+	  mv $$o/chrf-scores.txt $$n/chrf-scores.$$b.unsorted.txt; \
+	  rmdir $$o; \
 	done

@@ -75,20 +75,20 @@ elg-eng2all-eval1:
 	for l in ${ELG_EU_SELECTED_MULTILANG}; do \
 	  ${MAKE} WALLTIME=1 MODELTYPE=transformer-big SRCLANGS=eng TRGLANGS="$$l" tatoeba-sublang-eval-bt.submit; \
 	  ${MAKE} WALLTIME=1 MODELTYPE=transformer-big SRCLANGS=eng TRGLANGS="$$l" tatoeba-eval-bt.submit; \
-	  ${MAKE} GPUJOB_HPC_MEM=20g WALLTIME=1 MODELTYPE=transformer-big SRCLANGS=eng TRGLANGS="$$l" tatoeba-eval-testsets-bt.submit; \
+	  ${MAKE} GPUJOB_HPC_MEM=24g WALLTIME=1 MODELTYPE=transformer-big SRCLANGS=eng TRGLANGS="$$l" tatoeba-eval-testsets-bt.submit; \
 	done
 
 elg-eng2all-eval2:
 	for l in ${ELG_EU_SELECTED} ${ELG_EU_SELECTED_BIG}; do \
 	  if [ -e ${wildcard work/eng-$$l/*.npz} ]; then \
-	    ${MAKE} GPUJOB_HPC_MEM=20g WALLTIME=1 MODELTYPE=transformer-big tatoeba-eng2$${l}-evalall-bt.submit; \
+	    ${MAKE} GPUJOB_HPC_MEM=24g WALLTIME=1 MODELTYPE=transformer-big tatoeba-eng2$${l}-evalall-bt.submit; \
 	  fi \
 	done
 
 elg-all2eng-eval:
 	for l in ${ELG_EU_SELECTED} ${ELG_EU_SELECTED_BIG}; do \
 	  if [ -e ${wildcard work/$${l}-eng/*.npz} ]; then \
-	    ${MAKE} GPUJOB_HPC_MEM=20g WALLTIME=1 MODELTYPE=transformer-big tatoeba-$${l}2eng-evalall-bt.submit; \
+	    ${MAKE} GPUJOB_HPC_MEM=24g WALLTIME=1 MODELTYPE=transformer-big tatoeba-$${l}2eng-evalall-bt.submit; \
 	  fi \
 	done
 
