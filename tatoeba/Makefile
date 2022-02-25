@@ -202,6 +202,25 @@ print-langgroups:
 
 
 
+
+## release all impoved models
+##  - check leaderboard scores
+##  - get all models that have at least one improved BLEU score
+##  - make a release if the model is done
+##
+## caveat: does not check for model parameters/types etc!
+
+release-improved-models:
+	( p=`make -s compare-bleu-score-table-tatoeba | \
+		grep -v '	0	' | grep -v '	-[0-9]' | \
+		cut -f6 | sort -u | xargs`; \
+	  for l in $$p; do \
+	    s=`echo "$$l" | cut -f1 -d-`; \
+	    t=`echo "$$l" | cut -f2 -d-`; \
+	    make SRCLANGS="$$s" TRGLANGS="$$t" release-if-done-tatoeba; \
+	  done )
+
+
 ###############################################################################
 ## generic targets for evaluating multilingual models (all supported lang-pairs)
 ###############################################################################

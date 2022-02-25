@@ -109,7 +109,7 @@ ifdef SLURM_JOBID
 	  echo "reached maximum number of repeated slurm jobs: ${SLURM_REPEAT}"; \
 	fi
 endif
-	${MAKE} ${WORKDIR}/${MODEL}.${MODELTYPE}.model${NR}.done
+	${MAKE} ${MODEL_DONE}
 
 vocab: ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB}
 translate: ${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}

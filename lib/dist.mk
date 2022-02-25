@@ -88,6 +88,19 @@ endif
 	fi
 
 
+## only create the release if the model has converged (done-flag exists)
+.PHONY: release-if-done
+release-if-done:
+ifneq (${wildcard ${MODEL_DONE}},)
+	@${MAKE} release
+else
+	@echo "... not ready yet (${MODEL_DONE})"
+endif
+
+
+
+
+
 .PHONY: scores
 scores:
 	${MAKE} FIND_EVAL_FILES=1 ${WORKHOME}/eval/scores.txt
@@ -423,10 +436,10 @@ endif
 
 
 link-latest-model:
-	if [ `ls ${patsubst %.zip,%-*,${DIST_PACKAGE}} 2>/dev/null | wc -l` -gt 0 ]; then \
+	if [ `ls ${patsubst %.zip,%_*,${DIST_PACKAGE}} 2>/dev/null | wc -l` -gt 0 ]; then \
 	  rm -f ${DIST_PACKAGE}; \
 	  cd ${dir ${DIST_PACKAGE}}; \
-	  ln -s `ls -t ${patsubst %.zip,%-*.zip,$(notdir ${DIST_PACKAGE})} | head -1` \
+	  ln -s `ls -t ${patsubst %.zip,%_*.zip,$(notdir ${DIST_PACKAGE})} | head -1` \
 		${notdir ${DIST_PACKAGE}}; \
 	fi
 

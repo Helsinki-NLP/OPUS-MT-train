@@ -126,11 +126,16 @@ print-bleu-scores:
 
 LEADERBOARD_DIR = ${REPOHOME}scores
 
+## manipulating test set names is really messy
+## - need to remove language ID pairs
+## - could be different variants (2-lettter codes, 3-letter codes)
+## - newstest sometimes has additional langpair-IDs in their names
+
 compare-bleu-score-table:
 	@grep BLEU ${WORKHOME}/*/*.eval |\
 	perl -pe 's#^${WORKHOME}/([^/]*)/([^\.]+)\.(.*?-.*?\.)?([^\.]+\.[^\.]+\.[^\.]+)\.([^\.]+)\.([^\.]+)\.eval:.*? = ([0-9\.]+) .*$$#$$5-$$6\t$$7\t$$2\t$$1\t$$4#' |\
 	perl -pe '@a=split(/\t/);if($$a[0]=~/multi/){$$a[0]=$$a[3];};$$_=join("\t",@a);' |\
-	perl -pe '@a=split(/\t/);$$a[2]=lc($$a[2]);$$a[2]=~s/^(news.*)\-[a-z]{6}/$$1/;$$a[2]=~s/^(news.*)\-[a-z]{4}/$$1/;if (-e "${LEADERBOARD_DIR}/$$a[0]/$$a[2]/bleu-scores.txt"){$$b=`head -1 ${LEADERBOARD_DIR}/$$a[0]/$$a[2]/bleu-scores.txt | cut -f1`;$$b+=0;}else{$$b=0;}$$d=$$a[1]-$$b;splice(@a,2,0,$$b,$$d);$$_=join("\t",@a);' |\
+	perl -pe '@a=split(/\t/);$$a[2]=lc($$a[2]);$$a[2]=~s/^(.*)\-[a-z]{4}$$/$$1/;$$a[2]=~s/^(.*)\-[a-z]{6}$$/$$1/;$$a[2]=~s/^(news.*)\-[a-z]{4}/$$1/;if (-e "${LEADERBOARD_DIR}/$$a[0]/$$a[2]/bleu-scores.txt"){$$b=`head -1 ${LEADERBOARD_DIR}/$$a[0]/$$a[2]/bleu-scores.txt | cut -f1`;$$b+=0;}else{$$b=0;}$$d=$$a[1]-$$b;splice(@a,2,0,$$b,$$d);$$_=join("\t",@a);' |\
 	sort -k5,5 -k1,1 -k2,2nr
 
 compare-bleu-scores:
@@ -145,3 +150,26 @@ print-decreased-models:
 	@make -s compare-bleu-scores |\
 	grep ' -[0-9]'
 
+
+
+
+## compare BLEU scores for the current model
+
+compare-model-bleu-score-table:
+	@grep BLEU ${WORKDIR}/*.eval |\
+	perl -pe 's#^${WORKHOME}/([^/]*)/([^\.]+)\.(.*?-.*?\.)?([^\.]+\.[^\.]+\.[^\.]+)\.([^\.]+)\.([^\.]+)\.eval:.*? = ([0-9\.]+) .*$$#$$5-$$6\t$$7\t$$2\t$$1\t$$4#' |\
+	perl -pe '@a=split(/\t/);if($$a[0]=~/multi/){$$a[0]=$$a[3];};$$_=join("\t",@a);' |\
+	perl -pe '@a=split(/\t/);$$a[2]=lc($$a[2]);$$a[2]=~s/^(.*)\-[a-z]{4}$$/$$1/;$$a[2]=~s/^(.*)\-[a-z]{6}$$/$$1/;$$a[2]=~s/^(news.*)\-[a-z]{4}$$/$$1/;if (-e "${LEADERBOARD_DIR}/$$a[0]/$$a[2]/bleu-scores.txt"){$$b=`head -1 ${LEADERBOARD_DIR}/$$a[0]/$$a[2]/bleu-scores.txt | cut -f1`;$$b+=0;}else{$$b=0;}$$d=$$a[1]-$$b;splice(@a,2,0,$$b,$$d);$$_=join("\t",@a);' |\
+	sort -k5,5 -k1,1 -k2,2nr
+
+compare-model-bleu-scores:
+	make -s compare-model-bleu-score-table |\
+	perl -e 'printf "%15s  %5s  %5s  %6s  %-25s  %-15s  %s","langpair","BLEU","best","diff","testset","dir","model\n";while (<>){@a=split(/\t/);printf "%15s  %5.2f  %5.2f  %6.2f  %-25s  %-15s  %s",@a;}'
+
+print-improved-bleu:
+	@make -s compare-model-bleu-scores |\
+	grep -v ' 0.00' | grep -v ' -[0-9]'
+
+print-decreased-bleu:
+	@make -s compare-model-bleu-scores |\
+	grep ' -[0-9]'
