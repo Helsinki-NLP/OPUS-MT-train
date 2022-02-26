@@ -1105,3 +1105,29 @@ tatoeba-trainsize-%.txt: tatoeba-%.md
 
 
 
+
+
+## fix names of eval/test files
+
+# NEWMODELS = ${wildcard models/*/*_20*zip}
+# EVAL_NEWMODELS = $(patsubst %.zip,%.eval.txt,${NEWMODELS})
+# TEST_NEWMODELS = $(patsubst %.zip,%.test.txt,${NEWMODELS})
+
+# fix-eval-files: ${EVAL_NEWMODELS} ${TEST_NEWMODELS}
+
+# ${EVAL_NEWMODELS} ${TEST_NEWMODELS}:
+# 	@( f=`echo $@ | sed 's/\_\(....\-..\-..\.[a-z]*.txt\)/-\1/'`; \
+# 	  if [ -e $$f ]; then \
+# 	    echo "mv $$f $@"; \
+# 	    mv $$f $@; \
+# 	  else \
+# 	    echo "$$f does not exist"; \
+# 	  fi )
+
+# fix-refresh-readmes:
+# 	for s in ell eus hbs ita lit; do \
+# 	  make MODELTYPE=transformer-big SRCLANGS=$$s TRGLANGS=eng refresh-release-readme-bt-tatoeba; \
+# 	done
+# 	for t in ara bul hun lit mlt ron tur; do \
+# 	  make MODELTYPE=transformer-big SRCLANGS=eng TRGLANGS=$$t refresh-release-readme-bt-tatoeba; \
+# 	done

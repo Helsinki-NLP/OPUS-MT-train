@@ -197,7 +197,8 @@ best-dist best_dist:
 ## old: only accept models with a certain evaluation score:
 # 	if  [ `grep BLEU $(TEST_EVALUATION) | cut -f3 -d ' ' | cut -f1 -d '.'` -ge ${MIN_BLEU_SCORE} ]; then \
 
-MODELS_URL = https://object.pouta.csc.fi/${DEV_MODEL_CONTAINER}
+# MODELS_URL ?= https://object.pouta.csc.fi/${DEV_MODEL_CONTAINER}
+MODELS_URL ?= https://object.pouta.csc.fi/${MODEL_CONTAINER}
 SKIP_DIST_EVAL = 0
 
 
@@ -498,15 +499,15 @@ endif
 	@if [ -e ${RELEASE_PACKAGE} ]; then \
 	   mkdir -p models-backup/${LANGPAIRSTR}/${DATE}; \
 	   mv -f ${RELEASE_PACKAGE} models-backup/${LANGPAIRSTR}/${DATE}/; \
-	   mv -f ${@:.zip=}-${DATE}.eval.txt models-backup/${LANGPAIRSTR}/${DATE}/; \
-	   mv -f ${@:.zip=}-${DATE}.test.txt models-backup/${LANGPAIRSTR}/${DATE}/; \
+	   mv -f ${@:.zip=}_${DATE}.eval.txt models-backup/${LANGPAIRSTR}/${DATE}/; \
+	   mv -f ${@:.zip=}_${DATE}.test.txt models-backup/${LANGPAIRSTR}/${DATE}/; \
 	fi
 	@mv -f ${WORKDIR}/${notdir $@} ${RELEASE_PACKAGE}
 	@${MAKE} ${RELEASE_YML}
 	@${MAKE} ${RELEASE_README}
 ifneq ($(wildcard ${TEST_EVALUATION}),)
-	@cp $(TEST_EVALUATION) ${@:.zip=}-${DATE}.eval.txt
-	@cp $(TEST_COMPARISON) ${@:.zip=}-${DATE}.test.txt
+	@cp $(TEST_EVALUATION) ${@:.zip=}_${DATE}.eval.txt
+	@cp $(TEST_COMPARISON) ${@:.zip=}_${DATE}.test.txt
 endif
 	@rm -f $@
 	@cd ${dir $@} && ln -s $(notdir ${RELEASE_PACKAGE}) ${notdir $@}
@@ -521,10 +522,12 @@ endif
 ## --> this is kind of dangerous as we may overwrite existing newer ones with older ones
 ## --> the reason for doing this is to update yml files and evaluation scores
 
+#	  d=`realpath ${DIST_PACKAGE} | xargs basename | sed 's/^[^\-]*\-//;s/\.zip$$//'`; \
+
 refresh-release:
 	if [[ ${DIST_PACKAGE} -nt ${MODEL_FINAL} ]]; then \
 	  echo "updating ${shell realpath ${DIST_PACKAGE}}"; \
-	  d=`realpath ${DIST_PACKAGE} | xargs basename | sed 's/^[^\-]*\-//;s/\.zip$$//'`; \
+	  d=`realpath ${DIST_PACKAGE} | sed 's/^.*[\-\_]\(....\-..\-..\)\.zip$$/\1/'`; \
 	  mkdir -p models-backup/${LANGPAIRSTR}/${DATE}; \
 	  mv -f ${shell realpath ${DIST_PACKAGE}} models-backup/${LANGPAIRSTR}/${DATE}/; \
 	  make DATE="$$d" release; \
@@ -534,7 +537,7 @@ refresh-release-yml:
 ifneq ("$(wildcard ${TEST_EVALUATION})","")
 	if [[ ${DIST_PACKAGE} -nt ${MODEL_FINAL} ]]; then \
 	  echo "updating ${patsubst %.zip,%.yml,${shell realpath ${DIST_PACKAGE}}}"; \
-	  d=`realpath ${DIST_PACKAGE} | xargs basename | sed 's/^[^\-]*\-//;s/\.zip$$//'`; \
+	  d=`realpath ${DIST_PACKAGE} | sed 's/^.*[\-\_]\(....\-..\-..\)\.zip$$/\1/'`; \
 	  if [ -e ${MODEL_YML} ]; then \
 	    mv ${MODEL_YML} ${MODEL_YML}.${DATE}; \
 	  fi; \
@@ -549,7 +552,7 @@ refresh-release-readme:
 ifneq ("$(wildcard ${TEST_EVALUATION})","")
 	if [[ ${DIST_PACKAGE} -nt ${MODEL_FINAL} ]]; then \
 	  echo "updating ${LANGPAIRSTR}/README.md for ${notdir ${shell realpath ${DIST_PACKAGE}}}"; \
-	  d=`realpath ${DIST_PACKAGE} | xargs basename | sed 's/^[^\-]*\-//;s/\.zip$$//'`; \
+	  d=`realpath ${DIST_PACKAGE} | sed 's/^.*[\-\_]\(....\-..\-..\)\.zip$$/\1/'`; \
 	  if [ -e ${MODEL_README} ]; then \
 	    mv ${MODEL_README} ${MODEL_README}.${DATE}; \
 	  fi; \

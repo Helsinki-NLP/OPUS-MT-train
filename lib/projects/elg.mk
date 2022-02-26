@@ -141,6 +141,12 @@ elg-zle2eng:
 		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=16g CPUJOB_HPC_DISK=1000' \
 		tatoeba-zle2eng-trainjob-bt
 
+elg-zls2eng:
+	${MAKE} MODELTYPE=transformer-big \
+		MARIAN_EXTRA=--no-restore-corpus \
+		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=16g CPUJOB_HPC_DISK=1000' \
+		tatoeba-zls2eng-trainjob-bt
+
 elg-multi2eng:
 	${MAKE} MODELTYPE=transformer-big \
 		MARIAN_EXTRA=--no-restore-corpus \
@@ -190,4 +196,11 @@ elg-eng2fra:
 		MARIAN_EXTRA=--no-restore-corpus \
 		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=16g CPUJOB_HPC_DISK=1000' \
 	tatoeba-job-bt
+
+
+
+elg-eng2fin:
+	${MAKE} MODELTYPE=transformer-big \
+		MARIAN_EXTRA=--no-restore-corpus \
+		tatoeba-eng2fin-trainjob-bt
 
