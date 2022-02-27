@@ -53,9 +53,21 @@ elg-eval:
 	done
 	for l in ${ELG_EU_SELECTED_MULTILANG}; do \
 	    ${MAKE} MODELTYPE=transformer-big SRCLANGS="$$l" TRGLANGS=eng eval-bt-tatoeba; \
+	    ${MAKE} MODELTYPE=transformer-big SRCLANGS="$$l" TRGLANGS=eng tatoeba-multilingual-eval-bt; \
 	    ${MAKE} MODELTYPE=transformer-big SRCLANGS="$$l" TRGLANGS=eng eval-testsets-bt-tatoeba; \
+	    ${MAKE} MODELTYPE=transformer-big TRGLANGS="$$l" SRCLANGS=eng eval-bt-tatoeba; \
+	    ${MAKE} MODELTYPE=transformer-big TRGLANGS="$$l" SRCLANGS=eng tatoeba-multilingual-eval-bt; \
+	    ${MAKE} MODELTYPE=transformer-big TRGLANGS="$$l" SRCLANGS=eng eval-testsets-bt-tatoeba; \
 	done
 
+## only separate languages in multilingual models (set of individual languages)
+elg-multieval:
+	for l in ${ELG_EU_SELECTED_MULTILANG}; do \
+	    ${MAKE} MODELTYPE=transformer-big SRCLANGS="$$l" TRGLANGS=eng tatoeba-multilingual-eval-bt; \
+	    ${MAKE} MODELTYPE=transformer-big TRGLANGS="$$l" SRCLANGS=eng tatoeba-multilingual-eval-bt; \
+	done
+
+# multieval-bt-tatoeba; \
 
 
 elg-eng2all:
@@ -128,6 +140,16 @@ elg-eng2cel:
 		CLEAN_DEVDATA_TYPE=clean \
 	tatoeba-eng2cel-trainjob-bt
 
+elg-por2eng:
+	${MAKE} MODELTYPE=transformer-big \
+		MARIAN_EXTRA=--no-restore-corpus \
+		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=16g CPUJOB_HPC_DISK=1000' \
+		tatoeba-por2eng-trainjob-bt
+
+elg-lav2eng:
+	${MAKE} MODELTYPE=transformer-big \
+		MARIAN_EXTRA=--no-restore-corpus \
+		tatoeba-lav2eng-trainjob-bt
 
 elg-ara2eng:
 	${MAKE} MODELTYPE=transformer-big \

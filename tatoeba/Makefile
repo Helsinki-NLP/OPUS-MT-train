@@ -273,12 +273,16 @@ MAX_TRGLANGS ?= 7000
 # find-langgroup = $(filter ${OPUS_LANGS3},\
 # 		$(sort ${shell langgroup $(1) | xargs iso639 -m -n} ${1} ${2}))
 
-find-langgroup = $(filter $(sort ${shell langgroup $(1) | xargs iso639 -m -n} ${1} ${2}),${TATOEBA_LANGS})
+
+## OLD (singleonly - only allows single languages)
+## NEW: also splits on '+' to allow for multiple languages
+
+find-langgroup-singleonly = $(filter $(sort ${shell langgroup $(1) | xargs iso639 -m -n} ${1} ${2}),${TATOEBA_LANGS})
+find-langgroup = $(filter $(sort ${shell langgroup $(subst +, ,$(1)) | xargs iso639 -m -n} $(subst +, ,${1}) ${2}),${TATOEBA_LANGS})
 find-srclanggroup = $(call find-langgroup,$(firstword ${subst -, ,${subst 2, ,${1}}}),${2})
 find-trglanggroup = $(call find-langgroup,$(lastword ${subst -, ,${subst 2, ,${1}}}),${2})
 
 find-langgroup-pair = $(sort $(call find-srclanggroup,${1}) $(call find-trglanggroup,${1}) ${2})
-
 
 
 ## print languages in this set
