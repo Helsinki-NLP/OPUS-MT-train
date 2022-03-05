@@ -120,6 +120,13 @@ endif
 
 
 print-datasets:
+	-@for s in ${SRCLANGS}; do \
+	  for t in ${TRGLANGS}; do \
+	    ${MAKE} SRC=$$s TRG=$$t print-datasets-current-langpair; \
+	  done \
+	done
+
+print-datasets-current-langpair:
 	@echo ${TATOEBA_TRAINSET}
 	@echo ${TRAINSET}
 	@echo "all data:"

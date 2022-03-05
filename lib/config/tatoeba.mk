@@ -37,10 +37,17 @@ DATA_IS_SHUFFLED          = 1
 
 
 ## Tatoeba specific data sets
-TATOEBA_DATASET     := opusTC${TATOEBA_VERSION_NOHYPHEN}
-TATOEBA_TRAINSET    := Tatoeba-train-${TATOEBA_VERSION}
-TATOEBA_DEVSET      := Tatoeba-dev-${TATOEBA_VERSION}
-TATOEBA_TESTSET     := Tatoeba-test-${TATOEBA_VERSION}
+TATOEBA_DATASET       := opusTC${TATOEBA_VERSION_NOHYPHEN}
+TATOEBA_TRAINSET      := Tatoeba-train-${TATOEBA_VERSION}
+TATOEBA_DEVSET        := Tatoeba-dev-${TATOEBA_VERSION}
+TATOEBA_TESTSET       := Tatoeba-test-${TATOEBA_VERSION}
+
+## the name is by default the same as the data set specifier
+## (for some tasks the name can differ, i.e. tuning of multilingual models)
+TATOEBA_DEVSET_NAME   := ${TATOEBA_DEVSET}
+TATOEBA_TESTSET_NAME  := ${TATOEBA_TESTSET}
+TATOEBA_TRAINSET_NAME := ${TATOEBA_TRAINSET}
+
 
 ## change data set names
 ## DATASET will also be the base name of the model file
@@ -48,9 +55,9 @@ DATASET             := ${TATOEBA_DATASET}
 TRAINSET            := ${TATOEBA_TRAINSET}
 DEVSET              := ${TATOEBA_DEVSET}
 TESTSET             := ${TATOEBA_TESTSET}
-DEVSET_NAME         := ${TATOEBA_DEVSET}
-TESTSET_NAME        := ${TATOEBA_TESTSET}
-TRAINSET_NAME       := ${TATOEBA_TRAINSET}
+DEVSET_NAME         := ${TATOEBA_DEVSET_NAME}
+TESTSET_NAME        := ${TATOEBA_TESTSET_NAME}
+TRAINSET_NAME       := ${TATOEBA_TRAINSET_NAME}
 
 ## 
 BACKTRANS_HOME      = ${PWD}/back-translate
