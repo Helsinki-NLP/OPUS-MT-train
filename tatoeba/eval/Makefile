@@ -72,6 +72,7 @@ ${MODEL_EVALCHECK}:
 
 #-------------------------------------------------
 ## phony targets to evaluate only new models
+## or only models that exist locally
 ## (no dependency on testset index)
 #-------------------------------------------------
 MODEL_EVALNEW := ${patsubst %.zip,${MODEL_HOME}/%.eval.new,${MODEL_DISTS}}
@@ -82,6 +83,13 @@ ${MODEL_EVALNEW}:
 	@if [ ! -e $(@:.new=.zip) ]; then \
 	  ${MAKE} MODEL_DIST=${patsubst ${MODEL_HOME}/%.eval.new,%.zip,$@} eval-model; \
 	fi
+
+
+## filter out all models that exist locally
+MODEL_LOCAL := ${filter ${patsubst %.zip,%.eval.new,$(wildcard ${MODEL_HOME}/*/*.zip)},${MODEL_EVALNEW}}
+eval-local: ${MODEL_LOCAL}
+print-eval-local:
+	@echo ${MODEL_LOCAL} | tr ' ' "\n"
 
 #-------------------------------------------------
 ## create zip-files with all evaluation files

@@ -37,6 +37,28 @@ ELG_EU_SELECTED_BIG = gmq zle zls zlw spa fra deu
 # "cat oci"
 
 
+ukreng-train-student:
+	make SRCLANGS=ukr TRGLANGS=eng train-tiny11-student
+
+engukr-train-student:
+	make SRCLANGS=eng TRGLANGS=ukr train-tiny11-student
+
+ukreng-test-student:
+	make SRCLANGS=ukr TRGLANGS=eng test-tiny11-student
+	make SRCLANGS=eng TRGLANGS=ukr test-tiny11-student
+
+
+# ukreng-quantize-student:
+# 	make SRCLANGS=ukr TRGLANGS=eng quantize-tiny11-student
+#	make SRCLANGS=ukr TRGLANGS=eng quantize-finetuned-tiny11-student
+#	make SRCLANGS=ukr TRGLANGS=eng test-quantized-tiny11-student
+#	make SRCLANGS=ukr TRGLANGS=eng test-quantized-finetuned-tiny11-student
+
+engukr-quantize-student:
+	make SRCLANGS=eng TRGLANGS=ukr quantize-tiny11-student
+	make SRCLANGS=eng TRGLANGS=ukr test-quantized-tiny11-student
+
+
 
 elg-eval: 
 	for l in ${ELG_EU_SELECTED} ${ELG_EU_SELECTED_BIG}; do \

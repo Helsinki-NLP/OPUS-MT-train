@@ -64,6 +64,8 @@ quantize-student:
 
 quantize-finetuned-student:
 	make FT_SELECTED=${STUDENT_CEFILTER} HPC_MEM=20g WALLTIME=2 \
+		quantize-tuned-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba
+	make FT_SELECTED=${STUDENT_CEFILTER} HPC_MEM=20g WALLTIME=2 \
 		quantize-tuned-alphas-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba
 
 
@@ -72,6 +74,11 @@ test-quantized-student:
 	make FT_SELECTED=${STUDENT_CEFILTER} HPC_MEM=20g WALLTIME=2 \
 		test-intgemm8-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba \
 		test-intgemm8-shortlist-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba
+
+test-quantized-finetuned-student:
+	make FT_SELECTED=${STUDENT_CEFILTER} HPC_MEM=20g WALLTIME=2 \
+		test-intgemm8tunedalpha-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba \
+		test-intgemm8tunedalpha-shortlist-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba
 
 test-quantized-all-student:
 	make FT_SELECTED=${STUDENT_CEFILTER} HPC_MEM=20g WALLTIME=2 \
