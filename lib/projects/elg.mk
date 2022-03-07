@@ -243,6 +243,17 @@ elg-tune4ukr2eng:
 	${MAKE} MODELTYPE=transformer-big TUNE_SRC=ukr TUNE_TRG=eng tatoeba-zle2eng-langtunejob
 
 
+## including English as a pivot language
+elg-zle2zlw-pivot:
+	${MAKE} MODELTYPE=transformer-big \
+		MARIAN_EXTRA=--no-restore-corpus \
+		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=16g CPUJOB_HPC_DISK=1000' \
+		tatoeba-zle2zlw-trainjob-bt-pivotlang
+	${MAKE} MODELTYPE=transformer-big \
+		MARIAN_EXTRA=--no-restore-corpus \
+		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=16g CPUJOB_HPC_DISK=1000' \
+		tatoeba-zlw2zle-trainjob-bt-pivotlang
+
 
 elg-zle2zlx:
 	${MAKE} MODELTYPE=transformer-big \
