@@ -60,7 +60,7 @@ intgemm8tuned: ${MODEL_INTGEMM8TUNED}
 %.intgemm8tuned.alphas.bin: %.finetune-alphas.npz
 	${BROWSERMT_CONVERT} --gemm-type intgemm8 -f $< -t $@
 
-%.finetune-alphas.npz: %.fine-quantmults %.intgemm8tuned.npz
+%.finetune-alphas.npz: %.finetune-quantmults %.intgemm8tuned.npz
 	${BROWSERMT_HOME}/marian-dev/scripts/alphas/extract_stats.py $^ $@
 
 ## NOTE: need to run this on CPU and with one core only!
