@@ -39,6 +39,12 @@ ELG_EU_SELECTED_BIG = gmq zle zls zlw spa fra deu
 
 
 elg-eval: 
+	${MAKE} elg-eval-tfbig
+	${MAKE} elg-eval-multi
+	${MAKE} elg-eval-zle
+	${MAKE} elg-pivot-eval
+
+elg-eval-tfbig:
 	for l in ${ELG_EU_SELECTED} ${ELG_EU_SELECTED_BIG}; do \
 	  if [ -e ${wildcard work/eng-$$l/*.npz} ]; then \
 	    ${MAKE} MODELTYPE=transformer-big tatoeba-eng2$${l}-eval-bt; \
@@ -51,6 +57,8 @@ elg-eval:
 	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2eng-eval-testsets-bt; \
 	  fi; \
 	done
+
+elg-eval-multi:
 	for l in ${ELG_EU_SELECTED_MULTILANG}; do \
 	    ${MAKE} MODELTYPE=transformer-big SRCLANGS="$$l" TRGLANGS=eng eval-bt-tatoeba; \
 	    ${MAKE} MODELTYPE=transformer-big SRCLANGS="$$l" TRGLANGS=eng tatoeba-multilingual-eval-bt; \
@@ -58,11 +66,6 @@ elg-eval:
 	    ${MAKE} MODELTYPE=transformer-big TRGLANGS="$$l" SRCLANGS=eng eval-bt-tatoeba; \
 	    ${MAKE} MODELTYPE=transformer-big TRGLANGS="$$l" SRCLANGS=eng tatoeba-multilingual-eval-bt; \
 	    ${MAKE} MODELTYPE=transformer-big TRGLANGS="$$l" SRCLANGS=eng eval-testsets-bt-tatoeba; \
-	done
-	for p in zle2zle zlw2zle zle2fin zle2zlw; do \
-	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-eval-bt; \
-	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-multieval-bt; \
-	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-eval-testsets-bt; \
 	done
 
 elg-eval-zle:
@@ -72,16 +75,30 @@ elg-eval-zle:
 	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-eval-testsets-bt; \
 	done
 
-
 elg-pivot-eval:
-	for l in dan swe fin deu ron tur; do
-	  ${MAKE} tatoeba-$${l}2ukr-eval-pbt; \
-	  ${MAKE} tatoeba-ukr2$${l}-eval-pft; \
+	for l in dan swe fin deu ron tur; do \
+	  if [ -e work/$$l-ukr ]; then \
+	    ${MAKE} tatoeba-$${l}2ukr-eval-pbt; \
+	  fi; \
+	  if [ -e work/ukr-$$l ]; then \
+	    ${MAKE} tatoeba-ukr2$${l}-eval-pft; \
+	  fi; \
 	done
 	${MAKE} SRCLANGS="ces slk" TRGLANGS=ukr eval-tatoeba
 	${MAKE} SRCLANGS="ces slk" TRGLANGS=ukr tatoeba-multilingual-eval
 	${MAKE} TRGLANGS="ces slk" SRCLANGS=ukr eval-tatoeba
 	${MAKE} TRGLANGS="ces slk" SRCLANGS=ukr tatoeba-multilingual-eval
+
+
+
+elg-dist-zle:
+	for p in zle2zle zlw2zle zle2zlw; do \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-eval-bt; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-multieval-bt; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-eval-testsets-bt; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-dist-bt; \
+	done
+
 
 
 elg-dan2ukr:
@@ -115,6 +132,32 @@ elg-ron2ukr:
 elg-tur2ukr:
 	${MAKE} tatoeba-tur2ukr-trainjob-pbt
 	${MAKE} tatoeba-ukr2tur-trainjob-pft
+
+elg-hun2ukr:
+	${MAKE} tatoeba-hun2ukr-trainjob-pbt
+	${MAKE} tatoeba-ukr2hun-trainjob-pft
+
+
+
+
+## continue with pivot-based model training (after shuffling)
+## (because it was not shuffled before, now shuffling is done by default)
+elg-ukr2deu-continue:
+	rm -f work/ukr-deu/*.done
+	${MAKE} SRCLANGS=ukr TRGLANGS=deu shuffle-training-data-pft-tatoeba
+	${MAKE} MARIAN_EARLY_STOPPING=15 MARIAN_EXTRA=--no-restore-corpus tatoeba-ukr2deu-trainjob-pft
+
+elg-deu2ukr-continue:
+	rm -f work/deu-ukr/*.done
+	${MAKE} SRCLANGS=deu TRGLANGS=ukr shuffle-training-data-pbt-tatoeba
+	${MAKE} MARIAN_EARLY_STOPPING=15 MARIAN_EXTRA=--no-restore-corpus tatoeba-deu2ukr-trainjob-pbt
+
+
+
+
+
+
+
 
 
 elg-eng2all:
@@ -348,3 +391,36 @@ ukr-model-table2:
 	sed 's/	/	|	/g;s/^/| /;s/$$/ |/' |\
 	sed 's#\(https://object.pouta.csc.fi/Tatoeba-MT-models/\)\(.*\).zip#[\2](\1\2.zip)#'
 	rm -f $@.tmp*
+
+
+
+SCORE_BASE_URL = https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master
+
+print-ukr2x-table:
+	grep '^[1-9][0-9]\.' ../scores/ukr-*/flores101-devtest/bleu-scores*txt | \
+	sed 's/:/	/' | sort -nr | rev | uniq -f2 | rev| sort                  > $@.tmp1
+	cut -f3 -d'/' $@.tmp1                                                       > $@.langids
+	cut -f1 $@.langids | xargs iso639 -p  | sed "s/^\"//;s/\"$$//;s#\" \"#\n#g" > $@.langnames
+	cut -f1 $@.tmp1 | sed 's#^\.\.#${SCORE_BASE_URL}#'                          > $@.bleufile
+	cut -f2 $@.tmp1                                                             > $@.bleuscore
+	cut -f3 $@.tmp1                                                             > $@.link
+	paste $@.bleuscore $@.bleufile | sed 's/	/\]\(/;s/^/\[/;s/$$/\)/'    > $@.bleulink
+	paste $@.langnames $@.bleulink $@.link |\
+	sed 's/	/ | /g;s/^/| /;s/$$/ |/' |\
+	sed 's#\(https://object.pouta.csc.fi/Tatoeba-MT-models/\)\(.*\).zip#[\2](\1\2.zip)#'
+	rm -f $@.*
+
+
+print-x2ukr-table:
+	grep '^[1-9][0-9]\.' ../scores/*-ukr/flores101-devtest/bleu-scores*txt | \
+	sed 's/:/	/' | sort -nr | rev | uniq -f2 | rev| sort                  > $@.tmp1
+	cut -f3 -d'/' $@.tmp1                                                       > $@.langids
+	cut -f1 $@.langids | xargs iso639 -p  | sed "s/^\"//;s/\"$$//;s#\" \"#\n#g" > $@.langnames
+	cut -f1 $@.tmp1 | sed 's#^\.\.#${SCORE_BASE_URL}#'                          > $@.bleufile
+	cut -f2 $@.tmp1                                                             > $@.bleuscore
+	cut -f3 $@.tmp1                                                             > $@.link
+	paste $@.bleuscore $@.bleufile | sed 's/	/\]\(/;s/^/\[/;s/$$/\)/'    > $@.bleulink
+	paste $@.langnames $@.bleulink $@.link |\
+	sed 's/	/ | /g;s/^/| /;s/$$/ |/' |\
+	sed 's#\(https://object.pouta.csc.fi/Tatoeba-MT-models/\)\(.*\).zip#[\2](\1\2.zip)#'
+	rm -f $@.*

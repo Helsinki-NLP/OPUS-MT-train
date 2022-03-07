@@ -242,7 +242,7 @@ listallmodels:
 ## include all backtranslation data as well in training
 
 %-bt:
-	${MAKE} DATASET=${DATASET}+bt USE_BACKTRANS=1 ${@:-bt=}
+	${MAKE} DATASET=${DATASET}+bt USE_BACKTRANS=1 SHUFFLE_TRAINING_DATA=1 ${@:-bt=}
 
 
 ## adding a pivot language to the model
@@ -271,7 +271,7 @@ PIVOT_LANG         ?= ${DEFAULT_PIVOT_LANG}
 ## add forward translations
 
 %-ft:
-	${MAKE} DATASET=${DATASET}+ft USE_FORWARDTRANS=1 ${@:-ft=}
+	${MAKE} DATASET=${DATASET}+ft USE_FORWARDTRANS=1 SHUFFLE_TRAINING_DATA=1 ${@:-ft=}
 
 # use a selected set of forward translation
 
@@ -289,6 +289,7 @@ FT_SELECTED ?= 95
 	done
 	${MAKE} DATASET=${DATASET}+ft${FT_SELECTED} \
 		USE_FORWARDTRANS_SELECTED=${FT_SELECTED} \
+		SHUFFLE_TRAINING_DATA=1 \
 	${@:-ftbest=}
 
 %-ftrawbest:
@@ -302,20 +303,21 @@ FT_SELECTED ?= 95
 	done
 	${MAKE} DATASET=${DATASET}+ftraw${FT_SELECTED} \
 		USE_FORWARDTRANS_SELECTED_RAW=${FT_SELECTED} \
+		SHUFFLE_TRAINING_DATA=1 \
 	${@:-ftrawbest=}
 
 
 ## add forward translation of monolingual data
 %-ftmono:
-	${MAKE} DATASET=${DATASET}+ftmono USE_FORWARDTRANSMONO=1 ${@:-ftmono=}
+	${MAKE} DATASET=${DATASET}+ftmono USE_FORWARDTRANSMONO=1 SHUFFLE_TRAINING_DATA=1 ${@:-ftmono=}
 
 ## pivot-based backward translation
 %-pbt:
-	${MAKE} DATASET=${DATASET}+pbt USE_BACKWARD_PIVOTING=1 ${@:-pbt=}
+	${MAKE} DATASET=${DATASET}+pbt USE_BACKWARD_PIVOTING=1 SHUFFLE_TRAINING_DATA=1 ${@:-pbt=}
 
 ## pivot-based backward translation
 %-pft:
-	${MAKE} DATASET=${DATASET}+pft USE_FORWARD_PIVOTING=1 ${@:-pft=}
+	${MAKE} DATASET=${DATASET}+pft USE_FORWARD_PIVOTING=1 SHUFFLE_TRAINING_DATA=1 ${@:-pft=}
 
 ## pivot-based backward translation
 %-pivot:
