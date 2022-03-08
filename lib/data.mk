@@ -107,7 +107,7 @@ endif
 
 # backward translation using pivoting (source language is automatically created)
 ifeq (${USE_BACKWARD_PIVOTING},1)
-  PIVOTING_SRC = ${sort ${wildcard ${PIVOTTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.gz}}
+  PIVOTING_SRC += ${sort ${wildcard ${PIVOTTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.gz}}
   PIVOTING_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${PIVOTING_SRC}}
 endif
 
