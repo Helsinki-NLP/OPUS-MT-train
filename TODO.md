@@ -12,6 +12,7 @@ grep for job is (pattern: 'Submitted batch job 946074')
 
 ## Issues
 
+* racing situations in work/data with jobs that fetch data for the same language pairs!
 * get rid of BPE to simplify the scripts
 
 

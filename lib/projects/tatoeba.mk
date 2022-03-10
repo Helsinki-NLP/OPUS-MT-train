@@ -244,8 +244,8 @@ OPUS_LANG_GRANDPARENTS := ${sort ${shell langgroup -p -n ${OPUS_LANG_PARENTS} 2>
 OPUS_LANG_GROUPS       := ${sort ${OPUS_LANG_PARENTS} ${OPUS_LANG_GRANDPARENTS}}
 
 
-.PHONY: tatoeba
-tatoeba:
+.PHONY: tatoeba tatoeba-all
+tatoeba tatoeba-all:
 	${MAKE} tatoeba-prepare
 	${MAKE} all-tatoeba
 

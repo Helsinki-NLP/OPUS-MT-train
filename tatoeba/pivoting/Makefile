@@ -143,7 +143,7 @@ endif
 ## pre-process data
 
 ifeq (${MULTI_TARGET_MODEL},1)
-  PREPROCESS_ARGS = ${PIVOT} ${TRG} ${MODELDIR}/source.spm
+  PREPROCESS_ARGS = ${PIVOT} ${SRC} ${MODELDIR}/source.spm
 else
   PREPROCESS_ARGS = ${PIVOT} ${MODELDIR}/source.spm
 endif

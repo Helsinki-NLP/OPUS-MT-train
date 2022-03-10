@@ -107,7 +107,7 @@ endif
 
 # backward translation using pivoting (source language is automatically created)
 ifeq (${USE_BACKWARD_PIVOTING},1)
-  PIVOTING_SRC = ${sort ${wildcard ${PIVOTTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.gz}}
+  PIVOTING_SRC += ${sort ${wildcard ${PIVOTTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.gz}}
   PIVOTING_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${PIVOTING_SRC}}
 endif
 
@@ -120,6 +120,13 @@ endif
 
 
 print-datasets:
+	-@for s in ${SRCLANGS}; do \
+	  for t in ${TRGLANGS}; do \
+	    ${MAKE} SRC=$$s TRG=$$t print-datasets-current-langpair; \
+	  done \
+	done
+
+print-datasets-current-langpair:
 	@echo ${TATOEBA_TRAINSET}
 	@echo ${TRAINSET}
 	@echo "all data:"
@@ -245,7 +252,6 @@ endif
 
 
 
-
 .PHONY: clean-data rawdata
 clean-data rawdata:
 	@for s in ${SRCLANGS}; do \
@@ -260,6 +266,32 @@ clean-data-source:
 	@${MAKE} ${CLEAN_TEST_SRC} ${CLEAN_TEST_TRG}
 	@${MAKE} ${CLEAN_TEST_SRC_STATS} ${CLEAN_TEST_TRG_STATS}
 	@${MAKE} ${DATA_SRC} ${DATA_TRG}
+
+
+
+## shuffle training data (if one wants to do that after they have been created already)
+.PHONY: shuffle-training-data
+shuffle-training-data:
+ifneq (${wildcard ${TRAIN_ALG}},)
+	paste 	<(gzip -cd ${TRAIN_SRC}.clean.${PRE_SRC}.gz) \
+		<(gzip -cd ${TRAIN_TRG}.clean.${PRE_TRG}.gz) \
+		<(gzip -cd ${TRAIN_ALG}) |\
+	${SHUFFLE} |\
+	tee 	>(cut -f1 | gzip -c >${TRAIN_SRC}.clean.${PRE_SRC}.new.gz) \
+		>(cut -f2 | gzip -c >${TRAIN_TRG}.clean.${PRE_TRG}.new.gz) | \
+	cut -f3 | gzip -c > ${TRAIN_ALG}.new.gz
+	mv -f ${TRAIN_SRC}.clean.${PRE_SRC}.new.gz ${TRAIN_SRC}.clean.${PRE_SRC}.gz
+	mv -f ${TRAIN_TRG}.clean.${PRE_TRG}.new.gz ${TRAIN_TRG}.clean.${PRE_TRG}.gz
+	mv ${TRAIN_ALG}.new.gz ${TRAIN_ALG}
+else
+	paste 	<(gzip -cd ${TRAIN_SRC}.clean.${PRE_SRC}.gz) \
+		<(gzip -cd ${TRAIN_TRG}.clean.${PRE_TRG}.gz) |\
+	${SHUFFLE} |\
+	tee 	>(cut -f1 | gzip -c >${TRAIN_SRC}.clean.${PRE_SRC}.new.gz) \
+		>(cut -f2 | gzip -c >${TRAIN_TRG}.clean.${PRE_TRG}.new.gz)
+	mv -f ${TRAIN_SRC}.clean.${PRE_SRC}.new.gz ${TRAIN_SRC}.clean.${PRE_SRC}.gz
+	mv -f ${TRAIN_TRG}.clean.${PRE_TRG}.new.gz ${TRAIN_TRG}.clean.${PRE_TRG}.gz
+endif
 
 
 
@@ -414,6 +446,16 @@ ifeq (${USE_REST_DEVDATA},1)
 endif
 
 
+## for multilingual systems:
+## shuffle the complete training data set
+## if the option is set to 1
+ifeq (${SHUFFLE_MULTILINGUAL_DATA},1)
+ifneq ($(words ${SRCLANGS} ${TRGLANGS}),2)
+  SHUFFLE_TRAINING_DATA = 1
+endif
+endif
+
+
 ## add training data for each language combination
 ## and put it together in local space
 ${LOCAL_TRAIN_SRC}: ${LOCAL_TRAINDATA_DEPENDENCIES}
@@ -444,14 +486,12 @@ ifeq (${USE_REST_DEVDATA},1)
 	  ${GZIP} -cd < ${DEV_TRG}.notused.gz >> ${LOCAL_TRAIN_TRG}; \
 	fi
 endif
-ifeq (${SHUFFLE_MULTILINGUAL_DATA},1)
-ifneq ($(words ${SRCLANGS} ${TRGLANGS}),2)
-	@echo ".... shuffle multilingual data"
+ifeq (${SHUFFLE_TRAINING_DATA},1)
+	@echo ".... shuffle complete training data"
 	@paste ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG} | ${SHUFFLE} > ${LOCAL_TRAIN_SRC}.shuffled
 	@cut -f1 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_SRC}
 	@cut -f2 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_TRG}
 	@rm -f ${LOCAL_TRAIN_SRC}.shuffled
-endif
 endif
 
 

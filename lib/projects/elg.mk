@@ -1,4 +1,10 @@
 # -*-makefile-*-
+#
+#  TODO: problems with racing situations in data pre-processing?
+#        (e.g. when starting simultanously jobs for both translation directions)
+#   --> strict filtering is done in work/data/simple/ ...
+#
+#
 
 ## 23 official EU languages:
 #
@@ -61,6 +67,12 @@ engukr-quantize-student:
 
 
 elg-eval: 
+	${MAKE} elg-eval-tfbig
+	${MAKE} elg-eval-multi
+	${MAKE} elg-eval-zle
+	${MAKE} elg-pivot-eval
+
+elg-eval-tfbig:
 	for l in ${ELG_EU_SELECTED} ${ELG_EU_SELECTED_BIG}; do \
 	  if [ -e ${wildcard work/eng-$$l/*.npz} ]; then \
 	    ${MAKE} MODELTYPE=transformer-big tatoeba-eng2$${l}-eval-bt; \
@@ -73,6 +85,8 @@ elg-eval:
 	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2eng-eval-testsets-bt; \
 	  fi; \
 	done
+
+elg-eval-multi:
 	for l in ${ELG_EU_SELECTED_MULTILANG}; do \
 	    ${MAKE} MODELTYPE=transformer-big SRCLANGS="$$l" TRGLANGS=eng eval-bt-tatoeba; \
 	    ${MAKE} MODELTYPE=transformer-big SRCLANGS="$$l" TRGLANGS=eng tatoeba-multilingual-eval-bt; \
@@ -82,14 +96,129 @@ elg-eval:
 	    ${MAKE} MODELTYPE=transformer-big TRGLANGS="$$l" SRCLANGS=eng eval-testsets-bt-tatoeba; \
 	done
 
-## only separate languages in multilingual models (set of individual languages)
-elg-multieval:
-	for l in ${ELG_EU_SELECTED_MULTILANG}; do \
-	    ${MAKE} MODELTYPE=transformer-big SRCLANGS="$$l" TRGLANGS=eng tatoeba-multilingual-eval-bt; \
-	    ${MAKE} MODELTYPE=transformer-big TRGLANGS="$$l" SRCLANGS=eng tatoeba-multilingual-eval-bt; \
+elg-eval-zle:
+	for p in zle2zle zlw2zle zle2fin zle2zlw; do \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-eval-bt; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-multieval-bt; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-eval-testsets-bt; \
 	done
 
-# multieval-bt-tatoeba; \
+elg-pivot-eval:
+	for l in dan swe fin deu ron tur; do \
+	  if [ -e work/$$l-ukr ]; then \
+	    ${MAKE} tatoeba-$${l}2ukr-eval-pbt; \
+	  fi; \
+	  if [ -e work/ukr-$$l ]; then \
+	    ${MAKE} tatoeba-ukr2$${l}-eval-pft; \
+	  fi; \
+	done
+	${MAKE} SRCLANGS="ces slk" TRGLANGS=ukr eval-pbt-tatoeba
+	${MAKE} SRCLANGS="ces slk" TRGLANGS=ukr tatoeba-multilingual-eval-pbt
+	${MAKE} TRGLANGS="ces slk" SRCLANGS=ukr eval-pft-tatoeba
+	${MAKE} TRGLANGS="ces slk" SRCLANGS=ukr tatoeba-multilingual-eval-pft
+
+
+
+elg-dist-zle:
+	for p in zle2zle zlw2zle zle2zlw; do \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-eval-bt; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-multieval-bt; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-eval-testsets-bt; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-dist-bt; \
+	done
+
+
+elg-dist-pivot:
+	for l in deu dan swe tur fin ron hun; do \
+	  ${MAKE} tatoeba-$${l}2ukr-dist-pbt; \
+	  ${MAKE} tatoeba-ukr2$${l}-dist-pft; \
+	done
+	${MAKE} SRCLANGS="ces slk" TRGLANGS=ukr dist-pbt-tatoeba
+	${MAKE} TRGLANGS="ces slk" SRCLANGS=ukr dist-pft-tatoeba
+	${MAKE} tatoeba-gmq2zle-dist-pbt
+	${MAKE} tatoeba-zle2gmq-dist-pft
+
+
+elg-dist-pivot-tmp:
+	${MAKE} SRCLANGS="ces slk" TRGLANGS=ukr dist-pbt-tatoeba
+	${MAKE} TRGLANGS="ces slk" SRCLANGS=ukr dist-pft-tatoeba
+
+
+elg-gmq2zle-pivot:
+	${MAKE} MODELTYPE=transformer-big CPUJOB_HPC_MEM=32g tatoeba-gmq2zle-trainjob-pbt
+
+elg-zle2gmq-pivot:
+	${MAKE} MODELTYPE=transformer-big CPUJOB_HPC_MEM=32g tatoeba-zle2gmq-trainjob-pft
+
+
+elg-bat2zle:
+	${MAKE} tatoeba-bat2zle-trainjob
+
+elg-zle2bat:
+	${MAKE} tatoeba-zle2bat-trainjob
+
+
+elg-dan2ukr:
+	${MAKE} tatoeba-dan2ukr-trainjob-pbt
+	${MAKE} tatoeba-ukr2dan-trainjob-pft
+
+elg-swe2ukr:
+	${MAKE} tatoeba-swe2ukr-trainjob-pbt
+	${MAKE} tatoeba-ukr2swe-trainjob-pft
+
+elg-fin2ukr:
+	${MAKE} tatoeba-fin2ukr-trainjob-pbt
+	${MAKE} tatoeba-ukr2fin-trainjob-pft
+
+elg-ukr2fin:
+	${MAKE} tatoeba-ukr2fin-trainjob-pbt-pft
+
+
+elg-deu2ukr:
+	${MAKE} tatoeba-deu2ukr-trainjob-pbt
+	${MAKE} tatoeba-ukr2deu-trainjob-pft
+
+elg-slk2ukr:
+	${MAKE} tatoeba-slk2ukr-trainjob-pbt
+	${MAKE} tatoeba-ukr2slk-trainjob-pft
+
+elg-ces_slk2ukr:
+	${MAKE} SRCLANGS=ukr TRGLANGS="ces slk" tatoeba-job-pft
+	${MAKE} TRGLANGS=ukr SRCLANGS="ces slk" tatoeba-job-pbt
+
+elg-ron2ukr:
+	${MAKE} tatoeba-ron2ukr-trainjob-pbt
+	${MAKE} tatoeba-ukr2ron-trainjob-pft
+
+elg-tur2ukr:
+	${MAKE} tatoeba-tur2ukr-trainjob-pbt
+	${MAKE} tatoeba-ukr2tur-trainjob-pft
+
+elg-hun2ukr:
+	${MAKE} tatoeba-hun2ukr-trainjob-pbt
+	${MAKE} tatoeba-ukr2hun-trainjob-pft
+
+
+
+
+## continue with pivot-based model training (after shuffling)
+## (because it was not shuffled before, now shuffling is done by default)
+elg-ukr2deu-continue:
+	rm -f work/ukr-deu/*.done
+	${MAKE} SRCLANGS=ukr TRGLANGS=deu shuffle-training-data-pft-tatoeba
+	${MAKE} MARIAN_EARLY_STOPPING=15 MARIAN_EXTRA=--no-restore-corpus tatoeba-ukr2deu-trainjob-pft
+
+elg-deu2ukr-continue:
+	rm -f work/deu-ukr/*.done
+	${MAKE} SRCLANGS=deu TRGLANGS=ukr shuffle-training-data-pbt-tatoeba
+	${MAKE} MARIAN_EARLY_STOPPING=15 MARIAN_EXTRA=--no-restore-corpus tatoeba-deu2ukr-trainjob-pbt
+
+
+
+
+
+
+
 
 
 elg-eng2all:
@@ -149,11 +278,95 @@ elg-all2eng-eval:
 	done
 
 
+elg-tune4ukr2eng:
+	${MAKE} MODELTYPE=transformer-big TUNE_SRC=ukr TUNE_TRG=eng tatoeba-zle2eng-langtunejob
+
+
+## including English as a pivot language
+elg-zle2zlw-pivot:
+	${MAKE} MODELTYPE=transformer-big \
+		MARIAN_EXTRA=--no-restore-corpus \
+		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=16g CPUJOB_HPC_DISK=1000' \
+		tatoeba-zle2zlw-trainjob-bt-pivotlang
+
+elg-zlw2zle-pivot:
+	${MAKE} MODELTYPE=transformer-big \
+		MARIAN_EXTRA=--no-restore-corpus \
+		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=16g CPUJOB_HPC_DISK=1000' \
+		tatoeba-zlw2zle-trainjob-bt-pivotlang
+
+
+elg-zle2zlw:
+	${MAKE} MODELTYPE=transformer-big \
+		MARIAN_EXTRA=--no-restore-corpus \
+		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=24g CPUJOB_HPC_DISK=1000' \
+		tatoeba-zle2zlw-trainjob-bt
+
+elg-zlw2zle:
+	${MAKE} MODELTYPE=transformer-big \
+		MARIAN_EXTRA=--no-restore-corpus \
+		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=24g CPUJOB_HPC_DISK=1000' \
+		tatoeba-zlw2zle-trainjob-bt
+
+elg-zle2zls:
+	${MAKE} MODELTYPE=transformer-big \
+		MARIAN_EXTRA=--no-restore-corpus \
+		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=24g CPUJOB_HPC_DISK=1000' \
+		tatoeba-zle2zls-trainjob-bt
+
+elg-zls2zle:
+	${MAKE} MODELTYPE=transformer-big \
+		MARIAN_EXTRA=--no-restore-corpus \
+		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=24g CPUJOB_HPC_DISK=1000' \
+		tatoeba-zls2zle-trainjob-bt
+
+
+elg-zle2zle:
+	${MAKE} MODELTYPE=transformer-big \
+		MARIAN_EXTRA=--no-restore-corpus \
+		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=16g CPUJOB_HPC_DISK=1000' \
+		tatoeba-zle2zle-trainjob-bt
+
+elg-gmq2zle:
+	${MAKE} MODELTYPE=transformer-big \
+		MARIAN_EXTRA=--no-restore-corpus \
+		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=16g CPUJOB_HPC_DISK=1000' \
+		tatoeba-gmq2zle-trainjob-bt
+	${MAKE} MODELTYPE=transformer-big \
+		MARIAN_EXTRA=--no-restore-corpus \
+		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=16g CPUJOB_HPC_DISK=1000' \
+		tatoeba-zle2gmq-trainjob-bt
+
+elg-big2zle:
+	for l in deu fra spa por ita; do \
+	  ${MAKE} MODELTYPE=transformer-big \
+		MARIAN_EXTRA=--no-restore-corpus \
+		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=16g CPUJOB_HPC_DISK=1000' \
+		tatoeba-$${l}2zle-trainjob; \
+	done
+
+elg-zle2big:
+	for l in deu fra spa por ita; do \
+	  ${MAKE} MODELTYPE=transformer-big \
+		MARIAN_EXTRA=--no-restore-corpus \
+		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=16g CPUJOB_HPC_DISK=1000' \
+		tatoeba-zle2$${l}-trainjob; \
+	done
+
+
+elg-zle2fin:
+	${MAKE} MODELTYPE=transformer-big tatoeba-zle2fin-trainjob-bt
+
+elg-fin2zle:
+	${MAKE} MODELTYPE=transformer-big tatoeba-fin2zle-trainjob-bt
 
 
 
-
-
+elg-sla2sla:
+	${MAKE} MODELTYPE=transformer-big \
+		MARIAN_EXTRA=--no-restore-corpus \
+		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=16g CPUJOB_HPC_DISK=1000' \
+		tatoeba-sla2sla-trainjob-bt
 
 
 elg-eng2cel:
@@ -213,6 +426,13 @@ elg-multi2eng:
 		TRGLANGS=eng SRCLANGS="por glg" \
 	tatoeba-job-bt
 
+elg-eng2spa:
+	${MAKE} MODELTYPE=transformer-big \
+		MARIAN_EXTRA=--no-restore-corpus \
+		DATA_PREPARE_HPCPARAMS='CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=16g CPUJOB_HPC_DISK=1000' \
+		SRCLANGS=eng TRGLANGS="cat oci spa" \
+	tatoeba-job-bt
+
 
 elg-ces2eng:
 	${MAKE} MODELTYPE=transformer-big \
@@ -248,3 +468,78 @@ elg-eng2fin:
 		MARIAN_EXTRA=--no-restore-corpus \
 		tatoeba-eng2fin-trainjob-bt
 
+
+
+good-ukr-models:
+	@grep '^[^ ]*-ukr'  ~/research/Tatoeba-Challenge/models/released-model-results-all.txt | \
+	grep -v 'tuned4' | rev | uniq -f5 | rev | grep '[3-9][0-9]\.[0-9]' | grep -P '\t[0-9]{3,}\t'
+	@grep '^ukr-'  ~/research/Tatoeba-Challenge/models/released-model-results-all.txt | \
+	grep -v 'tuned4' | rev | uniq -f5 | rev | grep '[3-9][0-9]\.[0-9]' | grep -P '\t[0-9]{3,}\t'
+
+ukr-model-table:
+	make -s good-ukr-models |\
+	cut -f1-4 |\
+	sed 's/	/	|	/g;s/^/| /;s/$$/ |/' |\
+	sed 's#\(https://object.pouta.csc.fi/Tatoeba-MT-models/\)\(.*\).zip#[\2](\1\2.zip)#'
+
+
+ukr-model-table2:
+	make -s good-ukr-models | cut -f1-4 > $@.tmp1
+	cut -f1 $@.tmp1 | xargs iso639 -p  | sed "s/^\"//;s/\"$$//;s#\" \"#\n#g" > $@.tmp2
+	paste $@.tmp2 $@.tmp1 |\
+	sed 's/	/	|	/g;s/^/| /;s/$$/ |/' |\
+	sed 's#\(https://object.pouta.csc.fi/Tatoeba-MT-models/\)\(.*\).zip#[\2](\1\2.zip)#'
+	rm -f $@.tmp*
+
+
+
+# SCORE_BASE_URL = https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master
+SCORE_BASE_URL = https://github.com/Helsinki-NLP/OPUS-MT-train/blob/puhti
+
+print-ukr2x-table:
+	@echo '| language pair | lang-IDs | BLEU | model |'
+	@echo '|---------------|----------|------|-------|'
+	@grep '^[1-9][0-9]\.' ../scores/ukr-*/flores101-devtest/bleu-scores*txt | \
+	sed 's/:/	/' | sort -nr | rev | uniq -f2 | rev| sort                   > $@.tmp1
+	@cut -f3 -d'/' $@.tmp1                                                       > $@.langids
+	@cut -f1 $@.langids | xargs iso639 -p  | sed "s/^\"//;s/\"$$//;s#\" \"#\n#g" > $@.langnames
+	@cut -f1 $@.tmp1 | sed 's#^\.\.#${SCORE_BASE_URL}#'                          > $@.bleufile
+	@cut -f2 $@.tmp1                                                             > $@.bleuscore
+	@cut -f3 $@.tmp1                                                             > $@.link
+	@paste $@.bleuscore $@.bleufile | sed 's/	/\]\(/;s/^/\[/;s/$$/\)/'     > $@.bleulink
+	@paste $@.langnames $@.langids $@.bleulink $@.link |\
+	grep -v 'Indonesian' | grep -v 'Afrikaans' |\
+	sed 's/	/ | /g;s/^/| /;s/$$/ |/' |\
+	sed 's#\(https://object.pouta.csc.fi/Tatoeba-MT-models/\)\(.*\).zip#[\2](\1\2.zip)#'
+	@rm -f $@.*
+
+
+print-x2ukr-table:
+	@echo '| language pair | lang-IDs | BLEU | model |'
+	@echo '|---------------|----------|------|-------|'
+	@grep '^[1-9][0-9]\.' ../scores/*-ukr/flores101-devtest/bleu-scores*txt | \
+	sed 's/:/	/' | sort -nr | rev | uniq -f2 | rev| sort                   > $@.tmp1
+	@cut -f3 -d'/' $@.tmp1                                                       > $@.langids
+	@cut -f1 $@.langids | xargs iso639 -p  | sed "s/^\"//;s/\"$$//;s#\" \"#\n#g" > $@.langnames
+	@cut -f1 $@.tmp1 | sed 's#^\.\.#${SCORE_BASE_URL}#'                          > $@.bleufile
+	@cut -f2 $@.tmp1                                                             > $@.bleuscore
+	@cut -f3 $@.tmp1                                                             > $@.link
+	@paste $@.bleuscore $@.bleufile | sed 's/	/\]\(/;s/^/\[/;s/$$/\)/'     > $@.bleulink
+	@paste $@.langnames $@.langids $@.bleulink $@.link |\
+	grep -v 'Indonesian' | grep -v 'Afrikaans' |\
+	sed 's/	/ | /g;s/^/| /;s/$$/ |/' |\
+	sed 's#\(https://object.pouta.csc.fi/Tatoeba-MT-models/\)\(.*\).zip#[\2](\1\2.zip)#'
+	@rm -f $@.*
+
+opus-mt-ukr-flores-devtest.md:
+	echo "# OPUS-MT models for Ukrainian" > $@
+	echo "" >> $@
+	echo "The following tables list the best OPUS-MT models for translating from and to Ukrainian according to the flores101 devtest benchmark. Results are given in standard BLEU scores (using sacrebleu)." >> $@
+	echo "" >> $@
+	echo "## Translations from Ukrainian" >> $@
+	echo "" >> $@
+	make -s print-ukr2x-table >> $@
+	echo "" >> $@
+	echo "## Translations to Ukrainian" >> $@
+	echo "" >> $@
+	make -s print-x2ukr-table >> $@
