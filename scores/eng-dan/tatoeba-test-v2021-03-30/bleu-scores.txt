@@ -10,6 +10,7 @@
 56.8	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-gem/opus-2020-07-06.zip
 56.7	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-gem/opus-2020-07-14.zip
 56.6	https://object.pouta.csc.fi/Tatoeba-MT-models/gmq-gmq/opus4m+btTCv20210807-2021-12-08.zip
+56.5	https://object.pouta.csc.fi/Tatoeba-MT-models/gmq-gmq/opus4m+btTCv20210807-2021-12-08.zip
 56.0	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-gmq/opus4m+btTCv20210807-2021-09-30.zip
 53.9	https://object.pouta.csc.fi/Tatoeba-MT-models/gem-gem/opus-2020-10-04.zip
 53.6	https://object.pouta.csc.fi/Tatoeba-MT-models/gem-gem/opus-2020-09-26.zip

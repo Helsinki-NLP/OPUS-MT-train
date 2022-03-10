@@ -1,5 +1,6 @@
 0.833	https://object.pouta.csc.fi/Tatoeba-MT-models/dan-swe/opus-2021-02-19.zip
 0.822	https://object.pouta.csc.fi/Tatoeba-MT-models/gmq-gmq/opus4m+btTCv20210807-2021-12-08.zip
+0.82177	https://object.pouta.csc.fi/Tatoeba-MT-models/gmq-gmq/opus4m+btTCv20210807-2021-12-08.zip
 0.818	https://object.pouta.csc.fi/Tatoeba-MT-models/gmq-gmq/opus-2020-09-26.zip
 0.817	https://object.pouta.csc.fi/Tatoeba-MT-models/gmq-gmq/opus-2020-10-04.zip
 0.803	https://object.pouta.csc.fi/Tatoeba-MT-models/gmq-gmq/opus-2020-07-21.zip
