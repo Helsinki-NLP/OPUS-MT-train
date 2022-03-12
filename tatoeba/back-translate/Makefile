@@ -182,7 +182,7 @@ ALLWIKIS_TRG = ${patsubst %,${OUTPUT_DIR}/%.${PART}_${MODELNAME}.${LANGPAIR}.${T
 
 
 ## don't delete translated text if the process crashes
-.PRECIOUS: ${WIKI_TRG}
+.PRECIOUS: ${WIKI_TRG} ${ALLWIKIPARTS_TRG} ${ALLWIKIS_TRG}
 
 
 ifdef LOCAL_SCRATCH
@@ -286,12 +286,19 @@ released-data.txt: .
 	swift list ${BT_CONTAINER} | grep -v README.md | grep -v '.txt' > $@
 	swift upload ${BT_CONTAINER} $@
 
+TODAY := $(shell date +%F)
+
 released-data-size.txt: .
-	${MAKE} check-latest-all | grep '^[0-9]' > $@
+	swift download ${BT_CONTAINER} released-data-size.txt
+	mv $@ $@.${TODAY}
+	head -n-1 $@.${TODAY} | grep [a-z] > $@.old
+	${MAKE} check-latest-all           > $@.new
+	cat $@.old $@.new | grep '^[1-9]' | sort -k2,2  > $@
 	cat $@ | awk '{ sum += $$1 } END { print sum }' > $@.tmp
 	cat $@.tmp >> $@
-	rm -f cat $@.tmp
-	swift upload ${BT_CONTAINER} released-data-size.txt
+	swift upload ${BT_CONTAINER} $@
+	swift upload ${BT_CONTAINER} $@.${TODAY}
+	rm -f $@.tmp $@.${TODAY} $@.new $@.old
 
 # download released data
 
@@ -333,19 +340,36 @@ prepare-allwikis: ${LANGPAIR}/${MODELNAME}/decoder.yml ${ALLWIKIS_TXT}
 
 .PHONY: translate
 translate: ${WIKI_LATEST_README} ${WIKI_LATEST_TRG}
+ifneq (${WIKI_LATEST_SRC},)
 	${MAKE} ${WIKI_LATEST_SRC}
+endif
 
 ## translate all parts
 .PHONY: translate-all-parts
 translate-all-parts: ${ALLWIKIPARTS_LATEST_TRG}
+ifneq (${ALLWIKIPARTS_LATEST_SRC},)
 	${MAKE} ${ALLWIKIPARTS_LATEST_SRC}
+endif
+
 
 ## translate all wikis and all parts
 .PHONY: translate-all
 translate-all:
 	for s in ${WIKISOURCES}; do \
-	  ${MAKE} translate-allparts; \
+	  ${MAKE} WIKISOURCE=$$s translate-all-parts; \
 	done
+
+
+## create all source language files
+.PHONY: latest-all-source-parts
+latest-all-source-parts: ${ALLWIKIPARTS_LATEST_SRC}
+
+.PHONY: latest-all-sources
+latest-all-sources:
+	for s in ${WIKISOURCES}; do \
+	  ${MAKE} WIKISOURCE=$$s latest-all-source-parts; \
+	done
+
 
 ## create jobs for translating all parts
 ## (only start the job if the file does not exist yet)
@@ -478,7 +502,8 @@ ${WIKI_DIR}/${SRC}/.done:
 
 
 
-${OUTPUT_DIR}/%.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.spm.gz: ${WIKI_DIR}/${SRC}/%.${PART}.gz
+# ${OUTPUT_DIR}/%.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.spm.gz: ${WIKI_DIR}/${SRC}/%.${PART}.gz
+${OUTPUT_DIR}/%_${MODELNAME}.${LANGPAIR}.${SRC}.spm.gz: ${WIKI_DIR}/${SRC}/%.gz
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
 	${MAKE} ${LANGPAIR}/${MODELNAME}/decoder.yml
@@ -494,7 +519,8 @@ endif
 ## merge SentencePiece segments in the source text
 ## (Why? because we filter out some data from the original wiki text, see above)
 
-${WIKI_SRC}: ${WIKI_PRE}
+# ${WIKI_SRC}: ${WIKI_PRE}
+${OUTPUT_DIR}/${WIKISOURCE}.%.${LANGPAIR}.${SRC}.gz: ${OUTPUT_DIR}/${WIKISOURCE}.%.${LANGPAIR}.${SRC}.spm.gz
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
 	${GZCAT} $< |\
@@ -511,11 +537,13 @@ endif
 ## --> this allows multiple translation iterations
 ##     without duplicating the data we want to use in MT training
 
-${WIKI_LATEST_SRC}: ${WIKI_SRC}
+# ${WIKI_LATEST_SRC}: ${WIKI_SRC}
+${OUTPUT_DIR}/latest/${WIKISOURCE}.%.${LANGPAIR}.${SRC}.gz: ${OUTPUT_DIR}/${WIKISOURCE}.%_${MODELNAME}.${LANGPAIR}.${SRC}.gz
 	mkdir -p ${dir $@}
 	cp $< $@
 
-${WIKI_LATEST_TRG}: ${WIKI_TRG}
+# ${WIKI_LATEST_TRG}: ${WIKI_TRG}
+${OUTPUT_DIR}/latest/${WIKISOURCE}.%.${LANGPAIR}.${TRG}.gz: ${OUTPUT_DIR}/${WIKISOURCE}.%_${MODELNAME}.${LANGPAIR}.${TRG}.gz
 	mkdir -p ${dir $@}
 	cp $< $@
 
@@ -534,7 +562,6 @@ ifneq (${MODELZIP},)
 		-i ${PWD}/$< \
 		-c decoder.yml \
 		-d ${MARIAN_GPUS} \
-		--quiet-translation \
 		${MARIAN_DECODER_FLAGS} |\
 	sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' |\
 	gzip -c > ${PWD}/$@

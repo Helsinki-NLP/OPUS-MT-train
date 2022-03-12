@@ -65,6 +65,16 @@ engukr-quantize-student:
 	make SRCLANGS=eng TRGLANGS=ukr test-quantized-tiny11-student
 
 
+## special thing: student models with pivot-based data (does that work?)
+elg-ukr-students:
+	for l in bul dan deu fin hun nob ron swe slk tur; do \
+	  ${MAKE} STUDENT_DATA=pft-nopar SRCLANGS=ukr TRGLANGS=$$l train-tiny11-student; \
+	done
+
+elg-ukr-students-test:
+	${MAKE} STUDENT_DATA=ftmono-pft-nopar SRCLANGS=ukr TRGLANGS=deu train-tiny11-student
+	${MAKE} STUDENT_DATA=ftmono-pft-nopar SRCLANGS=ukr TRGLANGS=hun train-tiny11-student
+
 
 elg-eval: 
 	${MAKE} elg-eval-tfbig
@@ -97,11 +107,22 @@ elg-eval-multi:
 	done
 
 elg-eval-zle:
-	for p in zle2zle zlw2zle zle2fin zle2zlw; do \
+	for p in zle2zle zlw2zle zle2fin zle2zlw zls2zlw zlw2zls; do \
 	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-eval-bt; \
 	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-multieval-bt; \
 	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-eval-testsets-bt; \
 	done
+
+elg-eval-big2zle:
+	for l in deu fra spa por ita; do \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-zle2$${l}-eval; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-zle2$${l}-multieval; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-zle2$${l}-eval-testsets; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2zle-eval; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2zle-multieval; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2zle-eval-testsets; \
+	done
+
 
 elg-pivot-eval:
 	for l in dan swe fin deu ron tur; do \
@@ -143,6 +164,19 @@ elg-dist-pivot-tmp:
 	${MAKE} SRCLANGS="ces slk" TRGLANGS=ukr dist-pbt-tatoeba
 	${MAKE} TRGLANGS="ces slk" SRCLANGS=ukr dist-pft-tatoeba
 
+elg-eval-pivot-tmp:
+	${MAKE} MODELTYPE=transformer-big tatoeba-gmq2zle-eval-pbt
+	${MAKE} MODELTYPE=transformer-big tatoeba-gmq2zle-multieval-pbt
+	${MAKE} MODELTYPE=transformer-big tatoeba-zle2gmq-eval-pft
+	${MAKE} MODELTYPE=transformer-big tatoeba-zle2gmq-multieval-pft
+
+
+#	${MAKE} SRCLANGS="ces slk" TRGLANGS=ukr eval-pbt-tatoeba
+#	${MAKE} SRCLANGS="ces slk" TRGLANGS=ukr tatoeba-multilingual-eval-pbt
+#	${MAKE} TRGLANGS="ces slk" SRCLANGS=ukr eval-pft-tatoeba
+#	${MAKE} TRGLANGS="ces slk" SRCLANGS=ukr tatoeba-multilingual-eval-pft
+
+
 
 elg-gmq2zle-pivot:
 	${MAKE} MODELTYPE=transformer-big CPUJOB_HPC_MEM=32g tatoeba-gmq2zle-trainjob-pbt
@@ -172,6 +206,8 @@ elg-fin2ukr:
 
 elg-ukr2fin:
 	${MAKE} tatoeba-ukr2fin-trainjob-pbt-pft
+
+
 
 
 elg-deu2ukr:
