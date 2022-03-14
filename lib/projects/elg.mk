@@ -66,10 +66,48 @@ engukr-quantize-student:
 
 
 ## special thing: student models with pivot-based data (does that work?)
+## --> does not work very well ...
 elg-ukr-students:
 	for l in bul dan deu fin hun nob ron swe slk tur; do \
-	  ${MAKE} STUDENT_DATA=pft-nopar SRCLANGS=ukr TRGLANGS=$$l train-tiny11-student; \
+	  ${MAKE} STUDENT_DATA=ftmono-pft-nopar SRCLANGS=ukr TRGLANGS=$$l train-tiny11-student; \
 	done
+
+
+
+
+## tiny11 transformer model for finnish with pivot data (reuse student recipes)
+elg-fin2ukr-tiny11:
+	${MAKE} STUDENT_DATA=pft-pbt SRCLANGS=fin TRGLANGS=ukr MARIAN_EXTRA=--no-restore-corpus train-tiny11-student
+
+elg-ukr2fin-tiny11:
+	${MAKE} STUDENT_DATA=pft-pbt SRCLANGS=ukr TRGLANGS=fin train-tiny11-student
+
+
+## tiny11 transformer model for finnish with pivot data (reuse student recipes)
+elg-hun2ukr-tiny11:
+	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS=hun TRGLANGS=ukr MARIAN_EXTRA=--no-restore-corpus train-tiny11-student
+
+elg-ukr2hun-tiny11:
+	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS=ukr TRGLANGS=hun train-tiny11-student
+
+
+elg-ron2ukr-tiny11:
+	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS=ron TRGLANGS=ukr train-tiny11-student
+
+elg-ukr2ron-tiny11:
+	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS=ukr TRGLANGS=ron train-tiny11-student
+
+elg-swe2ukr-tiny11:
+	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS=swe TRGLANGS=ukr train-tiny11-student
+
+elg-ukr2swe-tiny11:
+	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS=ukr TRGLANGS=swe train-tiny11-student
+
+
+
+
+
+
 
 elg-ukr-students-test:
 	${MAKE} STUDENT_DATA=ftmono-pft-nopar SRCLANGS=ukr TRGLANGS=deu train-tiny11-student

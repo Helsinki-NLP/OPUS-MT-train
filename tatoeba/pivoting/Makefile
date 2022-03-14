@@ -30,7 +30,8 @@ MARIAN_WORKSPACE=12000
 TATOEBA_VERSION          ?= v2021-08-07
 TATOEBA_VERSION_NOHYPHEN ?= $(subst -,,${TATOEBA_VERSION})
 
-TATOEBA_GITRAW        = https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
+# TATOEBA_GITRAW        = https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
+TATOEBA_GITRAW        = https://github.com/Helsinki-NLP/Tatoeba-Challenge/raw
 TATOEBA_RELEASED      = ${TATOEBA_GITRAW}/models/released-model-results-all.txt
 TATOEBA_RELEASED_BT   = https://object.pouta.csc.fi/Tatoeba-MT-bt/released-data.txt
 TATOEBA_MODEL_STORAGE = https://object.pouta.csc.fi/Tatoeba-MT-models

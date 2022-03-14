@@ -105,6 +105,9 @@ test-quantized-all-finetuned-student:
 %-small-student:
 	${MAKE} MODELTYPE=transformer-small-align ${@:small-student=student}
 
+%-base-student:
+	${MAKE} MODELTYPE=transformer-base-align ${@:base-student=student}
+
 
 
 
