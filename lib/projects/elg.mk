@@ -43,6 +43,15 @@ ELG_EU_SELECTED_BIG = gmq zle zls zlw spa fra deu
 # "cat oci"
 
 
+elg-release-models:
+	make MODELTYPE=transformer-big release-all-improved-models-bt
+	make MODELTYPE=transformer-big release-all-improved-models
+	make release-all-improved-models
+	make release-all-improved-models-bt
+
+#	for l in dan fin hun nob swe tur; do make STUDENT_DATA=pft SRCLANGS=ukr TRGLANGS=$l release-tiny11-student; done
+
+
 ukreng-train-student:
 	make SRCLANGS=ukr TRGLANGS=eng train-tiny11-student
 
@@ -107,11 +116,18 @@ elg-eval-multi:
 	done
 
 elg-eval-zle:
-	for p in zle2zle zlw2zle zle2fin zle2zlw zls2zlw zlw2zls; do \
+	for p in zle2zle zlw2zle zle2fin fin2zle zle2zlw zls2zle zle2zls; do \
 	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-eval-bt; \
 	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-multieval-bt; \
 	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-eval-testsets-bt; \
 	done
+	for p in bat2zle zle2bat; do \
+	    ${MAKE} tatoeba-$${p}-eval; \
+	    ${MAKE} tatoeba-$${p}-multieval; \
+	    ${MAKE} tatoeba-$${p}-eval-testsets; \
+	done
+
+
 
 elg-eval-big2zle:
 	for l in deu fra spa por ita; do \
@@ -137,6 +153,33 @@ elg-pivot-eval:
 	${MAKE} SRCLANGS="ces slk" TRGLANGS=ukr tatoeba-multilingual-eval-pbt
 	${MAKE} TRGLANGS="ces slk" SRCLANGS=ukr eval-pft-tatoeba
 	${MAKE} TRGLANGS="ces slk" SRCLANGS=ukr tatoeba-multilingual-eval-pft
+	${MAKE} MODELTYPE=transformer-big tatoeba-gmq2zle-eval-pbt
+	${MAKE} MODELTYPE=transformer-big tatoeba-gmq2zle-multieval-pbt
+	${MAKE} MODELTYPE=transformer-big tatoeba-gmq2zle-eval-testsets-pbt
+	${MAKE} MODELTYPE=transformer-big tatoeba-zle2gmq-eval-pft
+	${MAKE} MODELTYPE=transformer-big tatoeba-zle2gmq-multieval-pft
+	${MAKE} MODELTYPE=transformer-big tatoeba-zle2gmq-eval-testsets-pft
+
+
+# temporary - eval models I forgot to evaluate so far ...
+elg-eval-extra:
+	for p in bat2zle zle2bat; do \
+	    ${MAKE} tatoeba-$${p}-eval; \
+	    ${MAKE} tatoeba-$${p}-multieval; \
+	    ${MAKE} tatoeba-$${p}-eval-testsets; \
+	done
+	${MAKE} MODELTYPE=transformer-big tatoeba-gmq2zle-eval-pbt
+	${MAKE} MODELTYPE=transformer-big tatoeba-gmq2zle-multieval-pbt
+	${MAKE} MODELTYPE=transformer-big tatoeba-gmq2zle-eval-testsets-pbt
+	${MAKE} MODELTYPE=transformer-big tatoeba-zle2gmq-eval-pft
+	${MAKE} MODELTYPE=transformer-big tatoeba-zle2gmq-multieval-pft
+	${MAKE} MODELTYPE=transformer-big tatoeba-zle2gmq-eval-testsets-pft
+	for p in zls2zle zle2zls fin2zle zle2fin; do \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-eval-bt; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-multieval-bt; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-eval-testsets-bt; \
+	done
+
 
 
 

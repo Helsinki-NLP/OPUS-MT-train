@@ -1,4 +1,5 @@
 20.2	https://object.pouta.csc.fi/Tatoeba-MT-models/ukr-tur/opusTCv20210807+pft_transformer-align_2022-03-07.zip
+17.7	https://object.pouta.csc.fi/Tatoeba-MT-models/ukr-tur/opusTCv20210807+pft-sepvoc_transformer-tiny11-align_2022-03-13.zip
 8.1	https://object.pouta.csc.fi/Tatoeba-MT-models/ukr-tur/opus-2021-02-19.zip
 3.8	https://object.pouta.csc.fi/Tatoeba-MT-models/tatoeba-zero/opus-2020-06-19.zip
 3.7	https://object.pouta.csc.fi/Tatoeba-MT-models/tatoeba-zero/opus-2020-06-21.zip

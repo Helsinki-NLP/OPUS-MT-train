@@ -13,4 +13,5 @@
 0.175	https://object.pouta.csc.fi/Tatoeba-MT-models/cel-eng/opus-2020-06-28.zip
 0.174	https://object.pouta.csc.fi/Tatoeba-MT-models/cel-eng/opus-2020-07-26.zip
 0.170	https://object.pouta.csc.fi/Tatoeba-MT-models/cel-cel/opus-2020-10-04.zip
+0.15293	https://object.pouta.csc.fi/Tatoeba-MT-models/cel-eng/opusTCv20210807+bt_transformer-big_2022-03-13.zip
 0.129	https://object.pouta.csc.fi/Tatoeba-MT-models/tatoeba-lowest/opus-2020-06-15.zip

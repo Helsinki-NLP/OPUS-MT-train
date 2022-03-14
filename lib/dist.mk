@@ -74,6 +74,7 @@ local-dist:
 
 ## global distribution in models-dir, restrictions on BLEU
 global-dist release:
+ifneq (${wildcard $(MODEL_FINAL)},)
 ifeq (${wildcard $(TEST_EVALUATION)},)
 	  ${MAKE} compare
 endif
@@ -86,6 +87,7 @@ endif
 	else \
 	  echo "cannot find or create benchmark file ${TEST_EVALUATION}"; \
 	fi
+endif
 
 
 ## only create the release if the model has converged (done-flag exists)

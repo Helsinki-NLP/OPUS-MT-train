@@ -1,3 +1,4 @@
+27.4	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-ell/opusTCv20210807+bt_transformer-big_2022-03-13.zip
 25.9	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-ell/opus+bt-2021-04-13.zip
 22.1	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-grk/opus2m-2020-08-01.zip
 20.6	https://object.pouta.csc.fi/Tatoeba-MT-models/grk-grk/opus-2020-10-04.zip

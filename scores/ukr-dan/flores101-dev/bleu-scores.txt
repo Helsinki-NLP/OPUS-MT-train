@@ -1,3 +1,4 @@
 30.0	https://object.pouta.csc.fi/Tatoeba-MT-models/ukr-dan/opusTCv20210807+pft_transformer-align_2022-03-07.zip
+27.6	https://object.pouta.csc.fi/Tatoeba-MT-models/ukr-dan/opusTCv20210807+pft-sepvoc_transformer-tiny11-align_2022-03-13.zip
 14.0	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-27.zip
 13.2	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-21.zip
