@@ -210,11 +210,17 @@ print-langgroups:
 ##
 ## caveat: does not check for model parameters/types etc!
 
-release-improved-models:
-	( p=`make -s compare-bleu-score-table-tatoeba | \
+show-improved-models:
+	make -s compare-bleu-score-table-tatoeba | \
 		grep -v '	0	' | grep -v '	-[0-9]' | \
-		cut -f6 | sort -u | xargs`; \
-	  for l in $$p; do \
+		cut -f6 | sort -u | xargs
+
+
+
+release-improved-models:
+	for l in ${shell make -s compare-bleu-score-table-tatoeba | \
+		grep -v '	0	' | grep -v '	-[0-9]' | \
+		cut -f6 | sort -u | xargs}; do \
 	    s=`echo "$$l" | cut -f1 -d-`; \
 	    t=`echo "$$l" | cut -f2 -d-`; \
 	    make SRCLANGS="$$s" TRGLANGS="$$t" release-if-done-tatoeba; \
@@ -222,14 +228,13 @@ release-improved-models:
 
 ## release all models with improved scores even if they are not yet done
 release-all-improved-models:
-	( p=`make -s compare-bleu-score-table-tatoeba | \
+	for l in ${shell make -s compare-bleu-score-table-tatoeba | \
 		grep -v '	0	' | grep -v '	-[0-9]' | \
-		cut -f6 | sort -u | xargs`; \
-	  for l in $$p; do \
+		cut -f6 | sort -u | xargs}; do \
 	    s=`echo "$$l" | cut -f1 -d-`; \
 	    t=`echo "$$l" | cut -f2 -d-`; \
 	    make SRCLANGS="$$s" TRGLANGS="$$t" release-tatoeba; \
-	  done )
+	done
 
 
 
