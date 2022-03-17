@@ -49,7 +49,8 @@ elg-release-models:
 	make release-all-improved-models
 	make release-all-improved-models-bt
 
-#	for l in dan fin hun nob swe tur; do make STUDENT_DATA=pft SRCLANGS=ukr TRGLANGS=$l release-tiny11-student; done
+elg-release-tiny-models:
+	for l in bul dan deu fin hun nob ron swe tur; do make STUDENT_DATA=pft SRCLANGS=ukr TRGLANGS=$$l release-tiny11-student; done
 
 
 ukreng-train-student:
@@ -126,6 +127,24 @@ elg-eval-zle:
 	    ${MAKE} tatoeba-$${p}-multieval; \
 	    ${MAKE} tatoeba-$${p}-eval-testsets; \
 	done
+
+elg-release-zlszle:
+	for p in zls2zle zle2zls; do \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-eval-bt; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-multieval-bt; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-eval-testsets-bt; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${p}-dist-bt; \
+	done
+
+elg-release-cesslk2ukr:
+	${MAKE} SRCLANGS="ces slk" TRGLANGS=ukr eval-pbt-tatoeba
+	${MAKE} SRCLANGS="ces slk" TRGLANGS=ukr tatoeba-multilingual-eval-pbt
+	${MAKE} SRCLANGS="ces slk" TRGLANGS=ukr release-pbt-tatoeba
+
+elg-release-ukr2cesslk:
+	${MAKE} TRGLANGS="ces slk" SRCLANGS=ukr eval-pft-tatoeba
+	${MAKE} TRGLANGS="ces slk" SRCLANGS=ukr tatoeba-multilingual-eval-pft
+	${MAKE} TRGLANGS="ces slk" SRCLANGS=ukr release-pft-tatoeba
 
 
 
@@ -575,11 +594,13 @@ ukr-model-table2:
 # SCORE_BASE_URL = https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master
 SCORE_BASE_URL = https://github.com/Helsinki-NLP/OPUS-MT-train/blob/puhti
 
+
 print-ukr2x-table:
 	@echo '| language pair | lang-IDs | BLEU | model |'
 	@echo '|---------------|----------|------|-------|'
 	@grep '^[1-9][0-9]\.' ../scores/ukr-*/flores101-devtest/bleu-scores*txt | \
-	sed 's/:/	/' | sort -nr | rev | uniq -f2 | rev| sort                   > $@.tmp1
+	grep -v 'txt:1[0-5]\.' | ${GREP_MODELS} \
+	sed 's/:/	/' | sort -nr | rev | uniq -f2 | rev| sort   > $@.tmp1
 	@cut -f3 -d'/' $@.tmp1                                                       > $@.langids
 	@cut -f1 $@.langids | xargs iso639 -p  | sed "s/^\"//;s/\"$$//;s#\" \"#\n#g" > $@.langnames
 	@cut -f1 $@.tmp1 | sed 's#^\.\.#${SCORE_BASE_URL}#'                          > $@.bleufile
@@ -597,7 +618,8 @@ print-x2ukr-table:
 	@echo '| language pair | lang-IDs | BLEU | model |'
 	@echo '|---------------|----------|------|-------|'
 	@grep '^[1-9][0-9]\.' ../scores/*-ukr/flores101-devtest/bleu-scores*txt | \
-	sed 's/:/	/' | sort -nr | rev | uniq -f2 | rev| sort                   > $@.tmp1
+	grep -v 'txt:1[0-5]\.' | ${GREP_MODELS} \
+	sed 's/:/	/' | sort -nr | rev | uniq -f2 | rev| sort   > $@.tmp1
 	@cut -f3 -d'/' $@.tmp1                                                       > $@.langids
 	@cut -f1 $@.langids | xargs iso639 -p  | sed "s/^\"//;s/\"$$//;s#\" \"#\n#g" > $@.langnames
 	@cut -f1 $@.tmp1 | sed 's#^\.\.#${SCORE_BASE_URL}#'                          > $@.bleufile
@@ -622,3 +644,44 @@ opus-mt-ukr-flores-devtest.md:
 	echo "## Translations to Ukrainian" >> $@
 	echo "" >> $@
 	make -s print-x2ukr-table >> $@
+
+
+opus-mt-ukr-flores-devtest-tiny.md:
+	echo "# OPUS-MT models for Ukrainian" > $@
+	echo "" >> $@
+	echo "The following tables list the best OPUS-MT models for translating from and to Ukrainian according to the flores101 devtest benchmark. Results are given in standard BLEU scores (using sacrebleu)." >> $@
+	echo "" >> $@
+	echo "## Translations from Ukrainian" >> $@
+	echo "" >> $@
+	make -s GREP_MODELS="grep 'tiny' |" print-ukr2x-table >> $@
+	echo "" >> $@
+	echo "## Translations to Ukrainian" >> $@
+	echo "" >> $@
+	make -s GREP_MODELS="grep 'tiny' |" print-x2ukr-table >> $@
+
+
+opus-mt-ukr-flores-devtest-big.md:
+	echo "# OPUS-MT models for Ukrainian" > $@
+	echo "" >> $@
+	echo "The following tables list the best OPUS-MT models for translating from and to Ukrainian according to the flores101 devtest benchmark. Results are given in standard BLEU scores (using sacrebleu)." >> $@
+	echo "" >> $@
+	echo "## Translations from Ukrainian" >> $@
+	echo "" >> $@
+	make -s GREP_MODELS="grep 'transformer-big' |" print-ukr2x-table >> $@
+	echo "" >> $@
+	echo "## Translations to Ukrainian" >> $@
+	echo "" >> $@
+	make -s GREP_MODELS="grep 'transformer-big' |" print-x2ukr-table >> $@
+
+opus-mt-ukr-flores-devtest-base.md:
+	echo "# OPUS-MT models for Ukrainian" > $@
+	echo "" >> $@
+	echo "The following tables list the best OPUS-MT models for translating from and to Ukrainian according to the flores101 devtest benchmark. Results are given in standard BLEU scores (using sacrebleu)." >> $@
+	echo "" >> $@
+	echo "## Translations from Ukrainian" >> $@
+	echo "" >> $@
+	make -s GREP_MODELS="grep -v 'transformer-big' | grep -v 'tiny' |" print-ukr2x-table >> $@
+	echo "" >> $@
+	echo "## Translations to Ukrainian" >> $@
+	echo "" >> $@
+	make -s GREP_MODELS="grep -v 'transformer-big' | grep -v 'tiny' |" print-x2ukr-table >> $@

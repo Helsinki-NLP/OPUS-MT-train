@@ -1,3 +1,4 @@
+20.5	https://object.pouta.csc.fi/Tatoeba-MT-models/zle-bat/opusTCv20210807_transformer-align_2022-03-17.zip
 20.4	https://object.pouta.csc.fi/Tatoeba-MT-models/zle-bat/opusTCv20210807_transformer-align_2022-03-14.zip
 16.0	https://object.pouta.csc.fi/Tatoeba-MT-models/rus-lav/opus-2020-06-17.zip
 15.5	https://object.pouta.csc.fi/Tatoeba-MT-models/rus-lav/opus-2021-02-23.zip

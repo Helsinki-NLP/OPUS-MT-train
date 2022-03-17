@@ -7,12 +7,19 @@
 TODAY := ${shell date +%F}
 DATE  ?= ${TODAY}
 
+
+RELEASEDIR          ?= ${PWD}/models
+DEV_MODELDIR        ?= ${WORKHOME}/models
+MODELSHOME          ?= ${RELEASEDIR}
+
 OBJECTSTORAGE       ?= https://object.pouta.csc.fi
 MODEL_CONTAINER     ?= OPUS-MT-models
 DEV_MODEL_CONTAINER ?= OPUS-MT-dev
+RELEASE_MODELS_URL  ?= https://object.pouta.csc.fi/${MODEL_CONTAINER}
+DEV_MODELS_URL      ?= https://object.pouta.csc.fi/${DEV_MODEL_CONTAINER}
+MODELS_URL          ?= ${RELEASE_MODELS_URL}
 MODELINDEX          ?= ${OBJECTSTORAGE}/${MODEL_CONTAINER}/index.txt
-MODELSHOME          ?= ${WORKHOME}/models
-RELEASEDIR          ?= ${PWD}/models
+SKIP_DIST_EVAL      ?= 0
 
 
 ## TODO: better create a recipe for the yaml file and not the zip file
@@ -28,6 +35,9 @@ RELEASE_PACKAGE   = ${basename ${DIST_PACKAGE}}_${DATE}.zip
 RELEASE_YML       = ${basename ${DIST_PACKAGE}}_${DATE}.yml
 
 
+ALL_DIST_YML := ${sort ${shell find ${MODELSHOME}/ -name '*.yml' | sed -r 's/[\_\-][0-9]{4}-[0-9]{2}-[0-9]{2}.yml/.yml/'}}
+
+
 # previous name conventions:
 #
 # DIST_PACKAGE      = ${MODELSHOME}/${LANGPAIRSTR}/${DATASET}.zip
@@ -37,17 +47,11 @@ RELEASE_YML       = ${basename ${DIST_PACKAGE}}_${DATE}.yml
 # RELEASE_YML       = ${MODELSHOME}/${LANGPAIRSTR}/${DATASET}-${DATE}.yml
 
 
-
-
 MODEL_README      = ${WORKDIR}/README.md
 MODEL_YML         = ${patsubst %.npz,%.yml,${MODEL_FINAL}}
 
-
-
 get-model-release = ${shell wget -qq -O - ${MODELINDEX} | grep '^${1}/.*-.*\.zip' | LANG=en_US.UTF-8 sort -r}
 get-model-distro  = ${shell echo ${wildcard ${1}/${2}/*.zip} | tr ' ' "\n" | LANG=en_US.UTF-8 sort -r}
-
-
 
 
 
@@ -60,17 +64,11 @@ MIN_BLEU_SCORE ?= 20
 
 .PHONY: dist local-dist global-dist release
 
-## create a symbolic link to the latest model
-## and make the package
-dist: 
-	${MAKE} link-latest-model
-	${MAKE} ${DIST_PACKAGE}
+dist: ${DIST_YML}
 
 ## local distribution in workhome, no restrictions about BLEU
 local-dist:
-	${MAKE} MODELSHOME=${WORKHOME}/models \
-		MODELS_URL=https://object.pouta.csc.fi/${DEV_MODEL_CONTAINER} \
-	dist
+	${MAKE} MODELSHOME=${DEV_MODELDIR} MODELS_URL=${DEV_MODELS_URL} dist
 
 ## global distribution in models-dir, restrictions on BLEU
 global-dist release:
@@ -109,99 +107,9 @@ scores:
 
 
 
-## get the best model from all kind of alternative setups
-## in the following sub directories (add prefix work-)
-## scan various work directories - specify alternative dir's below
-
-ALT_MODEL_BASE = work-
-# ALT_MODEL_DIR = bpe-old bpe-memad bpe spm-noalign bpe-align spm
-# ALT_MODEL_DIR = spm langid
-ALT_MODEL_DIR = langid
-
-.PHONY: best_dist_all best-dist-all
-best-dist-all best_dist_all:
-	for l in $(sort ${shell ls ${ALT_MODEL_BASE}* | grep -- '-' | grep -v old | grep -v work}); do \
-	  if  [ `find work*/$$l -name '*.npz' | wc -l` -gt 0 ]; then \
-	    d=`find work-spm/$$l -name '*.best-perplexity.npz' -exec basename {} \; | cut -f1 -d.`; \
-	    ${MAKE} SRCLANGS="`echo $$l | cut -f1 -d'-' | sed 's/\\+/ /g'`" \
-		    TRGLANGS="`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`" \
-		    DATASET=$$d best_dist; \
-	  fi \
-	done
-
-
-
-
-## find the best model according to test set scores
-## and make a distribution package from that model
-## (BLEU needs to be above MIN_BLEU_SCORE)
-## NEW: don't trust models tested with GNOME test sets!
-
-## new version of finding the best model
-## --> look at different model variants in each work-dir
-## --> take only the best one to publish
-
-.PHONY: best_dist best-dist
-best-dist best_dist:
-	m=0;\
-	s=''; \
-	echo "------------------------------------------------"; \
-	echo "search best model for ${LANGPAIRSTR}"; \
-	for d in work ${ALT_MODEL_DIR}; do \
-	  if [ -e "work-$$d/${LANGPAIRSTR}/test/${TESTSET}.trg" ]; then \
-	    e=`basename work-$$d/${LANGPAIRSTR}/test/${TESTSET}.trg | sed 's/\.trg$$//'`; \
-	  else \
-	    e=`ls work-$$d/${LANGPAIRSTR}/test/*.trg | tail -1 | xargs basename | sed 's/\.trg$$//'`; \
-	  fi; \
-	  echo "evaldata = $$e"; \
-	  if [ "$$e" != "GNOME" ]; then \
-	    I=`find work-$$d/${LANGPAIRSTR}/ -maxdepth 1 -name "$$e.*.eval" -printf "%f\n"`; \
-	    for i in $$I; do \
-	      x=`echo $$i | cut -f3 -d. | cut -f1 -d-`; \
-	      y=`echo $$i | cut -f3 -d. | cut -f2 -d- | sed 's/[0-9]$$//'`; \
-	      z=`echo $$i | cut -f2 -d.`; \
-	      v=`echo $$i | cut -f4 -d.`; \
-	      if [ `find work-$$d/${LANGPAIRSTR} -name "$$e.$$z.$$x-$$y[0-9].$$v.*.eval" | wc -l ` -gt 0 ]; then \
-	        b=`grep 'BLEU+' work-$$d/${LANGPAIRSTR}/$$e.$$z.$$x-$$y[0-9].$$v.*.eval | cut -f3 -d' ' | head -1`; \
-	        if (( $$(echo "$$m-$$b < 0" |bc -l) )); then \
-	          echo "$$d/$$i ($$b) is better than $$s ($$m)!"; \
-	          m=$$b; \
-	          E=$$i; \
-	          s=$$d; \
-	        else \
-	          echo "$$d/$$i ($$b) is  worse than $$s ($$m)!"; \
-	        fi; \
-	      fi; \
-	    done; \
-	  fi \
-	done; \
-	echo "--------------- best = $$m ($$s/$$E) ---------------------------------"; \
-	if [ "$$s" != "" ]; then \
-	  if (( $$(echo "$$m > ${MIN_BLEU_SCORE}" |bc -l) )); then \
-	    x=`echo $$E | cut -f3 -d. | cut -f1 -d-`; \
-	    y=`echo $$E | cut -f3 -d. | cut -f2 -d- | sed 's/[0-9]$$//'`; \
-	    z=`echo $$E | cut -f2 -d.`; \
-	    v=`echo $$E | cut -f4 -d.`; \
-	    ${MAKE} \
-		MODELSHOME=${PWD}/models \
-		PRE_SRC=$$x PRE_TRG=$$y \
-		DATASET=$$z \
-		MODELTYPE=$$v   \
-		MODELS_URL=https://object.pouta.csc.fi/${MODEL_CONTAINER} dist-$$s; \
-	  fi; \
-	fi
-
-
 
 
 ## make a package for distribution
-
-## old: only accept models with a certain evaluation score:
-# 	if  [ `grep BLEU $(TEST_EVALUATION) | cut -f3 -d ' ' | cut -f1 -d '.'` -ge ${MIN_BLEU_SCORE} ]; then \
-
-# MODELS_URL ?= https://object.pouta.csc.fi/${DEV_MODEL_CONTAINER}
-MODELS_URL ?= https://object.pouta.csc.fi/${MODEL_CONTAINER}
-SKIP_DIST_EVAL = 0
 
 
 ## determine pre-processing type
@@ -447,6 +355,7 @@ link-latest-model:
 	fi
 
 
+
 ${DIST_PACKAGE}: ${MODEL_FINAL}
 ifneq (${SKIP_DIST_EVAL},1)
 	@${MAKE} $(TEST_EVALUATION)
@@ -517,6 +426,15 @@ endif
 	@rm -f ${WORKDIR}/preprocess.sh ${WORKDIR}/postprocess.sh
 
 
+
+## yaml file of the distribution package
+## is a link to the latest release of that kind of model variant
+
+${DIST_YML}: ${MODEL_FINAL}
+	@${MAKE} ${DIST_PACKAGE}
+	@${MAKE} ${RELEASE_YML}
+	@rm -f $@
+	@cd ${dir $@} && ln -s $(notdir ${RELEASE_YML}) ${notdir $@}
 
 
 ## refresh a release with the same time stamp
@@ -689,6 +607,93 @@ ${EVALTRANSL}: # ${WORKHOME}/eval/%.test.txt: ${MODELSHOME}/%.compare
 # 	swift delete OPUS-MT eval
 
 
+
+
+
+
+######################################################################
+## DEPRECATED?
+## obsolete now?
+######################################################################
+
+## get the best model from all kind of alternative setups
+## in the following sub directories (add prefix work-)
+## scan various work directories - specify alternative dir's below
+
+ALT_MODEL_BASE = work-
+# ALT_MODEL_DIR = bpe-old bpe-memad bpe spm-noalign bpe-align spm
+# ALT_MODEL_DIR = spm langid
+ALT_MODEL_DIR = langid
+
+.PHONY: best_dist_all best-dist-all
+best-dist-all best_dist_all:
+	for l in $(sort ${shell ls ${ALT_MODEL_BASE}* | grep -- '-' | grep -v old | grep -v work}); do \
+	  if  [ `find work*/$$l -name '*.npz' | wc -l` -gt 0 ]; then \
+	    d=`find work-spm/$$l -name '*.best-perplexity.npz' -exec basename {} \; | cut -f1 -d.`; \
+	    ${MAKE} SRCLANGS="`echo $$l | cut -f1 -d'-' | sed 's/\\+/ /g'`" \
+		    TRGLANGS="`echo $$l | cut -f2 -d'-' | sed 's/\\+/ /g'`" \
+		    DATASET=$$d best_dist; \
+	  fi \
+	done
+
+## find the best model according to test set scores
+## and make a distribution package from that model
+## (BLEU needs to be above MIN_BLEU_SCORE)
+## NEW: don't trust models tested with GNOME test sets!
+
+## new version of finding the best model
+## --> look at different model variants in each work-dir
+## --> take only the best one to publish
+
+.PHONY: best_dist best-dist
+best-dist best_dist:
+	m=0;\
+	s=''; \
+	echo "------------------------------------------------"; \
+	echo "search best model for ${LANGPAIRSTR}"; \
+	for d in work ${ALT_MODEL_DIR}; do \
+	  if [ -e "work-$$d/${LANGPAIRSTR}/test/${TESTSET}.trg" ]; then \
+	    e=`basename work-$$d/${LANGPAIRSTR}/test/${TESTSET}.trg | sed 's/\.trg$$//'`; \
+	  else \
+	    e=`ls work-$$d/${LANGPAIRSTR}/test/*.trg | tail -1 | xargs basename | sed 's/\.trg$$//'`; \
+	  fi; \
+	  echo "evaldata = $$e"; \
+	  if [ "$$e" != "GNOME" ]; then \
+	    I=`find work-$$d/${LANGPAIRSTR}/ -maxdepth 1 -name "$$e.*.eval" -printf "%f\n"`; \
+	    for i in $$I; do \
+	      x=`echo $$i | cut -f3 -d. | cut -f1 -d-`; \
+	      y=`echo $$i | cut -f3 -d. | cut -f2 -d- | sed 's/[0-9]$$//'`; \
+	      z=`echo $$i | cut -f2 -d.`; \
+	      v=`echo $$i | cut -f4 -d.`; \
+	      if [ `find work-$$d/${LANGPAIRSTR} -name "$$e.$$z.$$x-$$y[0-9].$$v.*.eval" | wc -l ` -gt 0 ]; then \
+	        b=`grep 'BLEU+' work-$$d/${LANGPAIRSTR}/$$e.$$z.$$x-$$y[0-9].$$v.*.eval | cut -f3 -d' ' | head -1`; \
+	        if (( $$(echo "$$m-$$b < 0" |bc -l) )); then \
+	          echo "$$d/$$i ($$b) is better than $$s ($$m)!"; \
+	          m=$$b; \
+	          E=$$i; \
+	          s=$$d; \
+	        else \
+	          echo "$$d/$$i ($$b) is  worse than $$s ($$m)!"; \
+	        fi; \
+	      fi; \
+	    done; \
+	  fi \
+	done; \
+	echo "--------------- best = $$m ($$s/$$E) ---------------------------------"; \
+	if [ "$$s" != "" ]; then \
+	  if (( $$(echo "$$m > ${MIN_BLEU_SCORE}" |bc -l) )); then \
+	    x=`echo $$E | cut -f3 -d. | cut -f1 -d-`; \
+	    y=`echo $$E | cut -f3 -d. | cut -f2 -d- | sed 's/[0-9]$$//'`; \
+	    z=`echo $$E | cut -f2 -d.`; \
+	    v=`echo $$E | cut -f4 -d.`; \
+	    ${MAKE} \
+		MODELSHOME=${PWD}/models \
+		PRE_SRC=$$x PRE_TRG=$$y \
+		DATASET=$$z \
+		MODELTYPE=$$v   \
+		MODELS_URL=https://object.pouta.csc.fi/${MODEL_CONTAINER} dist-$$s; \
+	  fi; \
+	fi
 
 
 
@@ -911,3 +916,19 @@ dist-fix-preprocess:
 
 
 # fix-yml-files: ${OLDYMLFILES}
+
+
+
+## create links for the released yml files
+
+# link-release-yml: ${ALL_DIST_YML}
+
+# print-dist-yml: 
+# 	echo "${ALL_DIST_YML}"
+
+# ${ALL_DIST_YML}:
+# 	if [ `ls ${@:.yml=[_-]*.yml} 2>/dev/null | wc -l` -gt 0 ]; then \
+# 	  cd ${dir $@}; \
+# 	  ln -s `ls -t ${notdir ${@:.yml=[_-]*.yml}} | head -1` ${notdir $@}; \
+# 	fi
+

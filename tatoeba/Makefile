@@ -224,7 +224,7 @@ release-improved-models:
 	    s=`echo "$$l" | cut -f1 -d-`; \
 	    t=`echo "$$l" | cut -f2 -d-`; \
 	    make SRCLANGS="$$s" TRGLANGS="$$t" release-if-done-tatoeba; \
-	  done )
+	done
 
 ## release all models with improved scores even if they are not yet done
 release-all-improved-models:

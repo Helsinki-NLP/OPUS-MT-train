@@ -1,1 +1,2 @@
+1.756	https://object.pouta.csc.fi/Tatoeba-MT-models/ces+slk-ukr/opusTCv20210807+pbt_transformer-align_2022-03-16.zip
 0.231	https://object.pouta.csc.fi/Tatoeba-MT-models/sla-sla/opus-2021-02-16.zip
