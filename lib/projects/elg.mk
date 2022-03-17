@@ -73,14 +73,50 @@ elg-ukr-students:
 	done
 
 
+elg-test-tiny:
+	${MAKE} EMAIL= STUDENT_DATA=pft-pbt SRCLANGS=fin TRGLANGS=ukr test-tiny11-student
+	${MAKE} EMAIL= STUDENT_DATA=pft-pbt SRCLANGS=ukr TRGLANGS=fin test-tiny11-student
+	${MAKE} EMAIL= STUDENT_DATA=pft-pbt-bt SRCLANGS=hun TRGLANGS=ukr test-tiny11-student
+	${MAKE} EMAIL= STUDENT_DATA=pft-pbt-bt SRCLANGS=ukr TRGLANGS=hun test-tiny11-student
+	${MAKE} EMAIL= STUDENT_DATA=pft-pbt-bt SRCLANGS=ron TRGLANGS=ukr test-tiny11-student
+	${MAKE} EMAIL= STUDENT_DATA=pft-pbt-bt SRCLANGS=ukr TRGLANGS=ron test-tiny11-student
+	${MAKE} EMAIL= STUDENT_DATA=pft-pbt-bt SRCLANGS=swe TRGLANGS=ukr test-tiny11-student
+	${MAKE} EMAIL= STUDENT_DATA=pft-pbt-bt SRCLANGS=ukr TRGLANGS=swe test-tiny11-student
+	${MAKE} EMAIL= STUDENT_DATA=pft-pbt-bt SRCLANGS=pol TRGLANGS=ukr test-tiny11-student
+	${MAKE} EMAIL= STUDENT_DATA=pft-pbt-bt SRCLANGS=ukr TRGLANGS=pol test-tiny11-student
+	${MAKE} EMAIL= STUDENT_DATA=pft-pbt-bt SRCLANGS=lit TRGLANGS=ukr test-tiny11-student
+	${MAKE} EMAIL= STUDENT_DATA=pft-pbt-bt SRCLANGS=ukr TRGLANGS=lit test-tiny11-student
+
+elg-dist-tiny:
+	${MAKE} STUDENT_DATA=pft-pbt SRCLANGS=fin TRGLANGS=ukr release-tiny11-student
+	${MAKE} STUDENT_DATA=pft-pbt SRCLANGS=ukr TRGLANGS=fin release-tiny11-student
+	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS=hun TRGLANGS=ukr release-tiny11-student
+	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS=ukr TRGLANGS=hun release-tiny11-student
+	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS=ron TRGLANGS=ukr release-tiny11-student
+	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS=ukr TRGLANGS=ron release-tiny11-student
+	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS=swe TRGLANGS=ukr release-tiny11-student
+	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS=ukr TRGLANGS=swe release-tiny11-student
+
+#	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS=pol TRGLANGS=ukr release-tiny11-student
+#	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS=ukr TRGLANGS=pol release-tiny11-student
+#	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS=lit TRGLANGS=ukr release-tiny11-student
+#	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS=ukr TRGLANGS=lit release-tiny11-student
+
+
 
 
 ## tiny11 transformer model for finnish with pivot data (reuse student recipes)
 elg-fin2ukr-tiny11:
-	${MAKE} STUDENT_DATA=pft-pbt SRCLANGS=fin TRGLANGS=ukr MARIAN_EXTRA=--no-restore-corpus train-tiny11-student
+	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS=fin TRGLANGS=ukr train-tiny11-student
 
 elg-ukr2fin-tiny11:
-	${MAKE} STUDENT_DATA=pft-pbt SRCLANGS=ukr TRGLANGS=fin train-tiny11-student
+	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS=ukr TRGLANGS=fin train-tiny11-student
+
+
+
+elg-gmq2ukr-tiny11:
+	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS="dan isl nno nob nor swe" TRGLANGS=ukr LANGPAIRSTR="gmq-ukr" train-tiny11-student
+
 
 
 ## tiny11 transformer model for finnish with pivot data (reuse student recipes)
@@ -102,6 +138,31 @@ elg-swe2ukr-tiny11:
 
 elg-ukr2swe-tiny11:
 	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS=ukr TRGLANGS=swe train-tiny11-student
+
+
+elg-pol2ukr-tiny11:
+	${MAKE} MARIAN_EARLY_STOPPING=20 CHECK_TRAINDATA_SIZE=1 CLEAN_CORPUS_TRAINING_DATA=1 STUDENT_DATA=pft-pbt-bt SRCLANGS=pol TRGLANGS=ukr train-tiny11-student
+
+elg-ukr2pol-tiny11:
+	${MAKE} CHECK_TRAINDATA_SIZE=1 CLEAN_CORPUS_TRAINING_DATA=1 STUDENT_DATA=pft-pbt-bt SRCLANGS=ukr TRGLANGS=pol train-tiny11-student
+
+
+elg-lit2ukr-tiny11:
+	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS=lit TRGLANGS=ukr train-tiny11-student
+
+elg-ukr2lit-tiny11:
+	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS=ukr TRGLANGS=lit train-tiny11-student
+
+
+
+elg-deu2ukr-tiny11:
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus STUDENT_DATA=pft-pbt-bt SRCLANGS=deu TRGLANGS=ukr train-tiny11-student
+
+elg-ukr2deu-tiny11:
+	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS=ukr TRGLANGS=deu train-tiny11-student
+
+
+
 
 
 

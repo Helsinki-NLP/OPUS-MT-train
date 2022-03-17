@@ -44,7 +44,7 @@ MODEL_YML         = ${patsubst %.npz,%.yml,${MODEL_FINAL}}
 
 
 
-get-model-release = ${shell wget -qq -O - ${MODELINDEX} | grep '^${1}/.*-.*\.zip' | LANG=en_US.UTF-8 sort -r}
+get-model-release = ${shell ${WGET} -qq -O - ${MODELINDEX} | grep '^${1}/.*-.*\.zip' | LANG=en_US.UTF-8 sort -r}
 get-model-distro  = ${shell echo ${wildcard ${1}/${2}/*.zip} | tr ' ' "\n" | LANG=en_US.UTF-8 sort -r}
 
 
@@ -627,9 +627,9 @@ upload-models:
 fetch-model:
 	mkdir -p ${RELEASEDIR}/${LANGPAIRSTR}
 	cd ${RELEASEDIR}/${LANGPAIRSTR} && \
-	wget ${OBJECTSTORAGE}/${MODEL_CONTAINER}/${firstword ${call get-model-release,${LANGPAIRSTR}}}
+	${WGET} ${OBJECTSTORAGE}/${MODEL_CONTAINER}/${firstword ${call get-model-release,${LANGPAIRSTR}}}
 
-#	wget -O ${RELEASEDIR}/${LANGPAIRSTR}/${LANGPAIRSTR}.zip \
+#	${WGET} -O ${RELEASEDIR}/${LANGPAIRSTR}/${LANGPAIRSTR}.zip \
 #	${OBJECTSTORAGE}/${MODEL_CONTAINER}/${firstword ${call get-model-dist,${LANGPAIRSTR}}}
 #	cd ${RELEASEDIR}/${LANGPAIRSTR} && unzip -n ${LANGPAIRSTR}.zip
 #	rm -f ${RELEASEDIR}/${LANGPAIRSTR}/${LANGPAIRSTR}.zip

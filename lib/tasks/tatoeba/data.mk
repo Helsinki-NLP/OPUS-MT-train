@@ -17,7 +17,7 @@ ${WORKHOME}/${LANGPAIRSTR}/${DATASET}-languages.%: ${WORKHOME}/${LANGPAIRSTR}/${
 
 ## a file with all released data sets in the current Tatoeba TC release
 ${RELEASED_TATOEBA_DATA_FILE}:
-	wget -O $@ ${RELEASED_TATOEBA_DATA_URL}
+	${WGET} -O $@ ${RELEASED_TATOEBA_DATA_URL}
 
 
 ## don't delete intermediate label files
@@ -168,18 +168,18 @@ print-skiplangids:
 
 tatoeba/langids-train-only-${TATOEBA_VERSION}.txt:
 	mkdir -p ${dir $@}
-	wget -O $@ ${TATOEBA_RAWGIT_MASTER}/data/release/${TATOEBA_VERSION}/langids-train-only.txt
+	${WGET} -O $@ ${TATOEBA_RAWGIT_MASTER}/data/release/${TATOEBA_VERSION}/langids-train-only.txt
 
 ## monolingual data from Tatoeba challenge (wiki data)
 
 ${TATOEBA_MONO}/%.labels:
 	mkdir -p $@.d
 # the old URL without versioning:
-	-wget -q -O $@.d/mono.tar ${TATOEBA_DATAURL}/$(patsubst %.labels,%,$(notdir $@)).tar
+	-${WGET} -q -O $@.d/mono.tar ${TATOEBA_DATAURL}/$(patsubst %.labels,%,$(notdir $@)).tar
 	-tar -C $@.d -xf $@.d/mono.tar
 	rm -f $@.d/mono.tar
 # the new URLs with versioning:
-	-wget -q -O $@.d/mono.tar ${TATOEBA_MONO_URL}/$(patsubst %.labels,%,$(notdir $@)).tar
+	-${WGET} -q -O $@.d/mono.tar ${TATOEBA_MONO_URL}/$(patsubst %.labels,%,$(notdir $@)).tar
 	-tar -C $@.d -xf $@.d/mono.tar
 	rm -f $@.d/mono.tar
 	find $@.d -name '*.id.gz' | xargs ${ZCAT} | sort -u | tr "\n" ' ' | sed 's/ $$//' > $@
@@ -295,7 +295,7 @@ endif
 %.gz.d/data.fetched:
 	@echo ".... fetch data (${LANGPAIR}.tar)"
 	@mkdir -p ${dir $@}
-	-wget -q -O ${dir $@}train.tar ${TATOEBA_TRAIN_URL}/${LANGPAIR}.tar
+	-${WGET} -q -O ${dir $@}train.tar ${TATOEBA_TRAIN_URL}/${LANGPAIR}.tar
 	@if [ -e ${dir $@}train.tar ]; then \
 	  tar -C ${dir $@} -xf ${dir $@}train.tar; \
 	  rm -f ${dir $@}train.tar; \
@@ -428,7 +428,7 @@ ${MULTILING_TESTSETS_DONE}:
 	@mkdir -p ${WORKHOME}/${LANGPAIRSTR}/test
 	@for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
-	      wget -q -O ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp \
+	      ${WGET} -q -O ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp \
 			${TATOEBA_RAWGIT_RELEASE}/data/test/$$s-$$t/test.txt; \
 	      if [ -s ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp ]; then \
 		cat ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp $(FIXLANGIDS) \
@@ -475,7 +475,7 @@ ${MULTILING_TESTSETS_DONE}:
 		  done \
 		fi; \
 	      else \
-	        wget -q -O ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp \
+	        ${WGET} -q -O ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp \
 			${TATOEBA_RAWGIT_RELEASE}/data/test/$$t-$$s/test.txt; \
 	        if [ -s ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp ]; then \
 		  cat ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp $(FIXLANGIDS) \

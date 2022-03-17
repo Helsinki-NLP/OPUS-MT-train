@@ -70,16 +70,16 @@ PWD := $(shell pwd)
 
 
 # MODELZIP = https://object.pouta.csc.fi/Tatoeba-Challenge/ang.tar
-MODELZIP := ${shell wget -qq -O - ${TATOEBA_RELEASED} | grep '^${LANGPAIR}' | head -1 | cut -f4}
+MODELZIP := ${shell ${WGET} -qq -O - ${TATOEBA_RELEASED} | grep '^${LANGPAIR}' | head -1 | cut -f4}
 MODELINFO = ${patsubst ${TATOEBA_MODEL_STORAGE}/%.zip,${TATOEBA_GITRAW}/models/%.yml,${MODELZIP}}
 MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
 
-MULTI_TARGET_MODEL := ${shell wget -qq -O - ${MODELINFO} | grep 'use-target-labels' | wc -l}
+MULTI_TARGET_MODEL := ${shell ${WGET} -qq -O - ${MODELINFO} | grep 'use-target-labels' | wc -l}
 ifneq (${MULTI_TARGET_MODEL},0)
-  TARGET_LANG_LABEL := ${shell wget -qq -O - ${MODELINFO} | grep -o '>>${TRG}.*<<' | head -1}
+  TARGET_LANG_LABEL := ${shell ${WGET} -qq -O - ${MODELINFO} | grep -o '>>${TRG}.*<<' | head -1}
 endif
 
-RELEASED_BITEXTS := $(patsubst %.tar,%,${shell wget -qq -O - ${TATOEBA_GITRAW}/Wiki.md | \
+RELEASED_BITEXTS := $(patsubst %.tar,%,${shell ${WGET} -qq -O - ${TATOEBA_GITRAW}/Wiki.md | \
 					grep -o 'WikiShuffled/...\.tar' | cut -f2 -d'/'})
 
 RELEASED_BITEXTS_REV = ${shell (for d in ${RELEASED_BITEXTS}; do echo $$d; done) | tac}
@@ -154,11 +154,11 @@ print-modelname:
 ##-------------------------------------------
 
 REV_LANGPAIR  = ${TRG}-${SRC}
-REV_MODELZIP := ${shell wget -qq -O - ${TATOEBA_RELEASED} | grep '^${REV_LANGPAIR}' | head -1 | cut -f4}
+REV_MODELZIP := ${shell ${WGET} -qq -O - ${TATOEBA_RELEASED} | grep '^${REV_LANGPAIR}' | head -1 | cut -f4}
 REV_MODELINFO = ${patsubst ${TATOEBA_MODEL_STORAGE}/%.zip,${TATOEBA_GITRAW}/models/%.yml,${REV_MODELZIP}}
 REV_MODELNAME = ${patsubst %.zip,%,${notdir ${REV_MODELZIP}}}
 
-REV_MULTI_TARGET_MODEL := ${shell wget -qq -O - ${REV_MODELINFO} | grep 'use-target-labels' | wc -l}
+REV_MULTI_TARGET_MODEL := ${shell ${WGET} -qq -O - ${REV_MODELINFO} | grep 'use-target-labels' | wc -l}
 ifeq (${REV_MULTI_TARGET_MODEL},1)
   REV_SRC_PREPROCESS_ARGS = ${TRG} ${SRC} ${REV_LANGPAIR}/${REV_MODELNAME}/source.spm
   REV_TRG_PREPROCESS_ARGS = ${SRC} ${TRG} ${REV_LANGPAIR}/${REV_MODELNAME}/target.spm noflags
@@ -267,7 +267,7 @@ extract-rawbest-translations: ${OUTPUT_DIR}/latest/Tatoeba-train.${SRC}.rawbest$
 ${LANGPAIR}/${MODELNAME}/decoder.yml:
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
-	wget -O ${dir $@}/model.zip ${MODELZIP}
+	${WGET} -O ${dir $@}/model.zip ${MODELZIP}
 	cd ${dir $@} && unzip model.zip
 	rm -f ${dir $@}/model.zip
 	mv ${dir $@}/preprocess.sh ${dir $@}/preprocess-old.sh

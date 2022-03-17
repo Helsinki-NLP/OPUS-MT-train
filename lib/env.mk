@@ -170,7 +170,7 @@ GZIP    := ${shell which ${PIGZ}     2>/dev/null || echo gzip}
 GZCAT   := ${GZIP} -cd
 ZCAT    := gzip -cd
 UNIQ    := ${SORT} -u
-
+WGET    := wget -T 1
 
 
 ## check that we have a GPU available

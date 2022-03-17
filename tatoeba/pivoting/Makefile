@@ -30,8 +30,8 @@ MARIAN_WORKSPACE=12000
 TATOEBA_VERSION          ?= v2021-08-07
 TATOEBA_VERSION_NOHYPHEN ?= $(subst -,,${TATOEBA_VERSION})
 
-# TATOEBA_GITRAW        = https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
-TATOEBA_GITRAW        = https://github.com/Helsinki-NLP/Tatoeba-Challenge/raw
+# TATOEBA_GITRAW        = https://github.com/Helsinki-NLP/Tatoeba-Challenge/raw
+TATOEBA_GITRAW        = https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
 TATOEBA_RELEASED      = ${TATOEBA_GITRAW}/models/released-model-results-all.txt
 TATOEBA_RELEASED_BT   = https://object.pouta.csc.fi/Tatoeba-MT-bt/released-data.txt
 TATOEBA_MODEL_STORAGE = https://object.pouta.csc.fi/Tatoeba-MT-models
@@ -61,14 +61,14 @@ OUTPUT_DIR     ?= ${NEW_LANGPAIR}
 
 
 # MODELZIP = https://object.pouta.csc.fi/Tatoeba-Challenge/ang.tar
-MODELZIP := ${shell wget -qq -O - ${TATOEBA_RELEASED} | grep '^${TRANSLATE_LANGPAIR}' | head -1 | cut -f4}
+MODELZIP := ${shell ${WGET} -qq -O - ${TATOEBA_RELEASED} | grep '^${TRANSLATE_LANGPAIR}' | head -1 | cut -f4}
 MODELINFO = ${patsubst ${TATOEBA_MODEL_STORAGE}/%.zip,${TATOEBA_GITRAW}/models/%.yml,${MODELZIP}}
 MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
 MODELDIR  = ${OUTPUT_DIR}/${TRANSLATE_LANGPAIR}/${MODELNAME}
 
-MULTI_TARGET_MODEL := ${shell wget -qq -O - ${MODELINFO} | grep 'use-target-labels' | wc -l}
+MULTI_TARGET_MODEL := ${shell ${WGET} -qq -O - ${MODELINFO} | grep 'use-target-labels' | wc -l}
 ifneq (${MULTI_TARGET_MODEL},0)
-  TARGET_LANG_LABEL := ${shell wget -qq -O - ${MODELINFO} | grep -o '>>${TRG}.*<<'}
+  TARGET_LANG_LABEL := ${shell ${WGET} -qq -O - ${MODELINFO} | grep -o '>>${TRG}.*<<'}
 endif
 
 
@@ -131,7 +131,7 @@ print-modelinfo:
 ${MODELDIR}/decoder.yml:
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
-	wget -O ${dir $@}/model.zip ${MODELZIP}
+	${WGET} -O ${dir $@}/model.zip ${MODELZIP}
 	cd ${dir $@} && unzip model.zip
 	rm -f ${dir $@}/model.zip
 	mv ${dir $@}/preprocess.sh ${dir $@}/preprocess-old.sh
@@ -203,32 +203,55 @@ ifneq (${MODELZIP},)
 	gzip -c > ${PWD}/$@
 endif
 
+
 check-latest:
 	@if [ -d ${OUTPUT_DIR}/latest ]; then \
+	  for T in `ls ${OUTPUT_DIR}/latest/*.${TRG}.gz`; do \
+	    S=`echo $$T | sed 's/.${TRG}.gz/.${SRC}.gz/'`; \
+	    if [ ! -e $$S ]; then \
+	      echo "$$S does not exist!"; \
+	    fi \
+	  done; \
 	  for S in `ls ${OUTPUT_DIR}/latest/*.${SRC}.gz`; do \
 	    T=`echo $$S | sed 's/.${SRC}.gz/.${TRG}.gz/'`; \
-	    a=`${GZCAT} $$S | wc -l`; \
-	    b=`${GZCAT} $$T | wc -l`; \
-	    if [ $$a != $$b ]; then \
-	      echo "$$a != $$b	$$S	$$T"; \
+	    if [ ! -e $$T ]; then \
+	      echo "$$T does not exist!"; \
 	    else \
-	      echo "$$a	$$S	$$T"; \
+	      a=`${GZCAT} $$S | wc -l`; \
+	      b=`${GZCAT} $$T | wc -l`; \
+	      if [ $$a != $$b ]; then \
+	        echo "$$a != $$b	$$S	$$T"; \
+	      else \
+	        echo "$$a	$$S	$$T"; \
+	      fi \
 	    fi \
-	  done \
+	  done; \
 	fi
 
 remove-incomplete-latest:
 	@echo "check ${OUTPUT_DIR}"
 	@mkdir -p ${OUTPUT_DIR}/incomplete/latest
 	@if [ -d ${OUTPUT_DIR}/latest ]; then \
+	  for T in `ls ${OUTPUT_DIR}/latest/*.${TRG}.gz`; do \
+	    S=`echo $$T | sed 's/.${TRG}.gz/.${SRC}.gz/'`; \
+	    if [ ! -e $$S ]; then \
+	      echo "$$S does not exist!"; \
+	      mv $$T ${OUTPUT_DIR}/incomplete/latest/; \
+	    fi \
+	  done; \
 	  for S in `ls ${OUTPUT_DIR}/latest/*.${SRC}.gz`; do \
 	    T=`echo $$S | sed 's/.${SRC}.gz/.${TRG}.gz/'`; \
-	    a=`${GZCAT} $$S | wc -l`; \
-	    b=`${GZCAT} $$T | wc -l`; \
-	    if [ $$a != $$b ]; then \
-	      echo "$$a != $$b	$$S	$$T"; \
+	    if [ ! -e $$T ]; then \
+	      echo "$$T does not exist!"; \
 	      mv $$S ${OUTPUT_DIR}/incomplete/latest/; \
-	      mv $$T ${OUTPUT_DIR}/incomplete/latest/; \
+	    else \
+	      a=`${GZCAT} $$S | wc -l`; \
+	      b=`${GZCAT} $$T | wc -l`; \
+	      if [ $$a != $$b ]; then \
+	        echo "$$a != $$b	$$S	$$T"; \
+	        mv $$S ${OUTPUT_DIR}/incomplete/latest/; \
+	        mv $$T ${OUTPUT_DIR}/incomplete/latest/; \
+	      fi \
 	    fi \
 	  done \
 	fi

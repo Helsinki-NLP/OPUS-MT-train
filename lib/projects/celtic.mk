@@ -62,7 +62,7 @@ welsh-data: ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz
 
 ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz:
 	for c in CofnodYCynulliad Deddfwriaeth Meddalwedd; do \
-	  wget http://techiaith.cymru/corpws/Moses/$$c/$$c.tar.gz; \
+	  ${WGET} http://techiaith.cymru/corpws/Moses/$$c/$$c.tar.gz; \
 	  tar -xzf $$c.tar.gz; \
 	  $(TOKENIZER)/detokenizer.perl -l cy < $$c.cy |\
 	  $(MOSESSCRIPTS)/recaser/detruecase.perl | gzip -c > ${DATADIR}/${PRE}/$$c.cy-en.clean.cy.gz; \
@@ -70,11 +70,11 @@ ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz:
 	  $(MOSESSCRIPTS)/recaser/detruecase.perl | gzip -c > ${DATADIR}/${PRE}/$$c.cy-en.clean.en.gz; \
 	  rm -f $$c.tar.gz; \
 	done
-	wget http://techiaith.cymru/alinio/rhestr_geiriau.tsv
+	${WGET} http://techiaith.cymru/alinio/rhestr_geiriau.tsv
 	tail -n +16 rhestr_geiriau.tsv | cut -f1 | gzip -c > ${DATADIR}/${PRE}/rhestr_geiriau.cy-en.clean.en.gz
 	tail -n +16 rhestr_geiriau.tsv | cut -f2 | gzip -c > ${DATADIR}/${PRE}/rhestr_geiriau.cy-en.clean.cy.gz
 	rm -f rhestr_geiriau.tsv
-	wget http://techiaith.cymru/alinio/hunalign/cy-en.dic
+	${WGET} http://techiaith.cymru/alinio/hunalign/cy-en.dic
 	cut -f1 -d '@' < cy-en.dic | sed 's/ $$*//' | gzip -c > ${DATADIR}/${PRE}/dic.cy-en.clean.en.gz
 	cut -f2 -d '@' < cy-en.dic | sed 's/^ *//' | gzip -c > ${DATADIR}/${PRE}/dic.cy-en.clean.cy.gz
 
@@ -84,7 +84,7 @@ CYMRU_BITEXTS = ${DATADIR}/${PRE}/CofnodYCynulliad.cy-en.clean.cy.gz \
 		${DATADIR}/${PRE}/Meddalwedd.cy-en.clean.cy.gz
 
 ${CYMRU_BITEXTS}: ${DATADIR}/${PRE}/%.cy-en.clean.cy.gz:
-	wget http://techiaith.cymru/corpws/Moses/$(patsubst %.cy-en.clean.cy.gz,%.tar.gz,${notdir $@})
+	${WGET} http://techiaith.cymru/corpws/Moses/$(patsubst %.cy-en.clean.cy.gz,%.tar.gz,${notdir $@})
 	tar -xzf $(patsubst %.cy-en.clean.cy.gz,%.tar.gz,${notdir $@})
 	$(TOKENIZER)/detokenizer.perl -l cy < $(patsubst %.cy-en.clean.cy.gz,%.cy,${notdir $@}) |\
 	$(MOSESSCRIPTS)/recaser/detruecase.perl | gzip -c > $@

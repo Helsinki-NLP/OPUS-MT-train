@@ -38,28 +38,28 @@ GIELLATEKNO_SAMI_TM = 	fin-smn/tm/finsmn.tmx \
 
 convert-sami-gloss:
 	mkdir -p ${DATADIR}/${PRE}
-	wget ${GIELLATEKNO_TM_HOME}/fin-smn/glossary/finsmn.utf8
+	${WGET} ${GIELLATEKNO_TM_HOME}/fin-smn/glossary/finsmn.utf8
 	cut -f1 finsmn.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.fi-smn.clean.fi.gz
 	cut -f2 finsmn.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.fi-smn.clean.smn.gz
 	rm -f finsmn.utf8
-	wget ${GIELLATEKNO_TM_HOME}/fin-sme/glossary/finsme.utf8
+	${WGET} ${GIELLATEKNO_TM_HOME}/fin-sme/glossary/finsme.utf8
 	cut -f1 finsme.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.fi-se.clean.fi.gz
 	cut -f2 finsme.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.fi-se.clean.se.gz
 	rm -f finsme.utf8
-	wget ${GIELLATEKNO_TM_HOME}/fin-sms/glossary/finsms.utf8
+	${WGET} ${GIELLATEKNO_TM_HOME}/fin-sms/glossary/finsms.utf8
 	cut -f1 finsms.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.fi-sms.clean.fi.gz
 	cut -f2 finsms.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.fi-sms.clean.sms.gz
 	rm -f finsms.utf8
-	wget ${GIELLATEKNO_TM_HOME}/sme-smn/glossary/smesmn.utf8
+	${WGET} ${GIELLATEKNO_TM_HOME}/sme-smn/glossary/smesmn.utf8
 	cut -f1 smesmn.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.se-smn.clean.se.gz
 	cut -f2 smesmn.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.se-smn.clean.smn.gz
 	rm -f smesmn.utf8
-	wget ${GIELLATEKNO_TM_HOME}/sme-smj/glossary/glossary.utf8
+	${WGET} ${GIELLATEKNO_TM_HOME}/sme-smj/glossary/glossary.utf8
 	cut -f1 glossary.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.se-smj.clean.se.gz
 	cut -f2 glossary.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.se-smj.clean.smj.gz
 	rm -f glossary.utf8
-	wget ${GIELLATEKNO_TM_HOME}/sme-nob/glossary/smenob.utf8
-	wget ${GIELLATEKNO_TM_HOME}/sme-nob/glossary/termwiki.utf8
+	${WGET} ${GIELLATEKNO_TM_HOME}/sme-nob/glossary/smenob.utf8
+	${WGET} ${GIELLATEKNO_TM_HOME}/sme-nob/glossary/termwiki.utf8
 	cut -f1 smenob.utf8 > ${DATADIR}/${PRE}/glossary.nb-se.clean.se
 	cut -f2 smenob.utf8 > ${DATADIR}/${PRE}/glossary.nb-se.clean.nb
 	cut -f1 termwiki.utf8 >> ${DATADIR}/${PRE}/glossary.nb-se.clean.se
@@ -67,20 +67,20 @@ convert-sami-gloss:
 	gzip -f ${DATADIR}/${PRE}/glossary.nb-se.clean.se
 	gzip -f ${DATADIR}/${PRE}/glossary.nb-se.clean.nb
 	rm -f smenob.utf8 termwiki.utf8
-	wget ${GIELLATEKNO_TM_HOME}/sme-sma/glossary/glossary.utf8
+	${WGET} ${GIELLATEKNO_TM_HOME}/sme-sma/glossary/glossary.utf8
 	cut -f1 glossary.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.se-sma.clean.se.gz
 	cut -f2 glossary.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.se-sma.clean.sma.gz
 	rm -f glossary.utf8
-	wget ${GIELLATEKNO_TM_HOME}/nob-smj/glossary/nobsmj.utf8
+	${WGET} ${GIELLATEKNO_TM_HOME}/nob-smj/glossary/nobsmj.utf8
 	cut -f1 nobsmj.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.nb-smj.clean.nb.gz
 	cut -f2 nobsmj.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.nb-smj.clean.smj.gz
 	rm -f nobsmj.utf8
-	wget ${GIELLATEKNO_TM_HOME}/nob-sme/glossary/nobsme.utf8
+	${WGET} ${GIELLATEKNO_TM_HOME}/nob-sme/glossary/nobsme.utf8
 	cut -f1 nobsme.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.nb-se.clean.nb.gz
 	cut -f2 nobsme.utf8 | gzip -c > ${DATADIR}/${PRE}/glossary.nb-se.clean.se.gz
 	rm -f nobsme.utf8
-	wget ${GIELLATEKNO_TM_HOME}/nob-sma/glossary/nobsma.utf8
-	wget ${GIELLATEKNO_TM_HOME}/sma-nob/glossary/termwiki.utf8
+	${WGET} ${GIELLATEKNO_TM_HOME}/nob-sma/glossary/nobsma.utf8
+	${WGET} ${GIELLATEKNO_TM_HOME}/sma-nob/glossary/termwiki.utf8
 	cut -f1 nobsma.utf8 > ${DATADIR}/${PRE}/glossary.nb-sma.clean.nb
 	cut -f2 nobsma.utf8 > ${DATADIR}/${PRE}/glossary.nb-sma.clean.sma
 	cut -f1 termwiki.utf8 >>${DATADIR}/${PRE}/glossary.nb-sma.clean.sma
@@ -136,7 +136,7 @@ merge-sami-data:
 
 ${GIELLATEKNO_SAMI_TM}:
 	mkdir -p ${dir $@}
-	wget -O $@ ${GIELLATEKNO_TM_HOME}/$@
+	${WGET} -O $@ ${GIELLATEKNO_TM_HOME}/$@
 
 
 ## name of the sami data sets

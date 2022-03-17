@@ -149,13 +149,13 @@ store-wiki:
 
 fetch-wiki fetch:
 	mkdir -p wiki
-	wget -O wiki/${SRC}.tar https://object.pouta.csc.fi/OPUS-MT-bt-wiki/${SRC}.tar
+	${WGET} -O wiki/${SRC}.tar https://object.pouta.csc.fi/OPUS-MT-bt-wiki/${SRC}.tar
 	tar -C wiki -xf wiki/${SRC}.tar
 	rm -f wiki/${SRC}.tar
 
 fetch-wikidoc:
 	mkdir -p wikidoc
-	wget -O wikidoc/${SRC}.tar https://object.pouta.csc.fi/OPUS-MT-bt-wikidoc/${SRC}.tar
+	${WGET} -O wikidoc/${SRC}.tar https://object.pouta.csc.fi/OPUS-MT-bt-wikidoc/${SRC}.tar
 	tar -C wikidoc -xf wikidoc/${SRC}.tar
 	rm -f wikidoc/${SRC}.tar
 
@@ -463,7 +463,7 @@ giellatekno/${SRC}/corp.${SRC}.aa.gz:
 	gzip -f giellatekno/${SRC}/corp.${SRC}.*
 
 victorio.uit.no/biggies/trunk/langs/${SRC}:
-	wget -r -np https://victorio.uit.no/biggies/trunk/langs/${SRC}/corp
+	${WGET} -r -np https://victorio.uit.no/biggies/trunk/langs/${SRC}/corp
 
 giellatekno/se: giellatekno/sme
 	-cd giellatekno && ln -s sme se
@@ -689,11 +689,11 @@ endif
 
 ## index of all downloadable files
 index.html:
-	wget -nv -O $@ https://dumps.wikimedia.org/other/cirrussearch/current
+	${WGET} -nv -O $@ https://dumps.wikimedia.org/other/cirrussearch/current
 
 ## wiki in json format
 ${WIKI_JSON}:
-	wget -nv https://dumps.wikimedia.org/other/cirrussearch/current/${WIKI_JSON}
+	${WGET} -nv https://dumps.wikimedia.org/other/cirrussearch/current/${WIKI_JSON}
 
 
 

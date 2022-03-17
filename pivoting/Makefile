@@ -246,7 +246,7 @@ print-excludes:
 ${OUTPUT_DIR}/${PIVOT_MODEL_NAME}/decoder.yml:
 ifneq (${PIVOT_MODEL_ZIP},)
 	mkdir -p ${dir $@}
-#	wget -O ${dir $@}${PIVOT_MODEL_NAME}.zip ${OBJECTSTORAGE}/${MODEL_CONTAINER}/${PIVOT_MODEL_ZIP}
+#	${WGET} -O ${dir $@}${PIVOT_MODEL_NAME}.zip ${OBJECTSTORAGE}/${MODEL_CONTAINER}/${PIVOT_MODEL_ZIP}
 	cp ${PIVOT_MODEL_ZIP} ${dir $@}
 	cd ${dir $@} && unzip *.zip
 	rm -f ${dir $@}*.zip

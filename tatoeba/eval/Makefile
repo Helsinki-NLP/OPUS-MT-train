@@ -20,7 +20,7 @@ GPUJOB_HPC_MEM = 20g
 
 
 MODEL_STORAGE  := https://object.pouta.csc.fi/Tatoeba-MT-models
-MODEL_DISTS    := ${shell wget -q -O - ${MODEL_STORAGE}/index.txt | grep '.zip$$' | grep -v '.eval.zip$$'}
+MODEL_DISTS    := ${shell ${WGET} -q -O - ${MODEL_STORAGE}/index.txt | grep '.zip$$' | grep -v '.eval.zip$$'}
 MODEL_DIST     = ${firstword ${MODEL_DISTS}}
 MODEL          = ${MODEL_DIST:.zip=}
 MODEL_LANGPAIR = ${firstword ${subst /, ,${MODEL_DIST}}}
@@ -151,7 +151,7 @@ fetch: ${WORK_DIR}/model/decoder.yml
 
 ${WORK_DIR}/model/decoder.yml:
 	mkdir -p ${dir $@}
-	wget -q -O ${dir $@}model.zip ${MODEL_URL}
+	${WGET} -q -O ${dir $@}model.zip ${MODEL_URL}
 	unzip -d ${dir $@} ${dir $@}model.zip
 ## fix an old problem with the pre-process script
 	mv ${dir $@}preprocess.sh ${dir $@}preprocess-old.sh

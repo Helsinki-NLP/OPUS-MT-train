@@ -23,8 +23,8 @@ TRG = eng
 TATOEBA_RELEASE       = v2020-07-28
 TATOEBA_STORAGE       = https://object.pouta.csc.fi/Tatoeba-Challenge-${TATOEBA_RELEASE}
 TATOEBA_WIKI_STORAGE  = https://object.pouta.csc.fi/Tatoeba-Challenge-WikiShuffled
-# TATOEBA_GITRAW        = https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
-TATOEBA_GITRAW        = https://github.com/Helsinki-NLP/Tatoeba-Challenge/raw
+TATOEBA_GITRAW        = https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
+# TATOEBA_GITRAW        = https://github.com/Helsinki-NLP/Tatoeba-Challenge/raw
 TATOEBA_RELEASED      = ${TATOEBA_GITRAW}/models/released-model-results.txt
 TATOEBA_RELEASED_ALL  = ${TATOEBA_GITRAW}/models/released-model-results-all.txt
 TATOEBA_RELEASED_BT   = https://object.pouta.csc.fi/Tatoeba-MT-bt/released-data.txt
@@ -60,13 +60,13 @@ PWD := $(shell pwd)
 
 
 # MODELZIP = https://object.pouta.csc.fi/Tatoeba-Challenge/ang.tar
-MODELZIP := ${shell wget -qq -O - ${TATOEBA_RELEASED_ALL} | grep '^${LANGPAIR}' | head -1 | cut -f4}
+MODELZIP := ${shell ${WGET} -qq -O - ${TATOEBA_RELEASED_ALL} | grep '^${LANGPAIR}' | head -1 | cut -f4}
 MODELINFO = ${patsubst ${TATOEBA_MODEL_STORAGE}/%.zip,${TATOEBA_GITRAW}/models/%.yml,${MODELZIP}}
 MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
 
-MULTI_TARGET_MODEL := ${shell wget -qq -O - ${MODELINFO} | grep 'use-target-labels' | wc -l}
+MULTI_TARGET_MODEL := ${shell ${WGET} -qq -O - ${MODELINFO} | grep 'use-target-labels' | wc -l}
 ifneq (${MULTI_TARGET_MODEL},0)
-  TARGET_LANG_LABEL := ${shell wget -qq -O - ${MODELINFO} | grep -o '>>${TRG}.*<<'}
+  TARGET_LANG_LABEL := ${shell ${WGET} -qq -O - ${MODELINFO} | grep -o '>>${TRG}.*<<'}
 endif
 
 
@@ -78,11 +78,11 @@ TATOEBA_MACRO_LANGS = hbs nor msa
 ## target languages of reliable models for current source language 
 ## reliable is defined as BLEU scores above 20.0
 ##
-TATOEBA_RELIABLE_TRG_BLEU  := ${shell wget -qq -O - ${TATOEBA_RELEASED} | grep '^${SRC}-' | \
+TATOEBA_RELIABLE_TRG_BLEU  := ${shell ${WGET} -qq -O - ${TATOEBA_RELEASED} | grep '^${SRC}-' | \
 				egrep '\s[2-9][0-9]\.' | cut -f1 | sort -u | cut -f2 -d-}
 
 ## alternative: chr-F2 >= 0.4
-TATOEBA_RELIABLE_TRG_CHRF  := ${shell wget -qq -O - ${TATOEBA_RELEASED} | grep '^${SRC}-' | \
+TATOEBA_RELIABLE_TRG_CHRF  := ${shell ${WGET} -qq -O - ${TATOEBA_RELEASED} | grep '^${SRC}-' | \
 				egrep '[a-z]\s0\.[4-9]' | cut -f1 | sort -u | cut -f2 -d-}
 
 ## accept both
@@ -95,12 +95,12 @@ TATOEBA_RELIABLE_TRG = $(filter-out ${TATOEBA_MACRO_LANGS},$(sort ${TATOEBA_RELI
 #####################################################################################
 
 ## all "reliable" released tanslation models
-# TATOEBA_AVAILABLE_NMT := ${shell wget -qq -O - ${TATOEBA_RELEASED} | egrep '\s[2-9][0-9]\.' | cut -f1 | sort -u}
+# TATOEBA_AVAILABLE_NMT := ${shell ${WGET} -qq -O - ${TATOEBA_RELEASED} | egrep '\s[2-9][0-9]\.' | cut -f1 | sort -u}
 
-TATOEBA_RELIABLE_SRC_BLEU  := ${shell wget -qq -O - ${TATOEBA_RELEASED} | grep -- '-${TRG}	' | \
+TATOEBA_RELIABLE_SRC_BLEU  := ${shell ${WGET} -qq -O - ${TATOEBA_RELEASED} | grep -- '-${TRG}	' | \
 				egrep '\s[2-9][0-9]\.' | cut -f1 | sort -u | cut -f1 -d-}
 
-TATOEBA_RELIABLE_SRC_CHRF  := ${shell wget -qq -O - ${TATOEBA_RELEASED} | grep -- '-${TRG}	' | \
+TATOEBA_RELIABLE_SRC_CHRF  := ${shell ${WGET} -qq -O - ${TATOEBA_RELEASED} | grep -- '-${TRG}	' | \
 				egrep '[a-z]\s0\.[4-9]' | cut -f1 | sort -u | cut -f1 -d-}
 
 TATOEBA_RELIABLE_SRC = $(sort ${TATOEBA_RELIABLE_SRC_BLEU} ${TATOEBA_RELIABLE_SRC_CHRF})
@@ -108,7 +108,7 @@ TATOEBA_RELIABLE_SRC = $(sort ${TATOEBA_RELIABLE_SRC_BLEU} ${TATOEBA_RELIABLE_SR
 
 ## TODO: is it OK to turn zho into cmn?
 ## NOTE: also needs to fix the grep pattern in recipe for ${WIKI_DIR}/${SRC} !!!!
-TATOEBA_WIKILANGS := ${shell wget -qq -O - ${TATOEBA_GITRAW}/data/release/${TATOEBA_RELEASE}/wiki.langs.txt | \
+TATOEBA_WIKILANGS := ${shell ${WGET} -qq -O - ${TATOEBA_GITRAW}/data/release/${TATOEBA_RELEASE}/wiki.langs.txt | \
 				cut -f2 | sed 's/zho/cmn/' | sed 's/nor.*/nob/' | sort -u }
 
 TATOEBA_TRANSLATABLE_WIKILANGS := ${filter ${TATOEBA_RELIABLE_SRC},${TATOEBA_WIKILANGS}}
@@ -129,7 +129,7 @@ print-wikilangs:
 
 ### OBSOLETE??
 ## languages of released wikis
-RELEASED_WIKIS := $(patsubst %.tar,%,${shell wget -qq -O - ${TATOEBA_GITRAW}/Wiki.md | \
+RELEASED_WIKIS := $(patsubst %.tar,%,${shell ${WGET} -qq -O - ${TATOEBA_GITRAW}/Wiki.md | \
 					grep -o 'WikiShuffled/...\.tar' | cut -f2 -d'/'})
 
 ## reverse list
@@ -244,21 +244,21 @@ src2all:
 
 
 
-RELEASED_BT_ALL := ${shell wget -qq -O - ${TATOEBA_RELEASED_BT}}
-RELEASED_BT := ${shell wget -qq -O - ${TATOEBA_RELEASED_BT} | grep '^${LANGPAIR}/'}
+RELEASED_BT_ALL := ${shell ${WGET} -qq -O - ${TATOEBA_RELEASED_BT}}
+RELEASED_BT := ${shell ${WGET} -qq -O - ${TATOEBA_RELEASED_BT} | grep '^${LANGPAIR}/'}
 
 fetch-bt:
 	for d in ${RELEASED_BT}; do \
 	  echo "fetch $$d"; \
 	  mkdir -p `dirname $$d`; \
-	  wget -qq -O $$d https://object.pouta.csc.fi/Tatoeba-MT-bt/$$d; \
+	  ${WGET} -qq -O $$d https://object.pouta.csc.fi/Tatoeba-MT-bt/$$d; \
 	done
 
 fetch-all-bt:
 	for d in ${RELEASED_BT_ALL}; do \
 	  echo "fetch $$d"; \
 	  mkdir -p `dirname $$d`; \
-	  wget -qq -O $$d https://object.pouta.csc.fi/Tatoeba-MT-bt/$$d; \
+	  ${WGET} -qq -O $$d https://object.pouta.csc.fi/Tatoeba-MT-bt/$$d; \
 	done
 
 
@@ -413,7 +413,7 @@ print-modelinfo:
 ${LANGPAIR}/${MODELNAME}/decoder.yml:
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
-	wget -O ${dir $@}/model.zip ${MODELZIP}
+	${WGET} -O ${dir $@}/model.zip ${MODELZIP}
 	cd ${dir $@} && unzip model.zip
 	rm -f ${dir $@}/model.zip
 	mv ${dir $@}/preprocess.sh ${dir $@}/preprocess-old.sh
@@ -451,7 +451,7 @@ ${WIKI_DIR}/${SRC}/%.txt.gz: ${WIKI_DIR}/${SRC}/.done
 # fetch
 ${WIKI_DIR}/${SRC}/data:
 	mkdir -p ${dir $@}
-	wget -O $@.tar ${TATOEBA_STORAGE}/${shell iso639 -m -n ${SRC}}.tar
+	${WGET} -O $@.tar ${TATOEBA_STORAGE}/${shell iso639 -m -n ${SRC}}.tar
 	tar -C ${dir $@} -xf $@.tar
 	rm -f $@.tar
 
@@ -486,7 +486,7 @@ ${WIKI_DIR}/${SRC}/.done:
 
 # ${WIKI_DIR}/${SRC}:
 # 	mkdir -p $@
-# 	wget -O $@.tar ${TATOEBA_WIKI_STORAGE}/${SRC}.tar
+# 	${WGET} -O $@.tar ${TATOEBA_WIKI_STORAGE}/${SRC}.tar
 # 	tar -C ${dir $@} -xf $@.tar
 # 	if [ -d ${WIKI_DIR}/data/${SRC} ]; then \
 # 	  mv ${WIKI_DIR}/data/${SRC}/*.txt.gz $@/;\

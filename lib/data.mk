@@ -407,7 +407,7 @@ $(LOCAL_TRAIN_SRC).algtmp.d/%.alg: $(LOCAL_TRAIN_SRC).algtmp.d/% $(LOCAL_TRAIN_T
 	    echo "============================================"; \
 	    echo "fetch moses data from $$l"; \
 	    echo "============================================"; \
-	    wget -qq -O $@-$$c-${LANGPAIR}.zip $$l; \
+	    ${WGET} -qq -O $@-$$c-${LANGPAIR}.zip $$l; \
 	    unzip -d ${dir $@} -n $@-$$c-${LANGPAIR}.zip; \
 	    mv ${dir $@}$$c*.${LANGPAIR}.${SRCEXT} $@; \
 	    mv ${dir $@}$$c*.${LANGPAIR}.${TRGEXT} ${@:.${SRCEXT}.raw=.${TRGEXT}.raw}; \
@@ -486,6 +486,27 @@ ifeq (${USE_REST_DEVDATA},1)
 	  ${GZIP} -cd < ${DEV_TRG}.notused.gz >> ${LOCAL_TRAIN_TRG}; \
 	fi
 endif
+######################################
+# run another round of cleaning if
+# CLEAN_CORPUS_TRAINING_DATA is set
+# --> could be useful if there is
+#     noisy data in back-translations etc
+######################################
+ifeq (${CLEAN_CORPUS_TRAINING_DATA},1)
+	@echo ".... another cleanup of local training data"
+	@ln -s ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_SRC}.${SRCEXT}
+	@ln -s ${LOCAL_TRAIN_TRG} ${LOCAL_TRAIN_SRC}.${TRGEXT}
+	@$(MOSESSCRIPTS)/training/clean-corpus-n.perl \
+		-ratio ${NR_TOKEN_RATIO} \
+		-max-word-length ${MAX_TOKEN_LENGTH} \
+		${LOCAL_TRAIN_SRC} $(SRCEXT) $(TRGEXT) \
+		${LOCAL_TRAIN_SRC}.clean \
+		${MIN_NR_TOKENS} ${MAX_NR_TOKENS}
+	@mv -f ${LOCAL_TRAIN_SRC}.clean,${SRCEXT} ${LOCAL_TRAIN_SRC}
+	@mv -f ${LOCAL_TRAIN_SRC}.clean,${TRGEXT} ${LOCAL_TRAIN_TRG}
+	@rm -f ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_SRC}.${SRCEXT}
+	@rm -f ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_SRC}.${TRGEXT}
+endif
 ifeq (${SHUFFLE_TRAINING_DATA},1)
 	@echo ".... shuffle complete training data"
 	@paste ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG} | ${SHUFFLE} > ${LOCAL_TRAIN_SRC}.shuffled
@@ -493,6 +514,7 @@ ifeq (${SHUFFLE_TRAINING_DATA},1)
 	@cut -f2 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_TRG}
 	@rm -f ${LOCAL_TRAIN_SRC}.shuffled
 endif
+
 
 
 ## everything is done in the target above
