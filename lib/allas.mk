@@ -76,7 +76,7 @@ fetch-data:
 %.fetched:
 	if [ "$(firstword $(subst -, ,$(subst /, ,$@)))" == "work" ]; then \
 	  cd $(dir $@); \
-	  wget ${ALLAS_STORAGE_URL}OPUS-MT-train_$(subst /,-,$(dir $@))${WHOAMI}/$(notdir $(@:.fetched=.tar)); \
+	  ${WGET} ${ALLAS_STORAGE_URL}OPUS-MT-train_$(subst /,-,$(dir $@))${WHOAMI}/$(notdir $(@:.fetched=.tar)); \
 	  tar -xf $(notdir $(@:.fetched=.tar)); \
 	  rm -f $(notdir $(@:.fetched=.tar)); \
 	  touch $(notdir $@); \
@@ -93,7 +93,7 @@ fetch-data:
 work-%/${LANGPAIRSTR}:
 	mkdir -p $(dir $@)
 	cd $(dir $@) && \
-	wget ${ALLAS_STORAGE_URL}OPUS-MT-train_$(subst /,-,$(dir $@))${WHOAMI}/${LANGPAIRSTR}.tar
+	${WGET} ${ALLAS_STORAGE_URL}OPUS-MT-train_$(subst /,-,$(dir $@))${WHOAMI}/${LANGPAIRSTR}.tar
 	tar -C $(dir $@) -xf $(dir $@)${LANGPAIRSTR}.tar
 	rm -f $(dir $@)${LANGPAIRSTR}.tar
 	touch $@.fetched

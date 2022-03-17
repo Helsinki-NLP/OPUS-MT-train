@@ -1,21 +1,23 @@
 # -*-makefile-*-
 
 
-## clean-corpus script parameters
-## (for filtering subword-segmented bitexts)
-##
-## (TODO: should MIN_NTOKENS be 1?)
-# MIN_NR_TOKENS    = 0
-# MAX_NR_TOKENS    = 250
-MIN_NR_TOKENS    = 1
-MAX_NR_TOKENS    = 500
-NR_TOKEN_RATIO   = 2
-MAX_TOKEN_LENGTH = 100
+## moved to config.mk
+## 
+# ## clean-corpus script parameters
+# ## (for filtering subword-segmented bitexts)
+# ##
+# ## (TODO: should MIN_NTOKENS be 1?)
+# # MIN_NR_TOKENS    = 0
+# # MAX_NR_TOKENS    = 250
+# MIN_NR_TOKENS    = 1
+# MAX_NR_TOKENS    = 500
+# NR_TOKEN_RATIO   = 2
+# MAX_TOKEN_LENGTH = 100
 
-## default values in the original script:
-##
-# MAX_TOKEN_LENGTH = 1000
-# NR_TOKEN_RATIO = 9
+# ## default values in the original script:
+# ##
+# # MAX_TOKEN_LENGTH = 1000
+# # NR_TOKEN_RATIO = 9
 
 
 ## compute some ratios and thresholds that could be useful for filtering training data

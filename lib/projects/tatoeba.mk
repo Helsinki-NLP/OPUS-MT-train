@@ -103,9 +103,11 @@ TATOEBA_MONO      ?= ${TATOEBA_WORK}/data/mono
 ## (fetched from Tatoeba github)
 TATOEBA_LANGIDS_TRAINONLY = tatoeba/langids-train-only-${TATOEBA_VERSION}.txt
 
-# TATOEBA_RAWGIT         := https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
+# TATOEBA_RAWGIT           := https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
 TATOEBA_RAWGIT_MASTER    := https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
 TATOEBA_RAWGIT_RELEASE   := https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/${TATOEBA_VERSION}
+# TATOEBA_RAWGIT_MASTER    := https://github.com/Helsinki-NLP/Tatoeba-Challenge/raw/master
+# TATOEBA_RAWGIT_RELEASE   := https://github.com/Helsinki-NLP/Tatoeba-Challenge/raw/${TATOEBA_VERSION}
 
 
 ## data count files (file basename)
@@ -114,13 +116,13 @@ TATOEBA_DATA_COUNT_BASE = ${TATOEBA_RAWGIT_MASTER}/data/release/${TATOEBA_VERSIO
 ## all released language pairs with test sets > 200 test pairs
 ## also extract all source languages that are available for a give target language
 ## and vice versa
-TATOEBA_RELEASED_DATA   = $(shell wget -qq -O - ${TATOEBA_DATA_COUNT_BASE}-min200.txt | cut -f1)
+TATOEBA_RELEASED_DATA   = $(shell ${WGET} -qq -O - ${TATOEBA_DATA_COUNT_BASE}-min200.txt | cut -f1)
 TATOEBA_AVAILABLE_TRG   = ${sort ${filter-out ${SRC},${subst -, ,${filter %-${SRC} ${SRC}-%,${TATOEBA_RELEASED_DATA}}}}}
 TATOEBA_AVAILABLE_SRC   = ${sort ${filter-out ${TRG},${subst -, ,${filter %-${TRG} ${TRG}-%,${TATOEBA_RELEASED_DATA}}}}}
 
 ## extract language pairs for a specific subset
 TATOEBA_SUBSET               = lower
-TATOEBA_RELEASED_SUBSET      = $(shell wget -qq -O - ${TATOEBA_DATA_COUNT_BASE}-${TATOEBA_SUBSET}.txt | cut -f1)
+TATOEBA_RELEASED_SUBSET      = $(shell ${WGET} -qq -O - ${TATOEBA_DATA_COUNT_BASE}-${TATOEBA_SUBSET}.txt | cut -f1)
 TATOEBA_AVAILABLE_SUBSET_TRG = ${sort ${filter-out ${SRC},${subst -, ,${filter %-${SRC} ${SRC}-%,${TATOEBA_RELEASED_SUBSET}}}}}
 TATOEBA_AVAILABLE_SUBSET_SRC = ${sort ${filter-out ${TRG},${subst -, ,${filter %-${TRG} ${TRG}-%,${TATOEBA_RELEASED_SUBSET}}}}}
 
@@ -770,7 +772,7 @@ all-tatoeba-langgroup-dist:
 TATOEBA_RELEASED_BT   = https://object.pouta.csc.fi/Tatoeba-MT-bt/released-data.txt
 
 tatoeba-all-bt:
-	for b in ${shell wget -qq -O - ${TATOEBA_RELEASED_BT} | grep -v '.txt' | cut -f1 -d'/' | sort -u}; do \
+	for b in ${shell ${WGET} -qq -O - ${TATOEBA_RELEASED_BT} | grep -v '.txt' | cut -f1 -d'/' | sort -u}; do \
 	  s=`echo $$b | cut -f1 -d'-'`; \
 	  t=`echo $$b | cut -f2 -d'-'`; \
 	  echo "${MAKE} -C bt-tatoeba SRC=$$s TRG=$$t fetch-bt"; \
@@ -1256,7 +1258,7 @@ tatoeba-%-langtunealljobs:
 
 ## get the markdown page for a specific subset
 tatoeba-%.md:
-	wget -O $@ ${TATOEBA_RAWGIT_MASTER}/subsets/${TATOEBA_VERSION}/${patsubst tatoeba-%,%,$@}
+	${WGET} -O $@ ${TATOEBA_RAWGIT_MASTER}/subsets/${TATOEBA_VERSION}/${patsubst tatoeba-%,%,$@}
 
 
 ## run all language pairs for a given subset
@@ -1413,7 +1415,7 @@ tatoeba-multilingual-testsets: ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba${TATO
 # 	@for s in ${SRCLANGS}; do \
 # 	  for t in ${TRGLANGS}; do \
 # 	    if [ ! -e ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.src ]; then \
-# 	      wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt \
+# 	      ${WGET} -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt \
 # 			${TATOEBA_RAWGIT}/data/test/$$s-$$t/test.txt; \
 # 	      if [ -s ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt ]; then \
 # 	        echo "make ${TATOEBA_TESTSET}.$$s-$$t"; \
@@ -1428,7 +1430,7 @@ tatoeba-multilingual-testsets: ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba${TATO
 # 	        cut -f4 ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt \
 # 		> ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.trg; \
 # 	      else \
-# 	        wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt \
+# 	        ${WGET} -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt \
 # 			${TATOEBA_RAWGIT}/data/test/$$t-$$s/test.txt; \
 # 	        if [ -s ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt ]; then \
 # 	          echo "make ${TATOEBA_TESTSET}.$$s-$$t"; \
@@ -1467,7 +1469,7 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba${TATOEBA_VERSION_NOHYPHEN}-testsets.
 	@mkdir -p ${TATOEBA_WORK}/${LANGPAIRSTR}/test
 	@for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
-	      wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp \
+	      ${WGET} -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp \
 			${TATOEBA_RAWGIT_RELEASE}/data/test/$$s-$$t/test.txt; \
 	      if [ -s ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp ]; then \
 		cat ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp $(FIXLANGIDS) \
@@ -1514,7 +1516,7 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba${TATOEBA_VERSION_NOHYPHEN}-testsets.
 		  done \
 		fi; \
 	      else \
-	        wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp \
+	        ${WGET} -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp \
 			${TATOEBA_RAWGIT_RELEASE}/data/test/$$t-$$s/test.txt; \
 	        if [ -s ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp ]; then \
 		  cat ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp $(FIXLANGIDS) \
@@ -1577,7 +1579,7 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba${TATOEBA_VERSION_NOHYPHEN}-testsets.
 # ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba-testsets-with-subsets.done:
 # 	@for s in ${SRCLANGS}; do \
 # 	  for t in ${TRGLANGS}; do \
-# 	      wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp \
+# 	      ${WGET} -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp \
 # 			${TATOEBA_RAWGIT}/data/test/$$s-$$t/test.txt; \
 # 	      if [ -s ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp ]; then \
 # 	        echo "make ${TATOEBA_TESTSET}.$$s-$$t"; \
@@ -1619,7 +1621,7 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/test/Tatoeba${TATOEBA_VERSION_NOHYPHEN}-testsets.
 # 		  done \
 # 		fi; \
 # 	      else \
-# 	        wget -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp \
+# 	        ${WGET} -q -O ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp \
 # 			${TATOEBA_RAWGIT}/data/test/$$t-$$s/test.txt; \
 # 	        if [ -s ${TATOEBA_WORK}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp ]; then \
 # 	          echo "make ${TATOEBA_TESTSET}.$$s-$$t"; \
@@ -1701,7 +1703,7 @@ EVAL_TATOEBA_WORKDIR   = ${EVAL_TATOEBA_WORKHOME}/$(dir ${RELEASED_TATOEBA_MODEL
 
 evaluate-released-tatoeba-model:
 	mkdir -p ${EVAL_TATOEBA_WORKDIR}
-	wget -O ${EVAL_TATOEBA_WORKHOME}/${RELEASED_TATOEBA_MODEL} ${RELEASED_TATOEBA_MODEL_URL}
+	${WGET} -O ${EVAL_TATOEBA_WORKHOME}/${RELEASED_TATOEBA_MODEL} ${RELEASED_TATOEBA_MODEL_URL}
 	cd ${EVAL_TATOEBA_WORKDIR} && unzip -o $(notdir ${RELEASED_TATOEBA_MODEL})
 	${MAKE} TATOEBA_WORK=${EVAL_TATOEBA_WORKHOME} \
 		DECODER_CONFIG=${EVAL_TATOEBA_WORKDIR}decoder.yml \
@@ -1889,18 +1891,18 @@ print-skiplangids:
 
 tatoeba/langids-train-only-${TATOEBA_VERSION}.txt:
 	mkdir -p ${dir $@}
-	wget -O $@ ${TATOEBA_RAWGIT_MASTER}/data/release/${TATOEBA_VERSION}/langids-train-only.txt
+	${WGET} -O $@ ${TATOEBA_RAWGIT_MASTER}/data/release/${TATOEBA_VERSION}/langids-train-only.txt
 
 ## monolingual data from Tatoeba challenge (wiki data)
 
 ${TATOEBA_MONO}/%.labels:
 	mkdir -p $@.d
 # the old URL without versioning:
-	-wget -q -O $@.d/mono.tar ${TATOEBA_DATAURL}/$(patsubst %.labels,%,$(notdir $@)).tar
+	-${WGET} -q -O $@.d/mono.tar ${TATOEBA_DATAURL}/$(patsubst %.labels,%,$(notdir $@)).tar
 	-tar -C $@.d -xf $@.d/mono.tar
 	rm -f $@.d/mono.tar
 # the new URLs with versioning:
-	-wget -q -O $@.d/mono.tar ${TATOEBA_MONO_URL}/$(patsubst %.labels,%,$(notdir $@)).tar
+	-${WGET} -q -O $@.d/mono.tar ${TATOEBA_MONO_URL}/$(patsubst %.labels,%,$(notdir $@)).tar
 	-tar -C $@.d -xf $@.d/mono.tar
 	rm -f $@.d/mono.tar
 	find $@.d -name '*.id.gz' | xargs ${ZCAT} | sort -u | tr "\n" ' ' | sed 's/ $$//' > $@
@@ -1933,7 +1935,7 @@ TATOEBA_TMPDATADIR = data/release/${TATOEBA_VERSION}/${LANGPAIR}
 
 %/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}.gz:
 	@mkdir -p $@.d
-	-wget -q -O $@.d/train.tar ${TATOEBA_TRAIN_URL}/${LANGPAIR}.tar
+	-${WGET} -q -O $@.d/train.tar ${TATOEBA_TRAIN_URL}/${LANGPAIR}.tar
 	-tar -C $@.d -xf $@.d/train.tar
 	@rm -f $@.d/train.tar
 	@if [ -e $@.d/${TATOEBA_TMPDATADIR}/test.src ]; then \

@@ -121,7 +121,6 @@ include ${REPOHOME}lib/projects/distill.mk
 include ${REPOHOME}lib/projects/elg.mk
 
 
-
 .PHONY: all
 all: 
 	${MAKE} tatoeba-prepare

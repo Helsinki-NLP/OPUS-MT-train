@@ -73,6 +73,25 @@ MODELTYPES   = 	transformer \
 
 
 
+
+## clean-corpus script parameters
+## (for filtering subword-segmented bitexts)
+##
+## (TODO: should MIN_NTOKENS be 1?)
+# MIN_NR_TOKENS    = 0
+# MAX_NR_TOKENS    = 250
+MIN_NR_TOKENS    = 1
+MAX_NR_TOKENS    = 500
+NR_TOKEN_RATIO   = 2
+MAX_TOKEN_LENGTH = 100
+
+## default values in the original script:
+##
+# MAX_TOKEN_LENGTH = 1000
+# NR_TOKEN_RATIO = 9
+
+
+
 ## name of the model-specific configuration file
 ## NEW: make it more model specific
 #
@@ -234,7 +253,7 @@ OPUSREAD_ARGS =
 ## get available data from the OPUS-API
 
 OPUSAPI = http://opus.nlpl.eu/opusapi/
-OPUSAPI_WGET = wget -qq --no-check-certificate -O - ${OPUSAPI}?
+OPUSAPI_WGET = ${WGET} -qq --no-check-certificate -O - ${OPUSAPI}?
 
 get-opus-mono      = ${shell ${OPUSAPI_WGET}source=${1}\&corpora=True | ${JQ} '.corpora[]' | tr '"' ' '}
 get-opus-bitexts   = ${shell ${OPUSAPI_WGET}source=${1}\&target=${2}\&corpora=True | ${JQ} '.corpora[]' | tr '"' ' '}
@@ -816,7 +835,7 @@ endif
 ## TODO: do we still need this?
 ## --> see OPUSLANGS which is directly taken from the API
 opus-langs.txt:
-	wget -O $@.tmp ${OPUSAPI}?languages=true
+	${WGET} -O $@.tmp ${OPUSAPI}?languages=true
 	grep '",' $@.tmp | tr '",' '  ' | sort | tr "\n" ' ' | sed 's/  */ /g' > $@
 	rm -f $@.tmp
 
@@ -824,7 +843,7 @@ opus-langs.txt:
 ## TODO: do we need this file?
 opus-langpairs.txt:
 	for l in ${OPUS_LANGS}; do \
-	  wget -O $@.tmp ${OPUSAPI}?source=$$l\&languages=true; \
+	  ${WGET} -O $@.tmp ${OPUSAPI}?source=$$l\&languages=true; \
 	  grep '",' $@.tmp | tr '",' '  ' | sort | tr "\n" ' ' | sed 's/  */ /g' > $@.tmp2; \
 	  for t in `cat $@.tmp2`; do \
 	    if [ $$t \< $$l ]; then \

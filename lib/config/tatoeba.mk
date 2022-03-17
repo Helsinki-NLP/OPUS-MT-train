@@ -97,6 +97,8 @@ TATOEBA_LANGIDS_TRAINONLY = tatoeba/langids-train-only-${TATOEBA_VERSION}.txt
 # TATOEBA_RAWGIT         := https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
 TATOEBA_RAWGIT_MASTER    := https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/master
 TATOEBA_RAWGIT_RELEASE   := https://raw.githubusercontent.com/Helsinki-NLP/Tatoeba-Challenge/${TATOEBA_VERSION}
+# TATOEBA_RAWGIT_MASTER    := https://github.com/Helsinki-NLP/Tatoeba-Challenge/raw/master
+# TATOEBA_RAWGIT_RELEASE   := https://github.com/Helsinki-NLP/Tatoeba-Challenge/raw/${TATOEBA_VERSION}
 
 
 ## data count files (file basename)
@@ -107,13 +109,13 @@ RELEASED_TATOEBA_DATA_FILE = tatoeba/released-bitexts-${TATOEBA_VERSION}.txt
 ## all released language pairs with test sets > 200 test pairs
 ## also extract all source languages that are available for a give target language
 ## and vice versa
-TATOEBA_RELEASED_DATA := $(shell wget -qq -O - ${TATOEBA_DATA_COUNT_BASE}-min200.txt | cut -f1)
+TATOEBA_RELEASED_DATA := $(shell ${WGET} -qq -O - ${TATOEBA_DATA_COUNT_BASE}-min200.txt | cut -f1)
 TATOEBA_AVAILABLE_TRG  = ${sort ${filter-out ${SRC},${subst -, ,${filter %-${SRC} ${SRC}-%,${TATOEBA_RELEASED_DATA}}}}}
 TATOEBA_AVAILABLE_SRC  = ${sort ${filter-out ${TRG},${subst -, ,${filter %-${TRG} ${TRG}-%,${TATOEBA_RELEASED_DATA}}}}}
 
 ## extract language pairs for a specific subset
 TATOEBA_SUBSET               := lower
-TATOEBA_RELEASED_SUBSET      := $(shell wget -qq -O - ${TATOEBA_DATA_COUNT_BASE}-${TATOEBA_SUBSET}.txt | cut -f1)
+TATOEBA_RELEASED_SUBSET      := $(shell ${WGET} -qq -O - ${TATOEBA_DATA_COUNT_BASE}-${TATOEBA_SUBSET}.txt | cut -f1)
 TATOEBA_AVAILABLE_SUBSET_TRG  = ${sort ${filter-out ${SRC},${subst -, ,${filter %-${SRC} ${SRC}-%,${TATOEBA_RELEASED_SUBSET}}}}}
 TATOEBA_AVAILABLE_SUBSET_SRC  = ${sort ${filter-out ${TRG},${subst -, ,${filter %-${TRG} ${TRG}-%,${TATOEBA_RELEASED_SUBSET}}}}}
 
@@ -123,7 +125,7 @@ TATOEBA_AVAILABLE_SUBSET_SRC  = ${sort ${filter-out ${TRG},${subst -, ,${filter 
 ## all available language pairs
 ## (download the file once and keep it here to get the language pairs in the release)
 TATOEBA_LANGPAIRS := ${shell if [ ! -e ${RELEASED_TATOEBA_DATA_FILE} ]; then \
-				wget -q -O ${RELEASED_TATOEBA_DATA_FILE} ${RELEASED_TATOEBA_DATA_URL}; \
+				${WGET} -q -O ${RELEASED_TATOEBA_DATA_FILE} ${RELEASED_TATOEBA_DATA_URL}; \
 			     fi; \
 			     tail -n +2 ${RELEASED_TATOEBA_DATA_FILE} | cut -f1 }
 

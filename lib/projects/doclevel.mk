@@ -89,7 +89,7 @@ ost-datasets: 	${DATADIR}/${PRE}/ost-train.de-en.clean.de.gz \
 
 ## download the doc-level data set
 ${WORKHOME}/doclevel-MT-benchmark:
-	wget -O $@.zip DOCLEVEL_BENCHMARK_DATA?download=1
+	${WGET} -O $@.zip DOCLEVEL_BENCHMARK_DATA?download=1
 	unzip -d ${dir $@} $@.zip
 	rm -f $@.zip
 

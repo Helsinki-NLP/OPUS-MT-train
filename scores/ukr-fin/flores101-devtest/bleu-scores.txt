@@ -2,6 +2,7 @@
 18.7	https://object.pouta.csc.fi/Tatoeba-MT-models/ukr-fin/opusTCv20210807+pft_transformer-align_2022-03-07.zip
 18.0	https://object.pouta.csc.fi/Tatoeba-MT-models/zle-fin/opusTCv20210807+bt_transformer-big_2022-03-07.zip
 16.7	https://object.pouta.csc.fi/Tatoeba-MT-models/ukr-fin/opusTCv20210807+pft-sepvoc_transformer-tiny11-align_2022-03-13.zip
+16.7	https://object.pouta.csc.fi/Tatoeba-MT-models/ukr-fin/opusTCv20210807+pbt+pft-sepvoc_transformer-tiny11-align_2022-03-16.zip
 11.6	https://object.pouta.csc.fi/Tatoeba-MT-models/sla-fiu/opus-2021-02-10.zip
 11.5	https://object.pouta.csc.fi/Tatoeba-MT-models/zle-fiu/opus-2021-02-10.zip
 5.6	https://object.pouta.csc.fi/Tatoeba-MT-models/tatoeba-zero/opus-2020-06-19.zip

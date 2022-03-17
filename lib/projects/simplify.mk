@@ -97,7 +97,7 @@ SIMPLEWIKI_DATA2_DOC = document-aligned.v2
 
 ${WORKHOME}/simplewiki/${SIMPLEWIKI_DATA1}:
 	mkdir -p ${dir $@}
-	wget -O $@.tar.gz ${SIMPLEWIKI_DATA1_URL}/${SIMPLEWIKI_DATA1}.tar.gz
+	${WGET} -O $@.tar.gz ${SIMPLEWIKI_DATA1_URL}/${SIMPLEWIKI_DATA1}.tar.gz
 	tar -C ${dir $@} -xzf $@.tar.gz
 	rm -f $@.tar.gz
 	${TOKENIZER}/detokenizer.perl -l en < $@/normal.training.txt > ${DATADIR}/${PRE}/simplewiki_v1-training.en-en.en1.raw
@@ -112,7 +112,7 @@ ${WORKHOME}/simplewiki/${SIMPLEWIKI_DATA1}:
 
 ${WORKHOME}/simplewiki/${SIMPLEWIKI_DATA2_SENT}:
 	mkdir -p ${dir $@}
-	wget -O $@.tar.gz ${SIMPLEWIKI_DATA2_URL}/${SIMPLEWIKI_DATA2_SENT}.tar.gz
+	${WGET} -O $@.tar.gz ${SIMPLEWIKI_DATA2_URL}/${SIMPLEWIKI_DATA2_SENT}.tar.gz
 	tar -C ${dir $@} -xzf $@.tar.gz
 	rm -f $@.tar.gz
 	cut -f3 $@/normal.aligned | tail -n +10001 |\
@@ -203,7 +203,7 @@ SIMPLEWIKI_LARGE = data-simplification/wikilarge
 
 ${WORKHOME}/simplewiki/${SIMPLEWIKI_LARGE}:
 	mkdir -p ${dir $@}
-	wget -O $@.tar.bz2 ${SIMPLEWIKI_LARGE_URL}
+	${WGET} -O $@.tar.bz2 ${SIMPLEWIKI_LARGE_URL}
 	tar -C ${dir $@} -xf $@.tar.bz2
 	rm -f $@.tar.bz2
 	${TOKENIZER}/detokenizer.perl -l en < $@/wiki.full.aner.train.src > ${DATADIR}/${PRE}/simplewiki_large-train.en-en.en1.raw

@@ -1,5 +1,6 @@
 0.59100	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-zle/opusTCv20210807+bt_transformer-big_2022-03-13.zip
 0.540	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-ukr/opus+bt-2021-04-14.zip
+0.53836	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-ukr/opusTCv20210807+nopar+ft95-sepvoc_transformer-tiny11-align_2022-03-05.zip
 0.503	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-zle/opus2m-2020-08-02.zip
 0.498	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-sla/opus2m-2020-08-01.zip
 0.490	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-zle/opus1m+bt-2021-04-10.zip

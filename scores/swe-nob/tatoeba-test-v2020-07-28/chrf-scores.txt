@@ -1,3 +1,4 @@
+0.84730	https://object.pouta.csc.fi/Tatoeba-MT-models/gmq-gmq/opus4m+btTCv20210807-2021-12-08.zip
 0.846	https://object.pouta.csc.fi/Tatoeba-MT-models/gmq-gmq/opus4m+btTCv20210807-2021-12-08.zip
 0.843	https://object.pouta.csc.fi/Tatoeba-MT-models/swe-nor/opus-2021-02-23.zip
 0.838	https://object.pouta.csc.fi/Tatoeba-MT-models/gmq-gmq/opus-2020-10-04.zip
