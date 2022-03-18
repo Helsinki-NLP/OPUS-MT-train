@@ -504,8 +504,7 @@ ifeq (${CLEAN_CORPUS_TRAINING_DATA},1)
 		${MIN_NR_TOKENS} ${MAX_NR_TOKENS}
 	@mv -f ${LOCAL_TRAIN_SRC}.clean.${SRCEXT} ${LOCAL_TRAIN_SRC}
 	@mv -f ${LOCAL_TRAIN_SRC}.clean.${TRGEXT} ${LOCAL_TRAIN_TRG}
-	@rm -f ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_SRC}.${SRCEXT}
-	@rm -f ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_SRC}.${TRGEXT}
+	@rm -f ${LOCAL_TRAIN_SRC}.${SRCEXT} ${LOCAL_TRAIN_SRC}.${TRGEXT}
 endif
 ifeq (${SHUFFLE_TRAINING_DATA},1)
 	@echo ".... shuffle complete training data"
