@@ -68,11 +68,32 @@ SORTED_LANGPAIR    = ${firstword ${SORTLANGS}}-${lastword ${SORTLANGS}}
 PWD := $(shell pwd)
 
 
+## new style of finding the best model for a given language pair:
+## use the leaderboard in this repository!
+## - use all benchmarks
+## - take the one that is mentioned the most
+## - count results from Tatoeba only once
+## Problem: only the first tatoeba benchmark will be used
+##          (but this will be the oldest one)
 
-# MODELZIP = https://object.pouta.csc.fi/Tatoeba-Challenge/ang.tar
-MODELZIP := ${shell ${WGET} -qq -O - ${TATOEBA_RELEASED} | grep '^${LANGPAIR}' | head -1 | cut -f4}
-MODELINFO = ${patsubst ${TATOEBA_MODEL_STORAGE}/%.zip,${TATOEBA_GITRAW}/models/%.yml,${MODELZIP}}
-MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
+LEADERBOARD_HOME = ../../scores
+
+best-opusmt-model = ${shell grep -H .  ${LEADERBOARD_HOME}/${1}/*/${2}.txt | \
+			sed 's/txt:[0-9\.]*//' | sed -r 's/tatoeba-test-v[0-9]{4}-[0-9]{2}-[0-9]{2}/tatoeba-test/' | \
+			rev | uniq -f1 | rev | cut -f2 | uniq -c | sort -nr | head -1 | sed 's/^.*http/http/'}
+MODELZIP        := ${call best-opusmt-model,${LANGPAIR},bleu-scores}
+MODELINFO       := ${MODELZIP:.zip=.yml}
+MODELNAME       := ${patsubst %.zip,%,${notdir ${MODELZIP}}}
+
+
+## old style: query the list of released models
+## problems with that ; the first one on the list might not be the best one
+
+# MODELZIP := ${shell ${WGET} -qq -O - ${TATOEBA_RELEASED} | grep '^${LANGPAIR}' | head -1 | cut -f4}
+# MODELINFO = ${patsubst ${TATOEBA_MODEL_STORAGE}/%.zip,${TATOEBA_GITRAW}/models/%.yml,${MODELZIP}}
+# MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
+
+
 
 MULTI_TARGET_MODEL := ${shell ${WGET} -qq -O - ${MODELINFO} | grep 'use-target-labels' | wc -l}
 ifneq (${MULTI_TARGET_MODEL},0)
@@ -153,10 +174,14 @@ print-modelname:
 ## --> for scoring translations
 ##-------------------------------------------
 
-REV_LANGPAIR  = ${TRG}-${SRC}
-REV_MODELZIP := ${shell ${WGET} -qq -O - ${TATOEBA_RELEASED} | grep '^${REV_LANGPAIR}' | head -1 | cut -f4}
-REV_MODELINFO = ${patsubst ${TATOEBA_MODEL_STORAGE}/%.zip,${TATOEBA_GITRAW}/models/%.yml,${REV_MODELZIP}}
-REV_MODELNAME = ${patsubst %.zip,%,${notdir ${REV_MODELZIP}}}
+REV_LANGPAIR   = ${TRG}-${SRC}
+REV_MODELZIP  := ${call best-opusmt-model,${REV_LANGPAIR},bleu-scores}
+REV_MODELINFO := ${REV_MODELZIP:.zip=.yml}
+REV_MODELNAME  = ${patsubst %.zip,%,${notdir ${REV_MODELZIP}}}
+
+# REV_MODELZIP := ${shell ${WGET} -qq -O - ${TATOEBA_RELEASED} | grep '^${REV_LANGPAIR}' | head -1 | cut -f4}
+# REV_MODELINFO = ${patsubst ${TATOEBA_MODEL_STORAGE}/%.zip,${TATOEBA_GITRAW}/models/%.yml,${REV_MODELZIP}}
+# REV_MODELNAME = ${patsubst %.zip,%,${notdir ${REV_MODELZIP}}}
 
 REV_MULTI_TARGET_MODEL := ${shell ${WGET} -qq -O - ${REV_MODELINFO} | grep 'use-target-labels' | wc -l}
 ifeq (${REV_MULTI_TARGET_MODEL},1)

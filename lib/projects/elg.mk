@@ -125,7 +125,7 @@ elg-ukr2fin-tiny11:
 
 
 elg-gmq2ukr-tiny11:
-	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS="dan isl nno nob nor swe" TRGLANGS=ukr LANGPAIRSTR="gmq-ukr" train-tiny11-student
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus CHECK_TRAINDATA_SIZE=1 CLEAN_CORPUS_TRAINING_DATA=1 STUDENT_DATA=pft-pbt-bt SRCLANGS="dan isl nno nob nor swe" TRGLANGS=ukr LANGPAIRSTR="gmq-ukr" train-tiny11-student
 
 
 
@@ -166,10 +166,10 @@ elg-ukr2lit-tiny11:
 
 
 elg-deu2ukr-tiny11:
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus STUDENT_DATA=pft-pbt-bt SRCLANGS=deu TRGLANGS=ukr train-tiny11-student
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus CHECK_TRAINDATA_SIZE=1 CLEAN_CORPUS_TRAINING_DATA=1 STUDENT_DATA=pft-pbt-bt SRCLANGS=deu TRGLANGS=ukr train-tiny11-student
 
 elg-ukr2deu-tiny11:
-	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS=ukr TRGLANGS=deu train-tiny11-student
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus STUDENT_DATA=pft-pbt-bt SRCLANGS=ukr CHECK_TRAINDATA_SIZE=1 CLEAN_CORPUS_TRAINING_DATA=1 TRGLANGS=deu train-tiny11-student
 
 
 
