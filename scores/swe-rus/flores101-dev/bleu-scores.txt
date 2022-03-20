@@ -1,3 +1,4 @@
+26.1	https://object.pouta.csc.fi/Tatoeba-MT-models/gmq-zle/opusTCv20210807+pbt_transformer-big_2022-03-19.zip
 25.7	https://object.pouta.csc.fi/Tatoeba-MT-models/gmq-zle/opusTCv20210807+pbt_transformer-big_2022-03-14.zip
 17.8	https://object.pouta.csc.fi/Tatoeba-MT-models/swe-rus/opus-2021-02-18.zip
 10.5	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-27.zip
