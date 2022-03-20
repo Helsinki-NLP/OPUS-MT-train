@@ -176,7 +176,48 @@ elg-ukr2deu-tiny11:
 
 
 
+## missing evaluations and dist packages
+## TODO: should probabubly also restart them!
+##       (also zls-zle and zle-zls)
 
+elg-dist-missing:
+	for l in deu fra ita por spa; do \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2zle-eval; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2zle-multieval; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2zle-eval-testsets; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2zle-dist; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-zle2$${l}-eval; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-zle2$${l}-multieval; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-zle2$${l}-eval-testsets; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-zle2$${l}-dist; \
+	done
+	${MAKE} MODELTYPE=transformer-big tatoeba-fin2zle-eval-bt
+	${MAKE} MODELTYPE=transformer-big tatoeba-fin2zle-multieval-bt
+	${MAKE} MODELTYPE=transformer-big tatoeba-fin2zle-eval-testsets-bt
+	${MAKE} MODELTYPE=transformer-big tatoeba-fin2zle-dist-bt
+	${MAKE} MODELTYPE=transformer-big tatoeba-gmq2zle-eval-pbt
+	${MAKE} MODELTYPE=transformer-big tatoeba-gmq2zle-multieval-pbt
+	${MAKE} MODELTYPE=transformer-big tatoeba-gmq2zle-eval-testsets-pbt
+	${MAKE} MODELTYPE=transformer-big tatoeba-gmq2zle-dist-pbt
+	${MAKE} MODELTYPE=transformer-big tatoeba-zlw2zle-eval-bt
+	${MAKE} MODELTYPE=transformer-big tatoeba-zlw2zle-multieval-bt
+	${MAKE} MODELTYPE=transformer-big tatoeba-zlw2zle-eval-testsets-bt
+	${MAKE} MODELTYPE=transformer-big tatoeba-zlw2zle-dist-bt
+	${MAKE} MODELTYPE=transformer-big tatoeba-zle2zlw-multieval-bt
+	${MAKE} MODELTYPE=transformer-big tatoeba-zle2zlw-eval-testsets-bt
+	${MAKE} MODELTYPE=transformer-big tatoeba-zle2zlw-dist-bt
+
+elg-continue-missing:
+	for l in deu fra ita por spa; do \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2zle-trainjob; \
+	    ${MAKE} MODELTYPE=transformer-big tatoeba-zle2$${l}-trainjob; \
+	done
+	${MAKE} MODELTYPE=transformer-big tatoeba-fin2zle-trainjob-bt
+	${MAKE} MODELTYPE=transformer-big tatoeba-gmq2zle-trainjob-pbt
+	${MAKE} MODELTYPE=transformer-big tatoeba-zlw2zle-trainjob-bt
+	${MAKE} MODELTYPE=transformer-big tatoeba-zle2zlw-trainjob-bt
+	${MAKE} MODELTYPE=transformer-big tatoeba-zls2zle-trainjob-bt
+	${MAKE} MODELTYPE=transformer-big tatoeba-zle2zls-trainjob-bt
 
 
 
