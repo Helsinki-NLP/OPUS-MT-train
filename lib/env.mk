@@ -203,8 +203,18 @@ endif
 ## TODO: add EXTRACT_LEX, BROWSERMT_TRAIN, ..?
 ## TODO: add OpusFilter?
 
-PREREQ_TOOLS := $(lastword ${ISO639}) ${ATOOLS} ${PIGZ} ${TERASHUF} ${JQ} ${MARIAN} ${EFLOMAL} ${TMX2MOSES}
+PREREQ_TOOLS := $(lastword ${ISO639}) ${ATOOLS} ${PIGZ} ${TERASHUF} ${MARIAN} ${EFLOMAL} ${TMX2MOSES}
 PREREQ_PERL  := ISO::639::3 ISO::639::5 OPUS::Tools XML::Parser
+
+## additional tools:
+## - extract-lex for extracting short lists
+## - browsermt_train for quantization
+## - jq to extract text from cirrus-search dumps of wikipedia (for back-transaltion)
+##
+## install those with `make install-all`
+
+EXTRA_TOOLS  := ${EXTRACT_LEX} ${BROWSERMT_TRAIN} ${JQ} 
+
 
 PIP  := ${shell which pip3  2>/dev/null || echo pip}
 CPAN := ${shell which cpanm 2>/dev/null || echo cpan}
@@ -227,6 +237,7 @@ install install-prerequisites install-prereq install-requirements:
 	${PIP} install --user -r requirements.txt
 	${MAKE} install-perl-modules
 	${MAKE} ${PREREQ_TOOLS}
+
 
 .PHONY: install-perl-modules
 install-perl-modules:
