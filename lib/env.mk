@@ -5,8 +5,9 @@
 # - system-specific settings
 #
 
-SHELL := /bin/bash
-PWD   ?= ${shell pwd}
+SHELL    := /bin/bash
+PWD      ?= ${shell pwd}
+REPOHOME ?= ${PWD}/
 
 # job-specific settings (overwrite if necessary)
 # HPC_EXTRA: additional SBATCH commands
@@ -39,8 +40,8 @@ WORKHOME ?= ${PWD}/work
 ## the build environment for specific software
 
 LOAD_BUILD_ENV            = echo "nothing to load"
-LOAD_MARIAN_BUILD_ENV     = echo "nothing to load"
-LOAD_EXTRACTLEX_BUILD_ENV = echo "nothing to load"
+LOAD_MARIAN_BUILD_ENV     = ${LOAD_BUILD_ENV}
+LOAD_EXTRACTLEX_BUILD_ENV = ${LOAD_BUILD_ENV}
 
 
 ## load system-specific environments
@@ -151,7 +152,7 @@ BROWSERMT_CONVERT  = ${BROWSERMT_HOME}/marian-dev/build/marian-conv
 ## BPE
 SUBWORD_BPE  ?= ${shell which subword-nmt 2>/dev/null || echo ${TOOLSDIR}/subword-nmt/subword_nmt/subword_nmt.py}
 SUBWORD_HOME ?= ${dir ${SUBWORD_BPE}}
-ifeq (${shell which subword-nmt},)
+ifeq (${shell which subword-nmt 2>/dev/null},)
   BPE_LEARN ?= python3 ${SUBWORD_HOME}/learn_bpe.py
   BPE_APPLY ?= python3 ${SUBWORD_HOME}/apply_bpe.py
 else
@@ -203,12 +204,11 @@ endif
 ## TODO: add EXTRACT_LEX, BROWSERMT_TRAIN, ..?
 ## TODO: add OpusFilter?
 
-PREREQ_TOOLS := $(lastword ${ISO639}) ${ATOOLS} ${PIGZ} ${TERASHUF} ${JQ} ${MARIAN} ${EFLOMAL} ${TMX2MOSES}
+PREREQ_TOOLS := $(lastword ${ISO639}) ${ATOOLS} ${PIGZ} ${TERASHUF} ${MARIAN} ${EFLOMAL} ${TMX2MOSES} ${JQ} 
 PREREQ_PERL  := ISO::639::3 ISO::639::5 OPUS::Tools XML::Parser
 
-PIP  := ${shell which pip3  2>/dev/null || echo pip}
-CPAN := ${shell which cpanm 2>/dev/null || echo cpan}
-
+PIP  := ${shell ${LOAD_BUILD_ENV} >/dev/null 2>/dev/null && which pip3  2>/dev/null || echo pip}
+CPAN := ${shell ${LOAD_BUILD_ENV} >/dev/null 2>/dev/null && which cpanm 2>/dev/null || echo cpan}
 
 ## setup local Perl environment
 ## better install local::lib and put this into your .bashrc:
@@ -221,12 +221,32 @@ export PERL_LOCAL_LIB_ROOT := ${HOME}/perl5:${PERL_LOCAL_LIB_ROOT}}
 export PERL_MB_OPT         := --install_base "${HOME}/perl5"
 export PERL_MM_OPT         := INSTALL_BASE=${HOME}/perl5
 
+## quick hack to fix a problem in marian-dev submodule fbgemm
+## --> googletest changed to 'main' from 'master' (stupid)
+## TODO: remove this again once it is not needed anymore!
 
 PHONY: install install-prerequisites install-prereq install-requirements
 install install-prerequisites install-prereq install-requirements:
-	${PIP} install --user -r requirements.txt
-	${MAKE} install-perl-modules
-	${MAKE} ${PREREQ_TOOLS}
+	-git submodule update --init --recursive --remote
+	cp 	tools/marian-dev/src/3rd_party/fbgemm/.gitmodules \
+		tools/marian-dev/src/3rd_party/fbgemm/.gitmodules.backup
+	cat tools/marian-dev/src/3rd_party/fbgemm/.gitmodules.backup |\
+	sed 's#google/googletest#google/googletest|	branch = main#' | tr '|' "\n" | uniq \
+	> tools/marian-dev/src/3rd_party/fbgemm/.gitmodules
+	cp 	tools/browsermt/marian-dev/src/3rd_party/fbgemm/.gitmodules \
+		tools/browsermt/marian-dev/src/3rd_party/fbgemm/.gitmodules.backup
+	cat tools/browsermt/marian-dev/src/3rd_party/fbgemm/.gitmodules.backup |\
+	sed 's#google/googletest#google/googletest|	branch = main#' | tr '|' "\n" | uniq \
+	> tools/browsermt/marian-dev/src/3rd_party/fbgemm/.gitmodules
+	git submodule update --init --recursive --remote
+	${LOAD_BUILD_ENV} && ${PIP} install --user -r requirements.txt
+	${LOAD_BUILD_ENV} && ${MAKE} install-perl-modules
+	${LOAD_BUILD_ENV} && ${MAKE} ${PREREQ_TOOLS}
+
+.PHONY: install-prereq-tools
+install-prereq-tools:
+	${LOAD_BUILD_ENV} && ${MAKE} ${PREREQ_TOOLS}
+
 
 .PHONY: install-perl-modules
 install-perl-modules:
@@ -248,9 +268,12 @@ ${TOOLSDIR}/fast_align/build/atools:
 ${TOOLSDIR}/pigz/pigz:
 	${MAKE} -C ${dir $@}
 
+
+## Don't need this anymore - it's a submodule
+#	mkdir -p ${TOOLSDIR}
+#	cd ${TOOLSDIR} && git clone https://github.com/alexandres/terashuf.git
+
 ${TOOLSDIR}/terashuf/terashuf:
-	mkdir -p ${TOOLSDIR}
-	cd ${TOOLSDIR} && git clone https://github.com/alexandres/terashuf.git
 	${MAKE} -C ${dir $@}
 
 ${TOOLSDIR}/jq/jq:
@@ -263,17 +286,19 @@ ${TOOLSDIR}/jq/jq:
 ## - install protobuf: sudo port install protobuf3-cpp
 ## - install MKL (especially for cpu use):
 ##   file:///opt/intel/documentation_2020/en/mkl/ps2020/get_started.htm
+## 	mkdir -p ${TOOLSDIR}
+##	cd ${TOOLSDIR} && git clone https://github.com/marian-nmt/marian-dev.git
 
 ${TOOLSDIR}/marian-dev/build/marian: ${PROTOC}
-	mkdir -p ${TOOLSDIR}
-	cd ${TOOLSDIR} && git clone https://github.com/marian-nmt/marian-dev.git
 	mkdir -p ${dir $@}
 	cd ${dir $@} && ${LOAD_MARIAN_BUILD_ENV} && cmake -DUSE_SENTENCEPIECE=on ${MARIAN_BUILD_OPTIONS} ..
 	${LOAD_MARIAN_BUILD_ENV} && ${MAKE} -C ${dir $@} -j8
 
 ${TOOLSDIR}/protobuf/bin/protoc:
 	mkdir -p ${TOOLSDIR}
-	cd ${TOOLSDIR} && git clone https://github.com/protocolbuffers/protobuf.git
+	if [ -e ${dir $@} ]; then \
+	  cd ${TOOLSDIR} && git clone https://github.com/protocolbuffers/protobuf.git; \
+	fi
 	cd ${TOOLSDIR}/protobuf && git submodule update --init --recursive
 	cd ${TOOLSDIR}/protobuf && ./autogen.sh
 	cd ${TOOLSDIR}/protobuf && ./configure --prefix=${TOOLSDIR}/protobuf
