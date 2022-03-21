@@ -195,17 +195,28 @@ endif
 
 
 
-# TODO: delete those?
-# MULTEVALHOME = ${APPLHOME}/multeval
 
 
 ## install prerequisites
 ## 
-## TODO: add EXTRACT_LEX, BROWSERMT_TRAIN, ..?
 ## TODO: add OpusFilter?
 
-PREREQ_TOOLS := $(lastword ${ISO639}) ${ATOOLS} ${PIGZ} ${TERASHUF} ${MARIAN} ${EFLOMAL} ${TMX2MOSES} ${JQ} 
+PREREQ_TOOLS := $(lastword ${ISO639}) ${ATOOLS} ${PIGZ} ${TERASHUF} ${MARIAN} ${EFLOMAL} ${TMX2MOSES}
 PREREQ_PERL  := ISO::639::3 ISO::639::5 OPUS::Tools XML::Parser
+
+## additional tools:
+## - extract-lex for extracting short lists
+## - browsermt_train for quantization
+## - jq to extract text from cirrus-search dumps of wikipedia (for back-transaltion)
+##
+## install those with `make install-all`
+
+EXTRA_TOOLS  := ${EXTRACT_LEX} ${BROWSERMT_TRAIN} ${JQ} 
+
+# TODO: delete those?
+# MULTEVALHOME = ${APPLHOME}/multeval
+
+
 
 PIP  := ${shell ${LOAD_BUILD_ENV} >/dev/null 2>/dev/null && which pip3  2>/dev/null || echo pip}
 CPAN := ${shell ${LOAD_BUILD_ENV} >/dev/null 2>/dev/null && which cpanm 2>/dev/null || echo cpan}
@@ -215,7 +226,7 @@ CPAN := ${shell ${LOAD_BUILD_ENV} >/dev/null 2>/dev/null && which cpanm 2>/dev/n
 ##
 ## eval "$(perl -I$HOME/perl5/lib/perl5 -Mlocal::lib)"
 
-export PATH                := ${HOME}/perl5/bin:${PATH}
+export PATH                := ${HOME}/perl5/bin:${PATH}:${MARIAN_HOME}:${SPM_HOME}:${FASTALIGN_HOME}
 export PERL5LIB            := ${HOME}/perl5/lib/perl5:${PERL5LIB}}
 export PERL_LOCAL_LIB_ROOT := ${HOME}/perl5:${PERL_LOCAL_LIB_ROOT}}
 export PERL_MB_OPT         := --install_base "${HOME}/perl5"
@@ -242,6 +253,11 @@ install install-prerequisites install-prereq install-requirements:
 	${LOAD_BUILD_ENV} && ${PIP} install --user -r requirements.txt
 	${LOAD_BUILD_ENV} && ${MAKE} install-perl-modules
 	${LOAD_BUILD_ENV} && ${MAKE} ${PREREQ_TOOLS}
+
+PHONY: install-all
+install-all: install
+	${LOAD_BUILD_ENV} && ${MAKE} ${EXTRA_TOOLS}
+
 
 .PHONY: install-prereq-tools
 install-prereq-tools:
