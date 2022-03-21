@@ -286,8 +286,8 @@ ${TOOLSDIR}/jq/jq:
 ## - install protobuf: sudo port install protobuf3-cpp
 ## - install MKL (especially for cpu use):
 ##   file:///opt/intel/documentation_2020/en/mkl/ps2020/get_started.htm
-## 	mkdir -p ${TOOLSDIR}
-##	cd ${TOOLSDIR} && git clone https://github.com/marian-nmt/marian-dev.git
+##
+## TODO: do we still need to compile protobuf?
 
 ${TOOLSDIR}/marian-dev/build/marian: ${PROTOC}
 	mkdir -p ${dir $@}
