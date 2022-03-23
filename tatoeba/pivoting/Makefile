@@ -60,10 +60,18 @@ PART           ?= aa
 OUTPUT_DIR     ?= ${NEW_LANGPAIR}
 
 
-# MODELZIP = https://object.pouta.csc.fi/Tatoeba-Challenge/ang.tar
-MODELZIP := ${shell ${WGET} -qq -O - ${TATOEBA_RELEASED} | grep '^${TRANSLATE_LANGPAIR}' | head -1 | cut -f4}
-MODELINFO = ${patsubst ${TATOEBA_MODEL_STORAGE}/%.zip,${TATOEBA_GITRAW}/models/%.yml,${MODELZIP}}
-MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
+LEADERBOARD_HOME = ../../scores
+
+best-opusmt-model = ${shell grep -H .  ${LEADERBOARD_HOME}/${1}/*/${2}.txt | \
+			sed 's/txt:[0-9\.]*//' | sed -r 's/tatoeba-test-v[0-9]{4}-[0-9]{2}-[0-9]{2}/tatoeba-test/' | \
+			rev | uniq -f1 | rev | cut -f2 | uniq -c | sort -nr | head -1 | sed 's/^.*http/http/'}
+MODELZIP        := ${call best-opusmt-model,${TRANSLATE_LANGPAIR},bleu-scores}
+MODELINFO       := ${MODELZIP:.zip=.yml}
+MODELNAME       := ${patsubst %.zip,%,${notdir ${MODELZIP}}}
+
+# MODELZIP := ${shell ${WGET} -qq -O - ${TATOEBA_RELEASED} | grep '^${TRANSLATE_LANGPAIR}' | head -1 | cut -f4}
+# MODELINFO = ${patsubst ${TATOEBA_MODEL_STORAGE}/%.zip,${TATOEBA_GITRAW}/models/%.yml,${MODELZIP}}
+# MODELNAME = ${patsubst %.zip,%,${notdir ${MODELZIP}}}
 MODELDIR  = ${OUTPUT_DIR}/${TRANSLATE_LANGPAIR}/${MODELNAME}
 
 MULTI_TARGET_MODEL := ${shell ${WGET} -qq -O - ${MODELINFO} | grep 'use-target-labels' | wc -l}

@@ -83,6 +83,22 @@ elg-ukr-students:
 	done
 
 
+elg-test-tiny2:
+	${MAKE} EMAIL= SRCLANGS=ukr TRGLANGS=eng test-tiny11-student
+	${MAKE} EMAIL= SRCLANGS=eng TRGLANGS=ukr test-tiny11-student
+	${MAKE} EMAIL= SRCLANGS=ukr TRGLANGS=deu STUDENT_DATA=ftbest-bt-nopar test-tiny11-student
+	${MAKE} EMAIL= SRCLANGS=deu TRGLANGS=ukr STUDENT_DATA=ftbest-bt-nopar test-tiny11-student
+	${MAKE} EMAIL= SRCLANGS=deu TRGLANGS=ukr STUDENT_DATA=ftbest-ftmono-nopar test-tiny11-student
+	${MAKE} EMAIL= SRCLANGS="ces slk" TRGLANGS=ukr STUDENT_DATA=pft-pbt-bt test-tiny11-student
+	${MAKE} EMAIL= SRCLANGS=gmq TRGLANGS=ukr STUDENT_DATA=pft-pbt-bt test-tiny11-student
+
+elg-dist-tiny2:
+	${MAKE} EMAIL= SRCLANGS=ukr TRGLANGS=eng quantize-tiny11-student release-tiny11-student
+	${MAKE} EMAIL= SRCLANGS=eng TRGLANGS=ukr quantize-tiny11-student release-tiny11-student
+	${MAKE} EMAIL= SRCLANGS=deu TRGLANGS=ukr STUDENT_DATA=ftbest-ftmono-nopar quantize-tiny11-student release-tiny11-student
+	${MAKE} EMAIL= SRCLANGS="ces slk" TRGLANGS=ukr STUDENT_DATA=pft-pbt-bt quantize-tiny11-student release-tiny11-student
+
+
 elg-test-tiny:
 	${MAKE} EMAIL= STUDENT_DATA=pft-pbt SRCLANGS=fin TRGLANGS=ukr test-tiny11-student
 	${MAKE} EMAIL= STUDENT_DATA=pft-pbt SRCLANGS=ukr TRGLANGS=fin test-tiny11-student
@@ -125,7 +141,12 @@ elg-ukr2fin-tiny11:
 
 
 elg-gmq2ukr-tiny11:
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus CHECK_TRAINDATA_SIZE=1 CLEAN_CORPUS_TRAINING_DATA=1 STUDENT_DATA=pft-pbt-bt SRCLANGS="dan isl nno nob nor swe" TRGLANGS=ukr LANGPAIRSTR="gmq-ukr" train-tiny11-student
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus \
+		DATA_PREPARE_HPCPARAMS='${DATA_PREPARE_HPCPARAMS} CPUJOB_HPC_DISK=1000' \
+		DATA_ALIGN_HPCPARAMS="${DATA_ALIGN_HPCPARAMS} CPUJOB_HPC_DISK=1000" \
+		CHECK_TRAINDATA_SIZE=1 CLEAN_CORPUS_TRAINING_DATA=1 \
+		STUDENT_DATA=pft-pbt-bt SRCLANGS="dan isl nno nob nor swe" TRGLANGS=ukr \
+		LANGPAIRSTR="gmq-ukr" train-tiny11-student
 
 
 
@@ -165,14 +186,71 @@ elg-ukr2lit-tiny11:
 
 
 
+
+elg-ces_slk2ukr-tiny11:
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus GPUJOB_HPC_MEM=24g \
+		DATA_PREPARE_HPCPARAMS='${DATA_PREPARE_HPCPARAMS} CPUJOB_HPC_DISK=1000' \
+		DATA_ALIGN_HPCPARAMS="${DATA_ALIGN_HPCPARAMS} CPUJOB_HPC_DISK=1000" \
+		CHECK_TRAINDATA_SIZE=1 CLEAN_CORPUS_TRAINING_DATA=1 \
+		STUDENT_DATA=pft-pbt-bt SRCLANGS="ces slk" TRGLANGS=ukr train-tiny11-student
+
+
+
 elg-deu2ukr-tiny11:
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus CHECK_TRAINDATA_SIZE=1 CLEAN_CORPUS_TRAINING_DATA=1 STUDENT_DATA=pft-pbt-bt SRCLANGS=deu TRGLANGS=ukr train-tiny11-student
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus GPUJOB_HPC_MEM=24g \
+		DATA_PREPARE_HPCPARAMS='${DATA_PREPARE_HPCPARAMS} CPUJOB_HPC_DISK=1000' \
+		DATA_ALIGN_HPCPARAMS="${DATA_ALIGN_HPCPARAMS} CPUJOB_HPC_DISK=1000" \
+		CHECK_TRAINDATA_SIZE=1 CLEAN_CORPUS_TRAINING_DATA=1 \
+		STUDENT_DATA=pft-pbt-bt SRCLANGS=deu TRGLANGS=ukr train-tiny11-student
 
 elg-ukr2deu-tiny11:
 	${MAKE} MARIAN_EXTRA=--no-restore-corpus STUDENT_DATA=pft-pbt-bt SRCLANGS=ukr CHECK_TRAINDATA_SIZE=1 CLEAN_CORPUS_TRAINING_DATA=1 TRGLANGS=deu train-tiny11-student
 
 
+elg-deu2ukr-student:
+	${MAKE} MARIAN_EARLY_STOPPING=15 SRCLANGS=deu TRGLANGS=ukr train-tiny11-student
 
+elg-ukr2deu-student:
+	${MAKE} SRCLANGS=ukr TRGLANGS=deu train-tiny11-student
+
+elg-deu2ukr-student2:
+	${MAKE} SRCLANGS=deu TRGLANGS=ukr STUDENT_DATA=ftbest-ftmono-nopar train-tiny11-student
+
+elg-deu2ukr-student3:
+	${MAKE} MODELZIP=https://object.pouta.csc.fi/Tatoeba-MT-models/deu-ukr/opusTCv20210807+pbt_transformer-align_2022-03-07.zip \
+		SRCLANGS=deu TRGLANGS=ukr STUDENT_DATA=ftbest-bt-nopar train-tiny11-student
+
+elg-ukr2deu-student2:
+	${MAKE} SRCLANGS=ukr TRGLANGS=deu STUDENT_DATA=ftbest-ftmono-nopar train-tiny11-student
+
+elg-ukr2deu-student3:
+	${MAKE} MODELZIP=https://object.pouta.csc.fi/Tatoeba-MT-models/ukr-deu/opusTCv20210807_transformer-big_2022-03-14.zip \ SRCLANGS=ukr TRGLANGS=deu STUDENT_DATA=ftbest-bt-nopar train-tiny11-student
+
+
+
+
+elg-spa2ukr-student:
+	${MAKE} MARIAN_EARLY_STOPPING=15 SRCLANGS=spa TRGLANGS=ukr train-tiny11-student
+
+elg-ukr2spa-student:
+	${MAKE} MARIAN_EARLY_STOPPING=15 SRCLANGS=ukr TRGLANGS=spa train-tiny11-student
+
+
+elg-fra2ukr-student:
+	${MAKE} MARIAN_EARLY_STOPPING=15 SRCLANGS=fra TRGLANGS=ukr train-tiny11-student
+
+elg-ukr2fra-student:
+	${MAKE} MARIAN_EARLY_STOPPING=15 SRCLANGS=ukr TRGLANGS=fra train-tiny11-student
+
+elg-eng2ukr-student:
+	${MAKE} MARIAN_EARLY_STOPPING=15 SRCLANGS=eng TRGLANGS=ukr train-tiny11-student
+
+elg-ukr2eng-student:
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MARIAN_EARLY_STOPPING=15 SRCLANGS=ukr TRGLANGS=eng train-tiny11-student
+
+
+elg-eng2ukr-student2:
+	${MAKE} MARIAN_EARLY_STOPPING=15 STUDENT_DATA=ftbest-bt-nopar SRCLANGS=eng TRGLANGS=ukr train-tiny11-student
 
 
 

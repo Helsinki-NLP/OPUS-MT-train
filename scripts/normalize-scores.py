@@ -16,7 +16,10 @@ def main():
     for line in sys.stdin:
         fields = line.strip().split("\t")
         trg = fields[-1]
-        score = float(fields[0])
+        try:
+            score = float(fields[0])
+        except:
+            score = 0.00
 
         if not args.no_normalize:
             length = len(trg.split())

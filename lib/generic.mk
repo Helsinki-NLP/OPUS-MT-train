@@ -274,6 +274,9 @@ PIVOT_LANG         ?= ${DEFAULT_PIVOT_LANG}
 	${MAKE} DATASET=${DATASET}+ft USE_FORWARDTRANS=1 SHUFFLE_TRAINING_DATA=1 ${@:-ft=}
 
 # use a selected set of forward translation
+# TODO: only call the translation extraction recipe if there is no file that matches
+#       the extension of that kind of extraction type (e.g. *.best95.gz)
+#       --> this can go wrong
 
 # default for ce-filter
 FT_SELECTED ?= 95
@@ -282,8 +285,10 @@ FT_SELECTED ?= 95
 	@for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
 	    if [ -e ${FORWARDTRANS_HOME}/$$s-$$t/latest ]; then \
-	      ${MAKE} -C ${FORWARDTRANS_HOME} SRC=$$s TRG=$$t \
+	      if [ ! -e `ls ${FORWARDTRANS_HOME}/$$s-$$t/latest/*.best${FT_SELECTED}.gz | head -1` ]; then \
+	        ${MAKE} -C ${FORWARDTRANS_HOME} SRC=$$s TRG=$$t \
 			RETAIN=${FT_SELECTED} extract-best-translations; \
+	      fi \
 	    fi \
 	  done \
 	done
