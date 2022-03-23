@@ -45,9 +45,11 @@ train-student:
 		all-job-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba
 
 test-student:
-	make FT_SELECTED=${STUDENT_CEFILTER} HPC_MEM=20g WALLTIME=2 \
-		eval-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba.submit \
-		eval-testsets-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba.submit
+	make FT_SELECTED=${STUDENT_CEFILTER} \
+		eval-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba \
+		eval-testsets-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba \
+		tatoeba-multilingual-eval-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba \
+		tatoeba-sublang-eval-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba
 
 release-student:
 	make ${STUDENT_HPCPARAMS} FT_SELECTED=${STUDENT_CEFILTER} \
