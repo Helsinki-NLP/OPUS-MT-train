@@ -191,21 +191,18 @@ elg-dist-missing:
 	    ${MAKE} MODELTYPE=transformer-big tatoeba-zle2$${l}-eval-testsets; \
 	    ${MAKE} MODELTYPE=transformer-big tatoeba-zle2$${l}-dist; \
 	done
-	${MAKE} MODELTYPE=transformer-big tatoeba-fin2zle-eval-bt
-	${MAKE} MODELTYPE=transformer-big tatoeba-fin2zle-multieval-bt
-	${MAKE} MODELTYPE=transformer-big tatoeba-fin2zle-eval-testsets-bt
-	${MAKE} MODELTYPE=transformer-big tatoeba-fin2zle-dist-bt
+	for l in fin2zle zlw2zle zle2zlw zle2zls zls2zle; do \
+	  ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}-eval-bt; \
+	  ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}-multieval-bt; \
+	  ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}-eval-testsets-bt; \
+	  ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}-dist-bt; \
+	done
 	${MAKE} MODELTYPE=transformer-big tatoeba-gmq2zle-eval-pbt
 	${MAKE} MODELTYPE=transformer-big tatoeba-gmq2zle-multieval-pbt
 	${MAKE} MODELTYPE=transformer-big tatoeba-gmq2zle-eval-testsets-pbt
 	${MAKE} MODELTYPE=transformer-big tatoeba-gmq2zle-dist-pbt
-	${MAKE} MODELTYPE=transformer-big tatoeba-zlw2zle-eval-bt
-	${MAKE} MODELTYPE=transformer-big tatoeba-zlw2zle-multieval-bt
-	${MAKE} MODELTYPE=transformer-big tatoeba-zlw2zle-eval-testsets-bt
-	${MAKE} MODELTYPE=transformer-big tatoeba-zlw2zle-dist-bt
-	${MAKE} MODELTYPE=transformer-big tatoeba-zle2zlw-multieval-bt
-	${MAKE} MODELTYPE=transformer-big tatoeba-zle2zlw-eval-testsets-bt
-	${MAKE} MODELTYPE=transformer-big tatoeba-zle2zlw-dist-bt
+
+
 
 elg-continue-missing:
 	for l in deu fra ita por spa; do \
