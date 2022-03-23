@@ -378,13 +378,13 @@ sort-leaderboards: ${LEADERBOARDS_BLEU} ${LEADERBOARDS_CHRF}
 
 ${LEADERBOARDS_BLEU}: ${UPDATE_SCORE_DIRS}
 	@echo "sort ${patsubst ${LEADERBOARD_DIR}/%,%,$@}"
-	@cat $(dir $@)bleu-scores*.txt | grep '^[0-9]' | sort -u -k1,1nr > $@.sorted
+	@cat $(dir $@)bleu-scores*.txt | grep '^[0-9]' | sort -k1,1nr | uniq -f1 > $@.sorted
 	@rm -f $(dir $@)bleu-scores*.txt
 	@mv $@.sorted $@
 
 ${LEADERBOARDS_CHRF}: ${UPDATE_SCORE_DIRS}
 	@echo "sort ${patsubst ${LEADERBOARD_DIR}/%,%,$@}"
-	@cat $(dir $@)chrf-scores*.txt | grep '^[0-9]' | sort -u -k1,1nr > $@.sorted
+	@cat $(dir $@)chrf-scores*.txt | grep '^[0-9]' | sort -k1,1nr | uniq -f1 > $@.sorted
 	@rm -f $(dir $@)chrf-scores*.txt
 	@mv $@.sorted $@
 
