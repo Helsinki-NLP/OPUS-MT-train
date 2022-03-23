@@ -69,11 +69,11 @@ endif
 HPC_EXTRA1 = \#SBATCH --account=${CSCPROJECT}
 
 
-BUILD_MODULES  = cmake perl/5.30.0
-LOAD_BUILD_ENV = module load ${BUILD_MODULES} && module list
+BUILD_MODULES  = StdEnv python-env cmake perl/5.30.0
+LOAD_BUILD_ENV = module purge && module load ${BUILD_MODULES} && module list
 
 MARIAN_BUILD_MODULES  = gcc/8.3.0 cuda/10.1.168 cudnn/7.6.1.34-10.1 intel-mkl/2019.0.4 cmake/3.18.2
-LOAD_MARIAN_BUILD_ENV = module purge && module load ${MARIAN_BUILD_MODULES}
+LOAD_MARIAN_BUILD_ENV = module purge && module load ${MARIAN_BUILD_MODULES} && module list
 MARIAN_BUILD_OPTIONS  =	-DTcmalloc_INCLUDE_DIR=/appl/spack/install-tree/gcc-8.3.0/gperftools-2.7-5w7w2c/include \
 			-DTcmalloc_LIBRARY=/appl/spack/install-tree/gcc-8.3.0/gperftools-2.7-5w7w2c/lib/libtcmalloc.so \
 			-DTCMALLOC_LIB=/appl/spack/install-tree/gcc-8.3.0/gperftools-2.7-5w7w2c/lib/libtcmalloc.so \

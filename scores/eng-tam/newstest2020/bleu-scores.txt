@@ -1,0 +1,5 @@
+3.1	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-dra/opus-2020-07-26.zip
+2.8	https://object.pouta.csc.fi/Tatoeba-MT-models/dra-dra/opus-2020-10-04.zip
+2.0	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-mul/opus-2020-07-27.zip
+1.8	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-mul/opus-2020-07-20.zip
+1.6	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-mul/opus-2020-07-14.zip
