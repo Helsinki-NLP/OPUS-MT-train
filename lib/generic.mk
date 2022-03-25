@@ -285,7 +285,8 @@ FT_SELECTED ?= 95
 	@for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
 	    if [ -e ${FORWARDTRANS_HOME}/$$s-$$t/latest ]; then \
-	      if [ ! -e `ls ${FORWARDTRANS_HOME}/$$s-$$t/latest/*.best${FT_SELECTED}.gz | head -1` ]; then \
+	      if [ `ls ${FORWARDTRANS_HOME}/$$s-$$t/latest/ | grep "best${FT_SELECTED}.gz" | wc -l` -eq 0 ]; then \
+	        echo "... extract best translations from $$s-$$t forward translations"; \
 	        ${MAKE} -C ${FORWARDTRANS_HOME} SRC=$$s TRG=$$t \
 			RETAIN=${FT_SELECTED} extract-best-translations; \
 	      fi \
