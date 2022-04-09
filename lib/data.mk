@@ -119,6 +119,14 @@ ifeq (${USE_PIVOTING},1)
 endif
 
 
+# additional data sets that might be available ...
+ifeq (${USE_EXTRA_BITEXTS},1)
+  EXTRA_BITEXTS_SRC = ${sort ${wildcard ${DATADIR}/extra/${SRC}-${TRG}/*.${SRCEXT}.gz}}
+  EXTRA_BITEXTS_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${EXTRA_BITEXTS_SRC}}
+endif
+
+
+
 print-datasets:
 	-@for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
@@ -144,6 +152,10 @@ print-datasets-current-langpair:
 	@echo "pivot-based translation data:"
 	@echo ${PIVOTING_SRC}
 	@echo ${PIVOTING_TRG}
+	@echo "extra bitexts:"
+	@echo ${EXTRA_BITEXTS_SRC}
+	@echo ${EXTRA_BITEXTS_TRG}
+
 
 ##-------------------------------------------------------------
 ## data sets (train/dev/test)
@@ -153,9 +165,9 @@ print-datasets-current-langpair:
 ## with some basic pre-processing (see lib/preprocess.mk)
 
 CLEAN_TRAIN_SRC    = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.${CLEAN_TRAINDATA_TYPE}.${SRCEXT}.gz,${TRAINSET}} \
-			${BACKTRANS_SRC} ${FORWARDTRANS_SRC} ${FORWARDTRANSMONO_SRC} ${PIVOTING_SRC}
+			${BACKTRANS_SRC} ${FORWARDTRANS_SRC} ${FORWARDTRANSMONO_SRC} ${PIVOTING_SRC} ${EXTRA_BITEXTS_SRC}
 CLEAN_TRAIN_TRG    = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.${CLEAN_TRAINDATA_TYPE}.${TRGEXT}.gz,${TRAINSET}} \
-			${BACKTRANS_TRG} ${FORWARDTRANS_TRG} ${FORWARDTRANSMONO_TRG} ${PIVOTING_TRG}
+			${BACKTRANS_TRG} ${FORWARDTRANS_TRG} ${FORWARDTRANSMONO_TRG} ${PIVOTING_TRG} ${EXTRA_BITEXTS_TRG}
 
 CLEAN_DEV_SRC      = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.${CLEAN_DEVDATA_TYPE}.${SRCEXT}.gz,${DEVSET}}
 CLEAN_DEV_TRG      = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_DEV_SRC}}
