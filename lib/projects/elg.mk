@@ -810,6 +810,24 @@ ukr-model-table2:
 SCORE_BASE_URL = https://github.com/Helsinki-NLP/OPUS-MT-train/blob/puhti
 
 
+print-best-ukr:
+	@grep '^[1-9][0-9]\.' ../scores/ukr-*/flores101-devtest/bleu-scores*txt | \
+	grep -v 'txt:1[0-5]\.' | ${GREP_MODELS} \
+	sed 's/:/	/' | sort -nr | rev | uniq -f2 | rev| cut -f3 | sort -u
+	@grep '^[1-9][0-9]\.' ../scores/*-ukr/flores101-devtest/bleu-scores*txt | \
+	grep -v 'txt:1[0-5]\.' | ${GREP_MODELS} \
+	sed 's/:/	/' | sort -nr | rev | uniq -f2 | rev| cut -f3 | sort -u
+
+print-base-ukr:
+	make -s GREP_MODELS="grep -v 'transformer-big' | grep -v 'tiny' |" print-best-ukr
+
+print-big-ukr:
+	make -s GREP_MODELS="grep 'transformer-big' |" print-best-ukr
+
+print-tiny-ukr:
+	make -s GREP_MODELS="grep 'tiny' |" print-best-ukr
+
+
 print-ukr2x-table:
 	@echo '| language pair | lang-IDs | BLEU | model |'
 	@echo '|---------------|----------|------|-------|'
