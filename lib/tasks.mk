@@ -345,3 +345,15 @@ job1-step3:
 	${MAKE} all-bt
 
 
+
+
+print-info:
+	@echo "model file: ${MODEL_START}"
+	@echo "source vocab: ${MODEL_SRCVOCAB}"
+	@echo "target vocab: ${MODEL_TRGVOCAB}"
+	@echo "final model file: ${MODEL_FINAL}"
+	@echo "latest compatible model: ${MODEL_LATEST}"
+	ls -t 	${WORKDIR}/*${MODEL_VARIANT}.${PRE_SRC}-${PRE_TRG}.${subst -align,,${MODELTYPE}}.model[0-9].npz \
+			${WORKDIR}/*${MODEL_VARIANT}.${PRE_SRC}-${PRE_TRG}.${subst -align,,${MODELTYPE}}-align.model[0-9].npz \
+			${WORKDIR}/*${MODEL_VARIANT}.${PRE_SRC}-${PRE_TRG}.${subst -align,,${MODELTYPE}}.best-perplexity.npz \
+			${WORKDIR}/*${MODEL_VARIANT}.${PRE_SRC}-${PRE_TRG}.${subst -align,,${MODELTYPE}}-align.best-perplexity.npz

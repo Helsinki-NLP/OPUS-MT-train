@@ -557,8 +557,8 @@ ifeq (${CONTINUE_EXISTING},1)
   MODEL_LATEST = $(firstword \
 	${shell ls -t 	${WORKDIR}/*${MODEL_VARIANT}.${PRE_SRC}-${PRE_TRG}.${subst -align,,${MODELTYPE}}.model[0-9].npz \
 			${WORKDIR}/*${MODEL_VARIANT}.${PRE_SRC}-${PRE_TRG}.${subst -align,,${MODELTYPE}}-align.model[0-9].npz \
-			${WORKDIR}/*${MODEL_VARIANT}.${PRE_SRC}-${PRE_TRG}.${subst -align,,${MODELTYPE}}.best-perplexity.npz \
-			${WORKDIR}/*${MODEL_VARIANT}.${PRE_SRC}-${PRE_TRG}.${subst -align,,${MODELTYPE}}-align.best-perplexity.npz \
+			${WORKDIR}/*${MODEL_VARIANT}.${PRE_SRC}-${PRE_TRG}.${subst -align,,${MODELTYPE}}.model[0-9].npz.best-perplexity.npz \
+			${WORKDIR}/*${MODEL_VARIANT}.${PRE_SRC}-${PRE_TRG}.${subst -align,,${MODELTYPE}}-align.model[0-9].npz.best-perplexity.npz \
 		2>/dev/null | grep -v 'tuned4' })
   MODEL_LATEST_VOCAB     = $(shell echo "${MODEL_LATEST}" | \
 		sed 's|\.${PRE_SRC}-${PRE_TRG}\..*$$|.${PRE_SRC}-${PRE_TRG}.vocab.yml|')

@@ -348,7 +348,6 @@ tatoeba-%-train:
 			TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
 			all-groupsize-limits; )
 
-
 ## start the training job
 ## - create config file
 ## - create data sets
@@ -381,6 +380,17 @@ tatoeba-%-pivotlang:
 	else \
 	  echo "pivot language '${TATOEBA_PIVOT}' is already included in $@!"; \
 	fi
+
+
+tatoeba-%-info:
+	-( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-info,%,$@))); \
+	   t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-info,%,$@))); \
+	   S="${call find-srclanggroup,${patsubst tatoeba-%-info,%,$@},${PIVOT}}"; \
+	   T="${call find-trglanggroup,${patsubst tatoeba-%-info,%,$@},${PIVOT}}"; \
+	   ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" \
+			TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
+			TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
+			print-info; )
 
 
 ## evaluate with the model-specific test set

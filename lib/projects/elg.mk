@@ -86,9 +86,14 @@ elg-ukr-students:
 elg-test-tiny2:
 	${MAKE} EMAIL= SRCLANGS=ukr TRGLANGS=eng test-tiny11-student
 	${MAKE} EMAIL= SRCLANGS=eng TRGLANGS=ukr test-tiny11-student
-	${MAKE} EMAIL= SRCLANGS=ukr TRGLANGS=deu STUDENT_DATA=ftbest-bt-nopar test-tiny11-student
+	${MAKE} EMAIL= SRCLANGS=eng TRGLANGS=ukr STUDENT_DATA=ftbest-bt-nopar test-tiny11-student
+	${MAKE} EMAIL= SRCLANGS=deu TRGLANGS=ukr test-tiny11-student
 	${MAKE} EMAIL= SRCLANGS=deu TRGLANGS=ukr STUDENT_DATA=ftbest-bt-nopar test-tiny11-student
 	${MAKE} EMAIL= SRCLANGS=deu TRGLANGS=ukr STUDENT_DATA=ftbest-ftmono-nopar test-tiny11-student
+	${MAKE} EMAIL= SRCLANGS=deu TRGLANGS=ukr STUDENT_DATA=pft-pbt-bt test-tiny11-student
+	${MAKE} EMAIL= SRCLANGS=ukr TRGLANGS=deu test-tiny11-student
+	${MAKE} EMAIL= SRCLANGS=ukr TRGLANGS=deu STUDENT_DATA=ftbest-bt-nopar test-tiny11-student
+	${MAKE} EMAIL= SRCLANGS=ukr TRGLANGS=deu STUDENT_DATA=ftbest-ftmono-nopar test-tiny11-student
 	${MAKE} EMAIL= SRCLANGS="ces slk" TRGLANGS=ukr STUDENT_DATA=pft-pbt-bt test-tiny11-student
 	${MAKE} EMAIL= SRCLANGS=gmq TRGLANGS=ukr STUDENT_DATA=pft-pbt-bt test-tiny11-student
 
@@ -185,6 +190,14 @@ elg-ukr2lit-tiny11:
 	${MAKE} STUDENT_DATA=pft-pbt-bt SRCLANGS=ukr TRGLANGS=lit train-tiny11-student
 
 
+elg-pol2ukr-student2:
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MARIAN_EARLY_STOPPING=15 CHECK_TRAINDATA_SIZE=1 CLEAN_CORPUS_TRAINING_DATA=1 STUDENT_DATA=pft-pbt-bt-xb SRCLANGS=pol TRGLANGS=ukr train-tiny11-student
+
+elg-ukr2pol-student2:
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MARIAN_EARLY_STOPPING=15 CHECK_TRAINDATA_SIZE=1 CLEAN_CORPUS_TRAINING_DATA=1 STUDENT_DATA=pft-pbt-bt-xb SRCLANGS=ukr TRGLANGS=pol train-tiny11-student
+
+
+
 
 
 elg-ces_slk2ukr-tiny11:
@@ -228,6 +241,33 @@ elg-ukr2deu-student3:
 
 
 
+elg-fin2ukr-student2:
+	${MAKE} SUBWORD_VOCAB_SIZE=16000 MARIAN_EARLY_STOPPING=15 SRCLANGS=fin TRGLANGS=ukr CHECK_TRAINDATA_SIZE=1 CLEAN_CORPUS_TRAINING_DATA=1 STUDENT_DATA=ftbest-ftmono-nopar train-tiny11-student
+
+
+elg-fin2ukr-student:
+	${MAKE} MARIAN_EARLY_STOPPING=15 SRCLANGS=fin TRGLANGS=ukr CHECK_TRAINDATA_SIZE=1 CLEAN_CORPUS_TRAINING_DATA=1 STUDENT_DATA=ftbest-ftmono-nopar train-tiny11-student
+
+elg-ukr2fin-student:
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MARIAN_EARLY_STOPPING=15 SRCLANGS=ukr TRGLANGS=fin CHECK_TRAINDATA_SIZE=1 CLEAN_CORPUS_TRAINING_DATA=1 STUDENT_DATA=ftbest-ftmono-nopar train-tiny11-student
+
+elg-zle2fin-student:
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MARIAN_EARLY_STOPPING=15 \
+		DATA_PREPARE_HPCPARAMS='${DATA_PREPARE_HPCPARAMS} CPUJOB_HPC_DISK=1000' \
+		DATA_ALIGN_HPCPARAMS="${DATA_ALIGN_HPCPARAMS} CPUJOB_HPC_DISK=1000" \
+		CHECK_TRAINDATA_SIZE=1 CLEAN_CORPUS_TRAINING_DATA=1 \
+		STUDENT_DATA=ftbest-ftmono-nopar SRCLANGS="ukr rus" TRGLANGS=fin \
+		LANGPAIRSTR="zle-fin-tiny" train-tiny11-student
+
+
+elg-fin2rus-student:
+	${MAKE} MARIAN_EARLY_STOPPING=15 SRCLANGS=fin TRGLANGS=rus CHECK_TRAINDATA_SIZE=1 CLEAN_CORPUS_TRAINING_DATA=1 STUDENT_DATA=ftbest-ftmono-nopar train-tiny11-student
+
+elg-rus2fin-student:
+	${MAKE} MARIAN_EARLY_STOPPING=15 SRCLANGS=rus TRGLANGS=fin CHECK_TRAINDATA_SIZE=1 CLEAN_CORPUS_TRAINING_DATA=1 STUDENT_DATA=ftbest-ftmono-nopar train-tiny11-student
+
+
+
 
 elg-spa2ukr-student:
 	${MAKE} MARIAN_EARLY_STOPPING=15 SRCLANGS=spa TRGLANGS=ukr train-tiny11-student
@@ -251,6 +291,9 @@ elg-ukr2eng-student:
 
 elg-eng2ukr-student2:
 	${MAKE} MARIAN_EARLY_STOPPING=15 STUDENT_DATA=ftbest-bt-nopar SRCLANGS=eng TRGLANGS=ukr train-tiny11-student
+
+elg-ukr2eng-student2:
+	${MAKE} CONTINUE_EXISTING=1 MARIAN_EARLY_STOPPING=15 SRCLANGS=ukr TRGLANGS=eng STUDENT_DATA=ftbest-ftmono-nopar train-tiny11-student
 
 
 
@@ -279,6 +322,14 @@ elg-dist-missing:
 	${MAKE} MODELTYPE=transformer-big tatoeba-gmq2zle-multieval-pbt
 	${MAKE} MODELTYPE=transformer-big tatoeba-gmq2zle-eval-testsets-pbt
 	${MAKE} MODELTYPE=transformer-big tatoeba-gmq2zle-dist-pbt
+
+
+
+elg-zle2fin-pivot:
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-zle2fin-trainjob-pbt-pft-bt
+
+elg-fin2zle-pivot:
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-fin2zle-trainjob-pbt-pft-bt
 
 
 
@@ -372,6 +423,12 @@ elg-eval-big2zle:
 	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2zle-multieval; \
 	    ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2zle-eval-testsets; \
 	done
+
+elg-eng2zle-xb:
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big CONTINUE_EXISTING=1 tatoeba-eng2zle-trainjob-bt-xb
+
+elg-zle2eng-xb:
+	${MAKE} MARIAN_EARLY_STOPPING=25 MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big CONTINUE_EXISTING=1 tatoeba-zle2eng-trainjob-bt-xb
 
 
 elg-pivot-eval:
