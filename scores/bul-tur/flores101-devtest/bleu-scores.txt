@@ -1,2 +1,0 @@
-14.9	https://object.pouta.csc.fi/Tatoeba-MT-models/bul-tur/opus-2020-07-03.zip
-14.8	https://object.pouta.csc.fi/Tatoeba-MT-models/bul-tur/opus-2021-02-19.zip

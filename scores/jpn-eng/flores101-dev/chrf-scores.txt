@@ -1,9 +1,0 @@
-0.434	https://object.pouta.csc.fi/Tatoeba-MT-models/jpn-eng/opus-2021-02-18.zip
-0.426	https://object.pouta.csc.fi/Tatoeba-MT-models/jpn-eng/opus-2020-06-17.zip
-0.414	https://object.pouta.csc.fi/Tatoeba-MT-models/jpx-jpx/opus-2020-10-04.zip
-0.384	https://object.pouta.csc.fi/Tatoeba-MT-models/mul-eng/opus-2020-07-20.zip
-0.377	https://object.pouta.csc.fi/Tatoeba-MT-models/jpx-eng/opus-2020-07-14.zip
-0.376	https://object.pouta.csc.fi/Tatoeba-MT-models/mul-eng/opus-2020-07-14.zip
-0.375	https://object.pouta.csc.fi/Tatoeba-MT-models/mul-eng/opus2m-2020-08-12.zip
-0.363	https://object.pouta.csc.fi/Tatoeba-MT-models/tatoeba-zero/opus-2020-06-21.zip
-0.360	https://object.pouta.csc.fi/Tatoeba-MT-models/tatoeba-zero/opus-2020-06-19.zip

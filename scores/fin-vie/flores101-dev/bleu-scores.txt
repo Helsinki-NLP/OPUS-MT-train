@@ -1,2 +1,0 @@
-8.4	https://object.pouta.csc.fi/Tatoeba-MT-models/fiu-aav/opus-2021-02-19.zip
-8.1	https://object.pouta.csc.fi/Tatoeba-MT-models/fiu-mkh/opus-2021-02-18.zip

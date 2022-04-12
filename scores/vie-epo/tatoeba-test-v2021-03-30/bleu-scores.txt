@@ -1,2 +1,0 @@
-12.3	https://object.pouta.csc.fi/Tatoeba-MT-models/vie-epo/opus-2021-02-18.zip
-11.2	https://object.pouta.csc.fi/Tatoeba-MT-models/aav-art/opus4m+btTCv20210807-2021-09-30.zip

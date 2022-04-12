@@ -1,1 +1,0 @@
-48.1	https://object.pouta.csc.fi/Tatoeba-MT-models/fiu-gmq/opus-2021-02-16.zip

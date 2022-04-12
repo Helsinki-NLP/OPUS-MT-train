@@ -1,3 +1,0 @@
-76.2	https://object.pouta.csc.fi/Tatoeba-MT-models/dan-nor/opus-2021-02-23.zip
-74.0	https://object.pouta.csc.fi/Tatoeba-MT-models/gmq-gmq/opus-2021-02-16.zip
-66.2	https://object.pouta.csc.fi/Tatoeba-MT-models/dan-nor/opus-2020-06-17.zip

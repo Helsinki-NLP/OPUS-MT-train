@@ -1,1 +1,0 @@
-0.007	https://object.pouta.csc.fi/Tatoeba-MT-models/inc-inc/opus-2020-09-26.zip

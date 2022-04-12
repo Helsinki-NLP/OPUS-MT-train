@@ -1,1 +1,0 @@
-0.372	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-itc/opus1m+bt-2021-04-10.zip

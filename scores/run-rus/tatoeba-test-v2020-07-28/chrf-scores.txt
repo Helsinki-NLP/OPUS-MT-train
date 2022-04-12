@@ -1,2 +1,0 @@
-0.325	https://object.pouta.csc.fi/Tatoeba-MT-models/run-rus/opus-2021-02-18.zip
-0.314	https://object.pouta.csc.fi/Tatoeba-MT-models/alv-rus/opus1m-2021-05-15.zip

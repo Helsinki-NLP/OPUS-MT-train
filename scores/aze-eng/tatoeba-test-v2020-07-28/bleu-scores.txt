@@ -1,4 +1,0 @@
-33.2	https://object.pouta.csc.fi/Tatoeba-MT-models/trk-eng/opus1m+bt-2021-05-01.zip
-31.5	https://object.pouta.csc.fi/Tatoeba-MT-models/aze-eng/opus-2020-06-16.zip
-31.0	https://object.pouta.csc.fi/Tatoeba-MT-models/aze-eng/opus+bt-2021-04-30.zip
-6.2	https://object.pouta.csc.fi/Tatoeba-MT-models/trk-eng/opus1m-2021-02-23.zip

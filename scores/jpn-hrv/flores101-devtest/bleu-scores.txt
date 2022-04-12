@@ -1,2 +1,0 @@
-7.1	https://object.pouta.csc.fi/Tatoeba-MT-models/jpn-hbs/opus-2020-06-17.zip
-1.7	https://object.pouta.csc.fi/Tatoeba-MT-models/jpn-hbs/opus-2021-02-23.zip

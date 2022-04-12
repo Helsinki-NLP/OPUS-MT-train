@@ -1,1 +1,0 @@
-0.129	https://object.pouta.csc.fi/Tatoeba-MT-models/tai-fiu/opus-2021-02-15.zip

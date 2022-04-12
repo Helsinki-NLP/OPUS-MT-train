@@ -1,1 +1,0 @@
-0.523	https://object.pouta.csc.fi/Tatoeba-MT-models/fas-deu/opus-2021-02-23.zip

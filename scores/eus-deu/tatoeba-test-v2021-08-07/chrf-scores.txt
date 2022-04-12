@@ -1,1 +1,0 @@
-0.556	https://object.pouta.csc.fi/Tatoeba-MT-models/eus-deu/opus-2021-02-19.zip

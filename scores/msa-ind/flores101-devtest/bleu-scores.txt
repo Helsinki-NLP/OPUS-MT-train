@@ -1,2 +1,0 @@
-25.5	https://object.pouta.csc.fi/Tatoeba-MT-models/cpp-cpp/opus-2021-02-23.zip
-22.1	https://object.pouta.csc.fi/Tatoeba-MT-models/pqw-pqw/opus-2021-02-18.zip

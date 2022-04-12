@@ -1,2 +1,0 @@
-0.122	https://object.pouta.csc.fi/Tatoeba-MT-models/roa-zho/opus-2021-01-03.zip
-0.114	https://object.pouta.csc.fi/Tatoeba-MT-models/ita-zho/opus-2021-05-16.zip

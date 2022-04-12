@@ -1,3 +1,0 @@
-54.7	https://object.pouta.csc.fi/Tatoeba-MT-models/ell-rus/opus-2021-05-15.zip
-30.5	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-27.zip
-28.3	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-21.zip

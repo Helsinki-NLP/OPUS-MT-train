@@ -1,2 +1,0 @@
-41.3	https://object.pouta.csc.fi/Tatoeba-MT-models/kor-eng/opus-2020-06-17.zip
-40.8	https://object.pouta.csc.fi/Tatoeba-MT-models/kor-eng/opus-2021-02-18.zip

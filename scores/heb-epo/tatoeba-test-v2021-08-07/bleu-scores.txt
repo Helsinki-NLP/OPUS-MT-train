@@ -1,3 +1,0 @@
-34.3	https://object.pouta.csc.fi/Tatoeba-MT-models/afa-art/opus4m+btTCv20210807-2021-09-30.zip
-24.5	https://object.pouta.csc.fi/Tatoeba-MT-models/tatoeba-lowest/opus-2020-06-15.zip
-17.9	https://object.pouta.csc.fi/Tatoeba-MT-models/heb-epo/opus-2021-02-18.zip

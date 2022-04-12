@@ -1,1 +1,0 @@
-0.381	https://object.pouta.csc.fi/Tatoeba-MT-models/hbs-epo/opus-2020-06-16.zip

@@ -1,1 +1,0 @@
-0.442	https://object.pouta.csc.fi/Tatoeba-MT-models/deu-vie/opus-2021-02-19.zip

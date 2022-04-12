@@ -345,6 +345,12 @@ elg-continue-missing:
 	${MAKE} MODELTYPE=transformer-big tatoeba-zls2zle-trainjob-bt
 	${MAKE} MODELTYPE=transformer-big tatoeba-zle2zls-trainjob-bt
 
+elg-zlw2zle-xb:
+	${MAKE} MODELTYPE=transformer-big CONTINUE_EXISTING=1 MARIAN_EXTRA=--no-restore-corpus tatoeba-zlw2zle-trainjob-bt-xb
+
+elg-zle2zlw-xb:
+	${MAKE} MODELTYPE=transformer-big CONTINUE_EXISTING=1 MARIAN_EXTRA=--no-restore-corpus tatoeba-zle2zlw-trainjob-bt-xb
+
 
 
 elg-ukr-students-test:
@@ -494,6 +500,7 @@ elg-dist-pivot:
 	${MAKE} tatoeba-zle2gmq-dist-pft
 
 
+
 elg-dist-pivot-tmp:
 	${MAKE} SRCLANGS="ces slk" TRGLANGS=ukr dist-pbt-tatoeba
 	${MAKE} TRGLANGS="ces slk" SRCLANGS=ukr dist-pft-tatoeba
@@ -517,6 +524,14 @@ elg-gmq2zle-pivot:
 
 elg-zle2gmq-pivot:
 	${MAKE} MODELTYPE=transformer-big CPUJOB_HPC_MEM=32g tatoeba-zle2gmq-trainjob-pft
+
+elg-gmq2zle-xb:
+	${MAKE} MODELTYPE=transformer-big CONTINUE_EXISTING=1 CPUJOB_HPC_MEM=32g tatoeba-gmq2zle-trainjob-pbt-bt-xb
+
+elg-zle2gmq-xb:
+	${MAKE} MODELTYPE=transformer-big CONTINUE_EXISTING=1 CPUJOB_HPC_MEM=32g tatoeba-zle2gmq-trainjob-pft-bt-xb
+
+
 
 
 elg-bat2zle:

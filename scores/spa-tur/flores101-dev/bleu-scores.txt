@@ -1,3 +1,0 @@
-11.3	https://object.pouta.csc.fi/Tatoeba-MT-models/spa-tur/opus-2021-02-19.zip
-4.2	https://object.pouta.csc.fi/Tatoeba-MT-models/tatoeba-zero/opus-2020-06-19.zip
-3.4	https://object.pouta.csc.fi/Tatoeba-MT-models/tatoeba-lowest/opus-2020-06-15.zip

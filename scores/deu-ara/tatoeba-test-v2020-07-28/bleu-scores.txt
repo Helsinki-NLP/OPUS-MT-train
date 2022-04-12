@@ -1,3 +1,0 @@
-23.2	https://object.pouta.csc.fi/Tatoeba-MT-models/deu-ara/opusTCv20210807-2021-10-22.zip
-20.4	https://object.pouta.csc.fi/Tatoeba-MT-models/deu-ara/opus-2021-02-23.zip
-18.3	https://object.pouta.csc.fi/Tatoeba-MT-models/deu-ara/opus-2020-09-10.zip

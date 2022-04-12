@@ -1,2 +1,0 @@
-5.3	https://object.pouta.csc.fi/Tatoeba-MT-models/jpn-msa/opus-2020-06-17.zip
-4.2	https://object.pouta.csc.fi/Tatoeba-MT-models/jpn-msa/opus-2021-02-18.zip

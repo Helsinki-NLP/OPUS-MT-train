@@ -1,3 +1,0 @@
-1.7	https://object.pouta.csc.fi/Tatoeba-MT-models/bat-eng/opus4m+btTCv20210807-2021-09-30.zip
-1.3	https://object.pouta.csc.fi/Tatoeba-MT-models/bat-eng/opus1m+bt-2021-05-01.zip
-0.7	https://object.pouta.csc.fi/Tatoeba-MT-models/bat-bat/opus-2021-02-18.zip

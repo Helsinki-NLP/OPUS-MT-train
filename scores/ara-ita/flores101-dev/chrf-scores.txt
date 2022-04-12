@@ -1,2 +1,0 @@
-0.467	https://object.pouta.csc.fi/Tatoeba-MT-models/ara-ita/opus-2020-06-18.zip
-0.464	https://object.pouta.csc.fi/Tatoeba-MT-models/ara-ita/opus-2021-02-23.zip
