@@ -929,7 +929,8 @@ ukr-model-table2:
 
 
 # SCORE_BASE_URL = https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master
-SCORE_BASE_URL = https://github.com/Helsinki-NLP/OPUS-MT-train/blob/puhti
+# SCORE_BASE_URL = https://github.com/Helsinki-NLP/OPUS-MT-train/blob/puhti
+SCORE_BASE_URL = https://github.com/Helsinki-NLP/OPUS-MT-leaderboard/blob/master
 
 
 print-best-eng:

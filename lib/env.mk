@@ -253,6 +253,9 @@ install install-prerequisites install-prereq install-requirements:
 	${LOAD_BUILD_ENV} && ${PIP} install --user -r requirements.txt
 	${LOAD_BUILD_ENV} && ${MAKE} install-perl-modules
 	${LOAD_BUILD_ENV} && ${MAKE} ${PREREQ_TOOLS}
+	if [ ! -e scores ]; then \
+	  ln -s OPUS-MT-leaderboard/scores scores; \
+	fi
 
 PHONY: install-all
 install-all: install
