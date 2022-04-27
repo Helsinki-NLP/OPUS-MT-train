@@ -150,8 +150,8 @@ translate: ${BITEXT_LATEST_README} ${BITEXT_LATEST_TRG}
 	${MAKE} ${BITEXT_LATEST_SRC}
 
 ## translate all parts
-.PHONY: translate-all-parts
-translate-all-parts: ${ALL_BITEXT_LATEST_TRG}
+.PHONY: translate-all-parts translate-all
+translate-all translate-all-parts: ${ALL_BITEXT_LATEST_TRG}
 	${MAKE} source-all-parts
 
 .PHONY: source-all-parts
