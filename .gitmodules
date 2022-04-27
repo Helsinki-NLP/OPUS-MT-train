@@ -30,7 +30,10 @@
 	url = https://github.com/stedolan/jq.git
 [submodule "OPUS-MT-testsets"]
 	path = OPUS-MT-testsets
-	url = https://github.com/Helsinki-NLP/OPUS-MT-testsets.git
+	url = ../OPUS-MT-testsets.git
 [submodule "tools/browsermt/marian-dev"]
 	path = tools/browsermt/marian-dev
 	url = https://github.com/browsermt/marian-dev.git
+[submodule "OPUS-MT-leaderboard"]
+	path = OPUS-MT-leaderboard
+	url = ../OPUS-MT-leaderboard.git

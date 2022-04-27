@@ -1,8 +1,0 @@
-55.5	https://object.pouta.csc.fi/Tatoeba-MT-models/zlw-zle/opusTCv20210807+bt_transformer-big_2022-03-07.zip
-55.3	https://object.pouta.csc.fi/Tatoeba-MT-models/zlw-zle/opusTCv20210807+bt_transformer-big_2022-03-19.zip
-49.5	https://object.pouta.csc.fi/Tatoeba-MT-models/sla-sla/opus-2020-07-27.zip
-48.2	https://object.pouta.csc.fi/Tatoeba-MT-models/sla-sla/opus-2020-07-21.zip
-47.9	https://object.pouta.csc.fi/Tatoeba-MT-models/sla-sla/opus-2020-10-04.zip
-47.6	https://object.pouta.csc.fi/Tatoeba-MT-models/sla-sla/opus-2020-09-26.zip
-34.8	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-27.zip
-33.0	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-21.zip

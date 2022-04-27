@@ -1,7 +1,0 @@
-18.4	https://object.pouta.csc.fi/Tatoeba-MT-models/gem-gem/opus-2020-09-26.zip
-18.3	https://object.pouta.csc.fi/Tatoeba-MT-models/gem-gem/opus-2020-07-27.zip
-18.2	https://object.pouta.csc.fi/Tatoeba-MT-models/gem-gem/opus-2020-10-04.zip
-17.9	https://object.pouta.csc.fi/Tatoeba-MT-models/gem-gem/opus-2020-07-21.zip
-17.7	https://object.pouta.csc.fi/Tatoeba-MT-models/gem-gem/opus-2020-07-06.zip
-13.5	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-27.zip
-12.6	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-21.zip

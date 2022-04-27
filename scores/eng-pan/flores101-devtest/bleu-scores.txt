@@ -1,2 +1,0 @@
-0.5	https://object.pouta.csc.fi/Tatoeba-MT-models/inc-inc/opus-2020-09-26.zip
-0.4	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-inc/opus1m+bt-2021-04-13.zip

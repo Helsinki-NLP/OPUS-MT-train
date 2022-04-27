@@ -1,1 +1,0 @@
-11.4	https://object.pouta.csc.fi/Tatoeba-MT-models/itc-heb/opus1m-2021-05-16.zip

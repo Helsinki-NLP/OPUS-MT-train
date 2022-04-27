@@ -1,1 +1,0 @@
-0.384	https://object.pouta.csc.fi/Tatoeba-MT-models/vie-rus/opus-2021-02-18.zip

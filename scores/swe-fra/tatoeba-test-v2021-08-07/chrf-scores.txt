@@ -1,5 +1,0 @@
-0.723	https://object.pouta.csc.fi/Tatoeba-MT-models/swe-fra/opus-2021-02-18.zip
-0.722	https://object.pouta.csc.fi/Tatoeba-MT-models/swe-fra/opus-2021-02-22.zip
-0.689	https://object.pouta.csc.fi/Tatoeba-MT-models/deu+eng+fin+fra+nld+swe-deu+eng+fin+fra+nld+swe/opus1m-2021-02-22.zip
-0.602	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-27.zip
-0.589	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-21.zip

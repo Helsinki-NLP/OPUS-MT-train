@@ -1,8 +1,0 @@
-8.5	https://object.pouta.csc.fi/Tatoeba-MT-models/sla-sla/opus-2021-02-18.zip
-8.3	https://object.pouta.csc.fi/Tatoeba-MT-models/zle-gmw/opus-tuned4ukr2eng-2021-01-17.zip
-8.0	https://object.pouta.csc.fi/Tatoeba-MT-models/zle-gmw/opus-tuned4bel2nld-2021-01-15.zip
-7.7	https://object.pouta.csc.fi/Tatoeba-MT-models/zle-gmw/opus-tuned4rus2eng-2021-01-17.zip
-7.6	https://object.pouta.csc.fi/Tatoeba-MT-models/zle-eng/opus1m+bt-2021-05-02.zip
-7.5	https://object.pouta.csc.fi/Tatoeba-MT-models/zle-gmw/opus-tuned4bel2deu-2021-01-15.zip
-4.6	https://object.pouta.csc.fi/Tatoeba-MT-models/zle-zle/opus-2021-02-23.zip
-0.3	https://object.pouta.csc.fi/Tatoeba-MT-models/zle-gmw/opus-tuned4rus2deu-2021-01-17.zip

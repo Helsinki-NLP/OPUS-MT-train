@@ -1,1 +1,0 @@
-0.370	https://object.pouta.csc.fi/Tatoeba-MT-models/epo-afr/opus-2021-02-18.zip

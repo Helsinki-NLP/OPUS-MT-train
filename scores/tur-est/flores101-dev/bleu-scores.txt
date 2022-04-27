@@ -1,2 +1,0 @@
-7.4	https://object.pouta.csc.fi/Tatoeba-MT-models/tut-fiu/opus-2021-02-10.zip
-7.1	https://object.pouta.csc.fi/Tatoeba-MT-models/trk-fiu/opus-2021-02-10.zip

@@ -1,3 +1,0 @@
-20.3	https://object.pouta.csc.fi/Tatoeba-MT-models/ces+slk-ukr/opusTCv20210807+pbt_transformer-align_2022-03-08.zip
-19.4	https://object.pouta.csc.fi/Tatoeba-MT-models/ces+slk-ukr/opusTCv20210807+bt+pbt+pft-sepvoc_transformer-tiny11-align_2022-03-23.zip
-9.2	https://object.pouta.csc.fi/Tatoeba-MT-models/sla-sla/opus-2021-02-16.zip

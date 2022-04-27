@@ -1,1 +1,0 @@
-0.520	https://object.pouta.csc.fi/Tatoeba-MT-models/zho-nld/opus-2020-06-17.zip

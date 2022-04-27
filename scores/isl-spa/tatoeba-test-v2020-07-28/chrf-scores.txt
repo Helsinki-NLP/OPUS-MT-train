@@ -1,3 +1,0 @@
-0.666	https://object.pouta.csc.fi/Tatoeba-MT-models/isl-spa/opus-2021-02-19.zip
-0.499	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-27.zip
-0.488	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-21.zip

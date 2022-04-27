@@ -1,9 +1,0 @@
-0.669	https://object.pouta.csc.fi/Tatoeba-MT-models/deu-nor/opus-2021-02-24.zip
-0.647	https://object.pouta.csc.fi/Tatoeba-MT-models/gem-gem/opus-2020-07-27.zip
-0.645	https://object.pouta.csc.fi/Tatoeba-MT-models/gem-gem/opus-2020-10-04.zip
-0.643	https://object.pouta.csc.fi/Tatoeba-MT-models/gem-gem/opus-2020-09-26.zip
-0.640	https://object.pouta.csc.fi/Tatoeba-MT-models/gem-gem/opus-2020-07-21.zip
-0.564	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-27.zip
-0.555	https://object.pouta.csc.fi/Tatoeba-MT-models/deu-nor/opus-2020-06-17.zip
-0.553	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-21.zip
-0.209	https://object.pouta.csc.fi/Tatoeba-MT-models/gem-gem/opus-2020-07-06.zip

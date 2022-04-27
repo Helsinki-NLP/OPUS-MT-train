@@ -1,5 +1,0 @@
-16.4	https://object.pouta.csc.fi/Tatoeba-MT-models/sla-sla/opus-2020-10-04.zip
-16.2	https://object.pouta.csc.fi/Tatoeba-MT-models/sla-sla/opus-2020-07-27.zip
-15.8	https://object.pouta.csc.fi/Tatoeba-MT-models/sla-sla/opus-2020-07-21.zip
-10.2	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-27.zip
-9.7	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-21.zip

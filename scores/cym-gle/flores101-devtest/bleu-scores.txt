@@ -1,3 +1,0 @@
-14.8	https://object.pouta.csc.fi/Tatoeba-MT-models/cel-cel/opus-2020-10-04.zip
-8.6	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-27.zip
-8.2	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-21.zip

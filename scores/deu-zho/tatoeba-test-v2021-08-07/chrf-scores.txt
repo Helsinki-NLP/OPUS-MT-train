@@ -1,1 +1,0 @@
-0.276	https://object.pouta.csc.fi/Tatoeba-MT-models/deu-zho/opus-2021-02-23.zip

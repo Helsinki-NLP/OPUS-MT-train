@@ -1,4 +1,0 @@
-0.009	https://object.pouta.csc.fi/Tatoeba-MT-models/tatoeba-zero/opus-2020-06-19.zip
-0.008	https://object.pouta.csc.fi/Tatoeba-MT-models/art-art/opus-2020-10-04.zip
-0.007	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-mul/opus-2020-07-20.zip
-0.005	https://object.pouta.csc.fi/Tatoeba-MT-models/eng-mul/opus-2020-07-27.zip

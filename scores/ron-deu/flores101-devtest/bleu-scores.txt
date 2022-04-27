@@ -1,4 +1,0 @@
-24.3	https://object.pouta.csc.fi/Tatoeba-MT-models/ron-deu/opus-2021-05-01.zip
-17.3	https://object.pouta.csc.fi/Tatoeba-MT-models/itc-deu/opus1m-2021-05-16.zip
-13.5	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-27.zip
-12.6	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-21.zip

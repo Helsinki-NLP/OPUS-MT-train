@@ -1,3 +1,0 @@
-0.50862	https://object.pouta.csc.fi/Tatoeba-MT-models/bat-gmq/opus4m+btTCv20210807-2022-01-19.zip
-0.379	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-27.zip
-0.367	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-21.zip

@@ -1,4 +1,0 @@
-0.434	https://object.pouta.csc.fi/Tatoeba-MT-models/gmw-eng/opus1m+bt-2021-05-01.zip
-0.428	https://object.pouta.csc.fi/Tatoeba-MT-models/gem-gem/opus-2021-02-24.zip
-0.409	https://object.pouta.csc.fi/Tatoeba-MT-models/gmw-eng/opus4m+btTCv20210807-2021-09-30.zip
-0.364	https://object.pouta.csc.fi/Tatoeba-MT-models/gmw-gmw/opus-2021-02-23.zip

@@ -1,2 +1,0 @@
-7.6	https://object.pouta.csc.fi/Tatoeba-MT-models/cpp-fiu/opus-2021-02-19.zip
-7.3	https://object.pouta.csc.fi/Tatoeba-MT-models/crp-fiu/opus-2021-02-19.zip

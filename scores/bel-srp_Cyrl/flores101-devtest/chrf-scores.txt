@@ -1,1 +1,0 @@
-0.44424	https://object.pouta.csc.fi/Tatoeba-MT-models/zle-zls/opusTCv20210807+bt_transformer-big_2022-03-23.zip

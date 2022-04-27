@@ -1,3 +1,0 @@
-0.627	https://object.pouta.csc.fi/Tatoeba-MT-models/cat-nld/opus-2021-02-12.zip
-0.551	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-27.zip
-0.532	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-21.zip

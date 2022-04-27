@@ -1,4 +1,0 @@
-29.8	https://object.pouta.csc.fi/Tatoeba-MT-models/tatoeba-zero/opus-2020-06-21.zip
-29.6	https://object.pouta.csc.fi/Tatoeba-MT-models/tatoeba-zero/opus-2020-06-19.zip
-29.1	https://object.pouta.csc.fi/Tatoeba-MT-models/fra-epo/opus-2021-02-19.zip
-28.6	https://object.pouta.csc.fi/Tatoeba-MT-models/tatoeba-lowest/opus-2020-06-15.zip

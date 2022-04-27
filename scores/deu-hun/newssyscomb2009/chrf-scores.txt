@@ -1,2 +1,0 @@
-0.489	https://object.pouta.csc.fi/Tatoeba-MT-models/deu-hun/opus-2021-02-18.zip
-0.454	https://object.pouta.csc.fi/Tatoeba-MT-models/gmw-fiu/opus-2021-02-10.zip

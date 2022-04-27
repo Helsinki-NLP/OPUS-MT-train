@@ -1,2 +1,0 @@
-56.8	https://object.pouta.csc.fi/Tatoeba-MT-models/spa-nor/opus-2021-02-23.zip
-36.7	https://object.pouta.csc.fi/Tatoeba-MT-models/spa-nor/opus-2020-06-17.zip

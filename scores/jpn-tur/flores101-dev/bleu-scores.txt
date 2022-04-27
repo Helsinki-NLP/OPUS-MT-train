@@ -1,2 +1,0 @@
-5.0	https://object.pouta.csc.fi/Tatoeba-MT-models/jpn-tur/opus-2021-02-19.zip
-2.6	https://object.pouta.csc.fi/Tatoeba-MT-models/tatoeba-zero/opus-2020-06-19.zip

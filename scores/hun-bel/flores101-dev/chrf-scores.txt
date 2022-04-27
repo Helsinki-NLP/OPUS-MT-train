@@ -1,2 +1,0 @@
-0.307	https://object.pouta.csc.fi/Tatoeba-MT-models/fiu-sla/opus-2021-02-16.zip
-0.271	https://object.pouta.csc.fi/Tatoeba-MT-models/fiu-zle/opus-2021-02-11.zip

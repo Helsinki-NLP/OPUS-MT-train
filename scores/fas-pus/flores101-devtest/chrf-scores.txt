@@ -1,1 +1,0 @@
-0.012	https://object.pouta.csc.fi/Tatoeba-MT-models/ira-ira/opus-2020-10-04.zip

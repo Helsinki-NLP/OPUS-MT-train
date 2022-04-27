@@ -1,2 +1,0 @@
-0.502	https://object.pouta.csc.fi/Tatoeba-MT-models/tgl-por/opus-2020-06-17.zip
-0.500	https://object.pouta.csc.fi/Tatoeba-MT-models/tgl-por/opus-2021-02-24.zip

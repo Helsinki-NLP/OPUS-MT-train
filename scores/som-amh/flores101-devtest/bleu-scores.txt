@@ -1,2 +1,0 @@
-1.1	https://object.pouta.csc.fi/Tatoeba-MT-models/afa-afa/opus-2020-10-04.zip
-1.0	https://object.pouta.csc.fi/Tatoeba-MT-models/afa-afa/opus-2020-09-26.zip

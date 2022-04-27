@@ -1,4 +1,0 @@
-21.3	https://object.pouta.csc.fi/Tatoeba-MT-models/itc-itc/opus-2020-07-07.zip
-17.7	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-27.zip
-17.3	https://object.pouta.csc.fi/Tatoeba-MT-models/tatoeba-zero/opus-2020-06-21.zip
-16.9	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-21.zip

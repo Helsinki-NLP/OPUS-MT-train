@@ -1,3 +1,0 @@
-0.44620	https://object.pouta.csc.fi/Tatoeba-MT-models/fin-zlw/opus4m+btTCv20210807-2022-01-19.zip
-0.405	https://object.pouta.csc.fi/Tatoeba-MT-models/fiu-zlw/opus-2021-02-19.zip
-0.393	https://object.pouta.csc.fi/Tatoeba-MT-models/fiu-sla/opus-2021-02-16.zip

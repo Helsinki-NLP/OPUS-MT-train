@@ -1,2 +1,0 @@
-0.309	https://object.pouta.csc.fi/Tatoeba-MT-models/tai-fiu/opus-2021-02-18.zip
-0.301	https://object.pouta.csc.fi/Tatoeba-MT-models/tai-fiu/opus-2021-02-15.zip

@@ -1,2 +1,0 @@
-0.493	https://object.pouta.csc.fi/Tatoeba-MT-models/ron-epo/opus-2020-06-16.zip
-0.311	https://object.pouta.csc.fi/Tatoeba-MT-models/ron-epo/opus-2021-02-24.zip

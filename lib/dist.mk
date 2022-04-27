@@ -361,6 +361,9 @@ ifneq (${SKIP_DIST_EVAL},1)
 	@${MAKE} $(TEST_EVALUATION)
 	@${MAKE} $(TEST_COMPARISON)
 endif
+ifneq (${wildcard ${TRAIN_ALG}},)
+	-${MAKE} lexical-shortlist
+endif
 ##-----------------------------
 ## collect all files we need
 ##-----------------------------

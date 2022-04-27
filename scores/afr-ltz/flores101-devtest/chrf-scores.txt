@@ -1,9 +1,0 @@
-0.340	https://object.pouta.csc.fi/Tatoeba-MT-models/gem-gem/opus-2020-10-04.zip
-0.338	https://object.pouta.csc.fi/Tatoeba-MT-models/gem-gem/opus-2020-07-27.zip
-0.336	https://object.pouta.csc.fi/Tatoeba-MT-models/gem-gem/opus-2020-07-21.zip
-0.335	https://object.pouta.csc.fi/Tatoeba-MT-models/gem-gem/opus-2020-07-06.zip
-0.331	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-27.zip
-0.328	https://object.pouta.csc.fi/Tatoeba-MT-models/gmw-gmw/opus-2020-07-27.zip
-0.327	https://object.pouta.csc.fi/Tatoeba-MT-models/gmw-gmw/opus-2020-07-06.zip
-0.325	https://object.pouta.csc.fi/Tatoeba-MT-models/ine-ine/opus-2020-07-21.zip
-0.314	https://object.pouta.csc.fi/Tatoeba-MT-models/westgermanic/opus-2020-06-21.zip

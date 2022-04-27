@@ -1,3 +1,0 @@
-17.7	https://object.pouta.csc.fi/Tatoeba-MT-models/hun-ces/opus-2021-02-18.zip
-13.3	https://object.pouta.csc.fi/Tatoeba-MT-models/fiu-zlw/opus-2021-02-19.zip
-11.8	https://object.pouta.csc.fi/Tatoeba-MT-models/fiu-sla/opus-2021-02-16.zip

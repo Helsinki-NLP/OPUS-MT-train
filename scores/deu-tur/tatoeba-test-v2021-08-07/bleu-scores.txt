@@ -1,4 +1,0 @@
-35.5	https://object.pouta.csc.fi/Tatoeba-MT-models/deu-tur/opusTCv20210807-2021-10-22.zip
-18.5	https://object.pouta.csc.fi/Tatoeba-MT-models/tatoeba-zero/opus-2020-06-21.zip
-18.4	https://object.pouta.csc.fi/Tatoeba-MT-models/tatoeba-zero/opus-2020-06-19.zip
-18.3	https://object.pouta.csc.fi/Tatoeba-MT-models/tatoeba-lowest/opus-2020-06-15.zip
