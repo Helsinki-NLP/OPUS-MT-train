@@ -21,6 +21,8 @@
 ##----------------------------------------------
 
 spm-models: ${SPMSRCMODEL} ${SPMTRGMODEL}
+spm-srcmodel: ${SPMSRCMODEL}
+spm-trgmodel: ${SPMTRGMODEL}
 
 # SPMEXTRA = --split_by_whitespace=false
 SPMEXTRA = 

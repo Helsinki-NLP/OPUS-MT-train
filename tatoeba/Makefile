@@ -132,6 +132,42 @@ all:
 
 
 
+
+tatoeba-tokenizer-sizes:
+	for s in 16000 32000 64000 8000 4000; do \
+	  ${MAKE} SUBWORD_TRGVOCAB_SIZE=$$s tatoeba-tokenizer-langs; \
+	done
+
+# or rather base 2 sizes?
+# 16384 32768 65536 8192 4096
+# (but this breaks the way we create the short size string)
+
+tatoeba-tokenizer-langs:
+	for l in ${filter-out eng,${TATOEBA_LANGS}}; do \
+	  ${MAKE} SRC=eng TRG=$$l tatoeba-tokenizer; \
+	done
+	${MAKE} SRC=fra TRG=eng tatoeba-tokenizer
+
+SUBWORD_TRG_SHORTSIZE = ${SUBWORD_TRGVOCAB_SIZE:000=}k
+SUBWORD_TRG_NAME = ${lastword ${subst -, ,${LANGPAIRSTR}}}
+
+tatoeba-tokenizer: ${RELEASEDIR}/spm/${LANGPAIRSTR}/opusTC.${SUBWORD_TRG_NAME}.${SUBWORD_TRG_SHORTSIZE}.spm
+
+${RELEASEDIR}/spm/${LANGPAIRSTR}/opusTC.${SUBWORD_TRG_NAME}.${SUBWORD_TRG_SHORTSIZE}.spm:
+	mkdir -p ${WORKDIR}/spm/train
+	${MAKE} WORKDIR=${WORKDIR}/spm fetch-datasets
+	${MAKE} WORKDIR=${WORKDIR}/spm langlabel-files
+	${MAKE} WORKDIR=${WORKDIR}/spm SPM_INPUT_SIZE=10000000 spm-trgmodel-tatoeba \
+	> ${WORKDIR}/train/spm-trgmodel.out 2>${WORKDIR}/train/spm-trgmodel.err
+	mkdir -p ${dir $@}
+	mv ${WORKDIR}/spm/train/$(notdir ${SPMTRGMODEL}) $@
+	mv ${WORKDIR}/spm/train/$(notdir ${SPMTRGMODEL}).vocab $@.vocab
+	mv ${WORKDIR}/train/spm-trgmodel.out $@.stdout
+	mv ${WORKDIR}/train/spm-trgmodel.err $@.stderr
+
+
+
+
 ## start unidirectional training job
 ## - make data first, then submit a job
 .PHONY: tatoeba-job

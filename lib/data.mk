@@ -558,6 +558,8 @@ endif
 
 .PHONY: add-to-local-train-data
 add-to-local-train-data: ${CLEAN_TRAIN_SRC} ${CLEAN_TRAIN_TRG}
+ifneq (${wildcard ${CLEAN_TRAIN_SRC}},)
+ifneq (${wildcard ${CLEAN_TRAIN_TRG}},)
 ifdef CHECK_TRAINDATA_SIZE
 	@if [ `${GZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} | wc -l` != `${GZCAT} ${wildcard ${CLEAN_TRAIN_TRG}} | wc -l` ]; then \
 	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
@@ -593,6 +595,7 @@ endif
 		${LABEL_SOURCE_DATA} > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
 	@${GZCAT} ${wildcard ${CLEAN_TRAIN_TRG}} ${CUT_DATA_SETS} 2>/dev/null \
 		> ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
+	@touch ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
 ######################################
 #  SHUFFLE_DATA is set?
 #    --> shuffle data for each langpair
@@ -630,8 +633,8 @@ else
 	@cat ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg >> ${LOCAL_TRAIN_TRG}
 endif
 	@rm -f ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
-
-
+endif
+endif
 
 
 ####################
