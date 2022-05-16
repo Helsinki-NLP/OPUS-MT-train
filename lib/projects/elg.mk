@@ -153,6 +153,13 @@ elg-gmq2ukr-tiny11:
 		STUDENT_DATA=pft-pbt-bt SRCLANGS="dan isl nno nob nor swe" TRGLANGS=ukr \
 		LANGPAIRSTR="gmq-ukr" train-tiny11-student
 
+elg-gmq2ukr-small:
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus \
+		MARIAN_EARLY_STOPPING=15 \
+		STUDENT_DATA=ftbest-ftmono-nopar \
+		SRCLANGS="dan nob swe" TRGLANGS=ukr \
+		LANGPAIRSTR="gmq-ukr" train-small-student
+
 
 
 ## tiny11 transformer model for finnish with pivot data (reuse student recipes)
@@ -240,6 +247,32 @@ elg-ukr2deu-student3:
 	${MAKE} MODELZIP=https://object.pouta.csc.fi/Tatoeba-MT-models/ukr-deu/opusTCv20210807_transformer-big_2022-03-14.zip \ SRCLANGS=ukr TRGLANGS=deu STUDENT_DATA=ftbest-bt-nopar train-tiny11-student
 
 
+elg-deu2ukr-student4:
+	${MAKE} MARIAN_EARLY_STOPPING=15 STUDENT_DATA=ftbest-ftmono-nopar SRCLANGS=deu TRGLANGS=ukr train-small-student
+
+elg-ukr2deu-student4:
+	${MAKE} MARIAN_EARLY_STOPPING=15 SRCLANGS=ukr TRGLANGS=deu STUDENT_DATA=ftbest-ftmono-nopar train-small-student
+
+
+elg-ukr2gmq-small:
+	${MAKE} MARIAN_EARLY_STOPPING=15 SRCLANGS=ukr TRGLANGS=swe STUDENT_DATA=ftbest-ftmono-nopar train-small-student
+	${MAKE} MARIAN_EARLY_STOPPING=15 SRCLANGS=ukr TRGLANGS=dan STUDENT_DATA=ftbest-ftmono-nopar train-small-student
+	${MAKE} MARIAN_EARLY_STOPPING=15 SRCLANGS=ukr TRGLANGS=nob STUDENT_DATA=ftbest-ftmono-nopar train-small-student
+
+
+elg-dan2ukr-small:
+	${MAKE} MARIAN_EARLY_STOPPING=15 SRCLANGS=dan TRGLANGS=ukr STUDENT_DATA=ftbest-ftmono-nopar train-small-student
+
+elg-swe2ukr-small:
+	${MAKE} MARIAN_EARLY_STOPPING=15 SRCLANGS=swe TRGLANGS=ukr STUDENT_DATA=ftbest-ftmono-nopar train-small-student
+
+elg-nob2ukr-small:
+	${MAKE} MARIAN_EARLY_STOPPING=15 SRCLANGS=nob TRGLANGS=ukr STUDENT_DATA=ftbest-ftmono-nopar train-small-student
+
+
+
+
+
 
 elg-fin2ukr-student2:
 	${MAKE} SUBWORD_VOCAB_SIZE=16000 MARIAN_EARLY_STOPPING=15 SRCLANGS=fin TRGLANGS=ukr CHECK_TRAINDATA_SIZE=1 CLEAN_CORPUS_TRAINING_DATA=1 STUDENT_DATA=ftbest-ftmono-nopar train-tiny11-student
@@ -290,10 +323,18 @@ elg-ukr2eng-student:
 
 
 elg-eng2ukr-student2:
-	${MAKE} MARIAN_EARLY_STOPPING=15 STUDENT_DATA=ftbest-bt-nopar SRCLANGS=eng TRGLANGS=ukr train-tiny11-student
+	${MAKE} MARIAN_EARLY_STOPPING=15 STUDENT_DATA=ftbest-ftmono-nopar SRCLANGS=eng TRGLANGS=ukr train-tiny11-student
 
 elg-ukr2eng-student2:
 	${MAKE} CONTINUE_EXISTING=1 MARIAN_EARLY_STOPPING=15 SRCLANGS=ukr TRGLANGS=eng STUDENT_DATA=ftbest-ftmono-nopar train-tiny11-student
+
+
+
+elg-eng2ukr-student3:
+	${MAKE} MARIAN_EARLY_STOPPING=15 STUDENT_DATA=ftbest-ftmono-nopar SRCLANGS=eng TRGLANGS=ukr train-small-student
+
+elg-ukr2eng-student3:
+	${MAKE} MARIAN_EARLY_STOPPING=15 SRCLANGS=ukr TRGLANGS=eng STUDENT_DATA=ftbest-ftmono-nopar train-small-student
 
 
 
@@ -358,6 +399,8 @@ elg-new-bigmodels:
 	${MAKE} MODELTYPE=transformer-big tatoeba-vie2deu-trainjob
 
 
+elg-zho:
+	${MAKE} MODELTYPE=transformer-big tatoeba-zho2eng-trainjob
 
 
 elg-continue-missing:
@@ -462,6 +505,12 @@ elg-eng2zle-xb:
 
 elg-zle2eng-xb:
 	${MAKE} MARIAN_EARLY_STOPPING=25 MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big CONTINUE_EXISTING=1 tatoeba-zle2eng-trainjob-bt-xb
+
+
+elg-fin2zle-xb:
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big CONTINUE_EXISTING=1 tatoeba-fin2zle-trainjob-pbt-pft-bt-xb
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big CONTINUE_EXISTING=1 tatoeba-zle2fin-trainjob-pbt-pft-bt-xb
+
 
 
 elg-pivot-eval:
@@ -906,7 +955,8 @@ ukr-model-table2:
 
 
 # SCORE_BASE_URL = https://github.com/Helsinki-NLP/OPUS-MT-train/blob/master
-SCORE_BASE_URL = https://github.com/Helsinki-NLP/OPUS-MT-train/blob/puhti
+# SCORE_BASE_URL = https://github.com/Helsinki-NLP/OPUS-MT-train/blob/puhti
+SCORE_BASE_URL = https://github.com/Helsinki-NLP/OPUS-MT-leaderboard/blob/master
 
 
 print-best-eng:
