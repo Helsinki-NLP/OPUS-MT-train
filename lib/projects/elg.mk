@@ -374,29 +374,29 @@ elg-fin2zle-pivot:
 
 
 elg-new-bigmodels:
-	${MAKE} MODELTYPE=transformer-big tatoeba-deu2fin-trainjob-bt
-	${MAKE} MODELTYPE=transformer-big tatoeba-spa2fin-trainjob
-	${MAKE} MODELTYPE=transformer-big tatoeba-fra2fin-trainjob
-	${MAKE} MODELTYPE=transformer-big tatoeba-por2fin-trainjob
-	${MAKE} MODELTYPE=transformer-big tatoeba-ita2fin-trainjob
-	${MAKE} MODELTYPE=transformer-big tatoeba-tur2fin-trainjob
-	${MAKE} MODELTYPE=transformer-big tatoeba-ara2fin-trainjob
-	${MAKE} MODELTYPE=transformer-big tatoeba-zho2fin-trainjob
-	${MAKE} MODELTYPE=transformer-big tatoeba-zls2fin-trainjob
-	${MAKE} MODELTYPE=transformer-big tatoeba-zlw2fin-trainjob
-	${MAKE} MODELTYPE=transformer-big tatoeba-spa2deu-trainjob
-	${MAKE} MODELTYPE=transformer-big tatoeba-fra2deu-trainjob
-	${MAKE} MODELTYPE=transformer-big tatoeba-por2deu-trainjob
-	${MAKE} MODELTYPE=transformer-big tatoeba-ita2deu-trainjob
-	${MAKE} MODELTYPE=transformer-big tatoeba-tur2deu-trainjob
-	${MAKE} MODELTYPE=transformer-big tatoeba-ara2deu-trainjob
-	${MAKE} MODELTYPE=transformer-big tatoeba-zho2deu-trainjob
-	${MAKE} MODELTYPE=transformer-big tatoeba-zls2deu-trainjob
-	${MAKE} MODELTYPE=transformer-big tatoeba-zlw2deu-trainjob
-	${MAKE} MODELTYPE=transformer-big tatoeba-bat2deu-trainjob
-	${MAKE} MODELTYPE=transformer-big tatoeba-gmq2deu-trainjob
-	${MAKE} MODELTYPE=transformer-big tatoeba-heb2deu-trainjob
-	${MAKE} MODELTYPE=transformer-big tatoeba-vie2deu-trainjob
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-deu2fin-trainjob-bt
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-spa2fin-trainjob
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-fra2fin-trainjob
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-por2fin-trainjob
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-ita2fin-trainjob
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-tur2fin-trainjob
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-ara2fin-trainjob
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-zho2fin-trainjob
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-zls2fin-trainjob
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-zlw2fin-trainjob
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-spa2deu-trainjob
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-fra2deu-trainjob
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-por2deu-trainjob
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-ita2deu-trainjob
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-tur2deu-trainjob
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-ara2deu-trainjob
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-zho2deu-trainjob
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-zls2deu-trainjob
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-zlw2deu-trainjob
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-bat2deu-trainjob
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-gmq2deu-trainjob
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-heb2deu-trainjob
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-vie2deu-trainjob
 
 
 elg-zho:
