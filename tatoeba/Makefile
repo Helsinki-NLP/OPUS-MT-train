@@ -133,6 +133,10 @@ all:
 
 
 
+#################################################
+## fixed sentence piece models for all langs
+#################################################
+
 tatoeba-tokenizer-sizes:
 	for s in 16000 32000 64000 8000 4000; do \
 	  ${MAKE} SUBWORD_TRGVOCAB_SIZE=$$s tatoeba-tokenizer-langs; \
@@ -148,22 +152,51 @@ tatoeba-tokenizer-langs:
 	done
 	${MAKE} SRC=fra TRG=eng tatoeba-tokenizer
 
-SUBWORD_TRG_SHORTSIZE = ${SUBWORD_TRGVOCAB_SIZE:000=}k
-SUBWORD_TRG_NAME = ${lastword ${subst -, ,${LANGPAIRSTR}}}
 
-tatoeba-tokenizer: ${RELEASEDIR}/spm/${LANGPAIRSTR}/opusTC.${SUBWORD_TRG_NAME}.${SUBWORD_TRG_SHORTSIZE}.spm
-
-${RELEASEDIR}/spm/${LANGPAIRSTR}/opusTC.${SUBWORD_TRG_NAME}.${SUBWORD_TRG_SHORTSIZE}.spm:
+tatoeba-tokenizer: 
 	mkdir -p ${WORKDIR}/spm/train
 	${MAKE} WORKDIR=${WORKDIR}/spm fetch-datasets
 	${MAKE} WORKDIR=${WORKDIR}/spm langlabel-files
-	${MAKE} WORKDIR=${WORKDIR}/spm SPM_INPUT_SIZE=10000000 spm-trgmodel-tatoeba \
-	> ${WORKDIR}/train/spm-trgmodel.out 2>${WORKDIR}/train/spm-trgmodel.err
+	${MAKE} WORKDIR=${WORKDIR}/spm rawdata-tatoeba
+	${MAKE} WORKDIR=${WORKDIR}/spm local-config-tatoeba
+	for s in 16000 32000 64000 8000 4000; do \
+	  ${MAKE} SUBWORD_TRGVOCAB_SIZE=$$s tatoeba-spmodel; \
+	done
+	rm -fr ${WORKDIR}/spm
+
+SUBWORD_TRG_SHORTSIZE = ${SUBWORD_TRGVOCAB_SIZE:000=}k
+SUBWORD_TRG_NAME = ${lastword ${subst -, ,${LANGPAIRSTR}}}
+
+tatoeba-spmodel: ${RELEASEDIR}/spm/${LANGPAIRSTR}/opusTC.${SUBWORD_TRG_NAME}.${SUBWORD_TRG_SHORTSIZE}.spm
+
+${RELEASEDIR}/spm/${LANGPAIRSTR}/opusTC.${SUBWORD_TRG_NAME}.${SUBWORD_TRG_SHORTSIZE}.spm:
 	mkdir -p ${dir $@}
+	${MAKE} WORKDIR=${WORKDIR}/spm SPM_INPUT_SIZE=10000000 spm-trgmodel-tatoeba > $@.stdout 2>$@.stderr
 	mv ${WORKDIR}/spm/train/$(notdir ${SPMTRGMODEL}) $@
 	mv ${WORKDIR}/spm/train/$(notdir ${SPMTRGMODEL}).vocab $@.vocab
-	mv ${WORKDIR}/train/spm-trgmodel.out $@.stdout
-	mv ${WORKDIR}/train/spm-trgmodel.err $@.stderr
+
+## upload to allas
+
+TATOEBA_SPM_BUCKET = https://object.pouta.csc.fi/Tatoeba-MT-spm
+tatoeba-spmodel-upload:
+	which a-put
+	mkdir -p ${RELEASEDIR}/spm/tmp
+	cd ${RELEASEDIR}/spm/tmp && ln -s ../*-*/* . 
+	cd ${RELEASEDIR}/spm/tmp && swift upload Tatoeba-MT-spm --changed --skip-identical *.*
+	rm -f ${RELEASEDIR}/spm/tmp/*
+	rmdir ${RELEASEDIR}/spm/tmp
+	swift post Tatoeba-MT-spm --read-acl ".r:*"
+	echo "# Tatoeba-MT Sentence Piece Models" > SentencePieceModels.md
+	echo ""                                  >> SentencePieceModels.md
+	swift list Tatoeba-MT-spm | grep '\.spm$$' |\
+	sed 's#^\(.*\)$$#* [\1](${TATOEBA_SPM_BUCKET}/\1) ([vocab](${TATOEBA_SPM_BUCKET}/\1.vocab), [log stdout](${TATOEBA_SPM_BUCKET}/\1.stdout), [log stderr](${TATOEBA_SPM_BUCKET}/\1.stderr))#' >> SentencePieceModels.md
+
+
+##################################################################################################
+##################################################################################################
+
+
+
 
 
 
