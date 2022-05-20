@@ -20,7 +20,7 @@ WALLTIME      = 36
 
 
 ## test whether we have permissions to see pre-installed software
-ifneq (${wildcard /projappl/project_2003093/install},)
+ifneq (${wildcard /projappl/project_2003093/install-old},)
   APPLHOME       = /projappl/project_2003093/
   MOSESHOME      = ${APPLHOME}/install/mosesdecoder
   MOSESSCRIPTS   = ${MOSESHOME}/scripts
@@ -54,8 +54,8 @@ endif
 
 
 
-CPU_MODULES   = gcc/10.3.0 cuda/11.4.2 cudnn/8.0.4.30-11.0-linux-x64 openblas/0.3.14-omp openmpi/4.0.5-cuda
-GPU_MODULES   = gcc/10.3.0 cuda/11.4.2 cudnn/8.0.4.30-11.0-linux-x64 openblas/0.3.14-omp openmpi/4.0.5-cuda
+CPU_MODULES   = gcc cuda cudnn openblas openmpi
+GPU_MODULES   = gcc cuda cudnn openblas openmpi
 LOAD_CPU_ENV  = module load ${CPU_MODULES}
 LOAD_GPU_ENV  = module load ${GPU_MODULES}
 
@@ -75,12 +75,16 @@ HPC_EXTRA1 = \#SBATCH --account=${CSCPROJECT}
 
 ## setup for compiling marian-nmt
 
-MARIAN_BUILD_MODULES  = gcc/10.3.0 cuda/11.4.2 cudnn/8.0.4.30-11.0-linux-x64 cmake/3.18.4 openblas/0.3.14-omp openmpi/4.0.5-cuda
+MARIAN_BUILD_MODULES  = gcc cuda cudnn openblas openmpi cmake
 LOAD_MARIAN_BUILD_ENV = module purge && module load ${MARIAN_BUILD_MODULES}
-MARIAN_BUILD_OPTIONS  = -DTcmalloc_INCLUDE_DIR=/appl/spack/v016/install-tree/gcc-10.3.0/gperftools-2.7-ibnifm/include \
-			-DTcmalloc_LIBRARY=/appl/spack/v016/install-tree/gcc-10.3.0/gperftools-2.7-ibnifm/lib/libtcmalloc.so \
-			-DTCMALLOC_LIB=/appl/spack/v016/install-tree/gcc-10.3.0/gperftools-2.7-ibnifm/lib/libtcmalloc.so \
-			-DCUDNN=ON \
+
+# /appl/spack/v017/install-tree/gcc-11.2.0/gperf-3.1-cxa2un
+
+# MARIAN_BUILD_OPTIONS  = -DTcmalloc_INCLUDE_DIR=/appl/spack/v016/install-tree/gcc-10.3.0/gperftools-2.7-ibnifm/include \
+#			-DTcmalloc_LIBRARY=/appl/spack/v016/install-tree/gcc-10.3.0/gperftools-2.7-ibnifm/lib/libtcmalloc.so \
+#			-DTCMALLOC_LIB=/appl/spack/v016/install-tree/gcc-10.3.0/gperftools-2.7-ibnifm/lib/libtcmalloc.so \
+
+MARIAN_BUILD_OPTIONS  = -DCUDNN=ON \
 			-DCOMPILE_CPU=ON \
 			-DCOMPILE_CUDA_SM80=ON \
 			-DCOMPILE_CUDA=ON \
@@ -101,4 +105,5 @@ MARIAN_BUILD_OPTIONS  = -DTcmalloc_INCLUDE_DIR=/appl/spack/v016/install-tree/gcc
 
 ## setup for compiling extract-lex from marian-nmt
 
-LOAD_EXTRACTLEX_BUILD_ENV = cmake gcc/9.3.0 boost/1.68.0
+# LOAD_EXTRACTLEX_BUILD_ENV = cmake gcc/9.3.0 boost/1.68.0
+LOAD_EXTRACTLEX_BUILD_ENV = module load cmake boost
