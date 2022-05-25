@@ -3,6 +3,9 @@
 TATOEBA_VERSION          ?= v2021-08-07
 TATOEBA_VERSION_NOHYPHEN  = $(subst -,,${TATOEBA_VERSION})
 
+
+
+
 ifeq (${SRCLANGS},)
 ifdef SRC
   SRCLANGS = ${SRC}
@@ -60,8 +63,8 @@ TESTSET_NAME        := ${TATOEBA_TESTSET_NAME}
 TRAINSET_NAME       := ${TATOEBA_TRAINSET_NAME}
 
 ## 
-BACKTRANS_HOME      = ${PWD}/back-translate
-FORWARDTRANS_HOME   = ${PWD}/forward-translate
+# BACKTRANS_HOME      = ${PWD}/back-translate
+# FORWARDTRANS_HOME   = ${PWD}/forward-translate
 MODELSHOME          = ${PWD}/models
 RELEASEDIR          = ${PWD}/models
 

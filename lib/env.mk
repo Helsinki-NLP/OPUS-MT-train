@@ -121,7 +121,8 @@ EFLOMAL_HOME   ?= ${dir ${EFLOMAL}}
 WORDALIGN      ?= ${EFLOMAL_HOME}align.py
 EFLOMAL        ?= ${EFLOMAL_HOME}eflomal
 EXTRACT_LEX    ?= ${shell which extract_lex 2>/dev/null || echo ${TOOLSDIR}/extract-lex/build/extract_lex}
-MOSESSCRIPTS   ?= ${TOOLSDIR}/moses-scripts/scripts
+MOSESHOME      ?= ${TOOLSDIR}/moses-scripts
+MOSESSCRIPTS   ?= ${MOSESHOME}/scripts
 TMX2MOSES      ?= ${shell which tmx2moses 2>/dev/null || echo ${TOOLSDIR}/OpusTools-perl/scripts/convert/tmx2moses}
 
 ## marian-nmt binaries

@@ -4,15 +4,15 @@
 #
 
 
-include ${REPOHOME}lib/data.mk
-include ${REPOHOME}lib/train.mk
-include ${REPOHOME}lib/test.mk
-include ${REPOHOME}lib/quantize.mk
+include ${REPOHOME}lib/tasks/data.mk
+include ${REPOHOME}lib/tasks/train.mk
+include ${REPOHOME}lib/tasks/test.mk
+include ${REPOHOME}lib/tasks/quantize.mk
+
+include ${REPOHOME}lib/tasks/generic.mk
+include ${REPOHOME}lib/tasks/misc.mk
 
 include ${REPOHOME}lib/slurm.mk
-include ${REPOHOME}lib/generic.mk
-include ${REPOHOME}lib/misc.mk
-
 include ${REPOHOME}lib/allas.mk
 include ${REPOHOME}lib/dist.mk
 

@@ -21,8 +21,8 @@ ${RELEASED_TATOEBA_DATA_FILE}:
 
 
 ## don't delete intermediate label files
-.PRECIOUS: 	${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}.gz \
-		${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${TRGEXT}.gz
+.PRECIOUS: 	${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz \
+		${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}.gz
 
 
 ## fetch data for all language combinations
@@ -109,12 +109,12 @@ ${WORKHOME}/${LANGPAIRSTR}/${DATASET}-langlabels.trg: ${WORKHOME}/${LANGPAIRSTR}
 
 
 ## don't delete those files
-.SECONDARY: ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}.gz \
-	${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${TRGEXT}.gz \
-	${TATOEBA_DATA}/${TATOEBA_DEVSET}.${LANGPAIR}.clean.${SRCEXT}.gz \
-	${TATOEBA_DATA}/${TATOEBA_DEVSET}.${LANGPAIR}.clean.${TRGEXT}.gz \
-	${TATOEBA_DATA}/${TATOEBA_TESTSET}.${LANGPAIR}.clean.${SRCEXT}.gz \
-	${TATOEBA_DATA}/${TATOEBA_TESTSET}.${LANGPAIR}.clean.${TRGEXT}.gz
+.SECONDARY: ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz \
+	${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}.gz \
+	${TATOEBA_DATA}/${TATOEBA_DEVSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz \
+	${TATOEBA_DATA}/${TATOEBA_DEVSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}.gz \
+	${TATOEBA_DATA}/${TATOEBA_TESTSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz \
+	${TATOEBA_DATA}/${TATOEBA_TESTSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}.gz
 
 ##-------------------------------------------------------------
 ## take care of languages IDs
@@ -211,21 +211,21 @@ ${TATOEBA_MONO}/%.labels:
 ##-------------------------------------------------------------------------------------------
 
 ## relative directory within the data distributions of Tatoeba MT data files
-TATOEBADATA = data/release/${TATOEBA_VERSION}/${LANGPAIR}
+TATOEBADATA = data/release/${TATOEBA_VERSION}/${SORTED_LANGPAIR}
 
 ## fetch and convert the data and check whether we should extract
 ## sub-language pairs from the collection
 ## TDOD: this creates empty files for languages that don't have released data sets
 ##       --> should we rather skip those somehow? (without breaking anything)
 
-ifneq ($(filter ${LANGPAIR},${TATOEBA_LANGPAIRS}),${LANGPAIR})
+ifneq ($(filter ${SORTED_LANGPAIR},${TATOEBA_LANGPAIRS}),${SORTED_LANGPAIR})
 
-%/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}.gz:
-	@echo ".... no package released for ${LANGPAIR}!"
+%/${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz:
+	@echo ".... no package released for ${SORTED_LANGPAIR}!"
 
 else
 
-%/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}.gz:
+%/${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz:
 	mkdir -p ${dir $@} ${TMPWORKDIR}/${notdir $@}.d
 	ln -s ${TMPWORKDIR}/${notdir $@}.d $@.d
 	@${MAKE} $@.d/source.labels $@.d/target.labels
@@ -270,20 +270,20 @@ else
 ##       --> the label file for ron will include mol but the data files will not
 ## TODO: can we do that in a better way somehow?
 	@mv $@.d/source.labels \
-		${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SORTSRCEXT}.labels
+		${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${SORTSRCEXT}.labels
 	@mv $@.d/target.labels \
-		${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SORTTRGEXT}.labels
-	@if [ ! -e ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SRCEXT}.gz ]; then \
+		${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${SORTTRGEXT}.labels
+	@if [ ! -e ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz ]; then \
 	  echo ".... move data files"; \
 	  b="$@.d/${TATOEBADATA}"; \
 	  for d in dev test train; do \
-	    mv $$b/$$d.src.gz ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SORTSRCEXT}.gz; \
-	    mv $$b/$$d.trg.gz ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SORTTRGEXT}.gz; \
-	    mv $$b/$$d.id.gz ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.id.gz; \
+	    mv $$b/$$d.src.gz ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${SORTSRCEXT}.gz; \
+	    mv $$b/$$d.trg.gz ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${SORTTRGEXT}.gz; \
+	    mv $$b/$$d.id.gz ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.id.gz; \
 	  done; \
 	  ${ZCAT} $$b/train.domain.gz | sort -u | tr "\n" ' ' | sed 's/ *$$//' \
-		> ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${LANGPAIR}.clean.domains; \
-	  mv $$b/train.domain.gz ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${LANGPAIR}.clean.domain.gz; \
+		> ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.domains; \
+	  mv $$b/train.domain.gz ${dir $@}Tatoeba-train-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.domain.gz; \
 	fi
 	@echo ".... cleanup of temporary files"
 	@rm -fr ${TMPWORKDIR}/${notdir $@}.d $@.d
@@ -293,9 +293,9 @@ endif
 ## fetch data
 ## don't break if this fails!
 %.gz.d/data.fetched:
-	@echo ".... fetch data (${LANGPAIR}.tar)"
+	@echo ".... fetch data (${SORTED_LANGPAIR}.tar)"
 	@mkdir -p ${dir $@}
-	-${WGET} -q -O ${dir $@}train.tar ${TATOEBA_TRAIN_URL}/${LANGPAIR}.tar
+	-${WGET} -q -O ${dir $@}train.tar ${TATOEBA_TRAIN_URL}/${SORTED_LANGPAIR}.tar
 	@if [ -e ${dir $@}train.tar ]; then \
 	  tar -C ${dir $@} -xf ${dir $@}train.tar; \
 	  rm -f ${dir $@}train.tar; \
@@ -373,13 +373,13 @@ endif
 ## all the following data sets are created in the target of the
 #@ source language training data
 
-%/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${TRGEXT}.gz: %/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}.gz
+%/${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}.gz: %/${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz
 	@echo "done!"
 
-%/${TATOEBA_DEVSET}.${LANGPAIR}.clean.${SRCEXT}.gz %/${TATOEBA_DEVSET}.${LANGPAIR}.clean.${TRGEXT}.gz: %/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${TRGEXT}.gz
+%/${TATOEBA_DEVSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz %/${TATOEBA_DEVSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}.gz: %/${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}.gz
 	@echo "done!"
 
-%/${TATOEBA_TESTSET}.${LANGPAIR}.clean.${SRCEXT}.gz %/${TATOEBA_TESTSET}.${LANGPAIR}.clean.${TRGEXT}.gz: %/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${TRGEXT}.gz
+%/${TATOEBA_TESTSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz %/${TATOEBA_TESTSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}.gz: %/${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}.gz
 	@echo "done!"
 
 
@@ -394,7 +394,7 @@ test-tune-data:
 ## TODO: should we split into train/dev/test
 ##       problem: that would overlap with the previous training data
 
-%/Tatoeba-${TUNE_DOMAIN}-train.${LANGPAIR}.clean.${SRCEXT}.gz: %/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}.gz
+%/Tatoeba-${TUNE_DOMAIN}-train.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz: %/${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz
 	paste 	<(gzip -cd ${<:.${SRCEXT}.gz=.domain.gz}) \
 		<(gzip -cd $<) \
 		<(gzip -cd ${<:.${SRCEXT}.gz=.${TRGEXT}.gz}) | \
@@ -407,7 +407,7 @@ test-tune-data:
 
 ## make Tatoeba test files available in testset collection
 ## --> useful for testing various languages when creating multilingual models
-testsets/${LANGPAIR}/${TATOEBA_TESTSET}.${LANGPAIR}.%: ${TATOEBA_DATA}/${TATOEBA_TESTSET}.${LANGPAIR}.clean.%
+testsets/${SORTED_LANGPAIR}/${TATOEBA_TESTSET}.${SORTED_LANGPAIR}.%: ${TATOEBA_DATA}/${TATOEBA_TESTSET}.${SORTED_LANGPAIR}.clean.%
 	mkdir -p ${dir $@}
 	cp $< $@
 

@@ -38,7 +38,7 @@ TATOEBA_MODEL_STORAGE = https://object.pouta.csc.fi/Tatoeba-MT-models
 
 ## container for storing backtranslations
 BT_CONTAINER          = Tatoeba-MT-bt
-BT_CWORK_ONTAINER     = project-Tatoeba-MT-bt
+BT_WORK_CONTAINER     = project-Tatoeba-MT-bt
 
 ## split size in nr-of-lines
 ## default part to be selected = aa

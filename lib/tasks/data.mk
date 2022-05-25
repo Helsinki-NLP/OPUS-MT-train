@@ -164,15 +164,15 @@ print-datasets-current-langpair:
 ## data sets to be included in the train/dev/test sets
 ## with some basic pre-processing (see lib/preprocess.mk)
 
-CLEAN_TRAIN_SRC    = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.${CLEAN_TRAINDATA_TYPE}.${SRCEXT}.gz,${TRAINSET}} \
+CLEAN_TRAIN_SRC    = ${patsubst %,${DATADIR}/${PRE}/%.${SORTED_LANGPAIR}.${CLEAN_TRAINDATA_TYPE}.${SRCEXT}.gz,${TRAINSET}} \
 			${BACKTRANS_SRC} ${FORWARDTRANS_SRC} ${FORWARDTRANSMONO_SRC} ${PIVOTING_SRC} ${EXTRA_BITEXTS_SRC}
-CLEAN_TRAIN_TRG    = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.${CLEAN_TRAINDATA_TYPE}.${TRGEXT}.gz,${TRAINSET}} \
+CLEAN_TRAIN_TRG    = ${patsubst %,${DATADIR}/${PRE}/%.${SORTED_LANGPAIR}.${CLEAN_TRAINDATA_TYPE}.${TRGEXT}.gz,${TRAINSET}} \
 			${BACKTRANS_TRG} ${FORWARDTRANS_TRG} ${FORWARDTRANSMONO_TRG} ${PIVOTING_TRG} ${EXTRA_BITEXTS_TRG}
 
-CLEAN_DEV_SRC      = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.${CLEAN_DEVDATA_TYPE}.${SRCEXT}.gz,${DEVSET}}
+CLEAN_DEV_SRC      = ${patsubst %,${DATADIR}/${PRE}/%.${SORTED_LANGPAIR}.${CLEAN_DEVDATA_TYPE}.${SRCEXT}.gz,${DEVSET}}
 CLEAN_DEV_TRG      = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_DEV_SRC}}
 
-CLEAN_TEST_SRC     = ${patsubst %,${DATADIR}/${PRE}/%.${LANGPAIR}.${CLEAN_TESTDATA_TYPE}.${SRCEXT}.gz,${TESTSET}}
+CLEAN_TEST_SRC     = ${patsubst %,${DATADIR}/${PRE}/%.${SORTED_LANGPAIR}.${CLEAN_TESTDATA_TYPE}.${SRCEXT}.gz,${TESTSET}}
 CLEAN_TEST_TRG     = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_TEST_SRC}}
 
 CLEAN_TEST_SRC_STATS = ${CLEAN_TEST_SRC:.gz=.stats}
@@ -408,32 +408,32 @@ $(LOCAL_TRAIN_SRC).algtmp.d/%.alg: $(LOCAL_TRAIN_SRC).algtmp.d/% $(LOCAL_TRAIN_T
 
 %.${SRCEXT}.raw:
 	mkdir -p ${dir $@}
-	-( c=${patsubst %.${LANGPAIR}.${SRCEXT}.raw,%,${notdir $@}}; \
-	  if [ -e ${OPUSHOME}/$$c/latest/moses/${LANGPAIR}.txt.zip ]; then \
-	    unzip -d ${dir $@} -n ${OPUSHOME}/$$c/latest/moses/${LANGPAIR}.txt.zip; \
-	    mv ${dir $@}$$c*.${LANGPAIR}.${SRCEXT} $@; \
-	    mv ${dir $@}$$c*.${LANGPAIR}.${TRGEXT} ${@:.${SRCEXT}.raw=.${TRGEXT}.raw}; \
+	-( c=${patsubst %.${SORTED_LANGPAIR}.${SRCEXT}.raw,%,${notdir $@}}; \
+	  if [ -e ${OPUSHOME}/$$c/latest/moses/${SORTED_LANGPAIR}.txt.zip ]; then \
+	    unzip -d ${dir $@} -n ${OPUSHOME}/$$c/latest/moses/${SORTED_LANGPAIR}.txt.zip; \
+	    mv ${dir $@}$$c*.${SORTED_LANGPAIR}.${SRCEXT} $@; \
+	    mv ${dir $@}$$c*.${SORTED_LANGPAIR}.${TRGEXT} ${@:.${SRCEXT}.raw=.${TRGEXT}.raw}; \
 	    rm -f ${@:.${SRCEXT}.raw=.xml} ${@:.${SRCEXT}.raw=.ids} ${dir $@}/README ${dir $@}/LICENSE; \
-	  elif [ "${call url-exists,${call resource-url,${SRCEXT},${TRGEXT},${patsubst %.${LANGPAIR}.${SRCEXT}.raw,%,${notdir $@}}}}" == "1" ]; then \
-	    l="${call resource-url,${SRCEXT},${TRGEXT},${patsubst %.${LANGPAIR}.${SRCEXT}.raw,%,${notdir $@}}}"; \
+	  elif [ "${call url-exists,${call resource-url,${SRCEXT},${TRGEXT},${patsubst %.${SORTED_LANGPAIR}.${SRCEXT}.raw,%,${notdir $@}}}}" == "1" ]; then \
+	    l="${call resource-url,${SRCEXT},${TRGEXT},${patsubst %.${SORTED_LANGPAIR}.${SRCEXT}.raw,%,${notdir $@}}}"; \
 	    echo "============================================"; \
 	    echo "fetch moses data from $$l"; \
 	    echo "============================================"; \
-	    ${WGET} -qq -O $@-$$c-${LANGPAIR}.zip $$l; \
-	    unzip -d ${dir $@} -n $@-$$c-${LANGPAIR}.zip; \
-	    mv ${dir $@}$$c*.${LANGPAIR}.${SRCEXT} $@; \
-	    mv ${dir $@}$$c*.${LANGPAIR}.${TRGEXT} ${@:.${SRCEXT}.raw=.${TRGEXT}.raw}; \
+	    ${WGET} -qq -O $@-$$c-${SORTED_LANGPAIR}.zip $$l; \
+	    unzip -d ${dir $@} -n $@-$$c-${SORTED_LANGPAIR}.zip; \
+	    mv ${dir $@}$$c*.${SORTED_LANGPAIR}.${SRCEXT} $@; \
+	    mv ${dir $@}$$c*.${SORTED_LANGPAIR}.${TRGEXT} ${@:.${SRCEXT}.raw=.${TRGEXT}.raw}; \
 	    rm -f ${@:.${SRCEXT}.raw=.xml} ${@:.${SRCEXT}.raw=.ids} ${dir $@}/README ${dir $@}/LICENSE; \
-	    rm -f $@-$$c-${LANGPAIR}.zip; \
-	  elif [ -e ${OPUSHOME}/$$c/latest/xml/${LANGPAIR}.xml.gz ]; then \
+	    rm -f $@-$$c-${SORTED_LANGPAIR}.zip; \
+	  elif [ -e ${OPUSHOME}/$$c/latest/xml/${SORTED_LANGPAIR}.xml.gz ]; then \
 	    echo "============================================"; \
-	    echo "extract $$c (${LANGPAIR}) from XML in local OPUS copy"; \
+	    echo "extract $$c (${SORTED_LANGPAIR}) from XML in local OPUS copy"; \
 	    echo "============================================"; \
 	    opus_read ${OPUSREAD_ARGS} -ln -rd ${OPUSHOME} -d $$c -s ${SRC} -t ${TRG} \
 			-wm moses -p raw -w $@ ${@:.${SRCEXT}.raw=.${TRGEXT}.raw}; \
 	  else \
 	    echo "============================================"; \
-	    echo "fetch $$c (${LANGPAIR}) from OPUS"; \
+	    echo "fetch $$c (${SORTED_LANGPAIR}) from OPUS"; \
 	    echo "============================================"; \
 	    opus_read ${OPUSREAD_ARGS} -ln -q -dl ${TMPWORKDIR} -d $$c -s ${SRC} -t ${TRG} \
 			-wm moses -p raw -w $@ ${@:.${SRCEXT}.raw=.${TRGEXT}.raw}; \
@@ -582,7 +582,7 @@ endif
 	    echo "$$d" | xargs basename | \
 	    sed -e 's#.${SRC}.gz$$##' \
 		-e 's#.clean$$##'\
-		-e 's#.${LANGPAIR}$$##' | tr "\n" ' '         >> ${dir ${LOCAL_TRAIN_SRC}}README.md; \
+		-e 's#.${SORTED_LANGPAIR}$$##' | tr "\n" ' '         >> ${dir ${LOCAL_TRAIN_SRC}}README.md; \
 	    echo -n "($$l) "                                  >> ${dir ${LOCAL_TRAIN_SRC}}README.md; \
 	  fi \
 	done
@@ -592,25 +592,25 @@ endif
 ######################################
 	@echo "..... create training data in local scratch space"
 	@${GZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} ${CUT_DATA_SETS} 2>/dev/null \
-		${LABEL_SOURCE_DATA} > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src
+		${LABEL_SOURCE_DATA} > ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src
 	@${GZCAT} ${wildcard ${CLEAN_TRAIN_TRG}} ${CUT_DATA_SETS} 2>/dev/null \
-		> ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
-	@touch ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
+		> ${LOCAL_TRAIN_TRG}.${SORTED_LANGPAIR}.trg
+	@touch ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${SORTED_LANGPAIR}.trg
 ######################################
 #  SHUFFLE_DATA is set?
 #    --> shuffle data for each langpair
 #    --> do this when FIT_DATA_SIZE is set!
 ######################################
 ifeq (${SHUFFLE_DATA},1)
-	@if [ -s ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src ]; then \
+	@if [ -s ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src ]; then \
 	  echo "..... shuffle training data"; \
-	  paste ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg |\
+	  paste ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${SORTED_LANGPAIR}.trg |\
 		${SHUFFLE} > ${LOCAL_TRAIN_SRC}.shuffled; \
-	  cut -f1 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src; \
-	  cut -f2 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg; \
+	  cut -f1 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src; \
+	  cut -f2 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_TRG}.${SORTED_LANGPAIR}.trg; \
 	  rm -f ${LOCAL_TRAIN_SRC}.shuffled; \
 	else \
-	  echo "..... empty training data: ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src"; \
+	  echo "..... empty training data: ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src"; \
 	fi
 endif
 ######################################
@@ -622,17 +622,17 @@ endif
 ifdef FIT_DATA_SIZE
 	@echo "sample data to fit size = ${FIT_DATA_SIZE}"
 	@${REPOHOME}scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
-		${LOCAL_TRAIN_SRC}.${LANGPAIR}.src | wc -l >> ${dir ${LOCAL_TRAIN_SRC}}README.md
+		${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src | wc -l >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 	@${REPOHOME}scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
-		${LOCAL_TRAIN_SRC}.${LANGPAIR}.src >> ${LOCAL_TRAIN_SRC}
+		${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src >> ${LOCAL_TRAIN_SRC}
 	@${REPOHOME}scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
-		${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg >> ${LOCAL_TRAIN_TRG}
+		${LOCAL_TRAIN_TRG}.${SORTED_LANGPAIR}.trg >> ${LOCAL_TRAIN_TRG}
 else
-	@cat ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src | wc -l >> ${dir ${LOCAL_TRAIN_SRC}}README.md
-	@cat ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src >> ${LOCAL_TRAIN_SRC}
-	@cat ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg >> ${LOCAL_TRAIN_TRG}
+	@cat ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src | wc -l >> ${dir ${LOCAL_TRAIN_SRC}}README.md
+	@cat ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src >> ${LOCAL_TRAIN_SRC}
+	@cat ${LOCAL_TRAIN_TRG}.${SORTED_LANGPAIR}.trg >> ${LOCAL_TRAIN_TRG}
 endif
-	@rm -f ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg
+	@rm -f ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${SORTED_LANGPAIR}.trg
 endif
 endif
 
@@ -756,7 +756,7 @@ ${DEV_TRG}: ${DEV_SRC}
 add-to-dev-data: ${CLEAN_DEV_SRC} ${CLEAN_DEV_TRG}
 	@echo "add to devset: ${CLEAN_DEV_SRC}"
 	@mkdir -p ${dir ${DEV_SRC}}
-	@echo -n "* ${LANGPAIR}: ${DEVSET}, "         >> ${dir ${DEV_SRC}}README.md
+	@echo -n "* ${SORTED_LANGPAIR}: ${DEVSET}, "         >> ${dir ${DEV_SRC}}README.md
 	@${GZCAT} ${CLEAN_DEV_SRC} 2>/dev/null | wc -l >> ${dir ${DEV_SRC}}README.md
 #-----------------------------------------------------------------
 # sample devdata to balance size between different language pairs
@@ -840,7 +840,7 @@ ${TEST_TRG}: ${TEST_SRC}
 .PHONY: add-to-test-data
 add-to-test-data: ${CLEAN_TEST_SRC}
 	@echo "add to testset: ${CLEAN_TEST_SRC}"
-	@echo "* ${LANGPAIR}: ${TESTSET}" >> ${dir ${TEST_SRC}}README.md
+	@echo "* ${SORTED_LANGPAIR}: ${TESTSET}" >> ${dir ${TEST_SRC}}README.md
 	@${GZCAT} ${CLEAN_TEST_SRC} 2>/dev/null ${LABEL_SOURCE_DATA} >> ${TEST_SRC}
 	@${GZCAT} ${CLEAN_TEST_TRG} 2>/dev/null                      >> ${TEST_TRG}
 

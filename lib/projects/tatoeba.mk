@@ -273,7 +273,7 @@ endif
 
 ## prepare data (config, train.dev.test data, labels)
 .PHONY: tatoeba-prepare
-tatoeba-prepare: # ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}.gz
+tatoeba-prepare: # ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz
 	${MAKE} local-config-tatoeba
 	${MAKE} data-tatoeba
 
@@ -290,7 +290,7 @@ tatoeba-eval:
 ## fetch the essential data and get labels for language variants
 ## (this is done by the data targets above as well)
 .PHONY: tatoeba-data tatoeba-labels
-# tatoeba-data: ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}.gz
+# tatoeba-data: ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz
 tatoeba-data: data-tatoeba
 tatoeba-labels: ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.src \
 		${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.trg
@@ -1753,7 +1753,7 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-languages.%: ${TATOEBA_WORK}/${LANGPAI
 		SRC=$$s TRG=$$t \
 		WIKI_HOME=wiki-iso639-3 \
 		WIKIDOC_HOME=wikidoc-iso639-3 \
-		MODELHOME=${TATOEBA_MODELSHOME}/${LANGPAIR} \
+		MODELHOME=${TATOEBA_MODELSHOME}/${SORTED_LANGPAIR} \
 	    ${@:-bttatoeba=}"; \
 	  done \
 	done
@@ -1761,8 +1761,8 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-languages.%: ${TATOEBA_WORK}/${LANGPAI
 
 
 ## don't delete intermediate label files
-.PRECIOUS: 	${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}.gz \
-		${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${TRGEXT}.gz
+.PRECIOUS: 	${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz \
+		${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}.gz
 
 
 ## fetch data for all language combinations
@@ -1833,12 +1833,12 @@ ${TATOEBA_WORK}/${LANGPAIRSTR}/${DATASET}-langlabels.trg: ${TATOEBA_WORK}/${LANG
 
 
 ## don't delete those files
-.SECONDARY: ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}.gz \
-	${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${TRGEXT}.gz \
-	${TATOEBA_DATA}/${TATOEBA_DEVSET}.${LANGPAIR}.clean.${SRCEXT}.gz \
-	${TATOEBA_DATA}/${TATOEBA_DEVSET}.${LANGPAIR}.clean.${TRGEXT}.gz \
-	${TATOEBA_DATA}/${TATOEBA_TESTSET}.${LANGPAIR}.clean.${SRCEXT}.gz \
-	${TATOEBA_DATA}/${TATOEBA_TESTSET}.${LANGPAIR}.clean.${TRGEXT}.gz
+.SECONDARY: ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz \
+	${TATOEBA_DATA}/${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}.gz \
+	${TATOEBA_DATA}/${TATOEBA_DEVSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz \
+	${TATOEBA_DATA}/${TATOEBA_DEVSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}.gz \
+	${TATOEBA_DATA}/${TATOEBA_TESTSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz \
+	${TATOEBA_DATA}/${TATOEBA_TESTSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}.gz
 
 ##-------------------------------------------------------------
 ## take care of languages IDs
@@ -1931,66 +1931,66 @@ ${TATOEBA_MONO}/%.labels:
 ## 
 ## TODO: should we do some filtering like bitext-match, OPUS-filter ...
 
-TATOEBA_TMPDATADIR = data/release/${TATOEBA_VERSION}/${LANGPAIR}
+TATOEBA_TMPDATADIR = data/release/${TATOEBA_VERSION}/${SORTED_LANGPAIR}
 
-%/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}.gz:
+%/${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz:
 	@mkdir -p $@.d
-	-${WGET} -q -O $@.d/train.tar ${TATOEBA_TRAIN_URL}/${LANGPAIR}.tar
+	-${WGET} -q -O $@.d/train.tar ${TATOEBA_TRAIN_URL}/${SORTED_LANGPAIR}.tar
 	-tar -C $@.d -xf $@.d/train.tar
 	@rm -f $@.d/train.tar
 	@if [ -e $@.d/${TATOEBA_TMPDATADIR}/test.src ]; then \
-	  echo "........ move test files to ${dir $@}${TATOEBA_TESTSET}.${LANGPAIR}.clean.*"; \
-	  mv $@.d/${TATOEBA_TMPDATADIR}/test.src ${dir $@}${TATOEBA_TESTSET}.${LANGPAIR}.clean.${SRCEXT}; \
-	  mv $@.d/${TATOEBA_TMPDATADIR}/test.trg ${dir $@}${TATOEBA_TESTSET}.${LANGPAIR}.clean.${TRGEXT}; \
-	  cat $@.d/${TATOEBA_TMPDATADIR}/test.id $(FIXLANGIDS) > ${dir $@}${TATOEBA_TESTSET}.${LANGPAIR}.clean.id; \
+	  echo "........ move test files to ${dir $@}${TATOEBA_TESTSET}.${SORTED_LANGPAIR}.clean.*"; \
+	  mv $@.d/${TATOEBA_TMPDATADIR}/test.src ${dir $@}${TATOEBA_TESTSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}; \
+	  mv $@.d/${TATOEBA_TMPDATADIR}/test.trg ${dir $@}${TATOEBA_TESTSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}; \
+	  cat $@.d/${TATOEBA_TMPDATADIR}/test.id $(FIXLANGIDS) > ${dir $@}${TATOEBA_TESTSET}.${SORTED_LANGPAIR}.clean.id; \
 	fi
 	@if [ -e $@.d/${TATOEBA_TMPDATADIR}/dev.src ] && \
 	    [ `cat $@.d/${TATOEBA_TMPDATADIR}/dev.src | wc -l` -gt 50 ]; then \
-	  echo "........ move dev files to ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.*"; \
-	  mv $@.d/${TATOEBA_TMPDATADIR}/dev.src ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.${SRCEXT}; \
-	  mv $@.d/${TATOEBA_TMPDATADIR}/dev.trg ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.${TRGEXT}; \
-	  cat $@.d/${TATOEBA_TMPDATADIR}/dev.id $(FIXLANGIDS) > ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.id; \
+	  echo "........ move dev files to ${dir $@}${TATOEBA_DEVSET}.${SORTED_LANGPAIR}.clean.*"; \
+	  mv $@.d/${TATOEBA_TMPDATADIR}/dev.src ${dir $@}${TATOEBA_DEVSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}; \
+	  mv $@.d/${TATOEBA_TMPDATADIR}/dev.trg ${dir $@}${TATOEBA_DEVSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}; \
+	  cat $@.d/${TATOEBA_TMPDATADIR}/dev.id $(FIXLANGIDS) > ${dir $@}${TATOEBA_DEVSET}.${SORTED_LANGPAIR}.clean.id; \
 	  if [ -e $@.d/${TATOEBA_TMPDATADIR}/train.src.gz ]; then \
-	    echo "........ move train files to ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.*"; \
-	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.src.gz > ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}; \
-	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.trg.gz > ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${TRGEXT}; \
-	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.id.gz | cut -f2,3 $(FIXLANGIDS) > ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.id; \
-	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.id.gz | cut -f1 > ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.domain; \
+	    echo "........ move train files to ${dir $@}${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.*"; \
+	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.src.gz > ${dir $@}${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}; \
+	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.trg.gz > ${dir $@}${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}; \
+	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.id.gz | cut -f2,3 $(FIXLANGIDS) > ${dir $@}${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.id; \
+	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.id.gz | cut -f1 > ${dir $@}${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.domain; \
 	  fi; \
 	else \
 	  if [ -e $@.d/${TATOEBA_TMPDATADIR}/train.src.gz ]; then \
 	    echo "........ too little devdata available - get top 1000 from training data!"; \
-	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.src.gz | head -1000 > ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.${SRCEXT}; \
-	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.trg.gz | head -1000 > ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.${TRGEXT}; \
-	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.id.gz  | head -1000 | cut -f2,3 $(FIXLANGIDS) > ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.id; \
-	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.id.gz  | head -1000 | cut -f1 > ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.domain; \
-	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.src.gz | tail -n +1001 > ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}; \
-	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.trg.gz | tail -n +1001 > ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${TRGEXT}; \
-	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.id.gz  | tail -n +1001 | cut -f2,3 $(FIXLANGIDS) > ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.id; \
-	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.id.gz  | tail -n +1001 | cut -f1 > ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.domain; \
+	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.src.gz | head -1000 > ${dir $@}${TATOEBA_DEVSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}; \
+	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.trg.gz | head -1000 > ${dir $@}${TATOEBA_DEVSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}; \
+	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.id.gz  | head -1000 | cut -f2,3 $(FIXLANGIDS) > ${dir $@}${TATOEBA_DEVSET}.${SORTED_LANGPAIR}.clean.id; \
+	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.id.gz  | head -1000 | cut -f1 > ${dir $@}${TATOEBA_DEVSET}.${SORTED_LANGPAIR}.clean.domain; \
+	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.src.gz | tail -n +1001 > ${dir $@}${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}; \
+	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.trg.gz | tail -n +1001 > ${dir $@}${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}; \
+	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.id.gz  | tail -n +1001 | cut -f2,3 $(FIXLANGIDS) > ${dir $@}${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.id; \
+	    ${GZCAT} $@.d/${TATOEBA_TMPDATADIR}/train.id.gz  | tail -n +1001 | cut -f1 > ${dir $@}${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.domain; \
 	  fi; \
 	  if [ -e $@.d/${TATOEBA_TMPDATADIR}/dev.src ]; then \
-	    echo "........ add dev files to ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.*"; \
-	    cat $@.d/${TATOEBA_TMPDATADIR}/dev.src >> ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.${SRCEXT}; \
-	    cat $@.d/${TATOEBA_TMPDATADIR}/dev.trg >> ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.${TRGEXT}; \
-	    cat $@.d/${TATOEBA_TMPDATADIR}/dev.id $(FIXLANGIDS) >> ${dir $@}${TATOEBA_DEVSET}.${LANGPAIR}.clean.id; \
+	    echo "........ add dev files to ${dir $@}${TATOEBA_DEVSET}.${SORTED_LANGPAIR}.clean.*"; \
+	    cat $@.d/${TATOEBA_TMPDATADIR}/dev.src >> ${dir $@}${TATOEBA_DEVSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}; \
+	    cat $@.d/${TATOEBA_TMPDATADIR}/dev.trg >> ${dir $@}${TATOEBA_DEVSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}; \
+	    cat $@.d/${TATOEBA_TMPDATADIR}/dev.id $(FIXLANGIDS) >> ${dir $@}${TATOEBA_DEVSET}.${SORTED_LANGPAIR}.clean.id; \
 	  fi \
 	fi
 ## make sure that training data file exists even if it is empty
-	@if [ -e ${dir $@}${TATOEBA_TESTSET}.${LANGPAIR}.clean.${SRCEXT} ]; then \
-	  touch ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}; \
-	  touch ${dir $@}${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${TRGEXT}; \
+	@if [ -e ${dir $@}${TATOEBA_TESTSET}.${SORTED_LANGPAIR}.clean.${SRCEXT} ]; then \
+	  touch ${dir $@}${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}; \
+	  touch ${dir $@}${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}; \
 	fi
 #######################################
 # save all lang labels that appear in the data
 #######################################
-	@cut -f1 ${dir $@}Tatoeba-*.${LANGPAIR}.clean.id | sort -u | \
+	@cut -f1 ${dir $@}Tatoeba-*.${SORTED_LANGPAIR}.clean.id | sort -u | \
 		grep -v '${SKIP_LANGIDS_PATTERN}' | \
 		tr "\n" ' ' | sed 's/^ *//;s/ *$$//' > $(@:.${SRCEXT}.gz=.${SORTSRCEXT}.labels)
-	@cut -f2 ${dir $@}Tatoeba-*.${LANGPAIR}.clean.id | sort -u | \
+	@cut -f2 ${dir $@}Tatoeba-*.${SORTED_LANGPAIR}.clean.id | sort -u | \
 		grep -v '${SKIP_LANGIDS_PATTERN}' | \
 		tr "\n" ' ' | sed 's/^ *//;s/ *$$//' > $(@:.${SRCEXT}.gz=.${SORTTRGEXT}.labels)
-	@cat ${dir $@}Tatoeba-*.${LANGPAIR}.clean.domain | sort -u |\
+	@cat ${dir $@}Tatoeba-*.${SORTED_LANGPAIR}.clean.domain | sort -u |\
 		tr "\n" ' ' | sed 's/^ *//;s/ *$$//' > $(@:.${SRCEXT}.gz=.domains)
 #######################################
 # cleanup temporary data
@@ -2014,10 +2014,10 @@ TATOEBA_TMPDATADIR = data/release/${TATOEBA_VERSION}/${LANGPAIR}
 	      if [ "$$s" \< "$$t" ]; then \
 	        echo "extract $$s-$$t data"; \
 	        for d in dev test train; do \
-		  if [ -e ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.id ]; then \
-	            paste ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.id \
-		          ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SRCEXT} \
-		          ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${TRGEXT} |\
+		  if [ -e ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.id ]; then \
+	            paste ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.id \
+		          ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${SRCEXT} \
+		          ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${TRGEXT} |\
 	            grep -P "$$s\t$$t\t" | cut -f3,4 |\
 		    scripts/filter/filter-korean.sh ${SRC} ${TRG} $$d > ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t; \
 	            if [ -s ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t ]; then \
@@ -2033,10 +2033,10 @@ TATOEBA_TMPDATADIR = data/release/${TATOEBA_VERSION}/${LANGPAIR}
 	      else \
 	        echo "extract $$t-$$s data"; \
 	        for d in dev test train; do \
-		  if [ -e ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.id ]; then \
-	            paste ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.id \
-		          ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${TRGEXT} \
-		          ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SRCEXT} |\
+		  if [ -e ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.id ]; then \
+	            paste ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.id \
+		          ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${TRGEXT} \
+		          ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${SRCEXT} |\
 	            grep -P "$$t\t$$s\t" | cut -f3,4 |\
 		    scripts/filter/filter-korean.sh ${TRG} ${SRC} $$d > ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$t-$$s; \
 	            if [ -s ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$t-$$s ]; then \
@@ -2060,30 +2060,30 @@ TATOEBA_TMPDATADIR = data/release/${TATOEBA_VERSION}/${LANGPAIR}
 # variants then remove the file instead.
 #######################################
 	@for d in dev test train; do \
-	  if [ -e ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SRCEXT} ]; then \
-	    if [ ! -e ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SRCEXT}.gz ]; then \
-	      echo "........... compress ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SRCEXT}"; \
-	      ${GZIP} ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SRCEXT}; \
+	  if [ -e ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${SRCEXT} ]; then \
+	    if [ ! -e ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz ]; then \
+	      echo "........... compress ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${SRCEXT}"; \
+	      ${GZIP} ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${SRCEXT}; \
 	    else \
-	      rm -f ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SRCEXT}; \
+	      rm -f ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${SRCEXT}; \
 	    fi \
 	  fi; \
-	  if [ -e ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${TRGEXT} ]; then \
-	    if [ ! -e ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${TRGEXT}.gz ]; then \
-	      echo "........... compress ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${TRGEXT}"; \
-	      ${GZIP} ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${TRGEXT}; \
+	  if [ -e ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${TRGEXT} ]; then \
+	    if [ ! -e ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${TRGEXT}.gz ]; then \
+	      echo "........... compress ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${TRGEXT}"; \
+	      ${GZIP} ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${TRGEXT}; \
 	    else \
-	      rm -f ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${TRGEXT}; \
+	      rm -f ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.${TRGEXT}; \
 	    fi \
 	  fi; \
-	  if [ -e ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.domain ]; then \
-	    if [ ! -e ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.domain.gz ]; then \
-	      ${GZIP} ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.domain; \
+	  if [ -e ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.domain ]; then \
+	    if [ ! -e ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.domain.gz ]; then \
+	      ${GZIP} ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.domain; \
 	    else \
-	      rm -f ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.domain; \
+	      rm -f ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.domain; \
 	    fi \
 	  fi; \
-	  rm -f ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.id; \
+	  rm -f ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.clean.id; \
 	done
 
 
@@ -2092,13 +2092,13 @@ TATOEBA_TMPDATADIR = data/release/${TATOEBA_VERSION}/${LANGPAIR}
 ## all the following data sets are created in the target of the
 #@ source language training data
 
-%/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${TRGEXT}.gz: %/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}.gz
+%/${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}.gz: %/${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz
 	echo "done!"
 
-%/${TATOEBA_DEVSET}.${LANGPAIR}.clean.${SRCEXT}.gz %/${TATOEBA_DEVSET}.${LANGPAIR}.clean.${TRGEXT}.gz: %/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${TRGEXT}.gz
+%/${TATOEBA_DEVSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz %/${TATOEBA_DEVSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}.gz: %/${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}.gz
 	echo "done!"
 
-%/${TATOEBA_TESTSET}.${LANGPAIR}.clean.${SRCEXT}.gz %/${TATOEBA_TESTSET}.${LANGPAIR}.clean.${TRGEXT}.gz: %/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${TRGEXT}.gz
+%/${TATOEBA_TESTSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz %/${TATOEBA_TESTSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}.gz: %/${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${TRGEXT}.gz
 	echo "done!"
 
 
@@ -2113,7 +2113,7 @@ test-tune-data:
 ## TODO: should we split into train/dev/test
 ##       problem: that would overlap with the previous training data
 
-%/Tatoeba-${TUNE_DOMAIN}-train.${LANGPAIR}.clean.${SRCEXT}.gz: %/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${SRCEXT}.gz
+%/Tatoeba-${TUNE_DOMAIN}-train.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz: %/${TATOEBA_TRAINSET}.${SORTED_LANGPAIR}.clean.${SRCEXT}.gz
 	paste 	<(gzip -cd ${<:.${SRCEXT}.gz=.domain.gz}) \
 		<(gzip -cd $<) \
 		<(gzip -cd ${<:.${SRCEXT}.gz=.${TRGEXT}.gz}) | \
@@ -2126,7 +2126,7 @@ test-tune-data:
 
 ## make Tatoeba test files available in testset collection
 ## --> useful for testing various languages when creating multilingual models
-testsets/${LANGPAIR}/${TATOEBA_TESTSET}.${LANGPAIR}.%: ${TATOEBA_DATA}/${TATOEBA_TESTSET}.${LANGPAIR}.clean.%
+testsets/${SORTED_LANGPAIR}/${TATOEBA_TESTSET}.${SORTED_LANGPAIR}.%: ${TATOEBA_DATA}/${TATOEBA_TESTSET}.${SORTED_LANGPAIR}.clean.%
 	mkdir -p ${dir $@}
 	cp $< $@
 

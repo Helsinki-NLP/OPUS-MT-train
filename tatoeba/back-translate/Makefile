@@ -35,7 +35,7 @@ TATOEBA_MODEL_STORAGE = https://object.pouta.csc.fi/Tatoeba-MT-models
 
 ## container for storing backtranslations
 BT_CONTAINER          = Tatoeba-MT-bt
-BT_CWORK_ONTAINER     = project-Tatoeba-MT-bt
+BT_WORK_CONTAINER     = project-Tatoeba-MT-bt
 
 ## various sources are available
 ## can be general wikipedia, wikinews, wikibooks, ...
@@ -50,7 +50,6 @@ SPLIT_SIZE ?= 1000000
 ## maximum input length (number sentence piece segments)
 ## maximum number of sentences to be translated (top N lines)
 MAX_LENGTH    ?= 100
-MAX_SENTENCES ?= ${SPLIT_SIZE}
 
 
 LANGPAIR = ${SRC}-${TRG}

@@ -55,6 +55,11 @@ endif
 include ${REPOHOME}lib/langsets.mk
 
 
+## leader board (scores)
+
+LEADERBOARD_HOME = ${REPOHOME}scores
+
+
 ## supported model types
 ## configuration for each type is in lib/train.mk
 
@@ -188,11 +193,15 @@ MAX_OVER_SAMPLING ?= 50
 # CHECK_TRAINDATA_SIZE = 1
 
 
+# language pair
+LANGPAIR        = ${SRC}-${TRG}
+
+
 # sorted languages and langpair used to match resources in OPUS
-SORTLANGS   = $(sort ${SRC} ${TRG})
-SORTSRC     = ${firstword ${SORTLANGS}}
-SORTTRG     = ${lastword ${SORTLANGS}}
-LANGPAIR    = ${SORTSRC}-${SORTTRG}
+SORTLANGS       = $(sort ${SRC} ${TRG})
+SORTSRC         = ${firstword ${SORTLANGS}}
+SORTTRG         = ${lastword ${SORTLANGS}}
+SORTED_LANGPAIR = ${SORTSRC}-${SORTTRG}
 
 
 ## for monolingual things
@@ -447,9 +456,18 @@ TESTSET_NAME ?= opus-test
 ## TODO: MODELDIR still in use?
 ## TODO: SPMDIR still in use? (monolingual sp models)
 
-DATADIR  = ${WORKHOME}/data
-MODELDIR = ${WORKHOME}/models/${LANGPAIRSTR}
-SPMDIR   = ${WORKHOME}/SentencePieceModels
+DATADIR      = ${PWD}/data
+MONO_DATADIR = ${DATADIR}/monolingual
+MODELDIR     = ${WORKHOME}/models/${LANGPAIRSTR}
+SPMDIR       = ${WORKHOME}/SentencePieceModels
+
+## home directories for back, forward and pivot-based translation
+BACKTRANS_HOME    ?= ${DATADIR}/back_translations
+FORWARDTRANS_HOME ?= ${BACKTRANS_HOME}
+PIVOTTRANS_HOME   ?= ${DATADIR}/pivot_translations
+
+
+
 
 ## train data sets (word alignment for the guided alignment option)
 TRAIN_BASE = ${WORKDIR}/train/${DATASET}
@@ -481,10 +499,6 @@ TEST_SRC  ?= ${WORKDIR}/test/${TESTSET_NAME}.src
 TEST_TRG  ?= ${WORKDIR}/test/${TESTSET_NAME}.trg
 
 
-## home directories for back and forward translation
-BACKTRANS_HOME    ?= backtranslate
-FORWARDTRANS_HOME ?= ${BACKTRANS_HOME}
-PIVOTTRANS_HOME   ?= pivoting
 
 
 

@@ -66,7 +66,7 @@ tatoeba-%-refresh-release: tatoeba-%-refresh-release-yml tatoeba-%-refresh-relea
 # 		SRC=$$s TRG=$$t \
 # 		WIKI_HOME=wiki-iso639-3 \
 # 		WIKIDOC_HOME=wikidoc-iso639-3 \
-# 		MODELHOME=${TATOEBA_MODELSHOME}/${LANGPAIR} \
+# 		MODELHOME=${TATOEBA_MODELSHOME}/${SORTED_LANGPAIR} \
 # 	    ${@:-bttatoeba=}"; \
 # 	  done \
 # 	done
