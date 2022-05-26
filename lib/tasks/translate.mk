@@ -40,23 +40,15 @@ CORPUS_LATEST_README = ${OPUSMT_OUTPUT_DIR}/latest/README.md
 ## all parts of the bitext
 
 CORPUS_PARTS          = $(subst .,,${suffix ${basename ${wildcard ${CORPUS_PRE:${CORPUS_PART}.gz=}??.gz}}})
+ALL_CORPUS_SRC        = ${patsubst %,${CORPUS_BASE}.${SRC}.%.gz,${CORPUS_PARTS}}
+ALL_CORPUS_TRG        = ${patsubst %,${CORPUS_BASE}.${TRG}.%.gz,${CORPUS_PARTS}}
 ALL_CORPUS_LATEST_SRC = ${patsubst %,${OPUSMT_OUTPUT_DIR}/latest/${CORPUS_NAME}.%.${LANGPAIR}.${SRC}.gz,${CORPUS_PARTS}}
 ALL_CORPUS_LATEST_TRG = ${patsubst %,${OPUSMT_OUTPUT_DIR}/latest/${CORPUS_NAME}.%.${LANGPAIR}.${TRG}.gz,${CORPUS_PARTS}}
 
 
+## don't remove files of intermediate translations
+.PRECIOUS: ${ALL_CORPUS_SRC} ${ALL_CORPUS_TRG}
 
-## change decoder settings
-## TODO: do we need this?
-## TODO: this is not used at the moment!
-
-OPUSMT_MARIAN_BEAM_SIZE  = 1
-OPUSMT_MARIAN_MINI_BATCH = 128
-OPUSMT_MARIAN_MAXI_BATCH = 256
-OPUSMT_MARIAN_MAX_LENGTH = 200
-OPUSMT_MARIAN_WORKSPACE  = 12000
-
-# OPUSMT_MARIAN_MINI_BATCH = 768
-# OPUSMT_MARIAN_MAXI_BATCH = 2048
 
 
 ## split size in nr-of-lines
@@ -93,13 +85,32 @@ opusmt-prepare: opusmt-mtmodel ${CORPUS_PRE}
 
 ## translate current part
 .PHONY: opusmt-translate
-opusmt-translate: ${CORPUS_LATEST_README} ${CORPUS_LATEST_TRG}
-	${MAKE} ${CORPUS_LATEST_SRC}
+opusmt-translate: ${CORPUS_LATEST_TRG}
+	${MAKE} opusmt-model
+	${MAKE} ${CORPUS_LATEST_SRC} ${CORPUS_LATEST_README}
+
+## create a slurm job to translate the data
+.PHONY: opusmt-translate-job
+opusmt-translate-job:
+	${MAKE} opusmt-translate.${SUBMIT_PREFIX}
 
 ## translate all parts
 .PHONY: opusmt-translate-all-parts opusmt-translate-all
 opusmt-translate-all opusmt-translate-all-parts: ${ALL_CORPUS_LATEST_TRG}
 	${MAKE} opusmt-all-source-parts
+
+
+## create individual jobs for translating each part of the input data
+## (only start the job if the file does not exist yet)
+.PHONY: opusmt-translate-all-jobs opusmt-translate-all-parts-jobs
+opusmt-translate-all-jobs opusmt-translate-all-parts-jobs:
+	for p in ${CORPUS_PARTS}; do \
+	  if [ ! -e ${OPUSMT_OUTPUT_DIR}/${CORPUS_NAME}.$${p}_${MODELNAME}.${LANGPAIR}.${TRG}.gz ]; then \
+	    rm -f opusmt-translate.${SUBMIT_PREFIX}; \
+	    ${MAKE} CORPUS_PART=$$p opusmt-translate.${SUBMIT_PREFIX}; \
+	  fi \
+	done
+
 
 ## create all source language parts
 .PHONY: opusmt-all-source-parts
@@ -136,7 +147,7 @@ print-modelname:
 ${OPUSMT_OUTPUT_DIR}/${MODELNAME}/decoder.yml:
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
-	${WGET} -O ${dir $@}/model.zip ${MODELZIP}
+	${WGET} -q -O ${dir $@}/model.zip ${MODELZIP}
 	cd ${dir $@} && unzip model.zip
 	rm -f ${dir $@}/model.zip
 	mv ${dir $@}/preprocess.sh ${dir $@}/preprocess-old.sh

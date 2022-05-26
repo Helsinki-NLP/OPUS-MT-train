@@ -82,14 +82,14 @@ endif
 # forward-translation data (source-to-target)
 # filtered by reconstruction scores (ce filter)
 ifneq (${USE_FORWARDTRANS_SELECTED},)
-  FORWARDTRANS_SRC += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.best${USE_FORWARDTRANS_SELECTED}.gz}}
-  FORWARDTRANS_TRG += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/*.${TRGEXT}.best${USE_FORWARDTRANS_SELECTED}.gz}}
+  FORWARDTRANS_SRC += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/best${USE_FORWARDTRANS_SELECTED}/*.${SRCEXT}.gz}}
+  FORWARDTRANS_TRG += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/best${USE_FORWARDTRANS_SELECTED}/*.${TRGEXT}.gz}}
 endif
 
 ## selected by "raw" (unnormalised) scores
 ifneq (${USE_FORWARDTRANS_SELECTED_RAW},)
-  FORWARDTRANS_SRC += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.rawbest${USE_FORWARDTRANS_SELECTED_RAW}.gz}}
-  FORWARDTRANS_TRG += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/*.${TRGEXT}.rawbest${USE_FORWARDTRANS_SELECTED_RAW}.gz}}
+  FORWARDTRANS_SRC += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/rawbest${USE_FORWARDTRANS_SELECTED_RAW}/*.${SRCEXT}.gz}}
+  FORWARDTRANS_TRG += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/rawbest${USE_FORWARDTRANS_SELECTED_RAW}/*.${TRGEXT}.gz}}
 endif
 
 

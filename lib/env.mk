@@ -6,6 +6,7 @@
 #
 
 SHELL    := /bin/bash
+TODAY    := $(shell date +%F)
 PWD      ?= ${shell pwd}
 REPOHOME ?= ${PWD}/
 

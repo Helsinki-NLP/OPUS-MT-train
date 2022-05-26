@@ -20,7 +20,7 @@ WALLTIME      = 36
 
 
 ## test whether we have permissions to see pre-installed software
-ifneq (${wildcard /projappl/project_2003093/install-old},)
+ifneq (${wildcard /projappl/project_2003093/install},)
   APPLHOME       = /projappl/project_2003093/
   MOSESHOME      = ${APPLHOME}/install/mosesdecoder
   MOSESSCRIPTS   = ${MOSESHOME}/scripts

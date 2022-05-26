@@ -33,11 +33,11 @@ REV_MODELNAME  = ${patsubst %.zip,%,${notdir ${REV_MODELZIP}}}
 
 REV_MULTI_TARGET_MODEL := ${shell ${WGET} -qq -O - ${REV_MODELINFO} | grep 'use-target-labels' | wc -l}
 ifeq (${REV_MULTI_TARGET_MODEL},1)
-  REV_SRC_PREPROCESS_ARGS = ${TRG} ${SRC} ${REV_LANGPAIR}/${REV_MODELNAME}/source.spm
-  REV_TRG_PREPROCESS_ARGS = ${SRC} ${TRG} ${REV_LANGPAIR}/${REV_MODELNAME}/target.spm noflags
+  REV_SRC_PREPROCESS_ARGS = ${TRG} ${SRC} ${OPUSMT_OUTPUT_DIR}/${REV_MODELNAME}/source.spm
+  REV_TRG_PREPROCESS_ARGS = ${SRC} ${TRG} ${OPUSMT_OUTPUT_DIR}/${REV_MODELNAME}/target.spm noflags
 else
-  REV_SRC_PREPROCESS_ARGS = ${TRG} ${REV_LANGPAIR}/${REV_MODELNAME}/source.spm
-  REV_TRG_PREPROCESS_ARGS = ${SRC} ${REV_LANGPAIR}/${REV_MODELNAME}/target.spm
+  REV_SRC_PREPROCESS_ARGS = ${TRG} ${OPUSMT_OUTPUT_DIR}/${REV_MODELNAME}/source.spm
+  REV_TRG_PREPROCESS_ARGS = ${SRC} ${OPUSMT_OUTPUT_DIR}/${REV_MODELNAME}/target.spm
 endif
 
 
@@ -63,19 +63,19 @@ print-score-file:
 ${OPUSMT_OUTPUT_DIR}/%.${SRC}.scores.gz: ${OPUSMT_OUTPUT_DIR}/%.${SRC}.gz
 	${MAKE} SRC=${TRG} TRG=${SRC} opusmt-model
 	${GZCAT} ${<:.${SRC}.gz=.${TRG}.gz} |\
-	${REV_LANGPAIR}/${REV_MODELNAME}/preprocess.sh ${REV_SRC_PREPROCESS_ARGS} | \
+	${OPUSMT_OUTPUT_DIR}/${REV_MODELNAME}/preprocess.sh ${REV_SRC_PREPROCESS_ARGS} | \
 	${GZIP} -c > $@.src.gz
 	${GZCAT} $< |\
-	${REV_LANGPAIR}/${REV_MODELNAME}/preprocess.sh ${REV_TRG_PREPROCESS_ARGS} | \
+	${OPUSMT_OUTPUT_DIR}/${REV_MODELNAME}/preprocess.sh ${REV_TRG_PREPROCESS_ARGS} | \
 	${GZIP} -c > $@.trg.gz
 	${LOAD_ENV} && \
-	cd ${REV_LANGPAIR}/${REV_MODELNAME} && \
+	cd ${OPUSMT_OUTPUT_DIR}/${REV_MODELNAME} && \
 	${MARIAN_SCORER} \
 		-m `grep -A1 models decoder.yml | tail -1 | sed 's/ *- //'` \
 		-v `grep -A2 vocabs decoder.yml | tail -2 | sed 's/ *- //' | tr "\n" ' '` \
-		-t ${PWD}/$@.src.gz ${PWD}/$@.trg.gz \
+		-t ../$(notdir $@).src.gz ../$(notdir $@).trg.gz \
 		${MARIAN_SCORER_FLAGS} |\
-	${GZIP} -c > ${PWD}/$(@:.scores.gz=.raw-scores.gz)
+	${GZIP} -c > ../$(notdir $(@:.scores.gz=.raw-scores.gz))
 	paste <(gzip -dc $(@:.scores.gz=.raw-scores.gz)) <(gzip -dc $@.trg.gz) | \
 	python3 ${SCRIPTDIR}/normalize-scores.py | cut -f1 | ${GZIP} -c > $@
 	rm -f $@.src.gz $@.trg.gz
@@ -87,7 +87,7 @@ ${OPUSMT_OUTPUT_DIR}/bitext.sorted.gz: ${SCOREFILES}
 	${GZCAT} ${OPUSMT_OUTPUT_DIR}/*.${TRG}.gz | ${GZIP} -c > $@.trg.gz
 	paste <(gzip -cd $@.scores.gz) <(gzip -cd $@.src.gz) <(gzip -cd $@.trg.gz) |\
 	LC_ALL=C sort -n -k1,1 -S 10G | uniq -f1 | ${GZIP} -c > $@
-	rm -f $@.src.gz $@.trg.gz
+	rm -f $@.src.gz $@.trg.gz $@.scores.gz
 
 
 ${OPUSMT_OUTPUT_DIR}/bitext.sorted-raw.gz: ${RAWSCOREFILES}
@@ -96,7 +96,7 @@ ${OPUSMT_OUTPUT_DIR}/bitext.sorted-raw.gz: ${RAWSCOREFILES}
 	${GZCAT} ${OPUSMT_OUTPUT_DIR}/*.${TRG}.gz | ${GZIP} -c > $@.trg.gz
 	paste <(gzip -cd $@.raw-scores.gz) <(gzip -cd $@.src.gz) <(gzip -cd $@.trg.gz) |\
 	LC_ALL=C sort -n -k1,1 -S 10G | uniq -f1 | ${GZIP} -c > $@
-	rm -f $@.src.gz $@.trg.gz
+	rm -f $@.src.gz $@.trg.gz $@.raw-scores.gz
 
 
 #########################################################################
@@ -105,17 +105,18 @@ ${OPUSMT_OUTPUT_DIR}/bitext.sorted-raw.gz: ${RAWSCOREFILES}
 #########################################################################
 
 .PHONY: extract-best-translations extract-rawbest-translations
-extract-best-translations: ${OPUSMT_OUTPUT_DIR}/bitext.${SRC}.best${CEFILTER_RETAIN}.gz
-extract-rawbest-translations: ${OPUSMT_OUTPUT_DIR}/bitext.${SRC}.rawbest${CEFILTER_RETAIN}.gz
+extract-best-translations: ${OPUSMT_OUTPUT_DIR}/best${CEFILTER_RETAIN}/bitext.${SRC}.gz
+extract-rawbest-translations: ${OPUSMT_OUTPUT_DIR}/rawbest${CEFILTER_RETAIN}/bitext.${SRC}.gz
 
-%.${SRC}.best${CEFILTER_RETAIN}.gz: %.sorted.gz
+${OPUSMT_OUTPUT_DIR}/best${CEFILTER_RETAIN}/%.${SRC}.gz: ${OPUSMT_OUTPUT_DIR}/%.sorted.gz
+	mkdir -p $(dir $@)
 	$(eval STARTLINE := $(shell ${GZIP} -dc $< | wc -l | sed "s|$$|*$(CEFILTER_REMOVE)|" | bc | cut -f1 -d.))
 	@echo Removing $(CEFILTER_REMOVE) removes $(STARTLINE) lines
 	${GZIP} -dc $< | tail -n +$(STARTLINE) | cut -f2,3 | \
 	tee >(cut -f1 | gzip -c >$@) |\
-	cut -f2 | gzip -c > ${@:.${SRC}.best${CEFILTER_RETAIN}.gz=.${TRG}.best${CEFILTER_RETAIN}.gz}
+	cut -f2 | gzip -c > ${@:.${SRC}.gz=.${TRG}.gz}
 
-%.${TRG}.best${CEFILTER_RETAIN}.gz: %.${SRC}.best${CEFILTER_RETAIN}.gz
+${OPUSMT_OUTPUT_DIR}/best${CEFILTER_RETAIN}/%.${TRG}.gz: ${OPUSMT_OUTPUT_DIR}/best${CEFILTER_RETAIN}/%.${SRC}.gz
 	@echo "done!"
 
 %.${SRC}.rawbest${CEFILTER_RETAIN}.gz: %.sorted-raw.gz
