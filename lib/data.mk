@@ -16,6 +16,7 @@
 
 
 ## training data size (generates count if not in README.md)
+## TODO: do we still need this?
 TRAINDATA_SIZE = ${shell \
 	if [ -e ${WORKDIR}/train/README.md ]; then \
 	  if [ `grep 'total size (${DATASET}):' ${WORKDIR}/train/README.md | wc -l` -gt 0 ]; then \
@@ -32,6 +33,44 @@ TRAINDATA_SIZE = ${shell \
 	  ${GZIP} -cd < ${TRAIN_SRC}.clean.${PRE_SRC}.gz | wc -l >> ${WORKDIR}/train/README.md; \
 	  grep 'total size (${DATASET}):' ${WORKDIR}/train/README.md | cut -f2 -d':' ; \
 	fi }
+
+
+## set sample data size for mulitlingual models
+## (only if DATA_SAMPLING_WEIGHT is set)
+## MAX_DATA_SIZE controls the maximum data size for a language pair
+##    default: keep all data for the largest language pair (no down-sampling)
+## DATA_SAMPLING_WEIGHT balances between uniform and distributional sampling
+##  = 1: sample proportional to the size of bitext per language pair
+##  = 0.2: corresponds to temperature 5 to up-sample low resource languages
+
+ifneq (${words ${SRCLANGS} ${TRGLANGS}},2)
+ifdef DATA_SAMPLING_WEIGHT
+ifneq (${wildcard ${WORKDIR}/train/size_per_language_pair.txt},)
+ifdef MAX_DATA_SIZE
+  FIT_DATA_SIZE = ${shell ${REPOHOME}scripts/data-sample-sizes.pl -w ${DATA_SAMPLING_WEIGHT} -m ${MAX_DATA_SIZE} \
+			${WORKDIR}/train/size_per_language_pair.txt | grep '${SORTED_LANGPAIR}' | cut -f2}
+else
+  FIT_DATA_SIZE = ${shell ${REPOHOME}scripts/data-sample-sizes.pl -w ${DATA_SAMPLING_WEIGHT} \
+			${WORKDIR}/train/size_per_language_pair.txt | grep '${SORTED_LANGPAIR}' | cut -f2}
+endif
+endif
+endif
+endif
+
+print-data-sampling-size:
+	@echo "sample size for ${LANGPAIR}: ${FIT_DATA_SIZE}"
+
+print-data-sampling-sizes:
+	for s in ${SRCLANGS}; do \
+	  for t in ${TRGLANGS}; do \
+	    if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
+	      if [ "${SKIP_SAME_LANG}" != "1" ] || [ "$$s" != "$$t" ]; then \
+	        ${MAKE} SRC:=$$s TRG:=$$t print-data-sampling-size; \
+	      fi \
+	    fi \
+	  done \
+	done
+
 
 
 ## look for cleanup scripts and put them into a pipe
@@ -264,6 +303,38 @@ endif
 
 
 
+## generate a file with the size per language pair
+## NOTE: those are taken from CLEAN_TRAIN_SIZE and not the final
+## training data after the additional call to the clean-corpus script!
+## --> counts are used to estimate temperature-based sample sizes
+##     for multilingual models
+
+train-size-per-language: ${WORKDIR}/train/size_per_language_pair.txt
+add-size-per-language-pair-info:
+ifneq (${wildcard ${CLEAN_TRAIN_SRC}},)
+	( s=`${GZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} | wc -l`; \
+	  echo "${LANGPAIR}	$$s" >> ${WORKDIR}/train/size_per_language_pair.txt )
+endif
+
+${WORKDIR}/train/size_per_language_pair.txt: ${LOCAL_TRAINDATA_DEPENDENCIES}
+	mkdir -p $(dir $@)
+	rm -f $@
+	for s in ${SRCLANGS}; do \
+	  for t in ${TRGLANGS}; do \
+	    if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
+	      if [ "${SKIP_SAME_LANG}" != "1" ] || [ "$$s" != "$$t" ]; then \
+	        ${MAKE} DATASET=${DATASET} SRC:=$$s TRG:=$$t add-size-per-language-pair-info; \
+	      fi \
+	    fi \
+	  done \
+	done
+	cut -f2 $@ | paste -sd+ | bc | sed 's/^/TOTAL	/' >> $@
+
+
+
+
+
+
 .PHONY: clean-data rawdata
 clean-data rawdata:
 	@for s in ${SRCLANGS}; do \
@@ -470,7 +541,7 @@ endif
 
 ## add training data for each language combination
 ## and put it together in local space
-${LOCAL_TRAIN_SRC}: ${LOCAL_TRAINDATA_DEPENDENCIES}
+${LOCAL_TRAIN_SRC}: ${LOCAL_TRAINDATA_DEPENDENCIES} ${WORKDIR}/train/size_per_language_pair.txt
 	@mkdir -p ${dir $@}
 	@echo ""                           > ${dir $@}README.md
 	@echo "# ${notdir ${TRAIN_BASE}}" >> ${dir $@}README.md
@@ -552,6 +623,7 @@ endif
 ifeq (${USE_TARGET_LABELS},1)
   LABEL_SOURCE_DATA = | sed "s/^/>>${TRG}<< /"
 endif
+
 
 
 ## add to the training data

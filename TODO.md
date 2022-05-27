@@ -1,6 +1,12 @@
 
 # Things to do
 
+
+## data preparation
+
+* do temperature-based balanced sampling (see https://arxiv.org/pdf/1907.05019.pdf)
+
+
 ## slurm job pipelines
 
 Create slurm jobs with dependencies to create pipelines of jobs.

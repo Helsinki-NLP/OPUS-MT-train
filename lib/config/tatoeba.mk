@@ -214,7 +214,7 @@ GET_ISO_CODE   := ${ISO639} -m
 # TATOEBA_LANGGROUPS1 = ${shell langgroup -g -n ${TATOEBA_LANGS3} 2>/dev/null | tr " " "\n" | grep '+'}
 # TATOEBA_LANGGROUPS2 = ${shell langgroup -G -n ${TATOEBA_LANGS3} 2>/dev/null | tr " " "\n" | grep '+'}
 
-OPUS_LANGS3            := ${sort ${filter-out xxx,${shell ${GET_ISO_CODE} ${OPUSLANGS}}}}
-OPUS_LANG_PARENTS      := ${sort ${shell langgroup -p -n ${OPUS_LANGS3} 2>/dev/null}}
-OPUS_LANG_GRANDPARENTS := ${sort ${shell langgroup -p -n ${OPUS_LANG_PARENTS} 2>/dev/null}}
-OPUS_LANG_GROUPS       := ${sort ${OPUS_LANG_PARENTS} ${OPUS_LANG_GRANDPARENTS}}
+# OPUS_LANGS3            = ${sort ${filter-out xxx,${shell ${GET_ISO_CODE} ${OPUSLANGS}}}}
+# OPUS_LANG_PARENTS      = ${sort ${shell langgroup -p -n ${OPUS_LANGS3} 2>/dev/null}}
+# OPUS_LANG_GRANDPARENTS = ${sort ${shell langgroup -p -n ${OPUS_LANG_PARENTS} 2>/dev/null}}
+# OPUS_LANG_GROUPS       = ${sort ${OPUS_LANG_PARENTS} ${OPUS_LANG_GRANDPARENTS}}

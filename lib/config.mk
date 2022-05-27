@@ -193,6 +193,7 @@ SORTLANGS   = $(sort ${SRC} ${TRG})
 SORTSRC     = ${firstword ${SORTLANGS}}
 SORTTRG     = ${lastword ${SORTLANGS}}
 LANGPAIR    = ${SORTSRC}-${SORTTRG}
+SORTED_LANGPAIR    = ${SORTSRC}-${SORTTRG}
 
 
 ## for monolingual things
@@ -289,7 +290,10 @@ OPUSMONOCORPORA = $(filter-out ${EXCLUDE_CORPORA},${call get-opus-mono,${LANGID}
 ## TODO: do we need this?
 OPUSLANGS := ${call get-opus-langs}
 
-
+OPUS_LANGS3            := ${sort ${filter-out xxx,${shell ${GET_ISO_CODE} ${OPUSLANGS}}}}
+OPUS_LANG_PARENTS      := ${sort ${shell langgroup -p -n ${OPUS_LANGS3} 2>/dev/null}}
+OPUS_LANG_GRANDPARENTS := ${sort ${shell langgroup -p -n ${OPUS_LANG_PARENTS} 2>/dev/null}}
+OPUS_LANG_GROUPS       := ${sort ${OPUS_LANG_PARENTS} ${OPUS_LANG_GRANDPARENTS}}
 
 
 ##----------------------------------------------------------------------------

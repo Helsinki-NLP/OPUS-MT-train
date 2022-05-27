@@ -359,6 +359,28 @@ FT_SELECTED ?= 95
 	${MAKE} USE_SPM_VOCAB=1 MODEL_VARIANT=-sepvoc ${@:-separate-spm=}
 
 
+PRETRAINED_SPM_SRC = ${wildcard ${RELEASEDIR}/spm/*/opusTC.$(firstword $(subst -, ,${LANGPAIRSTR})).${SUBWORD_SRCVOCAB_SIZE:000=}k.spm}
+PRETRAINED_SPM_TRG = ${wildcard ${RELEASEDIR}/spm/*/opusTC.$(lastword $(subst -, ,${LANGPAIRSTR})).${SUBWORD_TRGVOCAB_SIZE:000=}k.spm}
+
+%-pretrained-spm:
+ifneq ($(wildcard $(subst ${WORKHOME},${WORKHOME}-prespm,${SPMSRCMODEL})),)
+ifneq (${PRETRAINED_SPM_SRC},)
+	@echo "copy ${PRETRAINED_SPM_SRC}"
+	mkdir -p $(dir $(subst ${WORKHOME},${WORKHOME}-prespm,${SPMSRCMODEL}))
+	cp ${PRETRAINED_SPM_SRC} $(subst ${WORKHOME},${WORKHOME}-prespm,${SPMSRCMODEL})
+	cp ${PRETRAINED_SPM_SRC}.vocab $(subst ${WORKHOME},${WORKHOME}-prespm,${SPMSRCMODEL}).vocab
+endif
+endif
+ifneq ($(wildcard $(subst ${WORKHOME},${WORKHOME}-prespm,${SPMTRGMODEL})),)
+ifneq (${PRETRAINED_SPM_TRG},)
+	@echo "copy ${PRETRAINED_SPM_TRG}"
+	mkdir -p $(dir $(subst ${WORKHOME},${WORKHOME}-prespm,${SPMTRGMODEL}))
+	cp ${PRETRAINED_SPM_TRG} $(subst ${WORKHOME},${WORKHOME}-prespm,${SPMTRGMODEL})
+	cp ${PRETRAINED_SPM_TRG}.vocab $(subst ${WORKHOME},${WORKHOME}-prespm,${SPMTRGMODEL}).vocab
+endif
+endif
+	${MAKE} WORKHOME=${WORKHOME}-prespm ${@:-pretrained-spm=}
+
 
 
 

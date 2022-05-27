@@ -137,20 +137,95 @@ all:
 ## fixed sentence piece models for all langs
 #################################################
 
-tatoeba-tokenizer-sizes:
-	for s in 16000 32000 64000 8000 4000; do \
-	  ${MAKE} SUBWORD_TRGVOCAB_SIZE=$$s tatoeba-tokenizer-langs; \
-	done
 
 # or rather base 2 sizes?
 # 16384 32768 65536 8192 4096
 # (but this breaks the way we create the short size string)
+
+
+TRGLANG_GROUP_LANGS = $(call find-langgroup,${TRGLANG_GROUP})
+
+tatoeba-tokenizer-groups:
+	for g in ${OPUS_LANG_GROUPS}; do \
+	  ${MAKE} TRGLANG_GROUP=$$g tatoeba-tokenizer-group; \
+	done
+
+tatoeba-tokenizer-group:
+	echo "${TRGLANG_GROUP}: ${TRGLANG_GROUP_LANGS}"
+	if [ $(words ${TRGLANG_GROUP_LANGS}) -gt 2 ]; then \
+	  if [ $(words ${TRGLANG_GROUP_LANGS}) -lt 25 ]; then \
+		${MAKE} DATA_SAMPLING_WEIGHT=0.3 SRCLANGS=eng TRGLANGS="${TRGLANG_GROUP_LANGS}" \
+			LANGPAIRSTR="eng-${TRGLANG_GROUP}" tatoeba-tokenizer; \
+	  fi \
+	fi
+
+tatoeba-tokenizer-missing:
+	for l in ${filter-out eng,${TATOEBA_LANGS}}; do \
+	  if [ ! -e models/spm/eng-$$l ]; then \
+	    ${MAKE} DATA_SAMPLING_WEIGHT=0.3 SRC=eng TRG=$$l tatoeba-tokenizer; \
+	  elif [ `cat work/eng-$$l/opusTCv20210807-langlabels.trg | tr ' ' "\n" | grep . | wc -l` -gt 1 ]; then \
+	    mkdir -o  models/spm-old; \
+	    mv models/spm/eng-$$l models/spm-old/; \
+	    ${MAKE} DATA_SAMPLING_WEIGHT=0.3 SRC=eng TRG=$$l tatoeba-tokenizer; \
+	  fi; \
+	done
+	for g in ${OPUS_LANG_GROUPS}; do \
+	  ${MAKE} TRGLANG_GROUP=$$g tatoeba-tokenizer-group; \
+	done
+
+
 
 tatoeba-tokenizer-langs:
 	for l in ${filter-out eng,${TATOEBA_LANGS}}; do \
 	  ${MAKE} SRC=eng TRG=$$l tatoeba-tokenizer; \
 	done
 	${MAKE} SRC=fra TRG=eng tatoeba-tokenizer
+
+reverse = $(if $(1),$(call reverse,$(wordlist 2,$(words $(1)),$(1)))) $(firstword $(1))
+tatoeba-tokenizer-langs-reverse:
+	for l in $(call reverse,$(filter-out eng,${TATOEBA_LANGS})); do \
+	  ${MAKE} SRC=eng TRG=$$l tatoeba-tokenizer; \
+	done
+
+tatoeba-tokenizer-check:
+	for l in ${filter-out eng,${TATOEBA_LANGS}}; do \
+	  if [ -e models/spm/eng-$$l/opusTC.$$l.4k.spm.vocab ]; then \
+	    if [ `cat models/spm/eng-$$l/opusTC.$$l.4k.spm.vocab | wc -l` -lt 4000 ]; then \
+	      echo "remove models/spm/eng-$$l/opusTC.$$l.4k.spm.vocab"; \
+	      mkdir -p models/spm-removed/eng-$$l; \
+	      mv models/spm/eng-$$l/opusTC.$$l.4k.spm* models/spm-removed/eng-$$l; \
+	    fi \
+	  fi; \
+	  if [ -e models/spm/eng-$$l/opusTC.$$l.8k.spm.vocab ]; then \
+	    if [ `cat models/spm/eng-$$l/opusTC.$$l.8k.spm.vocab | wc -l` -lt 8000 ]; then \
+	      echo "remove models/spm/eng-$$l/opusTC.$$l.8k.spm.vocab"; \
+	      mkdir -p models/spm-removed/eng-$$l; \
+	      mv models/spm/eng-$$l/opusTC.$$l.8k.spm* models/spm-removed/eng-$$l; \
+	    fi \
+	  fi; \
+	  if [ -e models/spm/eng-$$l/opusTC.$$l.16k.spm.vocab ]; then \
+	    if [ `cat models/spm/eng-$$l/opusTC.$$l.16k.spm.vocab | wc -l` -lt 16000 ]; then \
+	      echo "remove models/spm/eng-$$l/opusTC.$$l.16k.spm.vocab"; \
+	      mkdir -p models/spm-removed/eng-$$l; \
+	      mv models/spm/eng-$$l/opusTC.$$l.16k.spm* models/spm-removed/eng-$$l; \
+	    fi \
+	  fi; \
+	  if [ -e models/spm/eng-$$l/opusTC.$$l.32k.spm.vocab ]; then \
+	    if [ `cat models/spm/eng-$$l/opusTC.$$l.32k.spm.vocab | wc -l` -lt 32000 ]; then \
+	      echo "remove models/spm/eng-$$l/opusTC.$$l.32k.spm.vocab"; \
+	      mkdir -p models/spm-removed/eng-$$l; \
+	      mv models/spm/eng-$$l/opusTC.$$l.32k.spm* models/spm-removed/eng-$$l; \
+	    fi \
+	  fi; \
+	  if [ -e models/spm/eng-$$l/opusTC.$$l.64k.spm.vocab ]; then \
+	    if [ `cat models/spm/eng-$$l/opusTC.$$l.64k.spm.vocab | wc -l` -lt 64000 ]; then \
+	      echo "remove models/spm/eng-$$l/opusTC.$$l.64k.spm.vocab"; \
+	      mkdir -p models/spm-removed/eng-$$l; \
+	      mv models/spm/eng-$$l/opusTC.$$l.64k.spm* models/spm-removed/eng-$$l; \
+	    fi \
+	  fi; \
+	done
+
 
 
 tatoeba-tokenizer: 
@@ -174,6 +249,11 @@ ${RELEASEDIR}/spm/${LANGPAIRSTR}/opusTC.${SUBWORD_TRG_NAME}.${SUBWORD_TRG_SHORTS
 	${MAKE} WORKDIR=${WORKDIR}/spm SPM_INPUT_SIZE=10000000 spm-trgmodel-tatoeba > $@.stdout 2>$@.stderr
 	mv ${WORKDIR}/spm/train/$(notdir ${SPMTRGMODEL}) $@
 	mv ${WORKDIR}/spm/train/$(notdir ${SPMTRGMODEL}).vocab $@.vocab
+	if [ `cat $@.vocab | wc -l` -lt ${SUBWORD_TRGVOCAB_SIZE} ]; then \
+	  mkdir -p ${RELEASEDIR}/spm-removed/${LANGPAIRSTR}; \
+	  mv $@* ${RELEASEDIR}/spm-removed/${LANGPAIRSTR}/; \
+	fi
+
 
 ## upload to allas
 
@@ -181,7 +261,7 @@ TATOEBA_SPM_BUCKET = https://object.pouta.csc.fi/Tatoeba-MT-spm
 tatoeba-spmodel-upload:
 	which a-put
 	mkdir -p ${RELEASEDIR}/spm/tmp
-	cd ${RELEASEDIR}/spm/tmp && ln -s ../*-*/* . 
+	cd ${RELEASEDIR}/spm/tmp && ln -s ../???-???/* . 
 	cd ${RELEASEDIR}/spm/tmp && swift upload Tatoeba-MT-spm --changed --skip-identical *.*
 	rm -f ${RELEASEDIR}/spm/tmp/*
 	rmdir ${RELEASEDIR}/spm/tmp
@@ -267,7 +347,6 @@ trainonly_langids: ${TATOEBA_LANGIDS_TRAINONLY}
 
 print-langgroups:
 	@echo ${OPUS_LANG_GROUPS}
-
 
 
 
