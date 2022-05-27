@@ -258,8 +258,7 @@ install install-prerequisites install-prereq install-requirements:
 	fi
 
 PHONY: install-all
-install-all: install
-	${LOAD_BUILD_ENV} && ${MAKE} ${EXTRA_TOOLS}
+install-all: install install-extra-tools
 
 
 .PHONY: install-prereq-tools
@@ -273,6 +272,11 @@ install-perl-modules:
 	for p in ${PREREQ_PERL}; do \
 	  perl -e "use $$p;" 2> /dev/null || ${CPAN} -i $$p; \
 	done
+
+.PHONY: install-extra-tools
+install-extra-tools:
+	${LOAD_BUILD_ENV} && ${MAKE} ${EXTRA_TOOLS}
+
 
 ${TOOLSDIR}/LanguageCodes/ISO-639-3/bin/iso639:
 	${MAKE} tools/LanguageCodes/ISO-639-5/lib/ISO/639/5.pm
@@ -309,14 +313,20 @@ ${TOOLSDIR}/jq/jq:
 ##
 ## TODO: do we still need to compile protobuf?
 
-${TOOLSDIR}/marian-dev/build/marian: ${PROTOC}
+${TOOLSDIR}/marian-dev/build/marian: # ${PROTOC}
 	mkdir -p ${dir $@}
 	cd ${dir $@} && ${LOAD_MARIAN_BUILD_ENV} && cmake -DUSE_SENTENCEPIECE=on ${MARIAN_BUILD_OPTIONS} ..
 	${LOAD_MARIAN_BUILD_ENV} && ${MAKE} -C ${dir $@} -j8
 
+${TOOLSDIR}/browsermt/marian-dev/build/marian: # ${PROTOC}
+	mkdir -p ${dir $@}
+	cd ${dir $@} && ${LOAD_MARIAN_BUILD_ENV} && cmake ..
+	${LOAD_MARIAN_BUILD_ENV} && ${MAKE} -C ${dir $@} -j8
+
+## OBSOLETE?
 ${TOOLSDIR}/protobuf/bin/protoc:
 	mkdir -p ${TOOLSDIR}
-	if [ -e ${dir $@} ]; then \
+	if [ ! -e ${dir $@} ]; then \
 	  cd ${TOOLSDIR} && git clone https://github.com/protocolbuffers/protobuf.git; \
 	fi
 	cd ${TOOLSDIR}/protobuf && git submodule update --init --recursive
@@ -326,7 +336,9 @@ ${TOOLSDIR}/protobuf/bin/protoc:
 
 ${TOOLSDIR}/extract-lex/build/extract_lex:
 	mkdir -p ${TOOLSDIR}
-	cd ${TOOLSDIR} && git clone https://github.com/marian-nmt/extract-lex
+	if [ ! -e ${TOOLSDIR}/extract-lex ]; then \
+	  cd ${TOOLSDIR} && git clone https://github.com/marian-nmt/extract-lex; \
+	fi
 	mkdir -p ${dir $@}
 	cd ${dir $@} && ${LOAD_EXTRACTLEX_BUILD_ENV} && cmake ..
 	${LOAD_EXTRACTLEX_BUILD_ENV} && ${MAKE} -C ${dir $@} -j4
