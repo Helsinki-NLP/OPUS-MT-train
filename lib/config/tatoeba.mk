@@ -128,6 +128,8 @@ TATOEBA_AVAILABLE_SUBSET_SRC  = ${sort ${filter-out ${TRG},${subst -, ,${filter 
 ## all available language pairs
 ## (download the file once and keep it here to get the language pairs in the release)
 TATOEBA_LANGPAIRS := ${shell if [ ! -e ${RELEASED_TATOEBA_DATA_FILE} ]; then \
+				mkdir -p ${dir ${RELEASED_TATOEBA_DATA_FILE}}; \
+				echo "fetch release file"; \
 				${WGET} -q -O ${RELEASED_TATOEBA_DATA_FILE} ${RELEASED_TATOEBA_DATA_URL}; \
 			     fi; \
 			     tail -n +2 ${RELEASED_TATOEBA_DATA_FILE} | cut -f1 }

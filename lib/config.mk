@@ -463,7 +463,7 @@ SPMDIR       = ${WORKHOME}/SentencePieceModels
 
 ## home directories for back, forward and pivot-based translation
 BACKTRANS_HOME    ?= ${DATADIR}/back_translations
-FORWARDTRANS_HOME ?= ${BACKTRANS_HOME}
+FORWARDTRANS_HOME ?= ${DATADIR}/forward_translations
 PIVOTTRANS_HOME   ?= ${DATADIR}/pivot_translations
 
 

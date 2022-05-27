@@ -1,318 +1,143 @@
 # -*-makefile-*-
 #
-# forward translation to be used for 
-# knowledge distillation
-#
-# only works with sentencepiece models!
-#
-# TODO's
-#
-#   - forward-translate monolingual data (re-use bt-data)
-#   - reconstruction filtering (score translation in opposite direction)
-#     (use weights? normalise-script from bergamot/students)
-#   - other kind of data filtering / selection?
-#   - create lexical shortlists (see bergamot)
-#   - finetune alphas in intgemm8 models (see bergamot)
-#   - benchmark distilled models
+# forward-translate data
 #
 
 
+## take source language part of the training data as input
 
-## change decoder settings
-## TODO: do we need this?
-
-FT_MARIAN_BEAM_SIZE  = 1
-FT_MARIAN_MINI_BATCH = 128
-FT_MARIAN_MAXI_BATCH = 256
-FT_MARIAN_MAX_LENGTH = 200
-FT_MARIAN_WORKSPACE  = 12000
-
-# FT_MARIAN_MINI_BATCH = 768
-# FT_MARIAN_MAXI_BATCH = 2048
+FT_INPUT_FILES = ${CLEAN_TRAIN_SRC}
+FT_INPUT_FILE  = $(firstword ${FT_INPUT_FILES})
+FT_OUTPUT_DIR  = ${FORWARDTRANS_HOME}/${LANGPAIR}
 
 
+#---------------------------------------------------------------
+# main recipes for translating data
+#---------------------------------------------------------------
+
+## extra parameters to call translation recipes
+
+FT_MAKE_PARAMS = INPUT_FILE=${FT_INPUT_FILE} OPUSMT_OUTPUT_DIR=${FT_OUTPUT_DIR}
 
 
-## split size in nr-of-lines
-## default part to be selected = aa
-FT_SPLIT_SIZE ?= 1000000
-
-## maximum input length (number sentence piece segments)
-## maximum number of sentences to be translated (top N lines)
-FT_MAX_LENGTH    ?= 200
-
-
-
-## DO WE NEED THOSE?
-
-# RELEASED_BITEXTS := $(patsubst %.tar,%,${shell ${WGET} -qq -O - ${TATOEBA_GITRAW}/Wiki.md | \
-# 					grep -o 'WikiShuffled/...\.tar' | cut -f2 -d'/'})
-# 
-# RELEASED_BITEXTS_REV = ${shell (for d in ${RELEASED_BITEXTS}; do echo $$d; done) | tac}
-#
-
-
-
-FT_WORKHOME    = ${WORKHOME}/forward_translations
-FT_OUTPUT_DIR ?= ${FT_WORKHOME}/${LANGPAIR}
-FT_PART       ?= aa
-
-FT_BITEXT_SRCRAW  = ${CLEAN_TRAIN_SRC}
-# FT_BITEXT_SRCRAW  = ${DATADIR}/${PRE}/Tatoeba-train-${TATOEBA_VERSION}.${SORTED_LANGPAIR}.${CLEAN_TRAINDATA_TYPE}.${SRC}.gz
-
-FT_BITEXT_BASE    = ${FT_OUTPUT_DIR}/Tatoeba-train.${MODELNAME}.${LANGPAIR}
-FT_BITEXT_SRC     = ${FT_BITEXT_BASE}.${SRC}.${FT_PART}.gz
-FT_BITEXT_PRE     = ${FT_BITEXT_BASE}.${SRC}.spm.${FT_PART}.gz
-FT_BITEXT_TRG     = ${FT_BITEXT_BASE}.${TRG}.${FT_PART}.gz
-
-FT_BITEXT_LATEST_SRC    = ${FT_OUTPUT_DIR}/latest/Tatoeba-train.${FT_PART}.${LANGPAIR}.${SRC}.gz
-FT_BITEXT_LATEST_TRG    = ${FT_OUTPUT_DIR}/latest/Tatoeba-train.${FT_PART}.${LANGPAIR}.${TRG}.gz
-FT_BITEXT_LATEST_README = ${FT_OUTPUT_DIR}/latest/README.md
-
-
-## all parts of the bitext
-FT_PARTS                 = $(subst .,,${suffix ${basename ${wildcard ${FT_BITEXT_PRE:${FT_PART}.gz=}??.gz}}})
-FT_ALL_BITEXT_LATEST_SRC = ${patsubst %,${FT_OUTPUT_DIR}/latest/Tatoeba-train.%.${LANGPAIR}.${SRC}.gz,${FT_PARTS}}
-FT_ALL_BITEXT_LATEST_TRG = ${patsubst %,${FT_OUTPUT_DIR}/latest/Tatoeba-train.%.${LANGPAIR}.${TRG}.gz,${FT_PARTS}}
-
-
-## don't delete translated text even if the process crashes
-.PRECIOUS: ${FT_BITEXT_BASE}.${TRG}.%.gz
-
-.PHONY: ft-all
-ft-all: ft-prepare
-	${MAKE} forward-translate-all-parts
-	${MAKE} OUTPUT_DIR=${FT_OUTPUT_DIR}/latest score-translations
-	${MAKE} OUTPUT_DIR=${FT_OUTPUT_DIR}/latest sort-scored-translations
-	${MAKE} OUTPUT_DIR=${FT_OUTPUT_DIR}/latest extract-best-translations
-
-
-.PHONY: ft-mtmodel
-ft-mtmodel:
-	${MAKE} OUTPUT_DIR=${FT_OUTPUT_DIR} best-model
+.PHONY: ft-all-jobs
+ft-all-jobs:
+	${MAKE} ft-prepare-all
+	${MAKE} forward-translate-all-jobs
 
 .PHONY: ft-prepare
-ft-prepare: ft-mtmodel ${FT_BITEXT_PRE}
+ft-prepare: ${FT_INPUT_FILE}
+	${MAKE} ${FT_MAKE_PARAMS} opusmt-model
 
-.PHONY: forward-translate
-forward-translate: ${FT_BITEXT_LATEST_README} ${FT_BITEXT_LATEST_TRG}
-	${MAKE} ${FT_BITEXT_LATEST_SRC}
-
-## forward-translate all parts
-.PHONY: forward-translate-all-parts forward-translate-all
-forward-translate-all forward-translate-all-parts: ${FT_ALL_BITEXT_LATEST_TRG}
-	${MAKE} ft-source-all-parts
-
-.PHONY: ft-source-all-parts
-ft-source-all-parts: ${FT_ALL_BITEXT_LATEST_SRC}
+.PHONY: ft-prepare-all
+ft-prepare-all: ${FT_INPUT_FILES}
+	${MAKE} ${FT_MAKE_PARAMS} opusmt-model
 
 
+# forward-translate
+# forward-translate-all-parts ......... translate all parts of the input data
+# forward-translate-all-parts-jobs .... create jobs for translating all parts
+
+.PHONY: forward-translate forward-translate-all-parts forward-translate-all-parts-jobs
+forward-translate forward-translate-all-parts forward-translate-all-parts-jobs:
+	${MAKE} ${FT_MAKE_PARAMS} $(patsubst forward-%,opusmt-%,$@)
 
 
+# forward-translate-all ............... translate all parts of all sources
+# forward-translate-all-jobs .......... create jobs for all parts and all sources
 
-
-
-## pre-process data
-
-ifeq (${MULTI_TARGET_MODEL},1)
-  PREPROCESS_ARGS = ${SRC} ${TRG} ${FT_OUTPUT_DIR}/${MODELNAME}/source.spm
-else
-  PREPROCESS_ARGS = ${SRC} ${FT_OUTPUT_DIR}/${MODELNAME}/source.spm
-endif
-
-
-${FT_BITEXT_SRCRAW}:
-	${MAKE} SRCLANGS=${SRC} TRGLANGS=${TRG} rawdata-tatoeba
-
-${FT_BITEXT_PRE}: ${FT_BITEXT_SRCRAW}
-ifneq (${MODELZIP},)
-	mkdir -p ${dir $@}
-	${MAKE} ${FT_OUTPUT_DIR}/${MODELNAME}/decoder.yml
-	${GZCAT} $< |\
-	grep -v '[<>{}]' |\
-	${FT_OUTPUT_DIR}/${MODELNAME}/preprocess.sh ${PREPROCESS_ARGS} |\
-	perl -e 'while (<>){next if (split(/\s+/)>${FT_MAX_LENGTH});print;}' |\
-	split -l ${FT_SPLIT_SIZE} - ${patsubst %${FT_PART}.gz,%,$@}
-	${GZIP} -f ${patsubst %${FT_PART}.gz,%,$@}??
-endif
-
-
-
-
-
-## merge SentencePiece segments in the source text
-## (Why? because we filter out some data from the original wiki text, see above)
-
-${FT_BITEXT_BASE}.${SRC}.%.gz: ${FT_BITEXT_BASE}.${SRC}.spm.%.gz
-	if [ -e ${patsubst ${FT_BITEXT_BASE}.${SRC}.%.gz,${FT_BITEXT_BASE}.${TRG}.%.gz,$@} ]; then \
-	  mkdir -p ${dir $@}; \
-	  ${GZCAT} $< |\
-	  sed 's/ //g;s/▁/ /g' | \
-	  sed 's/^ *//;s/ *$$//' |\
-	  sed 's/^>>[a-z]*<< //' |\
-	  gzip -c > $@; \
-	fi
-
-
-## overwrite the file with the latest translations
-## --> this allows multiple translation iterations
-##     without duplicating the data we want to use in MT training
-
-${FT_OUTPUT_DIR}/latest/Tatoeba-train.%.${LANGPAIR}.${SRC}.gz: ${FT_BITEXT_BASE}.${SRC}.%.gz
-	mkdir -p ${dir $@}
-	rsync $< $@
-
-${FT_OUTPUT_DIR}/latest/Tatoeba-train.%.${LANGPAIR}.${TRG}.gz: ${FT_BITEXT_BASE}.${TRG}.%.gz
-	mkdir -p ${dir $@}
-	rsync $< $@
-
-${FT_BITEXT_LATEST_README}: ${FT_OUTPUT_DIR}/${MODELNAME}/README.md
-	mkdir -p ${dir $@}
-	rsync $< $@
-
-
-## forward-translate
-
-${FT_BITEXT_BASE}.${TRG}.%.gz: ${FT_BITEXT_BASE}.${SRC}.spm.%.gz
-ifneq (${MODELZIP},)
-	mkdir -p ${dir $@}
-	${MAKE} ${FT_OUTPUT_DIR}/${MODELNAME}/decoder.yml
-	${LOAD_ENV} && cd ${FT_OUTPUT_DIR}/${MODELNAME} && \
-	${MARIAN_DECODER} \
-		-c decoder.yml \
-		-i ${PWD}/$< \
-		${MARIAN_DECODER_FLAGS} |\
-	sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' |\
-	gzip -c > ${PWD}/$@
-endif
-
-
-
-ft-check-latest:
-	@if [ -d ${FT_OUTPUT_DIR}/latest ]; then \
-	  for S in `ls ${FT_OUTPUT_DIR}/latest/*.${SRC}.gz`; do \
-	    T=`echo $$S | sed 's/.${SRC}.gz/.${TRG}.gz/'`; \
-	    a=`${GZCAT} $$S | wc -l`; \
-	    b=`${GZCAT} $$T | wc -l`; \
-	    if [ $$a != $$b ]; then \
-	      echo "$$a != $$b	$$S	$$T"; \
-	    else \
-	      echo "$$a	$$S	$$T"; \
-	    fi \
-	  done \
-	fi
-
-ft-check-scores:
-	@if [ -d ${FT_OUTPUT_DIR}/latest ]; then \
-	  for T in `ls ${FT_OUTPUT_DIR}/latest/*.${TRG}.gz`; do \
-	    S=`echo $$T | sed 's/.${TRG}.gz/.${SRC}.scores.gz/'`; \
-	    a=`${GZCAT} $$S | wc -l`; \
-	    b=`${GZCAT} $$T | wc -l`; \
-	    if [ $$a != $$b ]; then \
-	      echo "$$a != $$b	$$S	$$T"; \
-	    else \
-	      echo "$$a	$$S	$$T"; \
-	    fi \
-	  done \
-	fi
-
-
-ft-check-translated:
-	@for S in `ls ${FT_OUTPUT_DIR}/*.${SRC}.spm.gz`; do \
-	    T=`echo $$S | sed 's/.${SRC}.gz/.${TRG}.gz/'`; \
-	    a=`${GZCAT} $$S | wc -l`; \
-	    b=`${GZCAT} $$T | wc -l`; \
-	    if [ $$a != $$b ]; then \
-	      echo "$$a != $$b	$$S	$$T"; \
-	    else \
-	      echo "$$a	$$S	$$T"; \
-	    fi \
+.PHONY: forward-translate-all forward-translate-all-jobs
+forward-translate-all forward-translate-all-jobs:
+	for s in ${FT_INPUT_FILES}; do \
+	  ${MAKE} FT_INPUT_FILE=$$s $(subst -all,-all-parts,$@); \
 	done
 
-ft-check-length:
-	@echo "check ${LANGPAIR}"
-	@${MAKE} ft-check-translated
-	@${MAKE} ft-check-latest
 
+# forward-translate-all-sources ....... translate all sources but only one part
+# forward-translate-all-sources-job ... create individual jobs to translate one part for each source
+
+.PHONY: forward-translate-all-sources forward-translate-all-sources-job
+forward-translate-all-sources forward-translate-all-sources-job:
+	for s in ${FT_INPUT_FILES}; do \
+	  ${MAKE} FT_INPUT_FILE=$$s $(subst -all-sources,,$@); \
+	done
+
+
+
+## forward recipes to translate-recipes (see translate.mk)
+
+PHONY: ft-check-length ft-check-latest ft-check-translated ft-remove-incomplete ft-remove-incomplete-translated ft-remove-incomplete-latest
+ft-check-length ft-check-latest ft-check-translated ft-remove-incomplete ft-remove-incomplete-translated ft-remove-incomplete-latest:
+	${MAKE} ${FT_MAKE_PARAMS} $(subst ft-,opusmt-,$@)
 
 ft-remove-%-all ft-check-%-all:
-	for d in `find . -maxdepth 1 -type d -name '*-*' -printf "%f "`; do \
-	  s=`echo $$d | cut -f1 -d'-'`; \
-	  t=`echo $$d | cut -f2 -d'-'`; \
-	  make SRC=$$s TRG=$$t ${@:-all=}; \
-	done
+	${MAKE} ${FT_MAKE_PARAMS} $(subst ft-,opusmt-,$@)
+
+
+## recipes to score translations (see score_translations.mk)
+
+# ft-score-translations ........... score translations with reverse NMT models
+# ft-sort-scored-translations ..... sort translations by reverse translation score
+# ft-extract-best-translations .... remove translation pairs with lowest score (default 5%)
+
+PHONY: ft-score-translations ft-sort-scored-translations ft-extract-best-translations
+ft-score-translations ft-sort-scored-translations ft-extract-best-translations:
+	${MAKE} OPUSMT_OUTPUT_DIR=${FT_OUTPUT_DIR}/latest $(subst ft-,,$@)
 
 
 
-ft-remove-incomplete:
-	${MAKE} ft-remove-incomplete-translated
-	${MAKE} ft-remove-incomplete-latest
+#---------------------------------------------------------------
+# fetch and release data (requires to be connected to allas@CSC)
+#---------------------------------------------------------------
 
-ft-remove-incomplete-translated:
-	@echo "check ${LANGPAIR}"
-	@mkdir -p ${FT_OUTPUT_DIR}/incomplete
-	@for S in `ls ${FT_OUTPUT_DIR}/*.${SRC}.gz`; do \
-	    T=`echo $$S | sed 's/.${SRC}.gz/.${TRG}.gz/'`; \
-	    a=`${GZCAT} $$S | wc -l`; \
-	    b=`${GZCAT} $$T | wc -l`; \
-	    if [ $$a != $$b ]; then \
-	      echo "$$a != $$b	$$S	$$T"; \
-	      mv $$S ${FT_OUTPUT_DIR}/incomplete/; \
-	      mv $$T ${FT_OUTPUT_DIR}/incomplete/; \
-	    fi \
-	done
+## container for storing forward translations
+FT_CONTAINER        := Tatoeba-MT-ft
+FT_WORK_CONTAINER   := project-Tatoeba-MT-ft
+TATOEBA_RELEASED_FT := https://object.pouta.csc.fi/${FT_CONTAINER}/released-data.txt
+RELEASED_FT         := ${shell ${WGET} -qq -O - ${TATOEBA_RELEASED_FT} | grep '^${LANGPAIR}/'}
+
+ft-fetch:
+	mkdir -p ${FORWARDTRANS_HOME}
+	( cd ${FORWARDTRANS_HOME}; \
+	  for d in ${RELEASED_FT}; do \
+	    echo "fetch $$d"; \
+	    mkdir -p `dirname $$d`; \
+	    ${WGET} -qq -O $$d https://object.pouta.csc.fi/${FT_CONTAINER}/$$d; \
+	  done )
+
+ft-release-all: ft-upload-all
+	${MAKE} ${FORWARDTRANS_HOME}/released-data.txt ${FORWARDTRANS_HOME}/released-data-size.txt
+
+.PHONY: ft-upload ft-release
+ft-release ft-upload: ${FT_LATEST_README}
+	cd ${FORWARDTRANS_HOME} && swift upload ${FT_CONTAINER} --changed --skip-identical ${LANGPAIR}/latest
+	${MAKE} ${FORWARDTRANS_HOME}/released-data.txt
+	swift post ${FT_CONTAINER} --read-acl ".r:*"
+
+.PHONY: ft-upload-all
+ft-upload-all:
+	( cd ${FORWARDTRANS_HOME}; \
+	  for d in `find . -maxdepth 1 -type d -name '*-*' -printf "%f "`; do \
+	    s=`echo $$d | cut -f1 -d'-'`; \
+	    t=`echo $$d | cut -f2 -d'-'`; \
+	    ${MAKE} SRC=$$s TRG=$$t ${@:-all=}; \
+	  done )
+
+${FORWARDTRANS_HOME}/released-data.txt: ${FORWARDTRANS_HOME}
+	swift list ${FT_CONTAINER} | grep -v README.md | grep -v '.txt' > $@
+	cd ${FORWARDTRANS_HOME} && swift upload ${FT_CONTAINER} $(notdir $@)
 
 
-ft-remove-incomplete-latest:
-	@echo "check ${LANGPAIR}"
-	@mkdir -p ${FT_OUTPUT_DIR}/incomplete/latest
-	@if [ -d ${FT_OUTPUT_DIR}/latest ]; then \
-	  for S in `ls ${FT_OUTPUT_DIR}/latest/*.${SRC}.gz`; do \
-	    T=`echo $$S | sed 's/.${SRC}.gz/.${TRG}.gz/'`; \
-	    a=`${GZCAT} $$S | wc -l`; \
-	    b=`${GZCAT} $$T | wc -l`; \
-	    if [ $$a != $$b ]; then \
-	      echo "$$a != $$b	$$S	$$T"; \
-	      mv $$S ${FT_OUTPUT_DIR}/incomplete/latest/; \
-	      mv $$T ${FT_OUTPUT_DIR}/incomplete/latest/; \
-	    fi \
-	  done \
-	fi
+${FORWARDTRANS_HOME}/released-data-size.txt: ${FORWARDTRANS_HOME}
+	swift download ${FT_CONTAINER} released-data-size.txt
+	mv $@ $@.${TODAY}
+	head -n-1 $@.${TODAY} | grep [a-z] > $@.old
+	${MAKE} ft-check-latest-all        > $@.new
+	cat $@.old $@.new | grep '^[1-9]' | sort -k2,2  > $@
+	cat $@ | awk '{ sum += $$1 } END { print sum }' > $@.tmp
+	cat $@.tmp >> $@
+	cd ${FORWARDTRANS_HOME} && swift upload ${FT_CONTAINER} $(notdir $@)
+	cd ${FORWARDTRANS_HOME} && swift upload ${FT_CONTAINER} $(notdir $@).${TODAY}
+	rm -f $@.tmp $@.${TODAY} $@.new $@.old
 
-
-
-
-
-
-# ## for testing purposes
-
-# score2-translation: ${FT_BITEXT_LATEST_SRC:.gz=.scores2}
-# score3-translation: ${FT_BITEXT_LATEST_SRC:.gz=.scores3}
-
-# ${FT_OUTPUT_DIR}/latest/%.${SRC}.scores2: ${FT_OUTPUT_DIR}/latest/%.${SRC}.gz
-# 	${MAKE} SRC=${TRG} TRG=${SRC} ft-mtmodel
-# 	${GZCAT} ${<:.${SRC}.gz=.${TRG}.gz} |\
-# 	${REV_LANGPAIR}/${REV_MODELNAME}/preprocess.sh ${REV_SRC_PREPROCESS_ARGS} | \
-# 	${GZIP} -c > $@.src.gz
-# 	${GZCAT} $< |\
-# 	${REV_LANGPAIR}/${REV_MODELNAME}/preprocess.sh ${REV_TRG_PREPROCESS_ARGS} | \
-# 	${GZIP} -c > $@.trg.gz
-# 	${LOAD_ENV} && \
-# 	cd ${REV_LANGPAIR}/${REV_MODELNAME} && \
-# 	${MARIAN_SCORER} \
-# 		-m `grep -A1 models decoder.yml | tail -1 | sed 's/ *- //'` \
-# 		-v `grep -A2 vocabs decoder.yml | tail -2 | sed 's/ *- //' | tr "\n" ' '` \
-# 		-t ${PWD}/$@.src.gz ${PWD}/$@.trg.gz \
-# 		-n1 -d 0 --mini-batch 1 --maxi-batch 1 --log ${PWD}/$@.log > ${PWD}/$@ 2>${PWD}/$@.err
-
-# ${FT_OUTPUT_DIR}/latest/%.${SRC}.scores3: ${FT_OUTPUT_DIR}/latest/%.${SRC}.gz
-# 	${LOAD_ENV} && \
-# 	cd ${REV_LANGPAIR}/${REV_MODELNAME} && \
-# 	${MARIAN_SCORER} \
-# 		-m `grep -A1 models decoder.yml | tail -1 | sed 's/ *- //'` \
-# 		-v `grep -A2 vocabs decoder.yml | tail -2 | sed 's/ *- //' | tr "\n" ' '` \
-# 		-t ${PWD}/$@.src.gz ${PWD}/$@.trg.gz \
-# 		-n1 -d 0 -w 10000 --mini-batch 128 \
-# 		--max-length 200 --max-length-crop \
-# 		--maxi-batch 256 --maxi-batch-sort src
 

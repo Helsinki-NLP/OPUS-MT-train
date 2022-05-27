@@ -2,7 +2,7 @@
 #
 # translate text with OPUS-MT models
 #
-# - find and fecth best model according to leader board
+# - find and fetch best model according to leader board
 # - split and prepare source language data
 # - translate and post-process data
 # - move to separate sub-dir with the latest translations
@@ -11,7 +11,8 @@
 
 ## text to be translated (expect gzipped raw data file, one sentence per line)
 
-CORPUS_SRCRAW  ?= $(firstword ${CLEAN_TRAIN_SRC})
+INPUT_FILE  ?= $(firstword ${CLEAN_TRAIN_SRC})
+INPUT_NAME  ?= $(basename $(notdir ${INPUT_FILE:.gz=}))
 
 
 ## work directories
@@ -20,34 +21,33 @@ OPUSMT_WORKHOME    = ${WORKHOME}/translations
 OPUSMT_OUTPUT_DIR ?= ${OPUSMT_WORKHOME}/${LANGPAIR}
 
 
-## translations together with the original source text (=bitext)
+## translations in various parts
 
-CORPUS_PART   ?= aa
-CORPUS_NAME   ?= data
-CORPUS_BASE    = ${OPUSMT_OUTPUT_DIR}/${CORPUS_NAME}.${MODELNAME}.${LANGPAIR}
-CORPUS_SRC     = ${CORPUS_BASE}.${SRC}.${CORPUS_PART}.gz
-CORPUS_PRE     = ${CORPUS_BASE}.${SRC}.spm.${CORPUS_PART}.gz
-CORPUS_TRG     = ${CORPUS_BASE}.${TRG}.${CORPUS_PART}.gz
+OUTPUT_PART  ?= aa
+OUTPUT_BASE  = ${OPUSMT_OUTPUT_DIR}/${INPUT_NAME}.${MODELNAME}.${LANGPAIR}
+OUTPUT_SRC   = ${OUTPUT_BASE}.${SRC}.${OUTPUT_PART}.gz
+OUTPUT_PRE   = ${OUTPUT_BASE}.${SRC}.spm.${OUTPUT_PART}.gz
+OUTPUT_TRG   = ${OUTPUT_BASE}.${TRG}.${OUTPUT_PART}.gz
 
 
 ## latest translations in a separate sub-directory
 
-CORPUS_LATEST_SRC    = ${OPUSMT_OUTPUT_DIR}/latest/${CORPUS_NAME}.${CORPUS_PART}.${LANGPAIR}.${SRC}.gz
-CORPUS_LATEST_TRG    = ${OPUSMT_OUTPUT_DIR}/latest/${CORPUS_NAME}.${CORPUS_PART}.${LANGPAIR}.${TRG}.gz
-CORPUS_LATEST_README = ${OPUSMT_OUTPUT_DIR}/latest/README.md
+OUTPUT_LATEST_SRC    = ${OPUSMT_OUTPUT_DIR}/latest/${INPUT_NAME}.${OUTPUT_PART}.${LANGPAIR}.${SRC}.gz
+OUTPUT_LATEST_TRG    = ${OPUSMT_OUTPUT_DIR}/latest/${INPUT_NAME}.${OUTPUT_PART}.${LANGPAIR}.${TRG}.gz
+OUTPUT_LATEST_README = ${OPUSMT_OUTPUT_DIR}/latest/README.md
 
 
 ## all parts of the bitext
 
-CORPUS_PARTS          = $(subst .,,${suffix ${basename ${wildcard ${CORPUS_PRE:${CORPUS_PART}.gz=}??.gz}}})
-ALL_CORPUS_SRC        = ${patsubst %,${CORPUS_BASE}.${SRC}.%.gz,${CORPUS_PARTS}}
-ALL_CORPUS_TRG        = ${patsubst %,${CORPUS_BASE}.${TRG}.%.gz,${CORPUS_PARTS}}
-ALL_CORPUS_LATEST_SRC = ${patsubst %,${OPUSMT_OUTPUT_DIR}/latest/${CORPUS_NAME}.%.${LANGPAIR}.${SRC}.gz,${CORPUS_PARTS}}
-ALL_CORPUS_LATEST_TRG = ${patsubst %,${OPUSMT_OUTPUT_DIR}/latest/${CORPUS_NAME}.%.${LANGPAIR}.${TRG}.gz,${CORPUS_PARTS}}
+OUTPUT_PARTS          = $(subst .,,${suffix ${basename ${wildcard ${OUTPUT_PRE:${OUTPUT_PART}.gz=}??.gz}}})
+ALL_OUTPUT_SRC        = ${patsubst %,${OUTPUT_BASE}.${SRC}.%.gz,${OUTPUT_PARTS}}
+ALL_OUTPUT_TRG        = ${patsubst %,${OUTPUT_BASE}.${TRG}.%.gz,${OUTPUT_PARTS}}
+ALL_OUTPUT_LATEST_SRC = ${patsubst %,${OPUSMT_OUTPUT_DIR}/latest/${INPUT_NAME}.%.${LANGPAIR}.${SRC}.gz,${OUTPUT_PARTS}}
+ALL_OUTPUT_LATEST_TRG = ${patsubst %,${OPUSMT_OUTPUT_DIR}/latest/${INPUT_NAME}.%.${LANGPAIR}.${TRG}.gz,${OUTPUT_PARTS}}
 
 
 ## don't remove files of intermediate translations
-.PRECIOUS: ${ALL_CORPUS_SRC} ${ALL_CORPUS_TRG}
+.PRECIOUS: ${ALL_OUTPUT_SRC} ${ALL_OUTPUT_TRG}
 
 
 
@@ -81,13 +81,13 @@ opusmt-model: ${OPUSMT_OUTPUT_DIR}/${MODELNAME}/decoder.yml
 
 ## prepare model and data (current part only)
 .PHONY: opusmt-prepare
-opusmt-prepare: opusmt-mtmodel ${CORPUS_PRE}
+opusmt-prepare: opusmt-mtmodel ${OUTPUT_PRE}
 
 ## translate current part
 .PHONY: opusmt-translate
-opusmt-translate: ${CORPUS_LATEST_TRG}
+opusmt-translate: ${OUTPUT_LATEST_TRG}
 	${MAKE} opusmt-model
-	${MAKE} ${CORPUS_LATEST_SRC} ${CORPUS_LATEST_README}
+	${MAKE} ${OUTPUT_LATEST_SRC} ${OUTPUT_LATEST_README}
 
 ## create a slurm job to translate the data
 .PHONY: opusmt-translate-job
@@ -96,7 +96,7 @@ opusmt-translate-job:
 
 ## translate all parts
 .PHONY: opusmt-translate-all-parts opusmt-translate-all
-opusmt-translate-all opusmt-translate-all-parts: ${ALL_CORPUS_LATEST_TRG}
+opusmt-translate-all opusmt-translate-all-parts: ${ALL_OUTPUT_LATEST_TRG}
 	${MAKE} opusmt-all-source-parts
 
 
@@ -104,17 +104,17 @@ opusmt-translate-all opusmt-translate-all-parts: ${ALL_CORPUS_LATEST_TRG}
 ## (only start the job if the file does not exist yet)
 .PHONY: opusmt-translate-all-jobs opusmt-translate-all-parts-jobs
 opusmt-translate-all-jobs opusmt-translate-all-parts-jobs:
-	for p in ${CORPUS_PARTS}; do \
-	  if [ ! -e ${OPUSMT_OUTPUT_DIR}/${CORPUS_NAME}.$${p}_${MODELNAME}.${LANGPAIR}.${TRG}.gz ]; then \
+	for p in ${OUTPUT_PARTS}; do \
+	  if [ ! -e ${OPUSMT_OUTPUT_DIR}/${INPUT_NAME}.$${p}_${MODELNAME}.${LANGPAIR}.${TRG}.gz ]; then \
 	    rm -f opusmt-translate.${SUBMIT_PREFIX}; \
-	    ${MAKE} CORPUS_PART=$$p opusmt-translate.${SUBMIT_PREFIX}; \
+	    ${MAKE} OUTPUT_PART=$$p opusmt-translate.${SUBMIT_PREFIX}; \
 	  fi \
 	done
 
 
 ## create all source language parts
 .PHONY: opusmt-all-source-parts
-opusmt-all-source-parts: ${ALL_CORPUS_LATEST_SRC}
+opusmt-all-source-parts: ${ALL_OUTPUT_LATEST_SRC}
 
 
 
@@ -170,7 +170,7 @@ else
 endif
 
 
-${CORPUS_PRE}: ${CORPUS_SRCRAW} mosesdecoder marian-dev
+${OUTPUT_PRE}: ${INPUT_FILE} mosesdecoder marian-dev
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
 	${MAKE} ${OPUSMT_OUTPUT_DIR}/${MODELNAME}/decoder.yml
@@ -178,8 +178,8 @@ ifneq (${MODELZIP},)
 	grep -v '[<>{}]' |\
 	${OPUSMT_OUTPUT_DIR}/${MODELNAME}/preprocess.sh ${PREPROCESS_ARGS} |\
 	perl -e 'while (<>){next if (split(/\s+/)>${OPUSMT_MAX_LENGTH});print;}' |\
-	split -l ${OPUSMT_SPLIT_SIZE} - ${patsubst %${CORPUS_PART}.gz,%,$@}
-	${GZIP} -f ${patsubst %${CORPUS_PART}.gz,%,$@}??
+	split -l ${OPUSMT_SPLIT_SIZE} - ${patsubst %${OUTPUT_PART}.gz,%,$@}
+	${GZIP} -f ${patsubst %${OUTPUT_PART}.gz,%,$@}??
 endif
 
 ## just to make sure that the pre-processing script
@@ -193,8 +193,8 @@ marian-dev:
 ## merge SentencePiece segments in the source text
 ## (Why? because we may want to have bitexts from all parts)
 
-${CORPUS_BASE}.${SRC}.%.gz: ${CORPUS_BASE}.${SRC}.spm.%.gz
-	if [ -e ${patsubst ${CORPUS_BASE}.${SRC}.%.gz,${CORPUS_BASE}.${TRG}.%.gz,$@} ]; then \
+${OUTPUT_BASE}.${SRC}.%.gz: ${OUTPUT_BASE}.${SRC}.spm.%.gz
+	if [ -e ${patsubst ${OUTPUT_BASE}.${SRC}.%.gz,${OUTPUT_BASE}.${TRG}.%.gz,$@} ]; then \
 	  mkdir -p ${dir $@}; \
 	  ${GZCAT} $< |\
 	  sed 's/ //g;s/▁/ /g' | \
@@ -208,7 +208,7 @@ ${CORPUS_BASE}.${SRC}.%.gz: ${CORPUS_BASE}.${SRC}.spm.%.gz
 ## translate
 #########################################################################
 
-${CORPUS_BASE}.${TRG}.%.gz: ${CORPUS_BASE}.${SRC}.spm.%.gz
+${OUTPUT_BASE}.${TRG}.%.gz: ${OUTPUT_BASE}.${SRC}.spm.%.gz
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
 	${MAKE} ${OPUSMT_OUTPUT_DIR}/${MODELNAME}/decoder.yml
@@ -229,15 +229,15 @@ endif
 ##     without duplicating the data we want to use in MT training
 #########################################################################
 
-${OPUSMT_OUTPUT_DIR}/latest/${CORPUS_NAME}.%.${LANGPAIR}.${SRC}.gz: ${CORPUS_BASE}.${SRC}.%.gz
+${OPUSMT_OUTPUT_DIR}/latest/${INPUT_NAME}.%.${LANGPAIR}.${SRC}.gz: ${OUTPUT_BASE}.${SRC}.%.gz
 	mkdir -p ${dir $@}
 	rsync $< $@
 
-${OPUSMT_OUTPUT_DIR}/latest/${CORPUS_NAME}.%.${LANGPAIR}.${TRG}.gz: ${CORPUS_BASE}.${TRG}.%.gz
+${OPUSMT_OUTPUT_DIR}/latest/${INPUT_NAME}.%.${LANGPAIR}.${TRG}.gz: ${OUTPUT_BASE}.${TRG}.%.gz
 	mkdir -p ${dir $@}
 	rsync $< $@
 
-${CORPUS_LATEST_README}: ${OPUSMT_OUTPUT_DIR}/${MODELNAME}/README.md
+${OUTPUT_LATEST_README}: ${OPUSMT_OUTPUT_DIR}/${MODELNAME}/README.md
 	mkdir -p ${dir $@}
 	rsync $< $@
 
