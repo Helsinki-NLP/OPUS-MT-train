@@ -4,15 +4,17 @@
 #
 
 
-BT_LANGPAIR   = ${TRG}-${SRC}
+# reverse language pair (translate target language into source language)
+BT_LANGPAIR = ${TRG}-${SRC}
 
 
 ## storage for prepared wiki data (default monolingual data)
-TATOEBA_RELEASE     := v2020-07-28
-TATOEBA_STORAGE     := https://object.pouta.csc.fi/Tatoeba-Challenge-${TATOEBA_RELEASE}
+TATOEBA_RELEASE := v2020-07-28
+TATOEBA_STORAGE := https://object.pouta.csc.fi/Tatoeba-Challenge-${TATOEBA_RELEASE}
 
 
-# BT_INPUT_NAMES = wiki wikibooks wikinews wikiquote wikisource wiktionary
+# input files and names, output directory
+# BT_INPUT_NAMES = wikipedia wikibooks wikinews wikiquote wikisource wiktionary
 
 BT_INPUT_NAMES = $(sort $(patsubst %.txt.gz,%,$(notdir ${wildcard ${MONO_DATADIR}/${TRG}/*.txt.gz})))
 BT_INPUT_NAME  = wikipedia
@@ -22,13 +24,13 @@ BT_OUTPUT_DIR  = ${BACKTRANS_HOME}/${BT_LANGPAIR}
 
 
 #---------------------------------------------------------------
-# main recipes for translating data
+# main recipes for preparing and translating data
 #---------------------------------------------------------------
 
 ## extra parameters to call translation recipes
 ## NOTE: need to swap source and target language to translate from target to source language
 
-BT_MAKE_PARAMS = SRC=${TRG} TRG=${SRC} INPUT_FILE=${BT_INPUT_FILE} OPUSMT_OUTPUT_DIR=${BT_OUTPUT_DIR}
+BT_MAKE_PARAMS = SRC=${TRG} TRG=${SRC} INPUT_FILE=${BT_INPUT_FILE} OUTPUT_DIR=${BT_OUTPUT_DIR}
 
 
 .PHONY: bt-all-jobs
@@ -101,8 +103,12 @@ ${MONO_DATADIR}/%/${BT_INPUT_NAME}.txt.gz:
 
 ## forward recipes to translate-recipes (see translate.mk)
 
-PHONY: bt-check-length bt-check-latest bt-check-translated bt-remove-incomplete bt-remove-incomplete-translated bt-remove-incomplete-latest
-bt-check-length bt-check-latest bt-check-translated bt-remove-incomplete bt-remove-incomplete-translated bt-remove-incomplete-latest:
+BT_GENERIC_RECIPES = 	bt-check-length bt-check-latest \
+			bt-check-translated bt-remove-incomplete \
+			bt-remove-incomplete-translated bt-remove-incomplete-latest
+
+PHONY: ${BT_GENERIC_RECIPES}
+${BT_GENERIC_RECIPES}:
 	${MAKE} ${BT_MAKE_PARAMS} $(subst bt-,opusmt-,$@)
 
 bt-remove-%-all bt-check-%-all:
@@ -110,7 +116,9 @@ bt-remove-%-all bt-check-%-all:
 
 
 
+#---------------------------------------------------------------
 ## recipes to score translations (see score_translations.mk)
+#---------------------------------------------------------------
 
 # bt-score-translations ........... score translations with reverse NMT models
 # bt-sort-scored-translations ..... sort translations by reverse translation score
@@ -118,7 +126,7 @@ bt-remove-%-all bt-check-%-all:
 
 PHONY: bt-score-translations bt-sort-scored-translations bt-extract-best-translations
 bt-score-translations bt-sort-scored-translations bt-extract-best-translations:
-	${MAKE} SRC=${TRG} TRG=${SRC} OPUSMT_OUTPUT_DIR=${BT_OUTPUT_DIR}/latest $(subst bt-,,$@)
+	${MAKE} SRC=${TRG} TRG=${SRC} OUTPUT_DIR=${BT_OUTPUT_DIR}/latest $(subst bt-,,$@)
 
 
 #---------------------------------------------------------------

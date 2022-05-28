@@ -1,6 +1,12 @@
 # -*-makefile-*-
 #
-# translate text with OPUS-MT models
+# translate big texts with OPUS-MT models
+# essential variables:
+#
+#   INPUT_FILE ......... gzipped plain text file (one sentence per line)
+#   OUTPUT_DIR ......... output directory
+#   SRC ................ source language ID
+#   TRG ................ target language ID
 #
 # - find and fetch best model according to leader board
 # - split and prepare source language data
@@ -17,14 +23,14 @@ INPUT_NAME  ?= $(basename $(notdir ${INPUT_FILE:.gz=}))
 
 ## work directories
 
-OPUSMT_WORKHOME    = ${WORKHOME}/translations
-OPUSMT_OUTPUT_DIR ?= ${OPUSMT_WORKHOME}/${LANGPAIR}
+OPUSMT_WORKHOME = ${WORKHOME}/translations
+OUTPUT_DIR     ?= ${OPUSMT_WORKHOME}/${LANGPAIR}
 
 
 ## translations in various parts
 
 OUTPUT_PART  ?= aa
-OUTPUT_BASE  = ${OPUSMT_OUTPUT_DIR}/${INPUT_NAME}.${MODELNAME}.${LANGPAIR}
+OUTPUT_BASE  = ${OUTPUT_DIR}/${INPUT_NAME}.${MODELNAME}.${LANGPAIR}
 OUTPUT_SRC   = ${OUTPUT_BASE}.${SRC}.${OUTPUT_PART}.gz
 OUTPUT_PRE   = ${OUTPUT_BASE}.${SRC}.spm.${OUTPUT_PART}.gz
 OUTPUT_TRG   = ${OUTPUT_BASE}.${TRG}.${OUTPUT_PART}.gz
@@ -32,9 +38,9 @@ OUTPUT_TRG   = ${OUTPUT_BASE}.${TRG}.${OUTPUT_PART}.gz
 
 ## latest translations in a separate sub-directory
 
-OUTPUT_LATEST_SRC    = ${OPUSMT_OUTPUT_DIR}/latest/${INPUT_NAME}.${OUTPUT_PART}.${LANGPAIR}.${SRC}.gz
-OUTPUT_LATEST_TRG    = ${OPUSMT_OUTPUT_DIR}/latest/${INPUT_NAME}.${OUTPUT_PART}.${LANGPAIR}.${TRG}.gz
-OUTPUT_LATEST_README = ${OPUSMT_OUTPUT_DIR}/latest/README.md
+OUTPUT_LATEST_SRC    = ${OUTPUT_DIR}/latest/${INPUT_NAME}.${OUTPUT_PART}.${LANGPAIR}.${SRC}.gz
+OUTPUT_LATEST_TRG    = ${OUTPUT_DIR}/latest/${INPUT_NAME}.${OUTPUT_PART}.${LANGPAIR}.${TRG}.gz
+OUTPUT_LATEST_README = ${OUTPUT_DIR}/latest/README.md
 
 
 ## all parts of the bitext
@@ -42,13 +48,13 @@ OUTPUT_LATEST_README = ${OPUSMT_OUTPUT_DIR}/latest/README.md
 OUTPUT_PARTS          = $(subst .,,${suffix ${basename ${wildcard ${OUTPUT_PRE:${OUTPUT_PART}.gz=}??.gz}}})
 ALL_OUTPUT_SRC        = ${patsubst %,${OUTPUT_BASE}.${SRC}.%.gz,${OUTPUT_PARTS}}
 ALL_OUTPUT_TRG        = ${patsubst %,${OUTPUT_BASE}.${TRG}.%.gz,${OUTPUT_PARTS}}
-ALL_OUTPUT_LATEST_SRC = ${patsubst %,${OPUSMT_OUTPUT_DIR}/latest/${INPUT_NAME}.%.${LANGPAIR}.${SRC}.gz,${OUTPUT_PARTS}}
-ALL_OUTPUT_LATEST_TRG = ${patsubst %,${OPUSMT_OUTPUT_DIR}/latest/${INPUT_NAME}.%.${LANGPAIR}.${TRG}.gz,${OUTPUT_PARTS}}
+ALL_OUTPUT_LATEST_SRC = ${patsubst %,${OUTPUT_DIR}/latest/${INPUT_NAME}.%.${LANGPAIR}.${SRC}.gz,${OUTPUT_PARTS}}
+ALL_OUTPUT_LATEST_TRG = ${patsubst %,${OUTPUT_DIR}/latest/${INPUT_NAME}.%.${LANGPAIR}.${TRG}.gz,${OUTPUT_PARTS}}
 
 
 ## don't remove files of intermediate translations
-.PRECIOUS: ${ALL_OUTPUT_SRC} ${ALL_OUTPUT_TRG}
-
+# .PRECIOUS: ${OUTPUT_SRC} ${OUTPUT_TRG} ${ALL_OUTPUT_SRC} ${ALL_OUTPUT_TRG}
+.PRECIOUS: ${OUTPUT_BASE}.${SRC}.%.gz ${OUTPUT_BASE}.${TRG}.%.gz
 
 
 ## split size in nr-of-lines
@@ -77,7 +83,7 @@ MODELNAME       := ${patsubst %.zip,%,${notdir ${MODELZIP}}}
 
 ## fetch the model
 .PHONY: opusmt-model
-opusmt-model: ${OPUSMT_OUTPUT_DIR}/${MODELNAME}/decoder.yml
+opusmt-model: ${OUTPUT_DIR}/${MODELNAME}/decoder.yml
 
 ## prepare model and data (current part only)
 .PHONY: opusmt-prepare
@@ -105,7 +111,7 @@ opusmt-translate-all opusmt-translate-all-parts: ${ALL_OUTPUT_LATEST_TRG}
 .PHONY: opusmt-translate-all-jobs opusmt-translate-all-parts-jobs
 opusmt-translate-all-jobs opusmt-translate-all-parts-jobs:
 	for p in ${OUTPUT_PARTS}; do \
-	  if [ ! -e ${OPUSMT_OUTPUT_DIR}/${INPUT_NAME}.$${p}_${MODELNAME}.${LANGPAIR}.${TRG}.gz ]; then \
+	  if [ ! -e ${OUTPUT_DIR}/${INPUT_NAME}.$${p}_${MODELNAME}.${LANGPAIR}.${TRG}.gz ]; then \
 	    rm -f opusmt-translate.${SUBMIT_PREFIX}; \
 	    ${MAKE} OUTPUT_PART=$$p opusmt-translate.${SUBMIT_PREFIX}; \
 	  fi \
@@ -144,7 +150,7 @@ print-modelname:
 ## fetch the best model
 #########################################################################
 
-${OPUSMT_OUTPUT_DIR}/${MODELNAME}/decoder.yml:
+${OUTPUT_DIR}/${MODELNAME}/decoder.yml:
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
 	${WGET} -q -O ${dir $@}/model.zip ${MODELZIP}
@@ -164,22 +170,24 @@ endif
 #########################################################################
 
 ifeq (${MULTI_TARGET_MODEL},1)
-  PREPROCESS_ARGS = ${SRC} ${TRG} ${OPUSMT_OUTPUT_DIR}/${MODELNAME}/source.spm
+  PREPROCESS_ARGS = ${SRC} ${TRG} ${OUTPUT_DIR}/${MODELNAME}/source.spm
 else
-  PREPROCESS_ARGS = ${SRC} ${OPUSMT_OUTPUT_DIR}/${MODELNAME}/source.spm
+  PREPROCESS_ARGS = ${SRC} ${OUTPUT_DIR}/${MODELNAME}/source.spm
 endif
 
 
 ${OUTPUT_PRE}: ${INPUT_FILE} mosesdecoder marian-dev
 ifneq (${MODELZIP},)
+ifneq (${INPUT_FILE},)
 	mkdir -p ${dir $@}
-	${MAKE} ${OPUSMT_OUTPUT_DIR}/${MODELNAME}/decoder.yml
+	${MAKE} ${OUTPUT_DIR}/${MODELNAME}/decoder.yml
 	${GZCAT} $< |\
 	grep -v '[<>{}]' |\
-	${OPUSMT_OUTPUT_DIR}/${MODELNAME}/preprocess.sh ${PREPROCESS_ARGS} |\
+	${OUTPUT_DIR}/${MODELNAME}/preprocess.sh ${PREPROCESS_ARGS} |\
 	perl -e 'while (<>){next if (split(/\s+/)>${OPUSMT_MAX_LENGTH});print;}' |\
 	split -l ${OPUSMT_SPLIT_SIZE} - ${patsubst %${OUTPUT_PART}.gz,%,$@}
 	${GZIP} -f ${patsubst %${OUTPUT_PART}.gz,%,$@}??
+endif
 endif
 
 ## just to make sure that the pre-processing script
@@ -211,10 +219,10 @@ ${OUTPUT_BASE}.${SRC}.%.gz: ${OUTPUT_BASE}.${SRC}.spm.%.gz
 ${OUTPUT_BASE}.${TRG}.%.gz: ${OUTPUT_BASE}.${SRC}.spm.%.gz
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
-	${MAKE} ${OPUSMT_OUTPUT_DIR}/${MODELNAME}/decoder.yml
+	${MAKE} ${OUTPUT_DIR}/${MODELNAME}/decoder.yml
 	${LOAD_ENV} && \
 	${MARIAN_DECODER} \
-		-c ${OPUSMT_OUTPUT_DIR}/${MODELNAME}/decoder.yml \
+		-c ${OUTPUT_DIR}/${MODELNAME}/decoder.yml \
 		-i $< \
 		${MARIAN_DECODER_FLAGS} |\
 	sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' |\
@@ -229,15 +237,15 @@ endif
 ##     without duplicating the data we want to use in MT training
 #########################################################################
 
-${OPUSMT_OUTPUT_DIR}/latest/${INPUT_NAME}.%.${LANGPAIR}.${SRC}.gz: ${OUTPUT_BASE}.${SRC}.%.gz
+${OUTPUT_DIR}/latest/${INPUT_NAME}.%.${LANGPAIR}.${SRC}.gz: ${OUTPUT_BASE}.${SRC}.%.gz
 	mkdir -p ${dir $@}
 	rsync $< $@
 
-${OPUSMT_OUTPUT_DIR}/latest/${INPUT_NAME}.%.${LANGPAIR}.${TRG}.gz: ${OUTPUT_BASE}.${TRG}.%.gz
+${OUTPUT_DIR}/latest/${INPUT_NAME}.%.${LANGPAIR}.${TRG}.gz: ${OUTPUT_BASE}.${TRG}.%.gz
 	mkdir -p ${dir $@}
 	rsync $< $@
 
-${OUTPUT_LATEST_README}: ${OPUSMT_OUTPUT_DIR}/${MODELNAME}/README.md
+${OUTPUT_LATEST_README}: ${OUTPUT_DIR}/${MODELNAME}/README.md
 	mkdir -p ${dir $@}
 	rsync $< $@
 
@@ -255,8 +263,8 @@ opusmt-check-length:
 	@${MAKE} opusmt-check-latest
 
 opusmt-check-latest:
-	@if [ -d ${OPUSMT_OUTPUT_DIR}/latest ]; then \
-	  for S in `ls ${OPUSMT_OUTPUT_DIR}/latest/*.${SRC}.gz`; do \
+	@if [ -d ${OUTPUT_DIR}/latest ]; then \
+	  for S in `ls ${OUTPUT_DIR}/latest/*.${SRC}.gz`; do \
 	    T=`echo $$S | sed 's/.${SRC}.gz/.${TRG}.gz/'`; \
 	    a=`${GZCAT} $$S | wc -l`; \
 	    b=`${GZCAT} $$T | wc -l`; \
@@ -269,7 +277,7 @@ opusmt-check-latest:
 	fi
 
 opusmt-check-translated:
-	@for S in `ls ${OPUSMT_OUTPUT_DIR}/*.${SRC}.spm.gz`; do \
+	@for S in `ls ${OUTPUT_DIR}/*.${SRC}.spm.gz`; do \
 	    T=`echo $$S | sed 's/.${SRC}.gz/.${TRG}.gz/'`; \
 	    a=`${GZCAT} $$S | wc -l`; \
 	    b=`${GZCAT} $$T | wc -l`; \
@@ -293,30 +301,30 @@ opusmt-remove-incomplete:
 
 opusmt-remove-incomplete-translated:
 	@echo "check ${LANGPAIR}"
-	@mkdir -p ${OPUSMT_OUTPUT_DIR}/incomplete
-	@for S in `ls ${OPUSMT_OUTPUT_DIR}/*.${SRC}.gz`; do \
+	@mkdir -p ${OUTPUT_DIR}/incomplete
+	@for S in `ls ${OUTPUT_DIR}/*.${SRC}.gz`; do \
 	    T=`echo $$S | sed 's/.${SRC}.gz/.${TRG}.gz/'`; \
 	    a=`${GZCAT} $$S | wc -l`; \
 	    b=`${GZCAT} $$T | wc -l`; \
 	    if [ $$a != $$b ]; then \
 	      echo "$$a != $$b	$$S	$$T"; \
-	      mv $$S ${OPUSMT_OUTPUT_DIR}/incomplete/; \
-	      mv $$T ${OPUSMT_OUTPUT_DIR}/incomplete/; \
+	      mv $$S ${OUTPUT_DIR}/incomplete/; \
+	      mv $$T ${OUTPUT_DIR}/incomplete/; \
 	    fi \
 	done
 
 opusmt-remove-incomplete-latest:
 	@echo "check ${LANGPAIR}"
-	@mkdir -p ${OPUSMT_OUTPUT_DIR}/incomplete/latest
-	@if [ -d ${OPUSMT_OUTPUT_DIR}/latest ]; then \
-	  for S in `ls ${OPUSMT_OUTPUT_DIR}/latest/*.${SRC}.gz`; do \
+	@mkdir -p ${OUTPUT_DIR}/incomplete/latest
+	@if [ -d ${OUTPUT_DIR}/latest ]; then \
+	  for S in `ls ${OUTPUT_DIR}/latest/*.${SRC}.gz`; do \
 	    T=`echo $$S | sed 's/.${SRC}.gz/.${TRG}.gz/'`; \
 	    a=`${GZCAT} $$S | wc -l`; \
 	    b=`${GZCAT} $$T | wc -l`; \
 	    if [ $$a != $$b ]; then \
 	      echo "$$a != $$b	$$S	$$T"; \
-	      mv $$S ${OPUSMT_OUTPUT_DIR}/incomplete/latest/; \
-	      mv $$T ${OPUSMT_OUTPUT_DIR}/incomplete/latest/; \
+	      mv $$S ${OUTPUT_DIR}/incomplete/latest/; \
+	      mv $$T ${OUTPUT_DIR}/incomplete/latest/; \
 	    fi \
 	  done \
 	fi

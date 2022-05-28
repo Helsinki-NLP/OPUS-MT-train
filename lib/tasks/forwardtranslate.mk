@@ -12,12 +12,12 @@ FT_OUTPUT_DIR  = ${FORWARDTRANS_HOME}/${LANGPAIR}
 
 
 #---------------------------------------------------------------
-# main recipes for translating data
+# main recipes for preparing and translating data
 #---------------------------------------------------------------
 
 ## extra parameters to call translation recipes
 
-FT_MAKE_PARAMS = INPUT_FILE=${FT_INPUT_FILE} OPUSMT_OUTPUT_DIR=${FT_OUTPUT_DIR}
+FT_MAKE_PARAMS = INPUT_FILE=${FT_INPUT_FILE} OUTPUT_DIR=${FT_OUTPUT_DIR}
 
 
 .PHONY: ft-all-jobs
@@ -66,15 +66,21 @@ forward-translate-all-sources forward-translate-all-sources-job:
 
 ## forward recipes to translate-recipes (see translate.mk)
 
-PHONY: ft-check-length ft-check-latest ft-check-translated ft-remove-incomplete ft-remove-incomplete-translated ft-remove-incomplete-latest
-ft-check-length ft-check-latest ft-check-translated ft-remove-incomplete ft-remove-incomplete-translated ft-remove-incomplete-latest:
+FT_GENERIC_RECIPES = 	ft-check-length ft-check-latest \
+			ft-check-translated ft-remove-incomplete \
+			ft-remove-incomplete-translated ft-remove-incomplete-latest
+
+PHONY: ${FT_GENERIC_RECIPES}
+${FT_GENERIC_RECIPES}:
 	${MAKE} ${FT_MAKE_PARAMS} $(subst ft-,opusmt-,$@)
 
 ft-remove-%-all ft-check-%-all:
 	${MAKE} ${FT_MAKE_PARAMS} $(subst ft-,opusmt-,$@)
 
 
+#---------------------------------------------------------------
 ## recipes to score translations (see score_translations.mk)
+#---------------------------------------------------------------
 
 # ft-score-translations ........... score translations with reverse NMT models
 # ft-sort-scored-translations ..... sort translations by reverse translation score
@@ -82,7 +88,7 @@ ft-remove-%-all ft-check-%-all:
 
 PHONY: ft-score-translations ft-sort-scored-translations ft-extract-best-translations
 ft-score-translations ft-sort-scored-translations ft-extract-best-translations:
-	${MAKE} OPUSMT_OUTPUT_DIR=${FT_OUTPUT_DIR}/latest $(subst ft-,,$@)
+	${MAKE} OUTPUT_DIR=${FT_OUTPUT_DIR}/latest $(subst ft-,,$@)
 
 
 
