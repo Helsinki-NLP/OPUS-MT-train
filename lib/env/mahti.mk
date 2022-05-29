@@ -14,7 +14,7 @@ CSCPROJECT    = project_2002688
 WORKHOME      = ${shell realpath ${PWD}/work}
 OPUSHOME      = /projappl/nlpl/data/OPUS
 HPC_QUEUE     = medium
-SUBMIT_PREFIX = submitcpu
+SUBMIT_PREFIX = submit
 GPU           = a100
 WALLTIME      = 36
 

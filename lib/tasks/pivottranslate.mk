@@ -14,8 +14,11 @@ PT_SORTED_LANGPAIR    = ${firstword ${PT_SORTLANGS}}-${lastword ${PT_SORTLANGS}}
 
 ## take source language part of the training data as input
 
-PT_INPUT_FILES = $(wildcard ${DATADIR}/${PRE}/*.${PT_SORTED_LANGPAIR}.${CLEAN_TRAINDATA_TYPE}.${PIVOT}.gz)
+PT_INPUT_FILES = $(filter-out ${DATADIR}/${PRE}/${DEVSET}.% ${DATADIR}/${PRE}/${TESTSET}.%,\
+		$(wildcard ${DATADIR}/${PRE}/*.${PT_SORTED_LANGPAIR}.${CLEAN_TRAINDATA_TYPE}.${PIVOT}.gz))
 PT_INPUT_FILE  = $(firstword ${PT_INPUT_FILES})
+PT_INPUT_NAME  = $(basename $(notdir ${PT_INPUT_FILE:.gz=}))
+PT_TARGET_FILE = $(PT_INPUT_FILE:.${PIVOT}.gz=.${TRG}.gz)
 PT_OUTPUT_DIR  = ${PIVOTTRANS_HOME}/${PT_NEW_LANGPAIR}
 
 
@@ -39,9 +42,13 @@ pt-prepare:
 	${MAKE} SRC=${PIVOT} rawdata
 	${MAKE} ${PT_MAKE_PARAMS} opusmt-model
 
+
+
+
 pt-info:
 	@echo "output dir: ${PT_OUTPUT_DIR}"
 	@echo "input file: ${PT_INPUT_FILE}"
+	@echo "input file: ${PT_INPUT_FILES}"
 
 
 # pivot-translate
@@ -50,7 +57,21 @@ pt-info:
 
 .PHONY: pivot-translate pivot-translate-all-parts pivot-translate-all-parts-jobs
 pivot-translate pivot-translate-all-parts pivot-translate-all-parts-jobs:
+	${MAKE} SRC=${PIVOT} rawdata
 	${MAKE} ${PT_MAKE_PARAMS} $(patsubst pivot-%,opusmt-%,$@)
+	${MAKE} pivot-target-files
+
+
+## the original target language file needs to be split in the same way as the source file
+PT_OUTPUT_LATEST_TRG = ${PT_OUTPUT_DIR}/latest/${PT_INPUT_NAME}.aa.${PIVOT}-${SRC}.${TRG}.gz
+
+.PHONY: pivot-target-files pt-target-files
+pivot-target-files pt-target-files: ${PT_OUTPUT_LATEST_TRG}
+${PT_OUTPUT_LATEST_TRG}: ${PT_TARGET_FILE}
+	${GZCAT} $< | split -l ${OPUSMT_SPLIT_SIZE} - ${patsubst %aa.${PIVOT}-${SRC}.${TRG}.gz,%,$@}
+	find $(dir $@) -name '${PT_INPUT_NAME}.[a-z][a-z]' -exec mv {} {}.${PIVOT}-${SRC}.${TRG} \;
+	${GZIP} -f ${PT_OUTPUT_DIR}/latest/${PT_INPUT_NAME}.??.${PIVOT}-${SRC}.${TRG}
+
 
 
 # pivot-translate-all ............... translate all parts of all sources

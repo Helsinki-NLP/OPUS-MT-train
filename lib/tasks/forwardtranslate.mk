@@ -4,6 +4,9 @@
 #
 
 
+# max sentence length in subword tokens
+FT_MAX_LENGTH ?= 200
+
 ## take source language part of the training data as input
 
 FT_INPUT_FILES = ${CLEAN_TRAIN_SRC}
@@ -17,7 +20,7 @@ FT_OUTPUT_DIR  = ${FORWARDTRANS_HOME}/${LANGPAIR}
 
 ## extra parameters to call translation recipes
 
-FT_MAKE_PARAMS = INPUT_FILE=${FT_INPUT_FILE} OUTPUT_DIR=${FT_OUTPUT_DIR}
+FT_MAKE_PARAMS = INPUT_FILE=${FT_INPUT_FILE} OUTPUT_DIR=${FT_OUTPUT_DIR} OPUSMT_MAX_LENGTH=${FT_MAX_LENGTH}
 
 
 .PHONY: ft-all-jobs
@@ -27,14 +30,16 @@ ft-all-jobs:
 
 .PHONY: ft-prepare
 ft-prepare: ${FT_INPUT_FILE}
-	${MAKE} ${FT_MAKE_PARAMS} opusmt-model
+	${MAKE} ${FT_MAKE_PARAMS} opusmt-prepare
 
 .PHONY: ft-prepare-all
 ft-prepare-all: ${FT_INPUT_FILES}
-	${MAKE} ${FT_MAKE_PARAMS} opusmt-model
+	for s in $^; do \
+	  ${MAKE} FT_INPUT_FILE=$$s ${FT_MAKE_PARAMS} opusmt-prepare; \
+	done
 
 
-# forward-translate
+# forward-translate ................... translate one part of input data
 # forward-translate-all-parts ......... translate all parts of the input data
 # forward-translate-all-parts-jobs .... create jobs for translating all parts
 

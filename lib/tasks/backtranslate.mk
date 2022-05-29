@@ -4,6 +4,9 @@
 #
 
 
+# max sentence length in subword tokens
+BT_MAX_LENGTH ?= 200
+
 # reverse language pair (translate target language into source language)
 BT_LANGPAIR = ${TRG}-${SRC}
 
@@ -30,13 +33,18 @@ BT_OUTPUT_DIR  = ${BACKTRANS_HOME}/${BT_LANGPAIR}
 ## extra parameters to call translation recipes
 ## NOTE: need to swap source and target language to translate from target to source language
 
-BT_MAKE_PARAMS = SRC=${TRG} TRG=${SRC} INPUT_FILE=${BT_INPUT_FILE} OUTPUT_DIR=${BT_OUTPUT_DIR}
+BT_MAKE_PARAMS = SRC=${TRG} TRG=${SRC} INPUT_FILE=${BT_INPUT_FILE} OUTPUT_DIR=${BT_OUTPUT_DIR} OPUSMT_MAX_LENGTH=${BT_MAX_LENGTH}
 
 
 .PHONY: bt-all-jobs
-bt-all-jobs: bt-download
-	${MAKE} bt-prepare-all-sources
+bt-all-jobs:
+	${MAKE} bt-prepare
 	${MAKE} back-translate-all-jobs
+
+.PHONY: ftmono-all-jobs
+ftmono-all-jobs:
+	${MAKE} SRC=${TRG} TRG=${SRC} bt-prepare
+	${MAKE} SRC=${TRG} TRG=${SRC} back-translate-all-jobs
 
 .PHONY: bt-prepare
 bt-prepare: ${BT_INPUT_FILE}

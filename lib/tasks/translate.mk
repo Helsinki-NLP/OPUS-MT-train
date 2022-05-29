@@ -27,10 +27,22 @@ OPUSMT_WORKHOME = ${WORKHOME}/translations
 OUTPUT_DIR     ?= ${OPUSMT_WORKHOME}/${LANGPAIR}
 
 
+
+## find the best OPUS-MT model from the leaderboard for this language pair
+
+best-opusmt-model = ${shell grep -H .  ${LEADERBOARD_HOME}/${1}/*/${2}.txt | \
+			sed 's/txt:[0-9\.]*//' | sed -r 's/tatoeba-test-v[0-9]{4}-[0-9]{2}-[0-9]{2}/tatoeba-test/' | \
+			rev | uniq -f1 | rev | cut -f2 | uniq -c | sort -nr | head -1 | sed 's/^.*http/http/'}
+OPUSMT_MODELZIP  := ${call best-opusmt-model,${LANGPAIR},bleu-scores}
+OPUSMT_MODELINFO := ${OPUSMT_MODELZIP:.zip=.yml}
+OPUSMT_MODELNAME := ${patsubst %.zip,%,${notdir ${OPUSMT_MODELZIP}}}
+OPUSMT_MODELDIR  ?= ${OUTPUT_DIR}/${OPUSMT_MODELNAME}
+
+
 ## translations in various parts
 
 OUTPUT_PART  ?= aa
-OUTPUT_BASE  = ${OUTPUT_DIR}/${INPUT_NAME}.${MODELNAME}.${LANGPAIR}
+OUTPUT_BASE  = ${OUTPUT_DIR}/${INPUT_NAME}.${OPUSMT_MODELNAME}.${LANGPAIR}
 OUTPUT_SRC   = ${OUTPUT_BASE}.${SRC}.${OUTPUT_PART}.gz
 OUTPUT_PRE   = ${OUTPUT_BASE}.${SRC}.spm.${OUTPUT_PART}.gz
 OUTPUT_TRG   = ${OUTPUT_BASE}.${TRG}.${OUTPUT_PART}.gz
@@ -62,38 +74,25 @@ ALL_OUTPUT_LATEST_TRG = ${patsubst %,${OUTPUT_DIR}/latest/${INPUT_NAME}.%.${LANG
 OPUSMT_SPLIT_SIZE ?= 1000000
 
 ## maximum input length (number sentence piece segments)
-## maximum number of sentences to be translated (top N lines)
-OPUSMT_MAX_LENGTH ?= 200
+## NEW: don't set this by default but rather make this a choice
+# OPUSMT_MAX_LENGTH ?= 200
 
-
-
-#########################################################################
-## find the best OPUS-MT model from the leaderboard
-#########################################################################
-
-best-opusmt-model = ${shell grep -H .  ${LEADERBOARD_HOME}/${1}/*/${2}.txt | \
-			sed 's/txt:[0-9\.]*//' | sed -r 's/tatoeba-test-v[0-9]{4}-[0-9]{2}-[0-9]{2}/tatoeba-test/' | \
-			rev | uniq -f1 | rev | cut -f2 | uniq -c | sort -nr | head -1 | sed 's/^.*http/http/'}
-MODELZIP        := ${call best-opusmt-model,${LANGPAIR},bleu-scores}
-MODELINFO       := ${MODELZIP:.zip=.yml}
-MODELNAME       := ${patsubst %.zip,%,${notdir ${MODELZIP}}}
 
 
 
 
 ## fetch the model
 .PHONY: opusmt-model
-opusmt-model: ${OUTPUT_DIR}/${MODELNAME}/decoder.yml
+opusmt-model: ${OPUSMT_MODELDIR}/decoder.yml
 
 ## prepare model and data (current part only)
 .PHONY: opusmt-prepare
-opusmt-prepare: opusmt-mtmodel ${OUTPUT_PRE}
+opusmt-prepare: opusmt-model ${OUTPUT_PRE}
 
 ## translate current part
 .PHONY: opusmt-translate
-opusmt-translate: ${OUTPUT_LATEST_TRG}
-	${MAKE} opusmt-model
-	${MAKE} ${OUTPUT_LATEST_SRC} ${OUTPUT_LATEST_README}
+opusmt-translate: ${OUTPUT_TRG}
+	${MAKE} ${OUTPUT_LATEST_SRC} ${OUTPUT_LATEST_TRG} ${OUTPUT_LATEST_README}
 
 ## create a slurm job to translate the data
 .PHONY: opusmt-translate-job
@@ -111,7 +110,7 @@ opusmt-translate-all opusmt-translate-all-parts: ${ALL_OUTPUT_LATEST_TRG}
 .PHONY: opusmt-translate-all-jobs opusmt-translate-all-parts-jobs
 opusmt-translate-all-jobs opusmt-translate-all-parts-jobs:
 	for p in ${OUTPUT_PARTS}; do \
-	  if [ ! -e ${OUTPUT_DIR}/${INPUT_NAME}.$${p}_${MODELNAME}.${LANGPAIR}.${TRG}.gz ]; then \
+	  if [ ! -e ${OUTPUT_DIR}/${INPUT_NAME}.$${p}_${OPUSMT_MODELNAME}.${LANGPAIR}.${TRG}.gz ]; then \
 	    rm -f opusmt-translate.${SUBMIT_PREFIX}; \
 	    ${MAKE} OUTPUT_PART=$$p opusmt-translate.${SUBMIT_PREFIX}; \
 	  fi \
@@ -127,33 +126,33 @@ opusmt-all-source-parts: ${ALL_OUTPUT_LATEST_SRC}
 
 ## check whether we need target language labels
 
-MULTI_TARGET_MODEL := ${shell ${WGET} -qq -O - ${MODELINFO} | grep 'use-target-labels' | wc -l}
+MULTI_TARGET_MODEL := ${shell ${WGET} -qq -O - ${OPUSMT_MODELINFO} | grep 'use-target-labels' | wc -l}
 ifneq (${MULTI_TARGET_MODEL},0)
-  TARGET_LANG_LABEL := ${shell ${WGET} -qq -O - ${MODELINFO} | grep -o '>>${TRG}.*<<' | head -1}
+  TARGET_LANG_LABEL := ${shell ${WGET} -qq -O - ${OPUSMT_MODELINFO} | grep -o '>>${TRG}.*<<' | head -1}
 endif
 
 
 .PHONY: print-modelinfo
 print-modelinfo:
-	@echo ${MODELNAME}
-	@echo ${MODELZIP}
-	@echo ${MODELINFO}
+	@echo ${OPUSMT_MODELNAME}
+	@echo ${OPUSMT_MODELZIP}
+	@echo ${OPUSMT_MODELINFO}
 	@echo "multi-target model: ${MULTI_TARGET_MODEL}"
 	@echo "target language label: ${TARGET_LANG_LABEL}"
 
 .PHONY: print-modelname
 print-modelname:
-	@echo ${MODELNAME}
+	@echo ${OPUSMT_MODELNAME}
 
 
 #########################################################################
 ## fetch the best model
 #########################################################################
 
-${OUTPUT_DIR}/${MODELNAME}/decoder.yml:
-ifneq (${MODELZIP},)
+${OPUSMT_MODELDIR}/decoder.yml:
+ifneq (${OPUSMT_MODELZIP},)
 	mkdir -p ${dir $@}
-	${WGET} -q -O ${dir $@}/model.zip ${MODELZIP}
+	${WGET} -q -O ${dir $@}/model.zip ${OPUSMT_MODELZIP}
 	cd ${dir $@} && unzip model.zip
 	rm -f ${dir $@}/model.zip
 	mv ${dir $@}/preprocess.sh ${dir $@}/preprocess-old.sh
@@ -170,22 +169,29 @@ endif
 #########################################################################
 
 ifeq (${MULTI_TARGET_MODEL},1)
-  PREPROCESS_ARGS = ${SRC} ${TRG} ${OUTPUT_DIR}/${MODELNAME}/source.spm
+  PREPROCESS_ARGS = ${SRC} ${TRG} ${OPUSMT_MODELDIR}/source.spm
 else
-  PREPROCESS_ARGS = ${SRC} ${OUTPUT_DIR}/${MODELNAME}/source.spm
+  PREPROCESS_ARGS = ${SRC} ${OPUSMT_MODELDIR}/source.spm
 endif
 
 
+## prepare input data (only if a model and an input file exist)
+## NOTE: if OPUSMT_MAX_LENGTH is set then do seom extra filtering!
+
 ${OUTPUT_PRE}: ${INPUT_FILE} mosesdecoder marian-dev
-ifneq (${MODELZIP},)
+ifneq (${OPUSMT_MODELZIP},)
 ifneq (${INPUT_FILE},)
 	mkdir -p ${dir $@}
-	${MAKE} ${OUTPUT_DIR}/${MODELNAME}/decoder.yml
-	${GZCAT} $< |\
-	grep -v '[<>{}]' |\
-	${OUTPUT_DIR}/${MODELNAME}/preprocess.sh ${PREPROCESS_ARGS} |\
+	${MAKE} ${OPUSMT_MODELDIR}/decoder.yml
+ifdef OPUSMT_MAX_LENGTH
+	${GZCAT} $< | grep -v '[<>{}]' |\
+	${OPUSMT_MODELDIR}/preprocess.sh ${PREPROCESS_ARGS} |\
 	perl -e 'while (<>){next if (split(/\s+/)>${OPUSMT_MAX_LENGTH});print;}' |\
 	split -l ${OPUSMT_SPLIT_SIZE} - ${patsubst %${OUTPUT_PART}.gz,%,$@}
+else
+	${GZCAT} $< | ${OPUSMT_MODELDIR}/preprocess.sh ${PREPROCESS_ARGS} |\
+	split -l ${OPUSMT_SPLIT_SIZE} - ${patsubst %${OUTPUT_PART}.gz,%,$@}
+endif
 	${GZIP} -f ${patsubst %${OUTPUT_PART}.gz,%,$@}??
 endif
 endif
@@ -217,12 +223,12 @@ ${OUTPUT_BASE}.${SRC}.%.gz: ${OUTPUT_BASE}.${SRC}.spm.%.gz
 #########################################################################
 
 ${OUTPUT_BASE}.${TRG}.%.gz: ${OUTPUT_BASE}.${SRC}.spm.%.gz
-ifneq (${MODELZIP},)
+ifneq (${OPUSMT_MODELZIP},)
 	mkdir -p ${dir $@}
-	${MAKE} ${OUTPUT_DIR}/${MODELNAME}/decoder.yml
+	${MAKE} ${OPUSMT_MODELDIR}/decoder.yml
 	${LOAD_ENV} && \
 	${MARIAN_DECODER} \
-		-c ${OUTPUT_DIR}/${MODELNAME}/decoder.yml \
+		-c ${OPUSMT_MODELDIR}/decoder.yml \
 		-i $< \
 		${MARIAN_DECODER_FLAGS} |\
 	sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' |\
@@ -245,7 +251,7 @@ ${OUTPUT_DIR}/latest/${INPUT_NAME}.%.${LANGPAIR}.${TRG}.gz: ${OUTPUT_BASE}.${TRG
 	mkdir -p ${dir $@}
 	rsync $< $@
 
-${OUTPUT_LATEST_README}: ${OUTPUT_DIR}/${MODELNAME}/README.md
+${OUTPUT_LATEST_README}: ${OPUSMT_MODELDIR}/README.md
 	mkdir -p ${dir $@}
 	rsync $< $@
 

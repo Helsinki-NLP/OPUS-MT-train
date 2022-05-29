@@ -11,8 +11,23 @@
 #  - run word alignment if necessary (models with guided alignment = transformer-align)
 #
 #
-# TODO: write data info to some model-specific file insetad of README.md
+# TODO: write data info to some model-specific file instead of README.md
 #       (applies for train/val/test!)
+#
+#  move OPUS specific things to a separate makefile
+#  --> avoid all those things for tatoeba-TC based models
+#
+#  support 3-letter codes (make them standard?)
+#  --> recogmnize if there are data sets in OPUS with 2-letter codes that match the 3-letter codes
+#
+#  cleaner structure with
+#   lib/data.mk
+#   lib/data/opus.mk
+#   lib/data/tatoeba.mk
+#   lib/tasks/preprocess.mk
+#   lib/tasks/preprocess/bpe.mk
+#   ....
+
 
 
 ## training data size (generates count if not in README.md)

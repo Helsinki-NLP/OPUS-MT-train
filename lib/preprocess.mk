@@ -20,6 +20,9 @@
 # # NR_TOKEN_RATIO = 9
 
 
+.PRECIOUS: %.clean.${TRGEXT}.gz %.clean.${SRCEXT}.gz %.strict.${TRGEXT}.gz %.strict.${SRCEXT}.gz
+
+
 ## compute some ratios and thresholds that could be useful for filtering training data
 ## use test sets for those stats assuming that they are representative and clean
 ##
@@ -105,6 +108,7 @@ print_data_thresholds:
 STRICT_TRAIN_SRC = $(patsubst %.clean.${SRCEXT}.gz,%.strict.${SRCEXT}.gz,${CLEAN_TRAIN_SRC})
 
 
+
 strict-clean-data: ${STRICT_TRAIN_SRC}
 
 %.strict.${SRCEXT}.gz: %.clean.${SRCEXT}.gz
@@ -121,10 +125,14 @@ ifdef WORD_RATIO_THRESHOLD
 	fi
 else
 	-if [ -e $< ]; then \
-	  ln -s $< $@; \
-	  ln -s $(<:.${SRCEXT}.gz=.${TRGEXT}.gz) $(@:.${SRCEXT}.gz=.${TRGEXT}.gz); \
+	  cp $< $@; \
+	  cp $(<:.${SRCEXT}.gz=.${TRGEXT}.gz) $(@:.${SRCEXT}.gz=.${TRGEXT}.gz); \
 	fi
 endif
+
+#	  ln -s $< $@; \
+#	  ln -s $(<:.${SRCEXT}.gz=.${TRGEXT}.gz) $(@:.${SRCEXT}.gz=.${TRGEXT}.gz); \
+
 
 %.strict.${TRGEXT}.gz: %.strict.${SRCEXT}.gz
 	@echo "done!"
