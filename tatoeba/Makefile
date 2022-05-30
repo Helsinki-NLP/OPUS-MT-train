@@ -145,46 +145,49 @@ all:
 
 TRGLANG_GROUP_LANGS = $(call find-langgroup,${TRGLANG_GROUP})
 
+SUBWORD_TRG_SHORTSIZE = ${SUBWORD_TRGVOCAB_SIZE:000=}k
+SUBWORD_TRG_NAME = ${lastword ${subst -, ,${LANGPAIRSTR}}}
+
 tatoeba-tokenizer-groups:
 	for g in ${OPUS_LANG_GROUPS}; do \
 	  ${MAKE} TRGLANG_GROUP=$$g tatoeba-tokenizer-group; \
 	done
 
+TOKENIZER_LANGGROUPS_MAXNRLANGS = 25
+TOKENIZER_LANGGROUPS_MINNRLANGS = 2
+
 tatoeba-tokenizer-group:
 	echo "${TRGLANG_GROUP}: ${TRGLANG_GROUP_LANGS}"
-	if [ $(words ${TRGLANG_GROUP_LANGS}) -gt 2 ]; then \
-	  if [ $(words ${TRGLANG_GROUP_LANGS}) -lt 25 ]; then \
-		${MAKE} DATA_SAMPLING_WEIGHT=0.3 SRCLANGS=eng TRGLANGS="${TRGLANG_GROUP_LANGS}" \
+	if [ $(words ${TRGLANG_GROUP_LANGS}) -ge ${TOKENIZER_LANGGROUPS_MINNRLANGS} ]; then \
+	  if [ $(words ${TRGLANG_GROUP_LANGS}) -le ${TOKENIZER_LANGGROUPS_MAXNRLANGS} ]; then \
+		${MAKE} DATA_SAMPLING_WEIGHT=0.3 MAX_DATA_SIZE=100000000 \
+			SRCLANGS=eng TRGLANGS="${TRGLANG_GROUP_LANGS}" \
 			LANGPAIRSTR="eng-${TRGLANG_GROUP}" tatoeba-tokenizer; \
 	  fi \
 	fi
 
 tatoeba-tokenizer-missing:
-	for l in ${filter-out eng,${TATOEBA_LANGS}}; do \
-	  if [ ! -e models/spm/eng-$$l ]; then \
-	    ${MAKE} DATA_SAMPLING_WEIGHT=0.3 SRC=eng TRG=$$l tatoeba-tokenizer; \
-	  elif [ `cat work/eng-$$l/opusTCv20210807-langlabels.trg | tr ' ' "\n" | grep . | wc -l` -gt 1 ]; then \
-	    mkdir -o  models/spm-old; \
-	    mv models/spm/eng-$$l models/spm-old/; \
-	    ${MAKE} DATA_SAMPLING_WEIGHT=0.3 SRC=eng TRG=$$l tatoeba-tokenizer; \
-	  fi; \
+	for g in ${OPUS_LANG_GROUPS}; do \
+	  ${MAKE} TRGLANG_GROUP=$$g \
+		TOKENIZER_SIZES="16000 32000 64000" \
+		TOKENIZER_LANGGROUPS_MAXNRLANGS=6000 \
+		TOKENIZER_LANGGROUPS_MINNRLANGS=25 tatoeba-tokenizer-group; \
 	done
 	for g in ${OPUS_LANG_GROUPS}; do \
 	  ${MAKE} TRGLANG_GROUP=$$g tatoeba-tokenizer-group; \
 	done
 
 
-
 tatoeba-tokenizer-langs:
 	for l in ${filter-out eng,${TATOEBA_LANGS}}; do \
-	  ${MAKE} SRC=eng TRG=$$l tatoeba-tokenizer; \
+	  ${MAKE} SRC=eng TRG=$$l DATA_SAMPLING_WEIGHT=0.3 tatoeba-tokenizer; \
 	done
-	${MAKE} SRC=fra TRG=eng tatoeba-tokenizer
+	${MAKE} SRC=fra TRG=eng DATA_SAMPLING_WEIGHT=0.3 tatoeba-tokenizer
 
 reverse = $(if $(1),$(call reverse,$(wordlist 2,$(words $(1)),$(1)))) $(firstword $(1))
 tatoeba-tokenizer-langs-reverse:
 	for l in $(call reverse,$(filter-out eng,${TATOEBA_LANGS})); do \
-	  ${MAKE} SRC=eng TRG=$$l tatoeba-tokenizer; \
+	  ${MAKE} SRC=eng TRG=$$l DATA_SAMPLING_WEIGHT=0.3 tatoeba-tokenizer; \
 	done
 
 tatoeba-tokenizer-check:
@@ -227,20 +230,20 @@ tatoeba-tokenizer-check:
 	done
 
 
+TOKENIZER_SIZES = 16000 32000 64000 8000 4000
 
 tatoeba-tokenizer: 
+ifeq ($(wildcard ${RELEASEDIR}/spm/${LANGPAIRSTR}/opusTC.${SUBWORD_TRG_NAME}.*.spm),)
 	mkdir -p ${WORKDIR}/spm/train
 	${MAKE} WORKDIR=${WORKDIR}/spm fetch-datasets
 	${MAKE} WORKDIR=${WORKDIR}/spm langlabel-files
 	${MAKE} WORKDIR=${WORKDIR}/spm rawdata-tatoeba
 	${MAKE} WORKDIR=${WORKDIR}/spm local-config-tatoeba
-	for s in 16000 32000 64000 8000 4000; do \
+	for s in ${TOKENIZER_SIZES}; do \
 	  ${MAKE} SUBWORD_TRGVOCAB_SIZE=$$s tatoeba-spmodel; \
 	done
 	rm -fr ${WORKDIR}/spm
-
-SUBWORD_TRG_SHORTSIZE = ${SUBWORD_TRGVOCAB_SIZE:000=}k
-SUBWORD_TRG_NAME = ${lastword ${subst -, ,${LANGPAIRSTR}}}
+endif
 
 tatoeba-spmodel: ${RELEASEDIR}/spm/${LANGPAIRSTR}/opusTC.${SUBWORD_TRG_NAME}.${SUBWORD_TRG_SHORTSIZE}.spm
 
