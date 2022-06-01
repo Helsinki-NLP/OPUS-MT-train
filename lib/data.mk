@@ -539,6 +539,9 @@ endif
 endif
 
 
+.PHONY: local-train-data
+local-train-data: ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG}
+
 ## add training data for each language combination
 ## and put it together in local space
 ${LOCAL_TRAIN_SRC}: ${LOCAL_TRAINDATA_DEPENDENCIES} ${WORKDIR}/train/size_per_language_pair.txt
