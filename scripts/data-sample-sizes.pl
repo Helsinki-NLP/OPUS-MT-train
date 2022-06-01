@@ -45,7 +45,7 @@ my %samplesize = ();
 my $maxsample = 0;
 
 foreach (sort keys %size){
-    $rate{$_} = ($size{$_}/$total)**$weight;
+    $rate{$_} = $total > 0 ? ($size{$_}/$total)**$weight : 0;
     $samplesize{$_} = int($total*$rate{$_});
     # print "sample size: $_\t$samplesize{$_}\t$rate{$_}\t$size{$_}\n";
     if ($samplesize{$_} > $maxsample){
@@ -56,7 +56,7 @@ foreach (sort keys %size){
 
 ## normalise size
 
-my $factor = $maxsize / $maxsample;
+my $factor = $maxsample > 0 ? $maxsize / $maxsample : 0;
 # print "$factor = $maxsize / $maxsample\n";
 foreach (sort keys %size){
     print "$_\t",int($samplesize{$_}*$factor),"\n";

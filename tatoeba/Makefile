@@ -160,11 +160,19 @@ tatoeba-tokenizer-group:
 	echo "${TRGLANG_GROUP}: ${TRGLANG_GROUP_LANGS}"
 	if [ $(words ${TRGLANG_GROUP_LANGS}) -ge ${TOKENIZER_LANGGROUPS_MINNRLANGS} ]; then \
 	  if [ $(words ${TRGLANG_GROUP_LANGS}) -le ${TOKENIZER_LANGGROUPS_MAXNRLANGS} ]; then \
+	  	rm -f work/eng-${TRGLANG_GROUP}/opusTCv20210807-languages.trg; \
+	  	rm -f work/eng-${TRGLANG_GROUP}/opusTCv20210807-langlabels.trg; \
 		${MAKE} DATA_SAMPLING_WEIGHT=0.3 MAX_DATA_SIZE=100000000 \
 			SRCLANGS=eng TRGLANGS="${TRGLANG_GROUP_LANGS}" \
 			LANGPAIRSTR="eng-${TRGLANG_GROUP}" tatoeba-tokenizer; \
 	  fi \
 	fi
+
+tatoeba-tokenizer-mul:
+	${MAKE} TRGLANG_GROUP=mul \
+		TOKENIZER_SIZES="16000 32000 64000" \
+		TOKENIZER_LANGGROUPS_MAXNRLANGS=6000 \
+		TOKENIZER_LANGGROUPS_MINNRLANGS=25 tatoeba-tokenizer-group
 
 tatoeba-tokenizer-missing:
 	for g in ${OPUS_LANG_GROUPS}; do \
@@ -234,6 +242,7 @@ TOKENIZER_SIZES = 16000 32000 64000 8000 4000
 
 tatoeba-tokenizer: 
 ifeq ($(wildcard ${RELEASEDIR}/spm/${LANGPAIRSTR}/opusTC.${SUBWORD_TRG_NAME}.*.spm),)
+	rm -fr ${WORKDIR}/spm
 	mkdir -p ${WORKDIR}/spm/train
 	${MAKE} WORKDIR=${WORKDIR}/spm fetch-datasets
 	${MAKE} WORKDIR=${WORKDIR}/spm langlabel-files

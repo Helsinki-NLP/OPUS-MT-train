@@ -58,6 +58,8 @@ endif
 endif
 
 print-data-sampling-size:
+	${REPOHOME}scripts/data-sample-sizes.pl -w 0.3 \
+			${WORKDIR}/train/size_per_language_pair.txt | grep '${SORTED_LANGPAIR}' | cut -f2
 	@echo "sample size for ${LANGPAIR}: ${FIT_DATA_SIZE}"
 
 print-data-sampling-sizes:
@@ -538,6 +540,7 @@ ifneq ($(words ${SRCLANGS} ${TRGLANGS}),2)
 endif
 endif
 
+local-train-data: ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG}
 
 ## add training data for each language combination
 ## and put it together in local space
