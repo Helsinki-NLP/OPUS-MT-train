@@ -178,7 +178,7 @@ endif
 ## prepare input data (only if a model and an input file exist)
 ## NOTE: if OPUSMT_MAX_LENGTH is set then do seom extra filtering!
 
-${OUTPUT_PRE}: ${INPUT_FILE} mosesdecoder marian-dev
+${OUTPUT_PRE}: ${INPUT_FILE} mosesdecoder marian-dev tools/marian-dev tools/moses-scripts
 ifneq (${OPUSMT_MODELZIP},)
 ifneq (${INPUT_FILE},)
 	mkdir -p ${dir $@}
@@ -203,6 +203,15 @@ mosesdecoder:
 
 marian-dev:
 	ln -s ${MARIAN_HOME:/build/=} $@
+
+tools/marian-dev:
+	mkdir -p $(dir $@)
+	ln -s ${MARIAN_HOME:/build/=} $@
+
+tools/moses-scripts:
+	mkdir -p $(dir $@)
+	ln -s ${MOSESHOME} $@
+
 
 ## merge SentencePiece segments in the source text
 ## (Why? because we may want to have bitexts from all parts)

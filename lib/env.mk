@@ -5,10 +5,14 @@
 # - system-specific settings
 #
 
+# .EXPORT_ALL_VARIABLES:
+# .ONESHELL:
+
 SHELL    := /bin/bash
 TODAY    := $(shell date +%F)
 PWD      ?= ${shell pwd}
 REPOHOME ?= ${PWD}/
+
 
 # job-specific settings (overwrite if necessary)
 # HPC_EXTRA: additional SBATCH commands

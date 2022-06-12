@@ -283,12 +283,12 @@ endif
 ## restrict to 1 million lines
 %.charfreq: %
 	head -1000000 $< > $<.1m
-	-python -c "import collections, pprint; pprint.pprint(dict(collections.Counter(open('$<.1m', 'r').read())))" > $@
+	-python3 -c "import collections, pprint; pprint.pprint(dict(collections.Counter(open('$<.1m', 'r').read())))" > $@
 	rm -f $<.1m
 
 %.charfreq: %.gz
 	${GZIP} -cd < $< | head -1000000 > $<.1m
-	-python -c "import collections, pprint; pprint.pprint(dict(collections.Counter(open('$<.1m', 'r').read())))" > $@
+	-python3 -c "import collections, pprint; pprint.pprint(dict(collections.Counter(open('$<.1m', 'r').read())))" > $@
 	rm -f $<.1m
 
 

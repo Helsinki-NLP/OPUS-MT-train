@@ -62,7 +62,7 @@ print-score-file:
 	@echo ${SCOREFILES}
 	@echo "tenplate: ${OUTPUT_DIR}/*.${SRC}.gz"
 
-${OUTPUT_DIR}/%.${SRC}.scores.gz: ${OUTPUT_DIR}/%.${SRC}.gz
+${OUTPUT_DIR}/%.${SRC}.scores.gz: ${OUTPUT_DIR}/%.${SRC}.gz mosesdecoder marian-dev tools/marian-dev tools/moses-scripts
 	${MAKE} SRC=${TRG} TRG=${SRC} opusmt-model
 	${GZCAT} ${<:.${SRC}.gz=.${TRG}.gz} |\
 	${OUTPUT_DIR}/${REV_MODELNAME}/preprocess.sh ${REV_SRC_PREPROCESS_ARGS} | \
@@ -84,18 +84,18 @@ ${OUTPUT_DIR}/%.${SRC}.scores.gz: ${OUTPUT_DIR}/%.${SRC}.gz
 
 
 ${OUTPUT_DIR}/bitext.sorted.gz: ${SCOREFILES}
-	${GZCAT} ${OUTPUT_DIR}/*.${SRC}.scores.gz | ${GZIP} -c > $@.scores.gz
-	${GZCAT} ${OUTPUT_DIR}/*.${SRC}.gz | ${GZIP} -c > $@.src.gz
-	${GZCAT} ${OUTPUT_DIR}/*.${TRG}.gz | ${GZIP} -c > $@.trg.gz
+	${GZCAT} $^ | ${GZIP} -c > $@.scores.gz
+	${GZCAT} $(patsubst %.${SRC}.scores.gz,%.${SRC}.gz,$^) | ${GZIP} -c > $@.src.gz
+	${GZCAT} $(patsubst %.${SRC}.scores.gz,%.${TRG}.gz,$^) | ${GZIP} -c > $@.trg.gz
 	paste <(gzip -cd $@.scores.gz) <(gzip -cd $@.src.gz) <(gzip -cd $@.trg.gz) |\
 	LC_ALL=C sort -n -k1,1 -S 10G | uniq -f1 | ${GZIP} -c > $@
 	rm -f $@.src.gz $@.trg.gz $@.scores.gz
 
 
 ${OUTPUT_DIR}/bitext.sorted-raw.gz: ${RAWSCOREFILES}
-	${GZCAT} ${OUTPUT_DIR}/*.${SRC}.raw-scores.gz | ${GZIP} -c > $@.raw-scores.gz
-	${GZCAT} ${OUTPUT_DIR}/*.${SRC}.gz | ${GZIP} -c > $@.src.gz
-	${GZCAT} ${OUTPUT_DIR}/*.${TRG}.gz | ${GZIP} -c > $@.trg.gz
+	${GZCAT} $^ | ${GZIP} -c > $@.raw-scores.gz
+	${GZCAT} $(patsubst %.${SRC}.raw-scores.gz,%.${SRC}.gz,$^) | ${GZIP} -c > $@.src.gz
+	${GZCAT} $(patsubst %.${SRC}.raw-scores.gz,%.${TRG}.gz,$^) | ${GZIP} -c > $@.trg.gz
 	paste <(gzip -cd $@.raw-scores.gz) <(gzip -cd $@.src.gz) <(gzip -cd $@.trg.gz) |\
 	LC_ALL=C sort -n -k1,1 -S 10G | uniq -f1 | ${GZIP} -c > $@
 	rm -f $@.src.gz $@.trg.gz $@.raw-scores.gz
@@ -132,3 +132,34 @@ ${OUTPUT_DIR}/best${CEFILTER_RETAIN}/%.${TRG}.gz: ${OUTPUT_DIR}/best${CEFILTER_R
 	@echo "done!"
 
 
+opusmt-scores-check-latest:
+	@if [ -d ${OUTPUT_DIR}/latest ]; then \
+	  for S in `ls ${OUTPUT_DIR}/latest/*.scores.gz`; do \
+	    B=`echo $$S | sed 's/.${SRC}.scores.gz//'`; \
+	    s=`${GZCAT} $$B.${SRC}.gz | wc -l`; \
+	    t=`${GZCAT} $$B.${TRG}.gz | wc -l`; \
+	    r=`${GZCAT} $$B.${SRC}.raw-scores.gz | wc -l`; \
+	    if [ $$r != $$s ] || [ $$r != $$t ]; then \
+	      echo "incomplete ($$s, $$t, $$r): $$S"; \
+	    else \
+	      echo "OK: $$S"; \
+	    fi \
+	  done \
+	fi
+
+opusmt-scores-remove-incomplete-latest:
+	@echo "check ${LANGPAIR}"
+	@mkdir -p ${OUTPUT_DIR}/incomplete/latest
+	@if [ -d ${OUTPUT_DIR}/latest ]; then \
+	  for S in `ls ${OUTPUT_DIR}/latest/*.scores.gz`; do \
+	    B=`echo $$S | sed 's/.${SRC}.scores.gz//'`; \
+	    s=`${GZCAT} $$B.${SRC}.gz | wc -l`; \
+	    t=`${GZCAT} $$B.${TRG}.gz | wc -l`; \
+	    r=`${GZCAT} $$B.${SRC}.raw-scores.gz | wc -l`; \
+	    if [ $$r != $$s ] || [ $$r != $$t ]; then \
+	      echo "incomplete - remove ($$s, $$t, $$r): $$S"; \
+	      mv $$B.${SRC}.raw-scores.gz ${OUTPUT_DIR}/incomplete/latest; \
+	      mv $$B.${SRC}.scores.gz ${OUTPUT_DIR}/incomplete/latest; \
+	    fi \
+	  done \
+	fi

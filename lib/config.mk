@@ -154,6 +154,11 @@ SHUFFLE_DEVDATA ?= 1
 ## shuffle multilingual training data to mix language examples
 SHUFFLE_MULTILINGUAL_DATA ?= 1
 
+## flag that indicates that we have more than 2 languages
+ifneq (${words ${SRCLANGS} ${TRGLANGS}},2)
+  MULTILINGUAL_MODEL = 1
+endif
+
 ##----------------------------------------------------------------------
 ## set FIT_DATA_SIZE to a specific value to fit the training data
 ## to a certain number of lines for each language pair in the collection
@@ -167,7 +172,23 @@ SHUFFLE_MULTILINGUAL_DATA ?= 1
 ## similar for the dev data: set FIT_DEVDATA_SIZE to
 ## balance the size of the devdata for each language pair
 ##
-# FIT_DEVDATA_SIZE = 
+# FIT_DEVDATA_SIZE =
+
+
+## NEW: use temperature-based sampling by default for multilingual models
+## default value = 0.3 is a bit lower than T=5 used in the literature
+## T=5 emphasizes a lot on low-resource languages, 0.3 relaxes this a littl
+## unset temperature-based sampling by setting to empty (DATA_SAMPLING_WEIGHT=)
+
+DATA_SAMPLING_WEIGHT = 0.3
+
+## temperature-based sampling can be combined with MAX_DATA_SIZE
+## which sets the maximum size of the biggest language pair
+## and sampling of other language pairs is proportional to that size
+## and the sampling probability assigned to that biggest language pair
+
+# MAX_DATA_SIZE = 10000000
+
 
 ## define a default dev size fit for multilingual models
 ## TODO: is 1000 too small? or too big?

@@ -73,7 +73,8 @@ forward-translate-all-sources forward-translate-all-sources-job:
 
 FT_GENERIC_RECIPES = 	ft-check-length ft-check-latest \
 			ft-check-translated ft-remove-incomplete \
-			ft-remove-incomplete-translated ft-remove-incomplete-latest
+			ft-remove-incomplete-translated ft-remove-incomplete-latest \
+			ft-scores-check-latest ft-scores-remove-incomplete-latest
 
 PHONY: ${FT_GENERIC_RECIPES}
 ${FT_GENERIC_RECIPES}:

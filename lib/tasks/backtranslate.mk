@@ -113,7 +113,9 @@ ${MONO_DATADIR}/%/${BT_INPUT_NAME}.txt.gz:
 
 BT_GENERIC_RECIPES = 	bt-check-length bt-check-latest \
 			bt-check-translated bt-remove-incomplete \
-			bt-remove-incomplete-translated bt-remove-incomplete-latest
+			bt-remove-incomplete-translated bt-remove-incomplete-latest \
+			bt-scores-check-latest bt-scores-remove-incomplete-latest
+
 
 PHONY: ${BT_GENERIC_RECIPES}
 ${BT_GENERIC_RECIPES}:

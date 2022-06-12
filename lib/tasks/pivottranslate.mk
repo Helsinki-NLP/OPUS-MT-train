@@ -99,7 +99,8 @@ pivot-translate-all-sources pivot-translate-all-sources-job:
 
 PT_GENERIC_RECIPES = 	pt-check-length pt-check-latest \
 			pt-check-translated pt-remove-incomplete \
-			pt-remove-incomplete-translated pt-remove-incomplete-latest
+			pt-remove-incomplete-translated pt-remove-incomplete-latest \
+			pt-scores-check-latest pt-scores-remove-incomplete-latest
 
 PHONY: ${PT_GENERIC_RECIPES}
 ${PT_GENERIC_RECIPES}:

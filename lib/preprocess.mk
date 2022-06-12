@@ -20,8 +20,6 @@
 # # NR_TOKEN_RATIO = 9
 
 
-.PRECIOUS: %.clean.${TRGEXT}.gz %.clean.${SRCEXT}.gz %.strict.${TRGEXT}.gz %.strict.${SRCEXT}.gz
-
 
 ## compute some ratios and thresholds that could be useful for filtering training data
 ## use test sets for those stats assuming that they are representative and clean
@@ -109,9 +107,9 @@ STRICT_TRAIN_SRC = $(patsubst %.clean.${SRCEXT}.gz,%.strict.${SRCEXT}.gz,${CLEAN
 
 
 
-strict-clean-data: ${STRICT_TRAIN_SRC}
+strict-clean-data: ${STRICT_TRAIN_SRC} ${STRICT_TRAIN_TRG}
 
-%.strict.${SRCEXT}.gz: %.clean.${SRCEXT}.gz
+%.strict.${SRCEXT}.gz: %.clean.${SRCEXT}.gz %.clean.${TRGEXT}.gz
 ifdef WORD_RATIO_THRESHOLD
 	if [ -e $< ]; then \
 	  $(MOSESSCRIPTS)/training/clean-corpus-n.perl \
@@ -130,10 +128,6 @@ else
 	fi
 endif
 
-#	  ln -s $< $@; \
-#	  ln -s $(<:.${SRCEXT}.gz=.${TRGEXT}.gz) $(@:.${SRCEXT}.gz=.${TRGEXT}.gz); \
-
-
 %.strict.${TRGEXT}.gz: %.strict.${SRCEXT}.gz
 	@echo "done!"
 
@@ -141,9 +135,11 @@ endif
 ## yet another filter
 
 STRICT2_TRAIN_SRC = $(patsubst %.clean.${SRCEXT}.gz,%.strict2.${SRCEXT}.gz,${CLEAN_TRAIN_SRC})
-strict2-clean-data: ${STRICT2_TRAIN_SRC}
+STRICT2_TRAIN_TRG = $(patsubst %.clean.${TRGEXT}.gz,%.strict2.${TRGEXT}.gz,${CLEAN_TRAIN_TRG})
 
-%.strict2.${SRCEXT}.gz: %.strict.${SRCEXT}.gz
+strict2-clean-data: ${STRICT2_TRAIN_SRC} ${STRICT2_TRAIN_TRG}
+
+%.strict2.${SRCEXT}.gz: %.strict.${SRCEXT}.gz %.strict.${TRGEXT}.gz
 ifdef CHAR_RATIO_THRESHOLD
 	if [ -e $< ]; then \
 	  $(SCRIPTDIR)/bitext_filter.pl \

@@ -49,6 +49,45 @@ TRAINDATA_SIZE = ${shell \
 	fi }
 
 
+## set sample data size for mulitlingual models
+## (only if DATA_SAMPLING_WEIGHT is set)
+## MAX_DATA_SIZE controls the maximum data size for a language pair
+##    default: keep all data for the largest language pair (no down-sampling)
+## DATA_SAMPLING_WEIGHT balances between uniform and distributional sampling
+##  = 1: sample proportional to the size of bitext per language pair
+##  = 0.2: corresponds to temperature 5 to up-sample low resource languages
+
+ifdef MULTILINGUAL_MODEL
+ifneq (${DATA_SAMPLING_WEIGHT},)
+ifneq (${wildcard ${WORKDIR}/train/size_per_language_pair.txt},)
+ifdef MAX_DATA_SIZE
+  FIT_DATA_SIZE = ${shell ${REPOHOME}scripts/data-sample-sizes.pl -w ${DATA_SAMPLING_WEIGHT} -m ${MAX_DATA_SIZE} \
+			${WORKDIR}/train/size_per_language_pair.txt | grep '^${SORTED_LANGPAIR}	' | cut -f2}
+else
+  FIT_DATA_SIZE = ${shell ${REPOHOME}scripts/data-sample-sizes.pl -w ${DATA_SAMPLING_WEIGHT} \
+			${WORKDIR}/train/size_per_language_pair.txt | grep '^${SORTED_LANGPAIR}	' | cut -f2}
+endif
+endif
+endif
+endif
+
+print-data-sampling-size:
+	${REPOHOME}scripts/data-sample-sizes.pl -w 0.3 \
+			${WORKDIR}/train/size_per_language_pair.txt | grep '^${SORTED_LANGPAIR}	' | cut -f2
+	@echo "sample size for ${LANGPAIR}: ${FIT_DATA_SIZE}"
+
+print-data-sampling-sizes:
+	for s in ${SRCLANGS}; do \
+	  for t in ${TRGLANGS}; do \
+	    if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
+	      if [ "${SKIP_SAME_LANG}" != "1" ] || [ "$$s" != "$$t" ]; then \
+	        ${MAKE} SRC:=$$s TRG:=$$t print-data-sampling-size; \
+	      fi \
+	    fi \
+	  done \
+	done
+
+
 ## look for cleanup scripts and put them into a pipe
 ## they should be executable and should basically read STDIN and print to STDOUT
 ## no further arguments are supported
@@ -82,11 +121,27 @@ endif
 ## TODO: make it possible to select only parts of the BT data
 ## ---> use TRAINDATA_SIZE to take max the same amount of all shuffled BT data
 
+
+#---------------------------------------------------------------------------
+# include back-translated data
+#---------------------------------------------------------------------------
+
 # back-translation data (target-to-source)
 ifeq (${USE_BACKTRANS},1)
   BACKTRANS_SRC = ${sort ${wildcard ${BACKTRANS_DIR}/*.${SRCEXT}.gz}}
   BACKTRANS_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${BACKTRANS_SRC}}
 endif
+
+# forward-translation data of monolingual data (source-to-target) with CE-filtering
+ifneq (${USE_BACKTRANS_SELECTED},)
+  BACKTRANS_SRC += ${sort ${wildcard ${BACKTRANS_HOME}/${TRG}-${SRC}/latest/best${BT_SELECTED}/*.${SRCEXT}.gz}}
+  BACKTRANS_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${FORWARDTRANSMONO_SRC}}
+endif
+
+
+#---------------------------------------------------------------------------
+# use forward translated data
+#---------------------------------------------------------------------------
 
 # forward-translation data (source-to-target)
 ifeq (${USE_FORWARDTRANS},1)
@@ -97,16 +152,15 @@ endif
 # forward-translation data (source-to-target)
 # filtered by reconstruction scores (ce filter)
 ifneq (${USE_FORWARDTRANS_SELECTED},)
-  FORWARDTRANS_SRC += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/best${USE_FORWARDTRANS_SELECTED}/*.${SRCEXT}.gz}}
-  FORWARDTRANS_TRG += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/best${USE_FORWARDTRANS_SELECTED}/*.${TRGEXT}.gz}}
+  FORWARDTRANS_SRC += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/best${FT_SELECTED}/*.${SRCEXT}.gz}}
+  FORWARDTRANS_TRG += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/best${FT_SELECTED}/*.${TRGEXT}.gz}}
 endif
 
 ## selected by "raw" (unnormalised) scores
 ifneq (${USE_FORWARDTRANS_SELECTED_RAW},)
-  FORWARDTRANS_SRC += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/rawbest${USE_FORWARDTRANS_SELECTED_RAW}/*.${SRCEXT}.gz}}
-  FORWARDTRANS_TRG += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/rawbest${USE_FORWARDTRANS_SELECTED_RAW}/*.${TRGEXT}.gz}}
+  FORWARDTRANS_SRC += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/rawbest${FT_SELECTED}/*.${SRCEXT}.gz}}
+  FORWARDTRANS_TRG += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/rawbest${FT_SELECTED}/*.${TRGEXT}.gz}}
 endif
-
 
 # forward-translation data of monolingual data (source-to-target)
 ifeq (${USE_FORWARDTRANSMONO},1)
@@ -114,11 +168,30 @@ ifeq (${USE_FORWARDTRANSMONO},1)
   FORWARDTRANSMONO_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${FORWARDTRANSMONO_SRC}}
 endif
 
+# forward-translation data of monolingual data (source-to-target) with CE-filtering
+ifeq (${USE_FORWARDTRANSMONO_SELECTED},1)
+  FORWARDTRANSMONO_SRC += ${sort ${wildcard ${BACKTRANS_HOME}/${SRC}-${TRG}/latest/best${FT_SELECTED}/*.${SRCEXT}.gz}}
+  FORWARDTRANSMONO_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${FORWARDTRANSMONO_SRC}}
+endif
+
+
+#---------------------------------------------------------------------------
+# use pivot-based synthetic data
+# - forward pivoting translates the original target language
+# - backward pivotong translates the original source language
+#---------------------------------------------------------------------------
+
 # forward translation using pivoting (target language is automatically created)
 ifeq (${USE_FORWARD_PIVOTING},1)
   PIVOTING_SRC = ${sort ${wildcard ${PIVOTTRANS_HOME}/${TRG}-${SRC}/latest/*.${SRCEXT}.gz}}
   PIVOTING_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${PIVOTING_SRC}}
 endif
+
+ifeq (${USE_FORWARD_PIVOTING_SELECTED},1)
+  PIVOTING_SRC += ${sort ${wildcard ${PIVOTTRANS_HOME}/${TRG}-${SRC}/latest/best${PT_SELECTED}/*.${SRCEXT}.gz}}
+  PIVOTING_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${PIVOTING_SRC}}
+endif
+
 
 # backward translation using pivoting (source language is automatically created)
 ifeq (${USE_BACKWARD_PIVOTING},1)
@@ -126,10 +199,22 @@ ifeq (${USE_BACKWARD_PIVOTING},1)
   PIVOTING_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${PIVOTING_SRC}}
 endif
 
+ifeq (${USE_BACKWARD_PIVOTING_SELECTED},1)
+  PIVOTING_SRC += ${sort ${wildcard ${PIVOTTRANS_HOME}/${SRC}-${TRG}/latest/best${PT_SELECTED}/*.${SRCEXT}.gz}}
+  PIVOTING_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${PIVOTING_SRC}}
+endif
+
+
 # pivot-based data augmentation data (in both directions)
 ifeq (${USE_PIVOTING},1)
   PIVOTING_SRC = ${sort ${wildcard ${PIVOTTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.gz} \
 			${wildcard ${PIVOTTRANS_HOME}/${TRG}-${SRC}/latest/*.${SRCEXT}.gz}}
+  PIVOTING_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${PIVOTING_SRC}}
+endif
+
+ifeq (${USE_PIVOTING_SELECTED},1)
+  PIVOTING_SRC = ${sort ${wildcard ${PIVOTTRANS_HOME}/${SRC}-${TRG}/latest/best${PT_SELECTED}/*.${SRCEXT}.gz} \
+			${wildcard ${PIVOTTRANS_HOME}/${TRG}-${SRC}/latest/best${PT_SELECTED}/*.${SRCEXT}.gz}}
   PIVOTING_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${PIVOTING_SRC}}
 endif
 
@@ -193,6 +278,7 @@ CLEAN_TEST_TRG     = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${CLEAN_TEST_SRC}}
 CLEAN_TEST_SRC_STATS = ${CLEAN_TEST_SRC:.gz=.stats}
 CLEAN_TEST_TRG_STATS = ${CLEAN_TEST_TRG:.gz=.stats}
 
+export CLEAN_TRAIN_SRC CLEAN_TRAIN_TRG
 
 DATA_SRC := ${sort ${CLEAN_TRAIN_SRC} ${CLEAN_DEV_SRC} ${CLEAN_TEST_SRC}}
 DATA_TRG := ${sort ${CLEAN_TRAIN_TRG} ${CLEAN_DEV_TRG} ${CLEAN_TEST_TRG}}
@@ -276,6 +362,35 @@ ifeq (${words ${TRGLANGS}},1)
 endif
 endif
 endif
+
+
+## generate a file with the size per language pair
+## NOTE: those are taken from CLEAN_TRAIN_SIZE and not the final
+## training data after the additional call to the clean-corpus script!
+## --> counts are used to estimate temperature-based sample sizes
+##     for multilingual models
+
+train-size-per-language: ${WORKDIR}/train/size_per_language_pair.txt
+add-size-per-language-pair-info:
+ifneq (${wildcard ${CLEAN_TRAIN_SRC}},)
+	( s=`${GZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} | wc -l`; \
+	  echo "${LANGPAIR}	$$s" >> ${WORKDIR}/train/size_per_language_pair.txt )
+endif
+
+${WORKDIR}/train/size_per_language_pair.txt: ${LOCAL_TRAINDATA_DEPENDENCIES}
+	mkdir -p $(dir $@)
+	rm -f $@
+	for s in ${SRCLANGS}; do \
+	  for t in ${TRGLANGS}; do \
+	    if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
+	      if [ "${SKIP_SAME_LANG}" != "1" ] || [ "$$s" != "$$t" ]; then \
+	        ${MAKE} DATASET=${DATASET} SRC:=$$s TRG:=$$t add-size-per-language-pair-info; \
+	      fi \
+	    fi \
+	  done \
+	done
+	cut -f2 $@ | paste -sd+ | bc | sed 's/^/TOTAL	/' >> $@
+
 
 
 
@@ -476,16 +591,18 @@ endif
 ## for multilingual systems:
 ## shuffle the complete training data set
 ## if the option is set to 1
+ifdef MULTILINGUAL_MODEL
 ifeq (${SHUFFLE_MULTILINGUAL_DATA},1)
-ifneq ($(words ${SRCLANGS} ${TRGLANGS}),2)
   SHUFFLE_TRAINING_DATA = 1
 endif
 endif
 
+.PHONY: local-train-data
+local-train-data: ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG}
 
 ## add training data for each language combination
 ## and put it together in local space
-${LOCAL_TRAIN_SRC}: ${LOCAL_TRAINDATA_DEPENDENCIES}
+${LOCAL_TRAIN_SRC}: ${LOCAL_TRAINDATA_DEPENDENCIES} ${WORKDIR}/train/size_per_language_pair.txt
 	@mkdir -p ${dir $@}
 	@echo ""                           > ${dir $@}README.md
 	@echo "# ${notdir ${TRAIN_BASE}}" >> ${dir $@}README.md
@@ -573,22 +690,22 @@ endif
 
 .PHONY: add-to-local-train-data
 add-to-local-train-data: ${CLEAN_TRAIN_SRC} ${CLEAN_TRAIN_TRG}
-ifneq (${wildcard ${CLEAN_TRAIN_SRC}},)
-ifneq (${wildcard ${CLEAN_TRAIN_TRG}},)
 ifdef CHECK_TRAINDATA_SIZE
-	@if [ `${GZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} | wc -l` != `${GZCAT} ${wildcard ${CLEAN_TRAIN_TRG}} | wc -l` ]; then \
-	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
-	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
-	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
-	  echo "source and target are not of same length!"; \
-	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
-	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
-	  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
-	  echo ${CLEAN_TRAIN_SRC}; \
-	  echo ${CLEAN_TRAIN_TRG}; \
+	@if [ "${wildcard ${CLEAN_TRAIN_SRC}}" != "" ] && [ "${wildcard ${CLEAN_TRAIN_TRG}}" != "" ]; then \
+	  if [ `${GZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} | wc -l` != `${GZCAT} ${wildcard ${CLEAN_TRAIN_TRG}} | wc -l` ]; then \
+	    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+	    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+	    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+	    echo "source and target are not of same length!"; \
+	    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+	    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+	    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
+	    echo ${CLEAN_TRAIN_SRC}; \
+	    echo ${CLEAN_TRAIN_TRG}; \
+	  fi \
 	fi
 endif
-	@echo "..... add info about training data"
+	@echo "..... add info about ${LANGPAIR} training data"
 	@mkdir -p ${dir ${LOCAL_TRAIN_SRC}} ${dir ${LOCAL_TRAIN_TRG}}
 	@echo -n "* ${SRC}-${TRG}: "                          >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 	@for d in ${wildcard ${CLEAN_TRAIN_SRC}}; do \
@@ -597,7 +714,7 @@ endif
 	    echo "$$d" | xargs basename | \
 	    sed -e 's#.${SRC}.gz$$##' \
 		-e 's#.clean$$##'\
-		-e 's#.${SORTED_LANGPAIR}$$##' | tr "\n" ' '         >> ${dir ${LOCAL_TRAIN_SRC}}README.md; \
+		-e 's#.${SORTED_LANGPAIR}$$##' | tr "\n" ' '  >> ${dir ${LOCAL_TRAIN_SRC}}README.md; \
 	    echo -n "($$l) "                                  >> ${dir ${LOCAL_TRAIN_SRC}}README.md; \
 	  fi \
 	done
@@ -605,27 +722,28 @@ endif
 ######################################
 # create local data files (add label if necessary)
 ######################################
-	@echo "..... create training data in local scratch space"
-	@${GZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} ${CUT_DATA_SETS} 2>/dev/null \
-		${LABEL_SOURCE_DATA} > ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src
-	@${GZCAT} ${wildcard ${CLEAN_TRAIN_TRG}} ${CUT_DATA_SETS} 2>/dev/null \
-		> ${LOCAL_TRAIN_TRG}.${SORTED_LANGPAIR}.trg
+	@if [ "${wildcard ${CLEAN_TRAIN_SRC}}" != "" ] && [ "${wildcard ${CLEAN_TRAIN_TRG}}" != "" ]; then \
+	  echo "..... create ${LANGPAIR} training data in local scratch space"; \
+	  ${GZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} ${CUT_DATA_SETS} ${LABEL_SOURCE_DATA} > ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src; \
+	  ${GZCAT} ${wildcard ${CLEAN_TRAIN_TRG}} ${CUT_DATA_SETS}                      > ${LOCAL_TRAIN_TRG}.${SORTED_LANGPAIR}.trg; \
+	fi
 	@touch ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${SORTED_LANGPAIR}.trg
+	@if [ ! -s ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src ] || [ ! -s ${LOCAL_TRAIN_TRG}.${SORTED_LANGPAIR}.trg ]; then \
+	  echo "..... empty ${LANGPAIR} training data"; \
+	fi
 ######################################
 #  SHUFFLE_DATA is set?
 #    --> shuffle data for each langpair
 #    --> do this when FIT_DATA_SIZE is set!
 ######################################
 ifeq (${SHUFFLE_DATA},1)
-	@if [ -s ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src ]; then \
-	  echo "..... shuffle training data"; \
-	  paste ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${SORTED_LANGPAIR}.trg |\
+	@if [ -s ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src ] && [ -s ${LOCAL_TRAIN_TRG}.${SORTED_LANGPAIR}.trg ]; then \
+	    echo "..... shuffle ${LANGPAIR} training data"; \
+	    paste ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${SORTED_LANGPAIR}.trg |\
 		${SHUFFLE} > ${LOCAL_TRAIN_SRC}.shuffled; \
-	  cut -f1 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src; \
-	  cut -f2 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_TRG}.${SORTED_LANGPAIR}.trg; \
-	  rm -f ${LOCAL_TRAIN_SRC}.shuffled; \
-	else \
-	  echo "..... empty training data: ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src"; \
+	    cut -f1 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src; \
+	    cut -f2 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_TRG}.${SORTED_LANGPAIR}.trg; \
+	    rm -f ${LOCAL_TRAIN_SRC}.shuffled; \
 	fi
 endif
 ######################################
@@ -633,23 +751,27 @@ endif
 #    --> fit data to specific size
 #    --> under/over sampling!
 ######################################
-	@echo -n "* ${SRC}-${TRG}: total size = " >> ${dir ${LOCAL_TRAIN_SRC}}README.md
 ifdef FIT_DATA_SIZE
-	@echo "sample data to fit size = ${FIT_DATA_SIZE}"
-	@${REPOHOME}scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
-		${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src | wc -l >> ${dir ${LOCAL_TRAIN_SRC}}README.md
-	@${REPOHOME}scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
-		${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src >> ${LOCAL_TRAIN_SRC}
-	@${REPOHOME}scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
-		${LOCAL_TRAIN_TRG}.${SORTED_LANGPAIR}.trg >> ${LOCAL_TRAIN_TRG}
+	@if [ -s ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src ] && [ -s ${LOCAL_TRAIN_TRG}.${SORTED_LANGPAIR}.trg ]; then \
+	  echo -n "* ${SRC}-${TRG}: total size = "                 >> ${dir ${LOCAL_TRAIN_SRC}}README.md; \
+	  echo "..... sample ${LANGPAIR} training data to fit size = ${FIT_DATA_SIZE}"; \
+	  ${REPOHOME}scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
+		${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src | wc -l >> ${dir ${LOCAL_TRAIN_SRC}}README.md; \
+	  ${REPOHOME}scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
+		${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src >> ${LOCAL_TRAIN_SRC}; \
+	  ${REPOHOME}scripts/fit-data-size.pl -m ${MAX_OVER_SAMPLING} ${FIT_DATA_SIZE} \
+		${LOCAL_TRAIN_TRG}.${SORTED_LANGPAIR}.trg >> ${LOCAL_TRAIN_TRG}; \
+	fi
 else
-	@cat ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src | wc -l >> ${dir ${LOCAL_TRAIN_SRC}}README.md
-	@cat ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src >> ${LOCAL_TRAIN_SRC}
-	@cat ${LOCAL_TRAIN_TRG}.${SORTED_LANGPAIR}.trg >> ${LOCAL_TRAIN_TRG}
+	@if [ -s ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src ] && [ -s ${LOCAL_TRAIN_TRG}.${SORTED_LANGPAIR}.trg ]; then \
+	  echo "..... add ${LANGPAIR} data to training data"; \
+	  echo -n "* ${SRC}-${TRG}: total size = "              >> ${dir ${LOCAL_TRAIN_SRC}}README.md; \
+	  cat ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src | wc -l >> ${dir ${LOCAL_TRAIN_SRC}}README.md; \
+	  cat ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src >> ${LOCAL_TRAIN_SRC}; \
+	  cat ${LOCAL_TRAIN_TRG}.${SORTED_LANGPAIR}.trg >> ${LOCAL_TRAIN_TRG}; \
+	fi
 endif
 	@rm -f ${LOCAL_TRAIN_SRC}.${SORTED_LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${SORTED_LANGPAIR}.trg
-endif
-endif
 
 
 ####################
