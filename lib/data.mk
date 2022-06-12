@@ -48,10 +48,10 @@ ifdef DATA_SAMPLING_WEIGHT
 ifneq (${wildcard ${WORKDIR}/train/size_per_language_pair.txt},)
 ifdef MAX_DATA_SIZE
   FIT_DATA_SIZE = ${shell ${REPOHOME}scripts/data-sample-sizes.pl -w ${DATA_SAMPLING_WEIGHT} -m ${MAX_DATA_SIZE} \
-			${WORKDIR}/train/size_per_language_pair.txt | grep '^${SORTED_LANGPAIR}	' | cut -f2}
+			${WORKDIR}/train/size_per_language_pair.txt | grep '^${LANGPAIR}	' | cut -f2}
 else
   FIT_DATA_SIZE = ${shell ${REPOHOME}scripts/data-sample-sizes.pl -w ${DATA_SAMPLING_WEIGHT} \
-			${WORKDIR}/train/size_per_language_pair.txt | grep '^${SORTED_LANGPAIR}	' | cut -f2}
+			${WORKDIR}/train/size_per_language_pair.txt | grep '^${LANGPAIR}	' | cut -f2}
 endif
 endif
 endif
@@ -59,7 +59,7 @@ endif
 
 print-data-sampling-size:
 	${REPOHOME}scripts/data-sample-sizes.pl -w 0.3 \
-			${WORKDIR}/train/size_per_language_pair.txt | grep '^${SORTED_LANGPAIR}	' | cut -f2
+			${WORKDIR}/train/size_per_language_pair.txt | grep '^${LANGPAIR}	' | cut -f2
 	@echo "sample size for ${LANGPAIR}: ${FIT_DATA_SIZE}"
 
 print-data-sampling-sizes:
