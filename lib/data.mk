@@ -48,10 +48,10 @@ ifdef DATA_SAMPLING_WEIGHT
 ifneq (${wildcard ${WORKDIR}/train/size_per_language_pair.txt},)
 ifdef MAX_DATA_SIZE
   FIT_DATA_SIZE = ${shell ${REPOHOME}scripts/data-sample-sizes.pl -w ${DATA_SAMPLING_WEIGHT} -m ${MAX_DATA_SIZE} \
-			${WORKDIR}/train/size_per_language_pair.txt | grep '${SORTED_LANGPAIR}' | cut -f2}
+			${WORKDIR}/train/size_per_language_pair.txt | grep '^${SORTED_LANGPAIR}	' | cut -f2}
 else
   FIT_DATA_SIZE = ${shell ${REPOHOME}scripts/data-sample-sizes.pl -w ${DATA_SAMPLING_WEIGHT} \
-			${WORKDIR}/train/size_per_language_pair.txt | grep '${SORTED_LANGPAIR}' | cut -f2}
+			${WORKDIR}/train/size_per_language_pair.txt | grep '^${SORTED_LANGPAIR}	' | cut -f2}
 endif
 endif
 endif
@@ -59,7 +59,7 @@ endif
 
 print-data-sampling-size:
 	${REPOHOME}scripts/data-sample-sizes.pl -w 0.3 \
-			${WORKDIR}/train/size_per_language_pair.txt | grep '${SORTED_LANGPAIR}' | cut -f2
+			${WORKDIR}/train/size_per_language_pair.txt | grep '^${SORTED_LANGPAIR}	' | cut -f2
 	@echo "sample size for ${LANGPAIR}: ${FIT_DATA_SIZE}"
 
 print-data-sampling-sizes:
@@ -651,7 +651,7 @@ endif
 	@echo "..... add info about training data"
 	@mkdir -p ${dir ${LOCAL_TRAIN_SRC}} ${dir ${LOCAL_TRAIN_TRG}}
 	@echo -n "* ${SRC}-${TRG}: "                          >> ${dir ${LOCAL_TRAIN_SRC}}README.md
-	@for d in ${wildcard ${CLEAN_TRAIN_SRC}}; do \
+	for d in ${wildcard ${CLEAN_TRAIN_SRC}}; do \
 	  l=`${GZIP} -cd < $$d ${CUT_DATA_SETS} 2>/dev/null | wc -l`; \
 	  if [ $$l -gt 0 ]; then \
 	    echo "$$d" | xargs basename | \
@@ -677,7 +677,7 @@ endif
 #    --> do this when FIT_DATA_SIZE is set!
 ######################################
 ifeq (${SHUFFLE_DATA},1)
-	@if [ -s ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src ]; then \
+	if [ -s ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src ]; then \
 	  echo "..... shuffle training data"; \
 	  paste ${LOCAL_TRAIN_SRC}.${LANGPAIR}.src ${LOCAL_TRAIN_TRG}.${LANGPAIR}.trg |\
 		${SHUFFLE} > ${LOCAL_TRAIN_SRC}.shuffled; \

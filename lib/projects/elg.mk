@@ -398,6 +398,31 @@ elg-new-bigmodels:
 	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-heb2deu-trainjob
 	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-vie2deu-trainjob
 
+elg-new-bigmodels1:
+	rm -f work/deu-fin/train/*.gz work/deu-fin/train/size_per_language_pair.txt
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-deu2fin-trainjob-bt
+	for l in spa fra por ita tur ara zho zls zlw; do \
+	  rm -f work/$${l}-fin/train/*.gz work/$${l}-fin/train/size_per_language_pair.txt; \
+	  rm -f work/$${l}-deu/train/*.gz work/$${l}-deu/train/size_per_language_pair.txt; \
+	  ${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big DATA_SAMPLING_WEIGHT=0.3 tatoeba-$${l}2fin-trainjob; \
+	  ${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big DATA_SAMPLING_WEIGHT=0.3 tatoeba-$${l}2deu-trainjob; \
+	done
+	for l in bat gmq heb vie; do \
+	  rm -f work/$${l}-deu/train/*.gz work/$${l}-deu/train/size_per_language_pair.txt; \
+	  ${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big DATA_SAMPLING_WEIGHT=0.3 tatoeba-$${l}2deu-trainjob; \
+	done
+
+
+elg-new-bigmodels2:
+	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-fin2deu-trainjob-bt
+	for l in spa fra por ita tur ara zho zls zlw; do \
+	  ${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big DATA_SAMPLING_WEIGHT=0.3 tatoeba-fin2$$l-trainjob; \
+	  ${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big DATA_SAMPLING_WEIGHT=0.3 tatoeba-deu2$$l-trainjob; \
+	done
+	for l in bat gmq heb vie; do \
+	  ${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big DATA_SAMPLING_WEIGHT=0.3 tatoeba-deu2$$l-trainjob; \
+	done
+
 
 elg-zho:
 	${MAKE} MODELTYPE=transformer-big tatoeba-zho2eng-trainjob
