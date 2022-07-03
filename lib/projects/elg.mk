@@ -425,6 +425,29 @@ elg-new-bigmodels2:
 	  ${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big DATA_SAMPLING_WEIGHT=0.5 tatoeba-deu2$$l-trainjob; \
 	done
 
+elg-new-bigmodels3:
+	for l in ara bat cel eus fas gmq heb itc sqi tur vie zho zle zls zlw; do \
+	  rm -f work/$${l}-itc/train/*.gz work/$${l}-itc/train/size_per_language_pair.txt; \
+	  ${MAKE} MARIAN_EXTRA=--no-restore-corpus \
+		MODELTYPE=transformer-big \
+		SKIP_SAME_LANG=1 \
+		DATA_SAMPLING_WEIGHT=0.5 tatoeba-$${l}2itc-trainjob; \
+	done
+	for l in cel eus fas sqi; do \
+	  rm -f work/$${l}-deu/train/*.gz work/$${l}-deu/train/size_per_language_pair.txt; \
+	  ${MAKE} MARIAN_EXTRA=--no-restore-corpus \
+		MODELTYPE=transformer-big \
+		SKIP_SAME_LANG=1 \
+		DATA_SAMPLING_WEIGHT=0.5 tatoeba-$${l}2deu-trainjob; \
+	done
+	for l in ara bat cel eus fas heb sqi tur vie zho zle zls zlw; do \
+	  rm -f work/$${l}-gmq/train/*.gz work/$${l}-gmq/train/size_per_language_pair.txt; \
+	  ${MAKE} MARIAN_EXTRA=--no-restore-corpus \
+		MODELTYPE=transformer-big \
+		SKIP_SAME_LANG=1 \
+		DATA_SAMPLING_WEIGHT=0.5 tatoeba-$${l}2gmq-trainjob; \
+	done
+
 
 elg-zho:
 	${MAKE} MODELTYPE=transformer-big tatoeba-zho2eng-trainjob

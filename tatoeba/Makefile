@@ -174,15 +174,23 @@ tatoeba-tokenizer-mul:
 		TOKENIZER_LANGGROUPS_MAXNRLANGS=6000 \
 		TOKENIZER_LANGGROUPS_MINNRLANGS=25 tatoeba-tokenizer-group
 
+MISSING_TOK_LANGS = bos hau hrv ind kir nob nno oci ori pan pol por ron sin slk sqi srp swe tam tgk tha
 tatoeba-tokenizer-missing:
-	for g in ${OPUS_LANG_GROUPS}; do \
-	  ${MAKE} TRGLANG_GROUP=$$g \
-		TOKENIZER_SIZES="16000 32000 64000" \
-		TOKENIZER_LANGGROUPS_MAXNRLANGS=6000 \
-		TOKENIZER_LANGGROUPS_MINNRLANGS=25 tatoeba-tokenizer-group; \
+	for l in ${filter ${TATOEBA_LANGS},${MISSING_TOK_LANGS}}; do \
+	  ${MAKE} SRC=eng TRG=$$l DATA_SAMPLING_WEIGHT=0.3 tatoeba-tokenizer; \
 	done
-	for g in ${OPUS_LANG_GROUPS}; do \
-	  ${MAKE} TRGLANG_GROUP=$$g tatoeba-tokenizer-group; \
+
+tatoeba-tokenizer-missing2:
+#	for l in hbs nor msa; do \
+#	  ${MAKE} SRC=eng TRG=$$l DATA_SAMPLING_WEIGHT=0.3 tokenizer-fetch-data; \
+#	done
+	for l in bos_Cyrl bos_Latn srp_Cyrl srp_Latn; do \
+	  ${MAKE} SRC=eng TRG=$$l DATA_SAMPLING_WEIGHT=0.3 tatoeba-tokenizer; \
+	done
+
+tatoeba-tokenizer-missing3:
+	for l in ${filter-out ${TATOEBA_LANGS},${MISSING_TOK_LANGS}}; do \
+	  ${MAKE} SRC=eng TRG=$$l DATA_SAMPLING_WEIGHT=0.3 tatoeba-tokenizer; \
 	done
 
 
@@ -240,6 +248,16 @@ tatoeba-tokenizer-check:
 
 TOKENIZER_SIZES = 16000 32000 64000 8000 4000
 
+tokenizer-fetch-data: 
+	rm -fr ${WORKDIR}/spm
+	mkdir -p ${WORKDIR}/spm/train
+	${MAKE} WORKDIR=${WORKDIR}/spm fetch-datasets
+	${MAKE} WORKDIR=${WORKDIR}/spm langlabel-files
+	${MAKE} WORKDIR=${WORKDIR}/spm rawdata
+	${MAKE} WORKDIR=${WORKDIR}/spm local-config
+
+# ifneq ($(words $(wildcard ${RELEASEDIR}/spm/${LANGPAIRSTR}/opusTC.${SUBWORD_TRG_NAME}.*.spm)),$(words ${TOKENIZER_SIZES}))
+
 tatoeba-tokenizer: 
 ifeq ($(wildcard ${RELEASEDIR}/spm/${LANGPAIRSTR}/opusTC.${SUBWORD_TRG_NAME}.*.spm),)
 	rm -fr ${WORKDIR}/spm
@@ -273,7 +291,7 @@ TATOEBA_SPM_BUCKET = https://object.pouta.csc.fi/Tatoeba-MT-spm
 tatoeba-spmodel-upload:
 	which a-put
 	mkdir -p ${RELEASEDIR}/spm/tmp
-	cd ${RELEASEDIR}/spm/tmp && ln -s ../???-???/* . 
+	cd ${RELEASEDIR}/spm/tmp && ln -s ../*-*/* . 
 	cd ${RELEASEDIR}/spm/tmp && swift upload Tatoeba-MT-spm --changed --skip-identical *.*
 	rm -f ${RELEASEDIR}/spm/tmp/*
 	rmdir ${RELEASEDIR}/spm/tmp
