@@ -373,41 +373,15 @@ elg-fin2zle-pivot:
 	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-fin2zle-trainjob-pbt-pft-bt
 
 
-elg-new-bigmodels:
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-deu2fin-trainjob-bt
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-spa2fin-trainjob
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-fra2fin-trainjob
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-por2fin-trainjob
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-ita2fin-trainjob
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-tur2fin-trainjob
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-ara2fin-trainjob
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-zho2fin-trainjob
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-zls2fin-trainjob
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-zlw2fin-trainjob
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-spa2deu-trainjob
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-fra2deu-trainjob
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-por2deu-trainjob
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-ita2deu-trainjob
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-tur2deu-trainjob
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-ara2deu-trainjob
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-zho2deu-trainjob
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-zls2deu-trainjob
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-zlw2deu-trainjob
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-bat2deu-trainjob
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-gmq2deu-trainjob
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-heb2deu-trainjob
-	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-vie2deu-trainjob
+elg-new-bigmodels: elg-new-bigmodels1 elg-new-bigmodels2 elg-new-bigmodels3 elg-new-bigmodels4
 
 elg-new-bigmodels1:
 	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-deu2fin-trainjob-bt
 	for l in spa fra por ita tur ara zho zls zlw; do \
-	  rm -f work/$${l}-fin/train/*.gz work/$${l}-fin/train/size_per_language_pair.txt; \
-	  rm -f work/$${l}-deu/train/*.gz work/$${l}-deu/train/size_per_language_pair.txt; \
 	  ${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big DATA_SAMPLING_WEIGHT=0.5 tatoeba-$${l}2fin-trainjob; \
 	  ${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big DATA_SAMPLING_WEIGHT=0.5 tatoeba-$${l}2deu-trainjob; \
 	done
 	for l in bat gmq heb vie; do \
-	  rm -f work/$${l}-deu/train/*.gz work/$${l}-deu/train/size_per_language_pair.txt; \
 	  ${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big DATA_SAMPLING_WEIGHT=0.5 tatoeba-$${l}2deu-trainjob; \
 	done
 
@@ -415,38 +389,80 @@ elg-new-bigmodels1:
 elg-new-bigmodels2:
 	${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big tatoeba-fin2deu-trainjob-bt
 	for l in spa fra por ita tur ara zho zls zlw; do \
-	  rm -f work/fin-$${l}/train/*.gz work/fin-$${l}/train/size_per_language_pair.txt; \
-	  rm -f work/deu-$${l}/train/*.gz work/deu-$${l}/train/size_per_language_pair.txt; \
 	  ${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big DATA_SAMPLING_WEIGHT=0.5 tatoeba-fin2$$l-trainjob; \
 	  ${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big DATA_SAMPLING_WEIGHT=0.5 tatoeba-deu2$$l-trainjob; \
 	done
 	for l in bat gmq heb vie; do \
-	  rm -f work/deu-$${l}/train/*.gz work/deu-$${l}/train/size_per_language_pair.txt; \
 	  ${MAKE} MARIAN_EXTRA=--no-restore-corpus MODELTYPE=transformer-big DATA_SAMPLING_WEIGHT=0.5 tatoeba-deu2$$l-trainjob; \
 	done
 
 elg-new-bigmodels3:
 	for l in ara bat cel eus fas gmq heb itc sqi tur vie zho zle zls zlw; do \
-	  rm -f work/$${l}-itc/train/*.gz work/$${l}-itc/train/size_per_language_pair.txt; \
 	  ${MAKE} MARIAN_EXTRA=--no-restore-corpus \
 		MODELTYPE=transformer-big \
 		SKIP_SAME_LANG=1 \
 		DATA_SAMPLING_WEIGHT=0.5 tatoeba-$${l}2itc-trainjob; \
 	done
 	for l in cel eus fas sqi; do \
-	  rm -f work/$${l}-deu/train/*.gz work/$${l}-deu/train/size_per_language_pair.txt; \
 	  ${MAKE} MARIAN_EXTRA=--no-restore-corpus \
 		MODELTYPE=transformer-big \
 		SKIP_SAME_LANG=1 \
 		DATA_SAMPLING_WEIGHT=0.5 tatoeba-$${l}2deu-trainjob; \
 	done
 	for l in ara bat cel eus fas heb sqi tur vie zho zle zls zlw; do \
-	  rm -f work/$${l}-gmq/train/*.gz work/$${l}-gmq/train/size_per_language_pair.txt; \
 	  ${MAKE} MARIAN_EXTRA=--no-restore-corpus \
 		MODELTYPE=transformer-big \
 		SKIP_SAME_LANG=1 \
 		DATA_SAMPLING_WEIGHT=0.5 tatoeba-$${l}2gmq-trainjob; \
 	done
+
+
+elg-new-bigmodels4:
+	for l in ara bat cel eus fas gmq heb sqi tur vie zho zle zls zlw; do \
+	  ${MAKE} MARIAN_EXTRA=--no-restore-corpus \
+		MODELTYPE=transformer-big \
+		SKIP_SAME_LANG=1 \
+		DATA_SAMPLING_WEIGHT=0.5 tatoeba-itc2$${l}-trainjob; \
+	done
+	for l in cel eus fas sqi; do \
+	  ${MAKE} MARIAN_EXTRA=--no-restore-corpus \
+		MODELTYPE=transformer-big \
+		SKIP_SAME_LANG=1 \
+		DATA_SAMPLING_WEIGHT=0.5 tatoeba-deu2$${l}-trainjob; \
+	done
+	for l in ara bat cel eus fas heb gmq sqi tur vie zho zle zls zlw; do \
+	  ${MAKE} MARIAN_EXTRA=--no-restore-corpus \
+		MODELTYPE=transformer-big \
+		SKIP_SAME_LANG=1 \
+		DATA_SAMPLING_WEIGHT=0.5 tatoeba-gmq2$${l}-trainjob; \
+	done
+
+
+
+elg-new-bigmodels-multieval:
+	for l in zls zlw; do \
+	  ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2fin-multieval; \
+	  ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2deu-multieval; \
+	  ${MAKE} MODELTYPE=transformer-big tatoeba-fin2$${l}-multieval; \
+	  ${MAKE} MODELTYPE=transformer-big tatoeba-deu2$${l}-multieval; \
+	done
+	for l in bat gmq; do \
+	  ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2deu-multieval; \
+	  ${MAKE} MODELTYPE=transformer-big tatoeba-deu2$${l}-multieval; \
+	done
+	for l in bat cel gmq zle zls zlw; do \
+	  ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2itc-multieval; \
+	  ${MAKE} MODELTYPE=transformer-big tatoeba-itc2$${l}-multieval; \
+	done
+	${MAKE} MODELTYPE=transformer-big tatoeba-cel2deu-multieval; \
+	${MAKE} MODELTYPE=transformer-big tatoeba-deu2cel-multieval; \
+	for l in bat cel zle zls zlw; do \
+	  ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2gmq-multieval; \
+	  ${MAKE} MODELTYPE=transformer-big tatoeba-gmq2$${l}-multieval; \
+	done
+
+
+
 
 
 elg-zho:

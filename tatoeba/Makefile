@@ -298,6 +298,12 @@ tatoeba-spmodel-upload:
 	swift post Tatoeba-MT-spm --read-acl ".r:*"
 	echo "# Tatoeba-MT Sentence Piece Models" > SentencePieceModels.md
 	echo ""                                  >> SentencePieceModels.md
+	echo "```python"                         >> SentencePieceModels.md
+	echo "import sentencepiece as spm"       >> SentencePieceModels.md
+	echo "sp = spm.SentencePieceProcessor(model_file='opusTC.eng.16k.spm')" >> SentencePieceModels.md
+	echo "print(sp.encode(['Hello world', 'This is a tokenization-test'], out_type=str))" >> SentencePieceModels.md
+	echo "```"                               >> SentencePieceModels.md
+	echo ""                                  >> SentencePieceModels.md
 	swift list Tatoeba-MT-spm | grep '\.spm$$' |\
 	sed 's#^\(.*\)$$#* [\1](${TATOEBA_SPM_BUCKET}/\1) ([vocab](${TATOEBA_SPM_BUCKET}/\1.vocab), [log stdout](${TATOEBA_SPM_BUCKET}/\1.stdout), [log stderr](${TATOEBA_SPM_BUCKET}/\1.stderr))#' >> SentencePieceModels.md
 

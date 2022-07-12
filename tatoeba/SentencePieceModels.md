@@ -1,5 +1,11 @@
 # Tatoeba-MT Sentence Piece Models
 
+```python
+import sentencepiece as spm
+sp = spm.SentencePieceProcessor(model_file='opusTC.eng.16k.spm')
+print(sp.encode(['Hello world', 'This is a tokenization-test'], out_type=str))
+```
+
 * [opusTC.aav.16k.spm](https://object.pouta.csc.fi/Tatoeba-MT-spm/opusTC.aav.16k.spm) ([vocab](https://object.pouta.csc.fi/Tatoeba-MT-spm/opusTC.aav.16k.spm.vocab), [log stdout](https://object.pouta.csc.fi/Tatoeba-MT-spm/opusTC.aav.16k.spm.stdout), [log stderr](https://object.pouta.csc.fi/Tatoeba-MT-spm/opusTC.aav.16k.spm.stderr))
 * [opusTC.aav.4k.spm](https://object.pouta.csc.fi/Tatoeba-MT-spm/opusTC.aav.4k.spm) ([vocab](https://object.pouta.csc.fi/Tatoeba-MT-spm/opusTC.aav.4k.spm.vocab), [log stdout](https://object.pouta.csc.fi/Tatoeba-MT-spm/opusTC.aav.4k.spm.stdout), [log stderr](https://object.pouta.csc.fi/Tatoeba-MT-spm/opusTC.aav.4k.spm.stderr))
 * [opusTC.aav.8k.spm](https://object.pouta.csc.fi/Tatoeba-MT-spm/opusTC.aav.8k.spm) ([vocab](https://object.pouta.csc.fi/Tatoeba-MT-spm/opusTC.aav.8k.spm.vocab), [log stdout](https://object.pouta.csc.fi/Tatoeba-MT-spm/opusTC.aav.8k.spm.stdout), [log stderr](https://object.pouta.csc.fi/Tatoeba-MT-spm/opusTC.aav.8k.spm.stderr))
