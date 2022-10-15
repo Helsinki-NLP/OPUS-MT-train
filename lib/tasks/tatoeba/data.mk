@@ -37,6 +37,8 @@ fetch-datasets fetch-tatoeba-datasets:
 	  for t in ${MACRO_TRGLANGS}; do \
 	    if [ `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
 	        echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
+	    elif [ `echo '${TATOEBA_LANGPAIRS}' | tr ' ' "\n" | egrep "$$s-$$t|$$t-$$s" | wc -l` -eq 0 ]; then \
+	        echo ".... no package released for $$s-$$t!"; \
 	    else \
 	      if [ "$$s" \< "$$t" ]; then \
 	        if [ ! -e ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$s-$$t.clean.$$s.gz ]; then \

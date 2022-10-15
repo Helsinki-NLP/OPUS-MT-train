@@ -46,8 +46,10 @@ else
 endif
 
 
-CPU_MODULES = gcc/8.3.0 cuda/10.1.168 cudnn/7.6.1.34-10.1 intel-mkl/2019.0.4 python-env 
-GPU_MODULES = gcc/8.3.0 cuda/10.1.168 cudnn/7.6.1.34-10.1 intel-mkl/2019.0.4 python-env 
+# CPU_MODULES = gcc/8.3.0 cuda/10.1.168 cudnn/7.6.1.34-10.1 intel-mkl/2019.0.4 python-env 
+# GPU_MODULES = gcc/8.3.0 cuda/10.1.168 cudnn/7.6.1.34-10.1 intel-mkl/2019.0.4 python-env
+CPU_MODULES = perl python-data cuda intel-oneapi-mkl openmpi
+GPU_MODULES = perl python-data cuda intel-oneapi-mkl openmpi
 LOAD_CPU_ENV = module load ${CPU_MODULES} && module list
 LOAD_GPU_ENV = module load ${GPU_MODULES} && module list
 
@@ -70,10 +72,10 @@ endif
 HPC_EXTRA1 = \#SBATCH --account=${CSCPROJECT}
 
 
-BUILD_MODULES  = StdEnv python-env cmake perl/5.30.0
+BUILD_MODULES  = StdEnv perl python-data cuda intel-oneapi-mkl openmpi cmake
 LOAD_BUILD_ENV = module purge && module load ${BUILD_MODULES} && module list
 
-MARIAN_BUILD_MODULES  = gcc/8.3.0 cuda/10.1.168 cudnn/7.6.1.34-10.1 intel-mkl/2019.0.4 cmake/3.18.2
+MARIAN_BUILD_MODULES  = StdEnv perl python-data cuda intel-oneapi-mkl openmpi cmake
 LOAD_MARIAN_BUILD_ENV = module purge && module load ${MARIAN_BUILD_MODULES} && module list
 MARIAN_BUILD_OPTIONS  =	-DTcmalloc_INCLUDE_DIR=/appl/spack/install-tree/gcc-8.3.0/gperftools-2.7-5w7w2c/include \
 			-DTcmalloc_LIBRARY=/appl/spack/install-tree/gcc-8.3.0/gperftools-2.7-5w7w2c/lib/libtcmalloc.so \
@@ -91,3 +93,4 @@ MARIAN_BUILD_OPTIONS  =	-DTcmalloc_INCLUDE_DIR=/appl/spack/install-tree/gcc-8.3.
 			-DFBGEMM_STATIC=1
 
 
+LOAD_COMET_ENV = module load pytorch &&

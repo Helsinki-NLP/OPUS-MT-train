@@ -2,11 +2,19 @@
 # evaluate released Tatoeba MT models
 # with existing benchmarks (collected in OPUS-MT-testsets)
 #
+#
+#
+# comet-score:
+#   on puhti: module load pytorch && comet-score
+#   on mahti: module load python-data && comet-score
+
 
 
 ## set the home directory of the repository
 ## this is to find the included makefiles
 ## (important to have a trailing '/')
+
+
 
 SHELL    := bash
 PWD      := ${shell pwd}
@@ -19,12 +27,20 @@ include ${REPOHOME}lib/slurm.mk
 GPUJOB_HPC_MEM = 20g
 
 
-MODEL_STORAGE  := https://object.pouta.csc.fi/Tatoeba-MT-models
-MODEL_DISTS    := ${shell ${WGET} -q -O - ${MODEL_STORAGE}/index.txt | grep '.zip$$' | grep -v '.eval.zip$$'}
-MODEL_DIST     = ${firstword ${MODEL_DISTS}}
-MODEL          = ${MODEL_DIST:.zip=}
-MODEL_LANGPAIR = ${firstword ${subst /, ,${MODEL_DIST}}}
-MODEL_URL      = ${MODEL_STORAGE}/${MODEL_DIST}
+MODEL_STORAGE     := https://object.pouta.csc.fi/Tatoeba-MT-models
+ifndef MODEL_DISTS
+ifneq ($(wildcard models.missing),)
+  MODEL_DISTS     := $(shell cat models.missing)
+else
+  MODEL_DISTS     := ${shell ${WGET} -q -O - ${MODEL_STORAGE}/index.txt | grep '.zip$$' | grep -v '.eval.zip$$'}
+endif
+endif
+
+MODEL_DIST         = ${firstword ${MODEL_DISTS}}
+MODEL              = ${MODEL_DIST:.zip=}
+MODEL_LANGPAIR     = ${firstword ${subst /, ,${MODEL_DIST}}}
+MODEL_URL          = ${MODEL_STORAGE}/${MODEL_DIST}
+MODEL_EVAL_URL     = ${MODEL_URL:.zip=.eval.zip}
 
 ## directory with all test sets (submodule OPUS-MT-testsets)
 TESTSET_HOME   := ${REPOHOME}OPUS-MT-testsets/testsets
@@ -37,12 +53,45 @@ WORK_DIR       = ${WORK_HOME}/${MODEL}
 ## model directory (for test results)
 ## model score file and zipfile with evaluation results
 # MODEL_HOME     = ${REPOHOME}models-tatoeba
-MODEL_HOME     = ${REPOHOME}tatoeba/models
-MODEL_DIR      = ${MODEL_HOME}/${MODEL}
-MODEL_SCORES   = ${MODEL_DIR}.scores.txt
-MODEL_EVALZIP  = ${MODEL_DIR}.eval.zip
-
+MODEL_HOME      = ${REPOHOME}tatoeba/models
+MODEL_DIR       = ${MODEL_HOME}/${MODEL}
+MODEL_SCORES    = ${MODEL_DIR}.scores.txt
+MODEL_EVALZIP   = ${MODEL_DIR}.eval.zip
 LEADERBOARD_DIR = ${REPOHOME}scores
+
+
+MODEL_BLEUSCORES    = ${MODEL_DIR}.bleu-scores.txt
+MODEL_CHRFSCORES    = ${MODEL_DIR}.chrf-scores.txt
+MODEL_COMETSCORES   = ${MODEL_DIR}.comet-scores.txt
+
+
+## fix individual score files for all modesl in the index!
+
+ALL_MODEL_BLEUSCORES = ${patsubst %.zip,%.bleu-scores,${MODEL_DISTS}}
+ALL_MODEL_CHRFSCORES = ${patsubst %.zip,%.chrf-scores,${MODEL_DISTS}}
+
+all-individual-scores: ${ALL_MODEL_BLEUSCORES} ${ALL_MODEL_CHRFSCORES}
+
+${ALL_MODEL_BLEUSCORES}:
+	-${MAKE} MODEL_DISTS=${@:.bleu-scores=.zip} individual-scores
+#	-${MAKE} MODEL_DISTS=${@:.bleu-scores=.zip} ${MODEL_HOME}/$@.txt
+
+${ALL_MODEL_CHRFSCORES}:
+	-${MAKE} MODEL_DISTS=${@:.chrf-scores=.zip} ${MODEL_HOME}/$@.txt
+
+
+
+## MODEL_NOTEVALS ... all released models that do not have an evaluation file yet
+## MODEL_LOCAL ...... all model packages in the local release dir
+##
+## NEW: don't set those variables by default as this slows down other makefile calls
+
+
+# MODEL_NOTEVALS    := $(shell ${WGET} -q -O - ${MODEL_STORAGE}/index.txt | grep '.zip$$' | \
+			sed 's/\.eval\.zip/.zip/' | sort | uniq -c | sed 's/^ *//' | grep '^1 ' | cut -f2 -d' ')
+# MODEL_LOCAL       := $(patsubst ${MODEL_HOME}/%,%,$(filter-out %.eval.zip,$(shell find ${MODEL_HOME}/ -type f -name '*.zip')))
+
+
 
 ## all zip files with benchmark results
 MODEL_EVALZIPS := ${patsubst %.zip,${MODEL_HOME}/%.eval.zip,${MODEL_DISTS}}
@@ -59,38 +108,38 @@ all: ${MODEL_EVALZIPS}
 first: $(firstword ${MODEL_EVALZIPS})
 
 
-## check models that still need to be evaluated
-## (i.e. *.eval.zip does not exist)
-MODEL_EVALCHECK := ${patsubst %.zip,${MODEL_HOME}/%.eval.check,${MODEL_DISTS}}
-
-.PNONY: print-eval-needed ${MODEL_EVALCHECK}
-print-eval-needed: ${MODEL_EVALCHECK}
-${MODEL_EVALCHECK}:
-	@if [ ! -e $(@:.check=.zip) ]; then \
-	  echo "need to make $(@:.check=.zip)"; \
-	fi
+print-model-list:
+	@echo "${MODEL_DISTS}"
+	@echo "number of models: ${words ${MODEL_DISTS}}"
 
 #-------------------------------------------------
 ## phony targets to evaluate only new models
 ## or only models that exist locally
 ## (no dependency on testset index)
 #-------------------------------------------------
-MODEL_EVALNEW := ${patsubst %.zip,${MODEL_HOME}/%.eval.new,${MODEL_DISTS}}
 
-.PNONY: eval-new eval-new-models ${MODEL_EVALNEW}
-eval-new eval-new-models: ${MODEL_EVALNEW}
-${MODEL_EVALNEW}:
-	@if [ ! -e $(@:.new=.zip) ]; then \
-	  ${MAKE} MODEL_DIST=${patsubst ${MODEL_HOME}/%.eval.new,%.zip,$@} eval-model; \
-	fi
+## check models that still need to be evaluated
+## (i.e. *.eval.zip does not exist)
+
+.PNONY: print-eval-needed
+print-eval-needed:
+	@echo "$(shell ${WGET} -q -O - ${MODEL_STORAGE}/index.txt | grep '.zip$$' | \
+		sed 's/\.eval\.zip/.zip/' | sort | uniq -c | sed 's/^ *//' | grep '^1 ' | cut -f2 -d' ')" | \
+	tr ' ' "\n"
+
+.PNONY: eval-new eval-new-models
+eval-new eval-new-models:
+	${MAKE} MODEL_DISTS="$(shell ${WGET} -q -O - ${MODEL_STORAGE}/index.txt | grep '.zip$$' | \
+		sed 's/\.eval\.zip/.zip/' | sort | uniq -c | sed 's/^ *//' | grep '^1 ' | cut -f2 -d' ')" all
 
 
-## filter out all models that exist locally
-MODEL_LOCAL := ${filter ${patsubst %.zip,%.eval.new,$(wildcard ${MODEL_HOME}/*/*.zip)},${MODEL_EVALNEW}}
-eval-local: ${MODEL_LOCAL}
+.PHONY: print-eval-local
 print-eval-local:
-	@echo ${MODEL_LOCAL} | tr ' ' "\n"
+	@echo "$(patsubst ${MODEL_HOME}/%,%,$(filter-out %.eval.zip,$(shell find ${MODEL_HOME}/ -type f -name '*.zip')))" | tr ' ' "\n"
 
+.PHONY: eval-local
+eval-local:
+	${MAKE} MODEL_DISTS="$(patsubst ${MODEL_HOME}/%,%,$(filter-out %.eval.zip,$(shell find ${MODEL_HOME}/ -type f -name '*.zip')))" all
 
 #-------------------------------------------------
 ## create zip-files with all evaluation files
@@ -103,7 +152,7 @@ ${MODEL_EVALZIPS}: ${TESTSET_INDEX}
 	  mkdir -p ${@:.eval.zip=}; \
 	  unzip -d ${@:.eval.zip=} $@; \
 	fi
-	${MAKE} MODEL_DIST=${patsubst ${MODEL_HOME}/%.eval.zip,%.zip,$@} eval-model
+	-${MAKE} MODEL_DISTS=${patsubst ${MODEL_HOME}/%.eval.zip,%.zip,$@} eval-model
 
 
 #-------------------------------------------------
@@ -118,12 +167,15 @@ eval-model: ${MODEL_SCORES}
 	  ${MAKE} sort-leaderboards; \
 	fi
 	if [ -d ${MODEL_DIR} ]; then \
-	  cd ${MODEL_DIR} && zip ${MODEL_EVALZIP} *.eval *.compare; \
+	  cd ${MODEL_DIR} && zip ${MODEL_EVALZIP} *.*; \
 	  rm -f ${MODEL_DIR}/*.eval; \
 	  rm -f ${MODEL_DIR}/*.compare; \
+	  rm -f ${MODEL_DIR}/*.comet; \
 	  rm -f ${MODEL_DIR}.done; \
 	  rmdir ${MODEL_DIR}; \
 	fi
+
+#	  cd ${MODEL_DIR} && zip ${MODEL_EVALZIP} *.eval *.compare;
 
 
 ## temporary directory with all benchmark results
@@ -148,15 +200,46 @@ cleanup:
 
 ## fetch translation model
 .PHONY: fetch
-fetch: ${WORK_DIR}/model/decoder.yml
+fetch: ${WORK_DIR}/model/decoder.yml ${MODEL_DIR}
 
+
+## prepare the model evaluation file directory
+## fetch already existing evaluations
+${MODEL_DIR}:
+	mkdir -p $@
+	-if [ -e ${MODEL_EVALZIP} ]; then \
+	  cd ${MODEL_DIR}; \
+	  unzip -n ${MODEL_EVALZIP}; \
+	fi
+	-${WGET} -q -O ${MODEL_DIR}/eval.zip ${MODEL_EVAL_URL}
+	-if [ -e ${MODEL_DIR}/eval.zip ]; then \
+	  cd ${MODEL_DIR}; \
+	  unzip -n eval.zip; \
+	  rm -f eval.zip; \
+	fi
+
+
+localmodel:
+	if [ -e ${MODEL_HOME}/${MODEL_DIST} ]; then \
+	  echo "local model found: ${MODEL_HOME}/${MODEL_DIST}"; \
+	else \
+	  echo "${MODEL_URL}"; \
+	fi
+
+## fetch the model (either from local release dir or from the model storage)
 ${WORK_DIR}/model/decoder.yml:
 	mkdir -p ${dir $@}
-	${WGET} -q -O ${dir $@}model.zip ${MODEL_URL}
+	if [ -e ${MODEL_HOME}/${MODEL_DIST} ]; then \
+	  cp ${MODEL_HOME}/${MODEL_DIST} ${dir $@}model.zip; \
+	else \
+	  ${WGET} -q -O ${dir $@}model.zip ${MODEL_URL}; \
+	fi
 	unzip -d ${dir $@} ${dir $@}model.zip
 ## fix an old problem with the pre-process script
 	mv ${dir $@}preprocess.sh ${dir $@}preprocess-old.sh
-	sed 's#perl -C -pe.*$$#perl -C -pe  "s/(?!\\n)\\p{C}/ /g;" |#' \
+	sed -e 's#perl -C -pe.*$$#perl -C -pe  "s/(?!\\n)\\p{C}/ /g;" |#' \
+	    -e 's#/projappl/project_2001569#$${HOME}/projappl#' \
+	    -e 's#SPMENCODE=.*$$#SPMENCODE=`which spm_encode || echo "$${PWD}/tools/marian-dev/build/spm_encode"`#' \
 		< ${dir $@}preprocess-old.sh > ${dir $@}preprocess.sh
 	chmod +x ${dir $@}preprocess.sh
 
@@ -194,6 +277,33 @@ TESTSETS      = ${notdir ${basename ${wildcard ${TESTSET_DIR}/*.${SRC}}}}
 TESTSET       = ${firstword ${TESTSETS}}
 
 
+
+MODEL_EVAL_MISSING = $(patsubst %,%.missing,${ALL_LANGPAIRS})
+METRICS = bleu chrf comet
+
+.PHONY: find-missing
+find-missing: models.missing
+models.missing: ${MODEL_EVAL_MISSING}
+	find . -name '*.missing' | xargs cat | cut -f1 | sort -u > $@
+
+${MODEL_EVAL_MISSING}:
+	if [ -e ${LEADERBOARD_DIR}/$(@:.missing=)/model-list.txt ]; then \
+	  for m in `grep 'Tatoeba-MT-models' ${LEADERBOARD_DIR}/$(@:.missing=)/model-list.txt`; do\
+	    for t in $(sort $(basename $(filter-out %.labels,$(notdir $(wildcard ${TESTSET_HOME}/$(@:.missing=)/*.*))))); do \
+	      for b in ${METRICS}; do \
+	        if [ ! -f ${LEADERBOARD_DIR}/$(@:.missing=)/$$t/$$b-scores.txt ]; then \
+	          echo "$$m	$$t	$$b" | sed 's#^.*MT-models/##' >> $@; \
+	        elif [ `grep "$$m" ${LEADERBOARD_DIR}/$(@:.missing=)/$$t/$$b-scores.txt | wc -l` -eq 0 ]; then \
+	          echo "$$m	$$t	$$b" | sed 's#^.*MT-models/##' >> $@; \
+	        fi \
+	      done \
+	    done \
+	  done \
+	fi
+
+#	  for t in `find ${LEADERBOARD_DIR}/$$l -mindepth 1 -maxdepth 1 -type d -printf " %f"`; do \
+
+
 ## eval all language pairs
 .PHONY: eval-langpairs
 eval-langpairs:
@@ -205,8 +315,49 @@ eval-langpairs:
 .PHONY: eval-testsets
 eval-testsets:
 	for t in ${TESTSETS}; do \
-	  ${MAKE} TESTSET=$$t eval; \
+	  ${MAKE} TESTSET=$$t eval comet-eval; \
 	done
+
+
+
+
+## make score files for individual metrics
+## (more convenient to read and extend with new metrics)
+## TODO: make them by default and create proper dependencies
+
+individual-scores: ${MODEL_BLEUSCORES} ${MODEL_CHRFSCORES} ${MODEL_COMETSCORES}
+
+${MODEL_BLEUSCORES}: ${MODEL_SCORES}
+	cut -f1,2,4 ${MODEL_SCORES} | \
+	sed 's/\(news.*[0-9][0-9][0-9][0-9]\)\-[a-z][a-z][a-z][a-z]	/\1	/' |\
+	sed -e 's/\(news.*2021\)\.[a-z][a-z]\-[a-z][a-z]	/\1	/' |\
+	rev | uniq -f1 | rev > $@
+
+
+${MODEL_CHRFSCORES}: ${MODEL_SCORES}
+	cut -f1,2,3 ${MODEL_SCORES} |\
+	sed 's/\(news.*[0-9][0-9][0-9][0-9]\)\-[a-z][a-z][a-z][a-z]	/\1	/' |\
+	sed -e 's/\(news.*2021\)\.[a-z][a-z]\-[a-z][a-z]	/\1	/' |\
+	rev | uniq -f1 | rev > $@
+
+
+EVAL_FILES       = ${wildcard ${MODEL_DIR}/*.eval}
+COMET_EVAL_FILES = ${wildcard ${MODEL_DIR}/*.comet}
+${MODEL_COMETSCORES}: ${COMET_EVAL_FILES}
+	if [ -d ${MODEL_DIR} ]; then \
+	  mkdir -p $(dir $@); \
+	  grep -H COMET ${MODEL_DIR}/*eval | sort                        > $@.comet; \
+	  cut -f1 -d: $@.comet | rev | cut -f2 -d. | rev                 > $@.langs; \
+	  cut -f1 -d: $@.comet | rev | cut -f1 -d/ | cut -f3- -d. | rev  > $@.testsets; \
+	  cat $@.comet | rev | cut -f1 -d' ' | rev                       > $@.comet-scores; \
+	  paste $@.langs $@.testsets $@.comet-scores                     >> $@; \
+	  cat $@ |\
+	  sed -e 's/\(news.*[0-9][0-9][0-9][0-9]\)-[a-z][a-z][a-z][a-z]	/\1	/' |  \
+	  sed -e 's/\(news.*2021\)\.[a-z][a-z]\-[a-z][a-z]	/\1	/' |\
+	  rev | uniq -f1 | rev                                           > $@.sorted; \
+	  mv -f $@.sorted $@; \
+	  rm -f $@.comet $@.langs $@.testsets $@.comet-scores; \
+	fi
 
 #-------------------------------------------------
 # create input file for translation
@@ -224,6 +375,9 @@ else
   USE_TARGET_LABELS = 0
 endif
 
+
+ifneq (${wildcard ${WORK_DIR}}/model/preprocess.sh,)
+
 ## double-check whether the preprocessing script
 ## requires both language IDs or not
 ifeq (${shell grep 'source-langid target-langid' ${WORK_DIR}/model/preprocess.sh 2>/dev/null | wc -l},1)
@@ -235,6 +389,8 @@ ifeq (${USE_BOTH_LANGIDS},1)
   PREPROCESS = ${WORK_DIR}/model/preprocess.sh ${SRC} ${TRG} ${WORK_DIR}/model/source.spm
 else
   PREPROCESS = ${WORK_DIR}/model/preprocess.sh ${SRC} ${WORK_DIR}/model/source.spm
+endif
+
 endif
 
 
@@ -306,14 +462,71 @@ ${MODEL_DIR}/${TESTSET}.${LANGPAIR}.eval:
 	fi
 
 
+
+## make the comet score
+
+.PHONY: comet
+comet: 
+	${MAKE} fetch
+	${MAKE} comet-langpairs
+	${MAKE} ${MODEL_COMETSCORES}
+
+
+comet-score-file: ${MODEL_COMETSCORES}
+comet-register-scores: ${MODEL_COMETSCORES:.txt=.registered}
+bleu-register-scores: ${MODEL_BLEUSCORES:.txt=.registered}
+chrf-register-scores: ${MODEL_CHRFSCORES:.txt=.registered}
+
+
+
+.PHONY: comet-langpairs
+comet-langpairs:
+	for l in ${LANGPAIRS}; do \
+	  ${MAKE} LANGPAIR=$$l comet-testsets; \
+	done
+
+.PHONY: comet-testsets
+comet-testsets:
+	for t in ${TESTSETS}; do \
+	  ${MAKE} TESTSET=$$t comet-eval; \
+	done
+
+.PHONY: comet-eval
+comet-eval: ${MODEL_DIR}/${TESTSET}.${LANGPAIR}.comet
+
+ifneq (${GPU_AVAILABLE},1)
+  COMET_PARAM += --gpus 0
+endif
+
+${MODEL_DIR}/${TESTSET}.${LANGPAIR}.comet: ${MODEL_DIR}/${TESTSET}.${LANGPAIR}.eval
+	mkdir -p ${dir $@}
+	sed -n '1~4p' $(<:.eval=.compare) > $@.src
+	sed -n '2~4p' $(<:.eval=.compare) > $@.ref
+	sed -n '3~4p' $(<:.eval=.compare) > $@.hyp
+	${LOAD_COMET_ENV} comet-score ${COMET_PARAM} \
+		-s $@.src -r $@.ref -t $@.hyp | cut -f2,3 > $@
+	tail -1 $@ | sed 's/^.*score:/COMET+default =/' >> $<
+	rm -f $@.src $@.ref $@.hyp
+
+
 #-------------------------------------------------
 # collect all scores in a file
 #-------------------------------------------------
+#
+# updating scores for models that already have some scores registered
+# - need to fetch eval file package
+# - avoid re-running things that are already done
+# - ingest the new evaluation scores
+#
 
 .PHONY: scores
 scores: ${MODEL_SCORES}
 
-${MODEL_SCORES}: ${TESTSET_INDEX}
+${MODEL_SCORES}: ${TESTSET_INDEX} ${MODEL_COMETSCORES}
+	-if [ ! -e $@ ]; then \
+	  mkdir -p $(dir $@); \
+	  wget -qq -O $@ ${MODEL_STORAGE}/${MODEL}.scores.txt; \
+	fi
 	${MAKE} ${MODEL_DIR}.done
 	if [ -d ${MODEL_DIR} ]; then \
 	  grep -H BLEU ${MODEL_DIR}/*eval | sort                   > $@.bleu; \
@@ -330,11 +543,17 @@ ${MODEL_SCORES}: ${TESTSET_INDEX}
 	  cat $@.bleu | rev | cut -f1 -d' ' | rev | cut -f1 -d')'  > $@.nrwords; \
 	  paste $@.langs $@.testsets \
 		$@.chrf-scores $@.bleu-scores \
-		$@.urls $@.nrlines $@.nrwords                    > $@; \
+		$@.urls $@.nrlines $@.nrwords                     >> $@; \
+	  cat $@ | \
+	  sed -e 's/\(news.*[0-9][0-9][0-9][0-9]\)-[a-z][a-z][a-z][a-z]	/\1	/' |  \
+	  sed -e 's/\(news.*2021\)\.[a-z][a-z]\-[a-z][a-z]	/\1	/' |\
+	  rev | uniq -f5 | rev | sort -u                           > $@.sorted; \
+	  mv -f $@.sorted $@; \
 	  rm -f $@.bleu $@.chrf $@.langs $@.testsets \
 		$@.chrf-scores $@.bleu-scores \
 		$@.urls $@.nrlines $@.nrwords; \
 	fi
+	${MAKE} individual-scores
 
 
 
@@ -348,6 +567,11 @@ SCOREFILES := ${wildcard ${MODEL_HOME}/*/*.scores.txt}
 SCOREFILES_DONE = ${SCOREFILES:.txt=.registered}
 SCOREFILE_DONE = ${MODEL_SCORES:.txt=.registered}
 
+BLEUSCOREFILE_DONE = ${MODEL_BLEUSCORES:.txt=.registered}
+CHRFSCOREFILE_DONE = ${MODEL_CHRFSCORES:.txt=.registered}
+COMETSCOREFILE_DONE = ${MODEL_COMETSCORES:.txt=.registered}
+
+
 ## update all leader boards with all scores
 update-leaderboards: ${SCOREFILES_DONE}
 	${MAKE} sort-leaderboards
@@ -355,13 +579,21 @@ update-leaderboards: ${SCOREFILES_DONE}
 ## register the scores for the current model
 ## (scores will be added to some temporary files sorted by language pair and benchmark)
 ## NOTE: this removes langIDs from newstest sets to avoid confusion and duplicates
-register-scores: ${SCOREFILE_DONE}
+
+# register-scores: ${SCOREFILE_DONE}
+# register-scores: ${BLEUSCOREFILE_DONE} ${CHRFSCOREFILE_DONE} ${COMETSCOREFILE_DONE}
+register-scores: ${SCOREFILE_DONE} ${COMETSCOREFILE_DONE}
+
 
 ${SCOREFILES_DONE}: %.registered: %.txt
 	@echo "register scores from ${patsubst ${MODEL_HOME}/%,%,$<}"
 	@cat $< | perl -e 'while (<>){ @a=split(/\t/); $$a[1]=~s/^(news.*)\-[a-z]{4}/$$1/; system "mkdir -p ${LEADERBOARD_DIR}/$$a[0]/$$a[1]"; open B,">>${LEADERBOARD_DIR}/$$a[0]/$$a[1]/bleu-scores.$(subst /,.,${patsubst ${MODEL_HOME}/%,%,$<}).unsorted.txt"; open C,">>${LEADERBOARD_DIR}/$$a[0]/$$a[1]/chrf-scores.$(subst /,.,${patsubst ${MODEL_HOME}/%,%,$<}).unsorted.txt"; print B "$$a[3]\t$$a[4]\n"; print C "$$a[2]\t$$a[4]\n"; close B; close C; }'
 	touch $@
 
+${MODEL_DIR}.%-scores.registered: ${MODEL_DIR}.%-scores.txt
+	@echo "register scores from ${patsubst ${MODEL_HOME}/%,%,$<}"
+	@cat $< | perl -e 'while (<>){ chomp; @a=split(/\t/);system "mkdir -p ${LEADERBOARD_DIR}/$$a[0]/$$a[1]"; open C,">>${LEADERBOARD_DIR}/$$a[0]/$$a[1]/$(patsubst ${MODEL_DIR}.%-scores.txt,%-scores,$<).$(subst /,.,${patsubst ${MODEL_HOME}/%,%,$<}).unsorted.txt"; print C "$$a[2]\t${MODEL_URL}\n"; close C; }'
+	touch $@
 
 ##-------------------------------------------------------------------
 ## UPDATE_SCORE_DIRS = directory that contains new scores
@@ -369,13 +601,17 @@ ${SCOREFILES_DONE}: %.registered: %.txt
 ## LEADERBOARDS_BLEU = list of chr-F leader boards that need to be sorted
 ##-------------------------------------------------------------------
 
-UPDATE_SCORE_DIRS := $(sort $(dir ${wildcard ${LEADERBOARD_DIR}/*/*/*.unsorted.txt}))
-LEADERBOARDS_BLEU := $(patsubst %,%bleu-scores.txt,${UPDATE_SCORE_DIRS})
-LEADERBOARDS_CHRF := $(patsubst %,%chrf-scores.txt,${UPDATE_SCORE_DIRS})
+UPDATE_SCORE_DIRS  := $(sort $(dir ${wildcard ${LEADERBOARD_DIR}/*/*/*.unsorted.txt}))
+LEADERBOARDS_BLEU  := $(patsubst %,%bleu-scores.txt,${UPDATE_SCORE_DIRS})
+LEADERBOARDS_CHRF  := $(patsubst %,%chrf-scores.txt,${UPDATE_SCORE_DIRS})
+LEADERBOARDS_COMET := $(patsubst %,%comet-scores.txt,${UPDATE_SCORE_DIRS})
 
 ## sort all leaderboards for which we have new unsorted scores
-.PHONY: sort-leaderboards
-sort-leaderboards: ${LEADERBOARDS_BLEU} ${LEADERBOARDS_CHRF}
+.PHONY: sort-leaderboards sort-bleu-leaderboards sort-chrf-leaderboards sort-comet-leaderboards
+sort-leaderboards: ${LEADERBOARDS_BLEU} ${LEADERBOARDS_CHRF} ${LEADERBOARDS_COMET}
+sort-bleu-leaderboards:  ${LEADERBOARDS_BLEU}
+sort-chrf-leaderboards:  ${LEADERBOARDS_CHRF}
+sort-comet-leaderboards:  ${LEADERBOARDS_COMET}
 
 ${LEADERBOARDS_BLEU}: ${UPDATE_SCORE_DIRS}
 	@echo "sort ${patsubst ${LEADERBOARD_DIR}/%,%,$@}"
@@ -387,5 +623,11 @@ ${LEADERBOARDS_CHRF}: ${UPDATE_SCORE_DIRS}
 	@echo "sort ${patsubst ${LEADERBOARD_DIR}/%,%,$@}"
 	@cat $(dir $@)chrf-scores*.txt | grep '^[0-9]' | sort -k1,1nr | uniq -f1 > $@.sorted
 	@rm -f $(dir $@)chrf-scores*.txt
+	@mv $@.sorted $@
+
+${LEADERBOARDS_COMET}: ${UPDATE_SCORE_DIRS}
+	@echo "sort ${patsubst ${LEADERBOARD_DIR}/%,%,$@}"
+	@cat $(dir $@)comet-scores*.txt | grep '^[0-9]' | sort -k1,1nr | uniq -f1 > $@.sorted
+	@rm -f $(dir $@)comet-scores*.txt
 	@mv $@.sorted $@
 

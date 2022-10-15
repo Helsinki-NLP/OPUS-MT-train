@@ -124,6 +124,9 @@ EXTRACT_LEX    ?= ${shell which extract_lex 2>/dev/null || echo ${TOOLSDIR}/extr
 MOSESSCRIPTS   ?= ${TOOLSDIR}/moses-scripts/scripts
 TMX2MOSES      ?= ${shell which tmx2moses 2>/dev/null || echo ${TOOLSDIR}/OpusTools-perl/scripts/convert/tmx2moses}
 
+GET_ISO_CODE   ?= ${ISO639} -m
+
+
 ## marian-nmt binaries
 
 MARIAN_TRAIN   = ${MARIAN_HOME}marian

@@ -246,6 +246,7 @@ DEVMINSIZE    ?= 250
 OPUSREAD_ARGS = 
 
 
+
 ##----------------------------------------------------------------------------
 ## resources in OPUS
 ##----------------------------------------------------------------------------
@@ -650,9 +651,6 @@ else
 endif
 
 
-## TODO: do we need to reduce workspace for decoding?
-# MARIAN_DECODER_WORKSPACE = $$((${MARIAN_WORKSPACE} / 2))
-MARIAN_DECODER_WORKSPACE = 10000
 
 
 ## weights associated with training examples
@@ -682,6 +680,11 @@ MARIAN_MAXI_BATCH = 512
 # MARIAN_MAXI_BATCH = 1024
 # MARIAN_MINI_BATCH = 768
 # MARIAN_MAXI_BATCH = 2048
+
+
+## TODO: do we need to reduce workspace for decoding?
+# MARIAN_DECODER_WORKSPACE = $$((${MARIAN_WORKSPACE} / 2))
+MARIAN_DECODER_WORKSPACE = 10000
 
 
 ifeq ($(GPU_AVAILABLE),1)

@@ -438,28 +438,68 @@ elg-new-bigmodels4:
 	done
 
 
+elg-new-bigmodels5:
+	${MAKE} MODELTYPE=transformer-big MARIAN_EXTRA=--no-restore-corpus \
+		SKIP_SAME_LANG=1 \
+		DATA_SAMPLING_WEIGHT=0.5 \
+		SRCLANGS="jpn kor zho" \
+		TRGLANGS="jpn kor zho" tatoeba-job
+
+
 
 elg-new-bigmodels-multieval:
-	for l in zls zlw; do \
+	-for l in ara deu fin fra gmq heb jpn por spa zho; do \
+	  ${MAKE} MODELTYPE=transformer-big tatoeba-sla2$${l}-multieval; \
+	  ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2sla-multieval; \
+	done
+	-${MAKE} MODELTYPE=transformer-big tatoeba-sla2sla-multieval
+	-${MAKE} MODELTYPE=transformer-big tatoeba-sla2kor-multieval-separate-spm
+	-${MAKE} MODELTYPE=transformer-big tatoeba-kor2sla-multieval-separate-spm
+	-for l in zls zlw; do \
 	  ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2fin-multieval; \
 	  ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2deu-multieval; \
 	  ${MAKE} MODELTYPE=transformer-big tatoeba-fin2$${l}-multieval; \
 	  ${MAKE} MODELTYPE=transformer-big tatoeba-deu2$${l}-multieval; \
 	done
-	for l in bat gmq; do \
+	-for l in bat gmq; do \
 	  ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2deu-multieval; \
 	  ${MAKE} MODELTYPE=transformer-big tatoeba-deu2$${l}-multieval; \
 	done
-	for l in bat cel gmq zle zls zlw; do \
+	-for l in ara bat cel eus fas gmq gmw heb sqi tur vie zho zle zls zlw; do \
 	  ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2itc-multieval; \
 	  ${MAKE} MODELTYPE=transformer-big tatoeba-itc2$${l}-multieval; \
 	done
-	${MAKE} MODELTYPE=transformer-big tatoeba-cel2deu-multieval; \
-	${MAKE} MODELTYPE=transformer-big tatoeba-deu2cel-multieval; \
-	for l in bat cel zle zls zlw; do \
+	-for l in ara bat cel eus fas heb sqi tur vie zho zle zls zlw; do \
 	  ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2gmq-multieval; \
 	  ${MAKE} MODELTYPE=transformer-big tatoeba-gmq2$${l}-multieval; \
 	done
+	-${MAKE} MODELTYPE=transformer-big tatoeba-cel2deu-multieval
+	-${MAKE} MODELTYPE=transformer-big tatoeba-deu2cel-multieval
+	-${MAKE} MODELTYPE=transformer-big tatoeba-bat2bat-multieval
+	-${MAKE} MODELTYPE=transformer-big tatoeba-cel2cel-multieval
+	-${MAKE} MODELTYPE=transformer-big tatoeba-gmq2gmq-multieval
+	-${MAKE} MODELTYPE=transformer-big tatoeba-itc2itc-multieval
+	-${MAKE} MODELTYPE=transformer-big tatoeba-gmw2gmw-multieval
+
+
+
+elg-sla-train:
+	-for l in ara deu fin fra gmq heb jpn por spa zho; do \
+	  ${MAKE} MODELTYPE=transformer-big tatoeba-sla2$${l}-trainjob; \
+	  ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2sla-trainjob; \
+	done
+	-${MAKE} MODELTYPE=transformer-big tatoeba-sla2sla-trainjob
+	-${MAKE} MODELTYPE=transformer-big tatoeba-sla2kor-trainjob-separate-spm
+	-${MAKE} MODELTYPE=transformer-big tatoeba-kor2sla-trainjob-separate-spm
+
+elg-sla-multieval:
+	-for l in ara deu fin fra gmq heb jpn por spa zho; do \
+	  ${MAKE} MODELTYPE=transformer-big tatoeba-sla2$${l}-multieval; \
+	  ${MAKE} MODELTYPE=transformer-big tatoeba-$${l}2sla-multieval; \
+	done
+	-${MAKE} MODELTYPE=transformer-big tatoeba-sla2sla-multieval
+	-${MAKE} MODELTYPE=transformer-big tatoeba-sla2kor-multieval-separate-spm
+	-${MAKE} MODELTYPE=transformer-big tatoeba-kor2sla-multieval-separate-spm
 
 
 

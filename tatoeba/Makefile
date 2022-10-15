@@ -395,14 +395,14 @@ print-langgroups:
 
 show-improved-models:
 	make -s compare-bleu-score-table-tatoeba | \
-		grep -v '	0	' | grep -v '	-[0-9]' | \
+		grep -v '	0	[a-z]' | grep -v '	-[0-9]' | \
 		cut -f6 | sort -u | xargs
 
 
 
 release-improved-models:
 	for l in ${shell make -s compare-bleu-score-table-tatoeba | \
-		grep -v '	0	' | grep -v '	-[0-9]' | \
+		grep -v '	0	[a-z]' | grep -v '	-[0-9]' | \
 		cut -f6 | sort -u | xargs}; do \
 	    s=`echo "$$l" | cut -f1 -d-`; \
 	    t=`echo "$$l" | cut -f2 -d-`; \
@@ -412,7 +412,7 @@ release-improved-models:
 ## release all models with improved scores even if they are not yet done
 release-all-improved-models:
 	for l in ${shell make -s compare-bleu-score-table-tatoeba | \
-		grep -v '	0	' | grep -v '	-[0-9]' | \
+		grep -v '	0	[a-z]' | grep -v '	-[0-9]' | \
 		cut -f6 | sort -u | xargs}; do \
 	    s=`echo "$$l" | cut -f1 -d-`; \
 	    t=`echo "$$l" | cut -f2 -d-`; \
@@ -485,12 +485,37 @@ find-trglanggroup = $(call find-langgroup,$(lastword ${subst -, ,${subst 2, ,${1
 find-langgroup-pair = $(sort $(call find-srclanggroup,${1}) $(call find-trglanggroup,${1}) ${2})
 
 
+
+## expand language groups to individual languages and language pairs
+
+LANGGROUP_SRCLANGS := ${call find-srclanggroup,${SRCLANGGROUP},${PIVOT}}
+LANGGROUP_TRGLANGS := ${call find-srclanggroup,${TRGLANGGROUP},${PIVOT}}
+LANGGROUP_LANGPAIRS := $(foreach S,${LANGGROUP_SRCLANGS},$(foreach T,${LANGGROUP_TRGLANGS},${S}-${T}))
+
+## remove non-supported language pairs (make pattern to skip those language pairs)
+## also remove combinations of the same language if SKIP_SAME_LANG is set to 1
+
+ifeq (${SKIP_SAME_LANG},1)
+  LANGGROUP_SAMELANG_LANGPAIRS := $(foreach L,${LANGGROUP_SRCLANGS},${L}-${L})
+  LANGGROUP_SKIP_LANGPAIRS := ${LANGGROUP_SAMELANG_LANGPAIRS} $(filter-out ${TATOEBA_LANGPAIRS},${LANGGROUP_LANGPAIRS})
+  LANGGROUP_USE_LANGPAIRS := $(filter-out ${LANGGROUP_SKIP_LANGPAIRS},${LANGGROUP_LANGPAIRS})
+  LANGGROUP_SKIP_LANGPAIR_PATTERN := $(subst ${SPACE},|,${LANGGROUP_SKIP_LANGPAIRS})
+else
+  LANGGROUP_SKIP_LANGPAIRS := $(filter-out ${TATOEBA_LANGPAIRS},${LANGGROUP_LANGPAIRS})
+  LANGGROUP_USE_LANGPAIRS := $(filter ${TATOEBA_LANGPAIRS},${LANGGROUP_LANGPAIRS})
+  LANGGROUP_SKIP_LANGPAIR_PATTERN := $(subst ${SPACE},|,${LANGGROUP_SKIP_LANGPAIRS})
+endif
+
+
 ## print languages in this set
 tatoeba-%-langs:
-	-( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-langs,%,$@))); \
+	@( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-langs,%,$@))); \
 	   t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-langs,%,$@))); \
 	   echo "${call find-srclanggroup,${patsubst tatoeba-%-langs,%,$@},${PIVOT}}"; \
 	   echo "${call find-trglanggroup,${patsubst tatoeba-%-langs,%,$@},${PIVOT}}"; )
+	@echo 'use: ${LANGGROUP_USE_LANGPAIRS}'
+	@echo 'skip: ${LANGGROUP_SKIP_LANGPAIR_PATTERN}'
+
 
 ## shortcut to start a target only if certain language group limits are met
 ## (maximum and minimum number of languages)
