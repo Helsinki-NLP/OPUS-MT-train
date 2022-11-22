@@ -1,0 +1,112 @@
+# -*-makefile-*-
+
+include Makefile.def
+
+bleu-register-scores: ${MODEL_BLEUSCORES:.txt=.registered}
+chrf-register-scores: ${MODEL_CHRFSCORES:.txt=.registered}
+comet-register-scores: ${MODEL_COMETSCORES:.txt=.registered}
+
+##-------------------------------------------------------------------
+## uodate leader boards with score from score files
+## SCOREFILES = all score files in the model directories
+## SCOREFILES_DONE = a flag that shows that the scores are registered
+##-------------------------------------------------------------------
+
+SCOREFILES := ${wildcard ${MODEL_HOME}/*/*.scores.txt}
+SCOREFILES_DONE = ${SCOREFILES:.txt=.registered}
+SCOREFILE_DONE = ${MODEL_SCORES:.txt=.registered}
+
+BLEUSCOREFILE_DONE = ${MODEL_BLEUSCORES:.txt=.registered}
+CHRFSCOREFILE_DONE = ${MODEL_CHRFSCORES:.txt=.registered}
+COMETSCOREFILE_DONE = ${MODEL_COMETSCORES:.txt=.registered}
+
+
+## update all leader boards with all scores
+update-leaderboards: ${SCOREFILES_DONE}
+	${MAKE} sort-leaderboards
+
+## register the scores for the current model
+## (scores will be added to some temporary files sorted by language pair and benchmark)
+## NOTE: this removes langIDs from newstest sets to avoid confusion and duplicates
+
+# register-scores: ${SCOREFILE_DONE}
+# register-scores: ${BLEUSCOREFILE_DONE} ${CHRFSCOREFILE_DONE} ${COMETSCOREFILE_DONE}
+register-scores: ${SCOREFILE_DONE} ${COMETSCOREFILE_DONE}
+
+
+${SCOREFILES_DONE}: %.registered: %.txt
+	@echo "register scores from ${patsubst ${MODEL_HOME}/%,%,$<}"
+	@cat $< | perl -e 'while (<>){ @a=split(/\t/); $$a[1]=~s/^(news.*)\-[a-z]{4}/$$1/; system "mkdir -p ${LEADERBOARD_DIR}/$$a[0]/$$a[1]"; open B,">>${LEADERBOARD_DIR}/$$a[0]/$$a[1]/bleu-scores.$(subst /,.,${patsubst ${MODEL_HOME}/%,%,$<}).unsorted.txt"; open C,">>${LEADERBOARD_DIR}/$$a[0]/$$a[1]/chrf-scores.$(subst /,.,${patsubst ${MODEL_HOME}/%,%,$<}).unsorted.txt"; print B "$$a[3]\t$$a[4]\n"; print C "$$a[2]\t$$a[4]\n"; close B; close C; }'
+	touch $@
+
+${MODEL_DIR}.%-scores.registered: ${MODEL_DIR}.%-scores.txt
+	@echo "register scores from ${patsubst ${MODEL_HOME}/%,%,$<}"
+	@cat $< | perl -e 'while (<>){ chomp; @a=split(/\t/); $$a[1]=~s/^(news.*)\-[a-z]{4}/$$1/; system "mkdir -p ${LEADERBOARD_DIR}/$$a[0]/$$a[1]"; open C,">>${LEADERBOARD_DIR}/$$a[0]/$$a[1]/$(patsubst ${MODEL_DIR}.%-scores.txt,%-scores,$<).$(subst /,.,${patsubst ${MODEL_HOME}/%,%,$<}).unsorted.txt"; print C "$$a[2]\t${MODEL_URL}\n"; close C; }'
+	touch $@
+
+##-------------------------------------------------------------------
+## UPDATE_SCORE_DIRS = directory that contains new scores
+## LEADERBOARDS_BLEU = list of BLEU leader boards that need to be sorted
+## LEADERBOARDS_BLEU = list of chr-F leader boards that need to be sorted
+##-------------------------------------------------------------------
+
+UPDATE_SCORE_DIRS  := $(sort $(dir ${wildcard ${LEADERBOARD_DIR}/*/*/*.unsorted.txt}))
+LEADERBOARDS_BLEU  := $(patsubst %,%bleu-scores.txt,${UPDATE_SCORE_DIRS})
+LEADERBOARDS_CHRF  := $(patsubst %,%chrf-scores.txt,${UPDATE_SCORE_DIRS})
+LEADERBOARDS_COMET := $(patsubst %,%comet-scores.txt,${UPDATE_SCORE_DIRS})
+
+## sort all leaderboards for which we have new unsorted scores
+.PHONY: sort-leaderboards sort-bleu-leaderboards sort-chrf-leaderboards sort-comet-leaderboards
+sort-leaderboards: ${LEADERBOARDS_BLEU} ${LEADERBOARDS_CHRF} ${LEADERBOARDS_COMET}
+sort-bleu-leaderboards:  ${LEADERBOARDS_BLEU}
+sort-chrf-leaderboards:  ${LEADERBOARDS_CHRF}
+sort-comet-leaderboards:  ${LEADERBOARDS_COMET}
+
+
+${LEADERBOARDS_BLEU}: ${UPDATE_SCORE_DIRS}
+	@echo "merge and sort ${patsubst ${LEADERBOARD_DIR}/%,%,$@}"
+	@if [ -e $@ ]; then \
+	  sort -k2,2 -k1,1nr $@                           > $@.old.txt; \
+	  cat $(dir $@)bleu-scores*.unsorted.txt | \
+	  grep '^[0-9]' | sort -k2,2 -k1,1nr              > $@.new.txt; \
+	  sort -m $@.new.txt $@.old.txt |\
+	  uniq -f1 | sort -k1,1nr -u                      > $@.sorted; \
+	else \
+	  cat $(dir $@)bleu-scores*.txt | grep '^[0-9]' |\
+	  sort -k2,2 -k1,1nr | uniq -f1 | sort -k1,1nr -u > $@.sorted; \
+	fi
+	@rm -f $(dir $@)bleu-scores*.txt
+	@mv $@.sorted $@
+
+${LEADERBOARDS_CHRF}: ${UPDATE_SCORE_DIRS}
+	@echo "merge and sort ${patsubst ${LEADERBOARD_DIR}/%,%,$@}"
+	@if [ -e $@ ]; then \
+	  sort -k2,2 -k1,1nr $@                           > $@.old.txt; \
+	  cat $(dir $@)chrf-scores*.unsorted.txt | \
+	  grep '^[0-9]' | sort -k2,2 -k1,1nr              > $@.new.txt; \
+	  sort -m $@.new.txt $@.old.txt |\
+	  uniq -f1 | sort -k1,1nr -u                      > $@.sorted; \
+	else \
+	  cat $(dir $@)chrf-scores*.txt | grep '^[0-9]' |\
+	  sort -k2,2 -k1,1nr | uniq -f1 | sort -k1,1nr -u > $@.sorted; \
+	fi
+	@rm -f $(dir $@)chrf-scores*.txt
+	@mv $@.sorted $@
+
+${LEADERBOARDS_COMET}: ${UPDATE_SCORE_DIRS}
+	@echo "merge and sort ${patsubst ${LEADERBOARD_DIR}/%,%,$@}"
+	@if [ -e $@ ]; then \
+	  sort -k2,2 -k1,1nr $@                           > $@.old.txt; \
+	  cat $(dir $@)comet-scores*.unsorted.txt | \
+	  grep '^[0-9]' | sort -k2,2 -k1,1nr              > $@.new.txt; \
+	  sort -m $@.new.txt $@.old.txt |\
+	  uniq -f1 | sort -k1,1nr -u                      > $@.sorted; \
+	else \
+	  cat $(dir $@)comet-scores*.txt | grep '^[0-9]' |\
+	  sort -k2,2 -k1,1nr | uniq -f1 | sort -k1,1nr -u > $@.sorted; \
+	fi
+	@rm -f $(dir $@)comet-scores*.txt
+	@mv $@.sorted $@
+
+
+

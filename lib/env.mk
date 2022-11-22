@@ -196,6 +196,7 @@ endif
 
 
 
+COMET_SCORE ?= comet-score
 
 
 

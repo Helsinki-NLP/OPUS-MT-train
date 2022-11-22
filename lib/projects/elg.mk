@@ -43,6 +43,21 @@ ELG_EU_SELECTED_BIG = gmq zle zls zlw spa fra deu
 # "cat oci"
 
 
+raul-timo:
+#	${MAKE} rus2eng
+#	${MAKE} ukr2eng
+#	${MAKE} sla2eng
+	${MAKE} ine2eng
+	${MAKE} mul2eng
+
+rus2eng ukr2eng:
+	make FIT_DATA_SIZE=1000000 MODELTYPE=transformer tatoeba-$@-data
+
+sla2eng ine2eng mul2eng:
+	make DATA_SAMPLING_WEIGHT=0.5 MAX_DATA_SIZE=1000000 MODELTYPE=transformer tatoeba-$@-data
+
+
+
 elg-release-models:
 	make MODELTYPE=transformer-big release-all-improved-models-bt
 	make MODELTYPE=transformer-big release-all-improved-models

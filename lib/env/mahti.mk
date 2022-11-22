@@ -108,4 +108,8 @@ MARIAN_BUILD_OPTIONS  = -DCUDNN=ON \
 # LOAD_EXTRACTLEX_BUILD_ENV = cmake gcc/9.3.0 boost/1.68.0
 LOAD_EXTRACTLEX_BUILD_ENV = module load cmake boost
 
-LOAD_COMET_ENV = module load python-data &&
+# LOAD_COMET_ENV = module load python-data pytorch cuda &&
+# LOAD_COMET_ENV = module purge && module load pytorch && singularity_wrapper exec
+# COMET_SCORE = ${HOME}/.local/bin/comet-score
+
+LOAD_COMET_ENV = module purge && module load pytorch &&
