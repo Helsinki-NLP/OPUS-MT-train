@@ -18,6 +18,8 @@ include ${REPOHOME}lib/slurm.mk
 GPUJOB_HPC_MEM = 20g
 
 
+METRICS           := bleu spbleu chrf chrf++ comet
+
 MODEL_STORAGE     := https://object.pouta.csc.fi/Tatoeba-MT-models
 ifndef MODEL_DISTS
 ifneq ($(wildcard models.missing),)
@@ -56,3 +58,7 @@ MODEL_COMETSCORES   = ${MODEL_DIR}.comet-scores.txt
 
 ## all zip files with benchmark results
 MODEL_EVALZIPS := ${patsubst %.zip,${MODEL_HOME}/%.eval.zip,${MODEL_DISTS}}
+
+
+## collected scores for a model using a specific metric
+MODEL_METRIC_SCORES = $(patsubst %,${MODEL_DIR}.%-scores.txt,${METRICS})

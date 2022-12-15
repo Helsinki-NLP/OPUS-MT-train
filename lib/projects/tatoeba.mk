@@ -727,6 +727,12 @@ tatoeba-dist-4m:
 		MARIAN_VALID_FREQ=10000 \
 	${@:-4m=}
 
+%-5m:
+	${MAKE} LANGGROUP_FIT_DATA_SIZE=5000000 \
+		FIT_DATA_SIZE=5000000 \
+		DATASET=${DATASET}5m \
+	${@:-5m=}
+
 
 
 ## evaluate and create dist packages

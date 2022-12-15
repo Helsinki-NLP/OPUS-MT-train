@@ -20,6 +20,30 @@ redo-chrf:
 first: $(firstword ${MODEL_EVALZIPS})
 
 
+
+
+## do things in reverse order
+## (just to start another job)
+
+## convenient function to reverse a list
+reverse = $(if $(wordlist 2,2,$(1)),$(call reverse,$(wordlist 2,$(words $(1)),$(1))) $(firstword $(1)),$(1))
+
+MODEL_EVALZIPS_REVERSE = $(call reverse,${MODEL_EVALZIPS})
+
+all-reverse: ${MODEL_EVALZIPS_REVERSE}
+
+
+
+
+redo-chrf-reverse:
+	make METRICS="bleu chrf" REDO_CHRF_SCORES=1 all-reverse
+
+add-new-metrics:
+	${MAKE} -j16 METRICS="spbleu chrf++" all
+
+all-comet-reverse:
+	make METRICS="comet" all-reverse
+
 #-------------------------------------------------
 ## phony targets to evaluate only new models
 ## or only models that exist locally
@@ -82,6 +106,9 @@ eval-model: ${MODEL_SCORES}
 	  rm -f ${MODEL_DIR}/*.bleu; \
 	  rm -f ${MODEL_DIR}/*.chrf; \
 	  rm -f ${MODEL_DIR}/*.comet; \
+	  for m in ${METRICS}; do \
+	    rm -f ${MODEL_DIR}/*.$$m; \
+	  done; \
 	  rm -f ${MODEL_DIR}.done; \
 	  rmdir ${MODEL_DIR}; \
 	fi
@@ -104,7 +131,7 @@ cleanup:
 	rm -f ${WORK_DIR}/model/*
 	rmdir ${WORK_DIR}/model
 	rmdir ${WORK_DIR}
-	rmdir ${WORK_HOME}/${MODEL_LANGPAIR}
+	-rmdir ${WORK_HOME}/${MODEL_LANGPAIR}
 
 #-------------------------------------------------
 # fetch model and get supported languages
@@ -189,9 +216,7 @@ TESTSETS      := ${notdir ${basename ${wildcard ${TESTSET_DIR}/*.${SRC}}}}
 TESTSET       := ${firstword ${TESTSETS}}
 
 
-
 MODEL_EVAL_MISSING := $(patsubst %,%.missing,${ALL_LANGPAIRS})
-METRICS            := bleu chrf comet
 
 .PHONY: find-missing
 find-missing: models.missing
@@ -251,7 +276,6 @@ ${MODEL_CHRFSCORES}: ${MODEL_SCORES}
 	sed -e 's/\(news.*2021\)\.[a-z][a-z]\-[a-z][a-z]	/\1	/' |\
 	rev | uniq -f1 | rev > $@
 
-
 COMET_EVAL_FILES = ${wildcard ${MODEL_DIR}/*.comet}
 ${MODEL_COMETSCORES}: ${COMET_EVAL_FILES}
 	if [ -d ${MODEL_DIR} ]; then \
@@ -268,6 +292,28 @@ ${MODEL_COMETSCORES}: ${COMET_EVAL_FILES}
 	  mv -f $@.sorted $@; \
 	  rm -f $@.comet $@.langs $@.testsets $@.comet-scores; \
 	fi
+
+
+## generic recipe for extracting scores for a metric
+## (works for all sacrebleu results but not for other metrics)
+
+${MODEL_DIR}.%-scores.txt: ${MODEL_SCORES} # ${MODEL_DIR}
+	if [ -d ${MODEL_DIR} ]; then \
+	  mkdir -p $(dir $@); \
+	  grep -H . ${MODEL_DIR}/*.$(patsubst ${MODEL_DIR}.%-scores.txt,%) > $@.all; \
+	  cut -f1 -d: $@.all | rev | cut -f2 -d. | rev                     > $@.langs; \
+	  cut -f1 -d: $@.all | rev | cut -f1 -d/ | cut -f3- -d. | rev      > $@.testsets; \
+	  cut -f3 -d ' '  $@.all                                           > $@.scores; \
+	  paste $@.langs $@.testsets $@.scores                            >> $@; \
+	  cat $@ |\
+	  sed -e 's/\(news.*[0-9][0-9][0-9][0-9]\)-[a-z][a-z][a-z][a-z]	/\1	/' |  \
+	  sed -e 's/\(news.*2021\)\.[a-z][a-z]\-[a-z][a-z]	/\1	/' |\
+	  rev | uniq -f1 | rev                                             > $@.sorted; \
+	  mv -f $@.sorted $@; \
+	  rm -f $@.all $@.langs $@.testsets $@.scores; \
+	fi
+
+
 
 #-------------------------------------------------
 # create input file for translation
@@ -393,10 +439,28 @@ ${MODEL_DIR}/${TESTSET}.${LANGPAIR}.compare:
 	fi
 
 ## adjust tokenisation to non-space-separated languages
-## TODO: is it correct to simply use 'zh' even for jpn or should we use 'intl'?
-ifneq ($(filter cmn jpn yue zho,${TRG}),)
+ifneq ($(filter cmn yue zho,${TRG}),)
   SACREBLEU_PARAMS = --tokenize zh
 endif
+
+ifneq ($(filter jpn,${TRG}),)
+  SACREBLEU_PARAMS = --tokenize ja-mecab
+endif
+
+ifneq ($(filter kor,${TRG}),)
+  SACREBLEU_PARAMS = --tokenize ko-mecab
+endif
+
+
+
+${MODEL_DIR}/${TESTSET}.${LANGPAIR}.spbleu: ${MODEL_DIR}/${TESTSET}.${LANGPAIR}.compare
+	mkdir -p ${dir $@}
+	sed -n '1~4p' $< > $@.src
+	sed -n '2~4p' $< > $@.ref
+	sed -n '3~4p' $< > $@.hyp
+	cat $@.hyp | \
+	sacrebleu -f text --metrics=bleu --tokenize  flores200 $@.ref > $@
+	rm -f $@.src $@.ref $@.hyp
 
 ${MODEL_DIR}/${TESTSET}.${LANGPAIR}.bleu: ${MODEL_DIR}/${TESTSET}.${LANGPAIR}.compare
 	mkdir -p ${dir $@}
@@ -417,11 +481,24 @@ ${MODEL_DIR}/${TESTSET}.${LANGPAIR}.chrf: ${MODEL_DIR}/${TESTSET}.${LANGPAIR}.co
 	perl -pe 'unless (/version\:1\./){@a=split(/\s+/);$$a[-1]/=100;$$_=join(" ",@a);}' > $@
 	rm -f $@.src $@.ref $@.hyp
 
-## normalise to decimals from percentage (like it used to be)
-## let's don't do this anymore and rather update all scores with new scores!
-##
-# perl -pe 'unless (/version\:1\./){@a=split(/\s+/);$$a[-1]/=100;$$_=join(" ",@a);}' > $@
+${MODEL_DIR}/${TESTSET}.${LANGPAIR}.chrf++: ${MODEL_DIR}/${TESTSET}.${LANGPAIR}.compare
+	mkdir -p ${dir $@}
+	sed -n '1~4p' $< > $@.src
+	sed -n '2~4p' $< > $@.ref
+	sed -n '3~4p' $< > $@.hyp
+	cat $@.hyp | \
+	sacrebleu -f text ${SACREBLEU_PARAMS} --metrics=chrf --width=3 --chrf-word-order 2 $@.ref |\
+	perl -pe 'unless (/version\:1\./){@a=split(/\s+/);$$a[-1]/=100;$$_=join(" ",@a);}' > $@
+	rm -f $@.src $@.ref $@.hyp
 
+${MODEL_DIR}/${TESTSET}.${LANGPAIR}.ter: ${MODEL_DIR}/${TESTSET}.${LANGPAIR}.compare
+	mkdir -p ${dir $@}
+	sed -n '1~4p' $< > $@.src
+	sed -n '2~4p' $< > $@.ref
+	sed -n '3~4p' $< > $@.hyp
+	cat $@.hyp | \
+	sacrebleu -f text ${SACREBLEU_PARAMS} --metrics=ter $@.ref > $@
+	rm -f $@.src $@.ref $@.hyp
 
 ifneq (${GPU_AVAILABLE},1)
   COMET_PARAM += --gpus 0

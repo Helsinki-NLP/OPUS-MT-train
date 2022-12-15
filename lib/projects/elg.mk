@@ -43,18 +43,35 @@ ELG_EU_SELECTED_BIG = gmq zle zls zlw spa fra deu
 # "cat oci"
 
 
-raul-timo:
+# raul-timo: rus2eng ukr2eng sla2eng ine2eng mul2eng
+raul-timo: sla2eng ine2eng mul2eng
+
 #	${MAKE} rus2eng
 #	${MAKE} ukr2eng
 #	${MAKE} sla2eng
-	${MAKE} ine2eng
-	${MAKE} mul2eng
+#	${MAKE} ine2eng
+#	${MAKE} mul2eng
 
 rus2eng ukr2eng:
-	make FIT_DATA_SIZE=1000000 MODELTYPE=transformer tatoeba-$@-data
+	make MODELTYPE=transformer tatoeba-$@-data-5m
 
 sla2eng ine2eng mul2eng:
-	make DATA_SAMPLING_WEIGHT=0.5 MAX_DATA_SIZE=1000000 MODELTYPE=transformer tatoeba-$@-data
+	make MODELTYPE=transformer tatoeba-$@-data-5m0.5temp
+
+
+%-5m:
+	${MAKE} LANGGROUP_FIT_DATA_SIZE=5000000 \
+		FIT_DATA_SIZE=5000000 \
+		DATASET=${DATASET}5m \
+	${@:-5m=}
+
+%-5m0.5temp:
+	${MAKE} DATA_SAMPLING_WEIGHT=0.5 \
+		MAX_DATA_SIZE=5000000 \
+		DATASET=${DATASET}5m \
+	${@:-5m0.5temp=}
+
+
 
 
 
