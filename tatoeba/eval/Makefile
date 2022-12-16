@@ -11,14 +11,10 @@ include Makefile.def
 .PHONY: all
 all: ${MODEL_EVALZIPS}
 
-redo-chrf:
-	make METRICS="bleu chrf" REDO_CHRF_SCORES=1 all
-
 
 ## test: make the first evaluation zip-file
 .PHONY: first
 first: $(firstword ${MODEL_EVALZIPS})
-
 
 
 
@@ -32,17 +28,13 @@ MODEL_EVALZIPS_REVERSE = $(call reverse,${MODEL_EVALZIPS})
 
 all-reverse: ${MODEL_EVALZIPS_REVERSE}
 
-
-
-
-redo-chrf-reverse:
-	make METRICS="bleu chrf" REDO_CHRF_SCORES=1 all-reverse
-
 add-new-metrics:
 	${MAKE} -j16 METRICS="spbleu chrf++" all
 
 all-comet-reverse:
 	make METRICS="comet" all-reverse
+
+
 
 #-------------------------------------------------
 ## phony targets to evaluate only new models
@@ -80,49 +72,54 @@ eval-local:
 ##-------------------------------------------------
 
 ${MODEL_EVALZIPS}: ${TESTSET_INDEX}
-	if [ -e $@ ]; then \
+	@if [ -e $@ ]; then \
+	  echo "unpack existing scores"; \
 	  mkdir -p ${@:.eval.zip=}; \
 	  unzip -d ${@:.eval.zip=} $@; \
 	fi
 	-${MAKE} MODEL_DISTS=${patsubst ${MODEL_HOME}/%.eval.zip,%.zip,$@} eval-model
 
 
-#-------------------------------------------------
+##-------------------------------------------------
+## evaluate the model with all benchmarks available
+## - if a model score file is missing:
+##      * fetch model and evaluation files
+##      * try to run evaluation again
+##      * make model score files again
+##-------------------------------------------------
+
+.PHONY: scores model-scores
+scores model-scores: ${MODEL_EVAL_SCORES}
+	@if [ $(words $(wildcard $^)) -ne $(words $^) ]; then \
+	  echo "score files missing ... fetch model and scores!"; \
+	  ${MAKE} fetch; \
+	  ${MAKE} eval-langpairs; \
+	  ${MAKE} cleanup; \
+	  ${MAKE} ${MODEL_EVAL_SCORES}; \
+	fi
+
+##-------------------------------------------------
 ## evaluate the model with all benchmarks available
 ## register the scores and update the leaderboard
-## final cleanup
-#-------------------------------------------------
+## pack evaluation files in a zip file
+##-------------------------------------------------
 
 .PHONY: eval-model
-eval-model: ${MODEL_SCORES}
+eval-model: ${MODEL_EVAL_SCORES}
+	${MAKE} model-scores
 	if [ -e $< ]; then \
 	  ${MAKE} -f Makefile.register register-scores; \
 	  ${MAKE} -f Makefile.register sort-leaderboards; \
 	fi
+	${MAKE} pack-model-scores
+
+.PHONY: pack-model-scores
+pack-model-scores:
 	if [ -d ${MODEL_DIR} ]; then \
 	  cd ${MODEL_DIR} && zip ${MODEL_EVALZIP} *.*; \
-	  rm -f ${MODEL_DIR}/*.eval; \
-	  rm -f ${MODEL_DIR}/*.compare; \
-	  rm -f ${MODEL_DIR}/*.bleu; \
-	  rm -f ${MODEL_DIR}/*.chrf; \
-	  rm -f ${MODEL_DIR}/*.comet; \
-	  for m in ${METRICS}; do \
-	    rm -f ${MODEL_DIR}/*.$$m; \
-	  done; \
-	  rm -f ${MODEL_DIR}.done; \
+	  rm -f ${MODEL_DIR}/*.*; \
 	  rmdir ${MODEL_DIR}; \
 	fi
-
-
-## temporary directory with all benchmark results
-${MODEL_DIR}.done:
-	${MAKE} fetch
-ifdef REDO_CHRF_SCORES
-	rm -f ${MODEL_DIR}/*.chrf
-endif
-	${MAKE} eval-langpairs
-	${MAKE} cleanup
-	-touch $@
 
 ## cleanup some additional workfiles
 .PHONY: cleanup
@@ -247,6 +244,7 @@ eval-langpairs:
 	  ${MAKE} LANGPAIR=$$l eval-testsets; \
 	done
 
+
 ## eval all testsets for the current langpair
 .PHONY: eval-testsets
 eval-testsets:
@@ -256,62 +254,6 @@ eval-testsets:
 
 
 
-
-## make score files for individual metrics
-## (more convenient to read and extend with new metrics)
-## TODO: make them by default and create proper dependencies
-
-individual-scores: ${MODEL_BLEUSCORES} ${MODEL_CHRFSCORES} ${MODEL_COMETSCORES}
-
-${MODEL_BLEUSCORES}: ${MODEL_SCORES}
-	cut -f1,2,4 ${MODEL_SCORES} | \
-	sed 's/\(news.*[0-9][0-9][0-9][0-9]\)\-[a-z][a-z][a-z][a-z]	/\1	/' |\
-	sed -e 's/\(news.*2021\)\.[a-z][a-z]\-[a-z][a-z]	/\1	/' |\
-	rev | uniq -f1 | rev > $@
-
-
-${MODEL_CHRFSCORES}: ${MODEL_SCORES}
-	cut -f1,2,3 ${MODEL_SCORES} |\
-	sed 's/\(news.*[0-9][0-9][0-9][0-9]\)\-[a-z][a-z][a-z][a-z]	/\1	/' |\
-	sed -e 's/\(news.*2021\)\.[a-z][a-z]\-[a-z][a-z]	/\1	/' |\
-	rev | uniq -f1 | rev > $@
-
-COMET_EVAL_FILES = ${wildcard ${MODEL_DIR}/*.comet}
-${MODEL_COMETSCORES}: ${COMET_EVAL_FILES}
-	if [ -d ${MODEL_DIR} ]; then \
-	  mkdir -p $(dir $@); \
-	  grep -H '^score:' ${MODEL_DIR}/*.comet | sort                  > $@.comet; \
-	  cut -f1 -d: $@.comet | rev | cut -f2 -d. | rev                 > $@.langs; \
-	  cut -f1 -d: $@.comet | rev | cut -f1 -d/ | cut -f3- -d. | rev  > $@.testsets; \
-	  cat $@.comet | rev | cut -f1 -d' ' | rev                       > $@.comet-scores; \
-	  paste $@.langs $@.testsets $@.comet-scores                     >> $@; \
-	  cat $@ |\
-	  sed -e 's/\(news.*[0-9][0-9][0-9][0-9]\)-[a-z][a-z][a-z][a-z]	/\1	/' |  \
-	  sed -e 's/\(news.*2021\)\.[a-z][a-z]\-[a-z][a-z]	/\1	/' |\
-	  rev | uniq -f1 | rev                                           > $@.sorted; \
-	  mv -f $@.sorted $@; \
-	  rm -f $@.comet $@.langs $@.testsets $@.comet-scores; \
-	fi
-
-
-## generic recipe for extracting scores for a metric
-## (works for all sacrebleu results but not for other metrics)
-
-${MODEL_DIR}.%-scores.txt: ${MODEL_SCORES} # ${MODEL_DIR}
-	if [ -d ${MODEL_DIR} ]; then \
-	  mkdir -p $(dir $@); \
-	  grep -H . ${MODEL_DIR}/*.$(patsubst ${MODEL_DIR}.%-scores.txt,%) > $@.all; \
-	  cut -f1 -d: $@.all | rev | cut -f2 -d. | rev                     > $@.langs; \
-	  cut -f1 -d: $@.all | rev | cut -f1 -d/ | cut -f3- -d. | rev      > $@.testsets; \
-	  cut -f3 -d ' '  $@.all                                           > $@.scores; \
-	  paste $@.langs $@.testsets $@.scores                            >> $@; \
-	  cat $@ |\
-	  sed -e 's/\(news.*[0-9][0-9][0-9][0-9]\)-[a-z][a-z][a-z][a-z]	/\1	/' |  \
-	  sed -e 's/\(news.*2021\)\.[a-z][a-z]\-[a-z][a-z]	/\1	/' |\
-	  rev | uniq -f1 | rev                                             > $@.sorted; \
-	  mv -f $@.sorted $@; \
-	  rm -f $@.all $@.langs $@.testsets $@.scores; \
-	fi
 
 
 
@@ -543,7 +485,7 @@ comet-eval: ${MODEL_DIR}/${TESTSET}.${LANGPAIR}.comet
 
 
 #-------------------------------------------------
-# collect all scores in a file
+# collect BLEU and chrF scores in one file
 #-------------------------------------------------
 #
 # updating scores for models that already have some scores registered
@@ -552,15 +494,14 @@ comet-eval: ${MODEL_DIR}/${TESTSET}.${LANGPAIR}.comet
 # - ingest the new evaluation scores
 #
 
-.PHONY: scores
-scores: ${MODEL_SCORES}
-
-${MODEL_SCORES}: ${TESTSET_INDEX} ${MODEL_COMETSCORES}
+${MODEL_SCORES}: ${TESTSET_INDEX}
 	-if [ ! -e $@ ]; then \
 	  mkdir -p $(dir $@); \
 	  wget -qq -O $@ ${MODEL_STORAGE}/${MODEL}.scores.txt; \
 	fi
-	${MAKE} ${MODEL_DIR}.done
+	${MAKE} fetch
+	${MAKE} eval-langpairs
+	${MAKE} cleanup
 	if [ -d ${MODEL_DIR} ]; then \
 	  grep -H BLEU ${MODEL_DIR}/*.bleu | sort                  > $@.bleu; \
 	  grep -H chrF ${MODEL_DIR}/*.chrf | sort                  > $@.chrf; \
@@ -591,6 +532,64 @@ ${MODEL_SCORES}: ${TESTSET_INDEX} ${MODEL_COMETSCORES}
 		$@.chrf-scores $@.bleu-scores \
 		$@.urls $@.nrlines $@.nrwords $@.old $@.new; \
 	fi
-	${MAKE} individual-scores
+
+
+
+## generic recipe for extracting scores for a metric
+## (works for all sacrebleu results but not for other metrics)
+
+${MODEL_DIR}.%-scores.txt: ${MODEL_SCORES}
+	if [ -d ${MODEL_DIR} ]; then \
+	  mkdir -p $(dir $@); \
+	  grep -H . ${MODEL_DIR}/*.$(patsubst ${MODEL_DIR}.%-scores.txt,%,$@) > $@.all; \
+	  cut -f1 -d: $@.all | rev | cut -f2 -d. | rev                        > $@.langs; \
+	  cut -f1 -d: $@.all | rev | cut -f1 -d/ | cut -f3- -d. | rev         > $@.testsets; \
+	  cut -f3 -d ' '  $@.all                                              > $@.scores; \
+	  paste $@.langs $@.testsets $@.scores                               >> $@; \
+	  cat $@ |\
+	  sed -e 's/\(news.*[0-9][0-9][0-9][0-9]\)-[a-z][a-z][a-z][a-z]	/\1	/' |  \
+	  sed -e 's/\(news.*2021\)\.[a-z][a-z]\-[a-z][a-z]	/\1	/' |\
+	  rev | uniq -f1 | rev                                                > $@.sorted; \
+	  mv -f $@.sorted $@; \
+	  rm -f $@.all $@.langs $@.testsets $@.scores; \
+	fi
+
+
+## specific recipe for COMET scores
+
+${MODEL_DIR}.comet-scores.txt: ${MODEL_SCORES}
+	if [ -d ${MODEL_DIR} ]; then \
+	  mkdir -p $(dir $@); \
+	  grep -H '^score:' ${MODEL_DIR}/*.comet | sort                  > $@.comet; \
+	  cut -f1 -d: $@.comet | rev | cut -f2 -d. | rev                 > $@.langs; \
+	  cut -f1 -d: $@.comet | rev | cut -f1 -d/ | cut -f3- -d. | rev  > $@.testsets; \
+	  cat $@.comet | rev | cut -f1 -d' ' | rev                       > $@.comet-scores; \
+	  paste $@.langs $@.testsets $@.comet-scores                     >> $@; \
+	  cat $@ |\
+	  sed -e 's/\(news.*[0-9][0-9][0-9][0-9]\)-[a-z][a-z][a-z][a-z]	/\1	/' |  \
+	  sed -e 's/\(news.*2021\)\.[a-z][a-z]\-[a-z][a-z]	/\1	/' |\
+	  rev | uniq -f1 | rev                                           > $@.sorted; \
+	  mv -f $@.sorted $@; \
+	  rm -f $@.comet $@.langs $@.testsets $@.comet-scores; \
+	fi
+
+
+
+
+## OLD: extract BLEU and chrF scores from the combined score file
+
+# ${MODEL_BLEUSCORES}: ${MODEL_SCORES}
+# 	cut -f1,2,4 ${MODEL_SCORES} | \
+# 	sed 's/\(news.*[0-9][0-9][0-9][0-9]\)\-[a-z][a-z][a-z][a-z]	/\1	/' |\
+# 	sed -e 's/\(news.*2021\)\.[a-z][a-z]\-[a-z][a-z]	/\1	/' |\
+# 	rev | uniq -f1 | rev > $@
+
+
+# ${MODEL_CHRFSCORES}: ${MODEL_SCORES}
+# 	cut -f1,2,3 ${MODEL_SCORES} |\
+# 	sed 's/\(news.*[0-9][0-9][0-9][0-9]\)\-[a-z][a-z][a-z][a-z]	/\1	/' |\
+# 	sed -e 's/\(news.*2021\)\.[a-z][a-z]\-[a-z][a-z]	/\1	/' |\
+# 	rev | uniq -f1 | rev > $@
+
 
 
