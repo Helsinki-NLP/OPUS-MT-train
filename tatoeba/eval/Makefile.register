@@ -36,39 +36,3 @@ ${SCOREFILES_DONE}: ${MODEL_DIR}.%-scores.registered: ${MODEL_DIR}.%-scores.txt
 	@touch $@
 
 
-
-##-------------------------------------------------------------------
-## UPDATE_SCORE_DIRS = directory that contains new scores
-## LEADERBOARDS      = list of BLEU leader boards that need to be sorted
-##-------------------------------------------------------------------
-
-UPDATE_SCORE_DIRS := $(sort $(dir ${wildcard ${LEADERBOARD_DIR}/*/*/*.unsorted.txt}))
-LEADERBOARDS := $(foreach m,${METRICS},$(patsubst %,%$(m)-scores.txt,${UPDATE_SCORE_DIRS}))
-
-
-## sort all leaderboards for which we have new unsorted scores
-sort-leaderboards: ${LEADERBOARDS}
-
-${LEADERBOARDS}: ${UPDATE_SCORE_DIRS}
-	@if [ -e $@ ]; then \
-	  if [ $(words $(wildcard ${@:.txt=}*.unsorted.txt)) -gt 0 ]; then \
-	    echo "merge and sort ${patsubst ${LEADERBOARD_DIR}/%,%,$@}"; \
-	    sort -k2,2 -k1,1nr $@                           > $@.old.txt; \
-	    cat $(wildcard ${@:.txt=}*.unsorted.txt) | \
-	    grep '^[0-9\-]' | sort -k2,2 -k1,1nr            > $@.new.txt; \
-	    sort -m $@.new.txt $@.old.txt |\
-	    uniq -f1 | sort -k1,1nr -u                      > $@.sorted; \
-	    rm -f $@.old.txt $@.new.txt; \
-	    rm -f $(wildcard ${@:.txt=}*.unsorted.txt); \
-	    mv $@.sorted $@; \
-	  fi; \
-	else \
-	  if [ $(words $(wildcard ${@:.txt=}*.txt)) -gt 0 ]; then \
-	    echo "merge and sort ${patsubst ${LEADERBOARD_DIR}/%,%,$@}"; \
-	    cat $(wildcard ${@:.txt=}*.txt) | grep '^[0-9\-]' |\
-	    sort -k2,2 -k1,1nr | uniq -f1 | sort -k1,1nr -u > $@.sorted; \
-	    rm -f $(wildcard ${@:.txt=}*.txt); \
-	    mv $@.sorted $@; \
-	  fi; \
-	fi
-

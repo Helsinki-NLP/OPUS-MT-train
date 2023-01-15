@@ -8,6 +8,7 @@ include Makefile.def
 #-------------------------------------------------
 ## make all evaluation zip-files
 #-------------------------------------------------
+
 .PHONY: all
 all: ${MODEL_EVALZIPS}
 
@@ -15,8 +16,6 @@ all: ${MODEL_EVALZIPS}
 ## test: make the first evaluation zip-file
 .PHONY: first
 first: $(firstword ${MODEL_EVALZIPS})
-
-
 
 ## do things in reverse order
 ## (just to start another job)
@@ -28,12 +27,53 @@ MODEL_EVALZIPS_REVERSE = $(call reverse,${MODEL_EVALZIPS})
 
 all-reverse: ${MODEL_EVALZIPS_REVERSE}
 
-add-new-metrics:
-	${MAKE} -j16 METRICS="spbleu chrf++" all
+
+
+## only do COMET scores
+
+all-comet:
+	make METRICS="comet" all
 
 all-comet-reverse:
 	make METRICS="comet" all-reverse
 
+
+##---------------------------------------------------
+## pack evaluation files if a model directory exists
+##---------------------------------------------------
+
+MODEL_PACK_EVAL := ${patsubst %.zip,%.pack,${MODEL_DISTS}}
+
+.PHONY: pack-all-model-scores
+pack-all-model-scores: ${MODEL_PACK_EVAL}
+
+.PHONY: ${MODEL_PACK_EVAL}
+${MODEL_PACK_EVAL}:
+	if [ -d ${MODEL_HOME}/$(@:.pack=) ]; then \
+	  ${MAKE} MODEL_DISTS=$(@:.pack=.zip) pack-model-scores; \
+	fi
+
+
+##------------------
+## register scores
+##------------------
+
+# phony targets to register model scores
+MODEL_REGISTER := ${patsubst %.zip,%.register,${MODEL_DISTS}}
+
+register-all-metrics:
+	${MAKE} ${MODEL_REGISTER}
+
+# only register selected metrics
+register-new-metrics:
+	${MAKE} METRICS="spbleu chrf++" ${MODEL_REGISTER}
+
+.PHONY: ${MODEL_REGISTER}
+${MODEL_REGISTER}:
+	${MAKE} MODEL_DISTS=$(@:.register=.zip) fetch-model-scores
+	${MAKE} MODEL_DISTS=$(@:.register=.zip) model-score-files
+	${MAKE} -f Makefile.register MODEL_DISTS=$(@:.register=.zip) register-scores
+	${MAKE} MODEL_DISTS=$(@:.register=.zip) pack-model-scores
 
 
 #-------------------------------------------------
@@ -98,6 +138,14 @@ scores model-scores: ${MODEL_EVAL_SCORES}
 	  ${MAKE} ${MODEL_EVAL_SCORES}; \
 	fi
 
+
+## only create model score files from individual benchmark scores
+## but don't run new evaluations if benchmark scores do not exist yet
+
+.PHONY: model-score-files
+model-score-files: ${MODEL_EVAL_SCORES}
+
+
 ##-------------------------------------------------
 ## evaluate the model with all benchmarks available
 ## register the scores and update the leaderboard
@@ -109,15 +157,21 @@ eval-model: ${MODEL_EVAL_SCORES}
 	${MAKE} model-scores
 	if [ -e $< ]; then \
 	  ${MAKE} -f Makefile.register register-scores; \
-	  ${MAKE} -f Makefile.register sort-leaderboards; \
 	fi
 	${MAKE} pack-model-scores
+
+
+# delay this to avoid racing conditions in case several
+# updates run simultaneously
+#
+# 	  ${MAKE} -f Makefile.register sort-leaderboards; \
+
 
 .PHONY: pack-model-scores
 pack-model-scores:
 	if [ -d ${MODEL_DIR} ]; then \
-	  cd ${MODEL_DIR} && zip ${MODEL_EVALZIP} *.*; \
-	  rm -f ${MODEL_DIR}/*.*; \
+	  cd ${MODEL_DIR} && find . -name '*.*' | xargs zip ${MODEL_EVALZIP}; \
+	  find ${MODEL_DIR} -name '*.*' -delete; \
 	  rmdir ${MODEL_DIR}; \
 	fi
 
@@ -137,6 +191,12 @@ cleanup:
 ## fetch translation model
 .PHONY: fetch
 fetch: ${WORK_DIR}/model/decoder.yml ${MODEL_DIR}
+
+.PHONY: fetch-model
+fetch-model: ${WORK_DIR}/model/decoder.yml
+
+.PHONY: fetch-model-scores
+fetch-model-scores: ${MODEL_DIR}
 
 
 ## prepare the model evaluation file directory
@@ -356,11 +416,6 @@ ${MODEL_DIR}/${TESTSET}.${LANGPAIR}.eval: ${INDIVIDUAL_EVAL_FILES}
 	rev $@ | sort | uniq -f2 | rev > $@.uniq
 	mv -f $@.uniq $@
 
-#	cat ${MODEL_DIR}/${TESTSET}.${LANGPAIR}.bleu \
-#	    ${MODEL_DIR}/${TESTSET}.${LANGPAIR}.chrf            > $@
-#	tail -1 ${MODEL_DIR}/${TESTSET}.${LANGPAIR}.comet | \
-#	sed 's/^.*score:/COMET+default =/'                     >> $@
-
 
 ${MODEL_DIR}/${TESTSET}.${LANGPAIR}.compare:
 	${MAKE} ${WORK_DIR}/${TESTSET}.${LANGPAIR}.output
@@ -572,24 +627,5 @@ ${MODEL_DIR}.comet-scores.txt: ${MODEL_SCORES}
 	  mv -f $@.sorted $@; \
 	  rm -f $@.comet $@.langs $@.testsets $@.comet-scores; \
 	fi
-
-
-
-
-## OLD: extract BLEU and chrF scores from the combined score file
-
-# ${MODEL_BLEUSCORES}: ${MODEL_SCORES}
-# 	cut -f1,2,4 ${MODEL_SCORES} | \
-# 	sed 's/\(news.*[0-9][0-9][0-9][0-9]\)\-[a-z][a-z][a-z][a-z]	/\1	/' |\
-# 	sed -e 's/\(news.*2021\)\.[a-z][a-z]\-[a-z][a-z]	/\1	/' |\
-# 	rev | uniq -f1 | rev > $@
-
-
-# ${MODEL_CHRFSCORES}: ${MODEL_SCORES}
-# 	cut -f1,2,3 ${MODEL_SCORES} |\
-# 	sed 's/\(news.*[0-9][0-9][0-9][0-9]\)\-[a-z][a-z][a-z][a-z]	/\1	/' |\
-# 	sed -e 's/\(news.*2021\)\.[a-z][a-z]\-[a-z][a-z]	/\1	/' |\
-# 	rev | uniq -f1 | rev > $@
-
 
 
