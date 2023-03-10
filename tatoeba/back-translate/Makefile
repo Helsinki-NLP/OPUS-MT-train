@@ -16,6 +16,10 @@ include ${REPOHOME}lib/slurm.mk
 SRC = fin
 TRG = eng
 
+WIKI_DIR     = ${PWD}/wiki
+LANGID       = ${SRC}
+PART         = aa
+
 
 ## TODO: should use unshuffled versions and split into individual languages
 ## ---> otherwise we don't know the input language in case there are multiple ones
@@ -37,10 +41,21 @@ TATOEBA_MODEL_STORAGE = https://object.pouta.csc.fi/Tatoeba-MT-models
 BT_CONTAINER          = Tatoeba-MT-bt
 BT_WORK_CONTAINER     = project-Tatoeba-MT-bt
 
+
 ## various sources are available
 ## can be general wikipedia, wikinews, wikibooks, ...
-WIKISOURCE ?= wikipedia
-# WIKISOURCE ?= wiki
+
+
+# WIKISOURCES = wiki wikibooks wikinews wikiquote wikisource wiktionary
+WIKISOURCES = ${sort $(patsubst %.txt.gz,%,$(notdir ${wildcard ${WIKI_DIR}/${LANGID}/*.txt.gz})) \
+		$(patsubst %.${PART}.gz,%,$(notdir ${wildcard ${WIKI_DIR}/${LANGID}/*.${PART}.gz}))}
+
+ifeq ($(words ${WIKISOURCES}),0)
+  WIKISOURCE ?= wikipedia
+else
+  WIKISOURCE ?= $(firstword ${WIKISOURCES})
+endif
+
 
 ## split size in nr-of-lines
 ## default part to be selected = aa
@@ -147,9 +162,6 @@ RELEASED_WIKIS_REV = ${shell (for d in ${RELEASED_WIKIS}; do echo $$d; done) | t
 
 
 
-WIKI_DIR     = ${PWD}/wiki
-LANGID       = ${SRC}
-PART         = aa
 OUTPUT_DIR   = ${LANGPAIR}
 WIKI_TXT     = ${WIKI_DIR}/${LANGID}/${WIKISOURCE}.${PART}.gz
 WIKI_SRC     = ${OUTPUT_DIR}/${WIKISOURCE}.${PART}_${MODELNAME}.${LANGPAIR}.${SRC}.gz
@@ -163,10 +175,6 @@ WIKI_LATEST_README = ${OUTPUT_DIR}/latest/README.md
 ## all parts of this wiki
 PARTS = ${sort ${patsubst ${WIKI_DIR}/${LANGID}/${WIKISOURCE}.%.gz,%,\
 		${wildcard ${WIKI_DIR}/${LANGID}/${WIKISOURCE}.??.gz}}}
-
-# WIKISOURCES = wiki wikibooks wikinews wikiquote wikisource wiktionary
-WIKISOURCES = ${sort $(patsubst %.txt.gz,%,$(notdir ${wildcard ${WIKI_DIR}/${LANGID}/*.txt.gz})) \
-		$(patsubst %.${PART}.gz,%,$(notdir ${wildcard ${WIKI_DIR}/${LANGID}/*.${PART}.gz}))}
 
 
 ## targets for all parts of the current wiki source
@@ -214,6 +222,30 @@ all-jobs: download
 # 	for w in ${filter-out eng,${RELEASED_WIKIS}}; do \
 # 	  make EMAIL= HPC_CORES=128 HPC_MEM=160g HPC_TIME=24:00 SRC=$$w TRG=eng all-jobs; \
 # 	done
+
+
+#------------------------------------------------------------
+# translate news crawls provided by WMT
+#------------------------------------------------------------
+
+SRC2          := ${shell iso639 -2 ${SRC}}
+NEWSCRAWL_URL := https://data.statmt.org/news-crawl/fi/
+NEWSCRAWLS    := $(patsubst "%.gz",news/${SRC}/%.txt.gz,${shell wget -qq -O - https://data.statmt.org/news-crawl/${SRC2}/ | grep -o '"news.*.gz"'})
+newscrawls: ${NEWSCRAWLS}
+
+
+translate-newscrawls:
+	${MAKE} WIKI_DIR=news prepare-allwikis
+	${MAKE} WIKI_DIR=news translate-all
+
+news/${SRC}/news.%.txt.gz:
+	mkdir -p $(dir $@)
+	wget -qq -O $@ $(patsubst news/${SRC}/%.txt.gz,${NEWSCRAWL_URL}%.gz,$@)
+
+#------------------------------------------------------------
+
+
+
 
 
 ## do only the ones that we do not have already!
@@ -449,6 +481,7 @@ ${WIKI_DIR}/${SRC}/%.${PART}.gz: | ${WIKI_DIR}/${SRC}/.done
 
 ${WIKI_DIR}/${SRC}/%.txt.gz: ${WIKI_DIR}/${SRC}/.done
 	echo "done!"
+
 
 
 ## NEW: get proper released WIKI data and extract the languages

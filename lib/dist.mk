@@ -78,8 +78,9 @@ ifeq (${wildcard $(TEST_EVALUATION)},)
 endif
 	if [ -e $(TEST_EVALUATION) ]; then \
 	  if  [ `grep BLEU $(TEST_EVALUATION) | cut -f3 -d ' ' | cut -f1 -d '.'` -ge ${MIN_BLEU_SCORE} ]; then \
+	    ${MAKE} MODELSHOME=${RELEASEDIR} link-latest-model; \
 	    ${MAKE} MODELSHOME=${RELEASEDIR} \
-		  MODELS_URL=https://object.pouta.csc.fi/${MODEL_CONTAINER} \
+	            MODELS_URL=https://object.pouta.csc.fi/${MODEL_CONTAINER} \
 	    dist; \
 	  fi \
 	else \
@@ -347,11 +348,14 @@ endif
 
 
 link-latest-model:
-	if [ `ls ${patsubst %.zip,%_*,${DIST_PACKAGE}} 2>/dev/null | wc -l` -gt 0 ]; then \
-	  rm -f ${DIST_PACKAGE}; \
-	  cd ${dir ${DIST_PACKAGE}}; \
-	  ln -s `ls -t ${patsubst %.zip,%_*.zip,$(notdir ${DIST_PACKAGE})} | head -1` \
-		${notdir ${DIST_PACKAGE}}; \
+	if [ `ls ${patsubst %.yml,%_*.yml,${DIST_YML}} 2>/dev/null | wc -l` -gt 0 ]; then \
+	  rm -f ${DIST_YML}; \
+	  cd ${dir ${DIST_YML}}; \
+	  ln -s `ls -t $(patsubst %.yml,%_*.yml,$(notdir ${DIST_YML})) | head -1` $(notdir ${DIST_YML}); \
+	  if [ `ls $(patsubst %.zip,%_*.zip,$(notdir ${DIST_PACKAGE})) 2>/dev/null | wc -l` -gt 0 ]; then \
+	    rm -f $(notdir ${DIST_PACKAGE}); \
+	    ln -s `ls -t $(patsubst %.zip,%_*.zip,$(notdir ${DIST_PACKAGE})) | head -1` $(notdir ${DIST_PACKAGE}); \
+	  fi \
 	fi
 
 

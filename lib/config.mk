@@ -177,10 +177,10 @@ endif
 
 ## NEW: use temperature-based sampling by default for multilingual models
 ## default value = 0.3 is a bit lower than T=5 used in the literature
-## T=5 emphasizes a lot on low-resource languages, 0.3 relaxes this a littl
+## T=5 emphasizes a lot on low-resource languages, 0.4 relaxes this a little
 ## unset temperature-based sampling by setting to empty (DATA_SAMPLING_WEIGHT=)
 
-DATA_SAMPLING_WEIGHT = 0.3
+DATA_SAMPLING_WEIGHT = 0.4
 
 ## temperature-based sampling can be combined with MAX_DATA_SIZE
 ## which sets the maximum size of the biggest language pair

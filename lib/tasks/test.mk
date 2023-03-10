@@ -134,6 +134,7 @@ LEADERBOARD_DIR = ${REPOHOME}scores
 compare-bleu-score-table:
 	@grep BLEU ${WORKHOME}/*/*.eval |\
 	perl -pe 's#^${WORKHOME}/([^/]*)/([^\.]+)\.(.*?-.*?\.)?([^\.]+\.[^\.]+\.[^\.]+)\.([^\.]+)\.([^\.]+)\.eval:.*? = ([0-9\.]+) .*$$#$$5-$$6\t$$7\t$$2\t$$1\t$$4#' |\
+	grep -v '^[a-z\-]*multi' |\
 	perl -pe '@a=split(/\t/);if($$a[0]=~/multi/){$$a[0]=$$a[3];};$$_=join("\t",@a);' |\
 	perl -pe '@a=split(/\t/);$$a[2]=lc($$a[2]);$$a[2]=~s/^(.*)\-[a-z]{4}$$/$$1/;$$a[2]=~s/^(.*)\-[a-z]{6}$$/$$1/;$$a[2]=~s/^(news.*)\-[a-z]{4}/$$1/;if (-e "${LEADERBOARD_DIR}/$$a[0]/$$a[2]/bleu-scores.txt"){$$b=`head -1 ${LEADERBOARD_DIR}/$$a[0]/$$a[2]/bleu-scores.txt | cut -f1`;$$b+=0;}else{$$b=0;}$$d=$$a[1]-$$b;splice(@a,2,0,$$b,$$d);$$_=join("\t",@a);' |\
 	sort -k5,5 -k1,1 -k2,2nr
@@ -144,7 +145,7 @@ compare-bleu-scores:
 
 print-improved-models:
 	@make -s compare-bleu-scores |\
-	grep -v ' 0.00' | grep -v ' -[0-9]'
+	grep -v ' 0.00  [a-z]' | grep -v ' -[0-9]'
 
 print-decreased-models:
 	@make -s compare-bleu-scores |\
@@ -158,6 +159,7 @@ print-decreased-models:
 compare-model-bleu-score-table:
 	@grep BLEU ${WORKDIR}/*.eval |\
 	perl -pe 's#^${WORKHOME}/([^/]*)/([^\.]+)\.(.*?-.*?\.)?([^\.]+\.[^\.]+\.[^\.]+)\.([^\.]+)\.([^\.]+)\.eval:.*? = ([0-9\.]+) .*$$#$$5-$$6\t$$7\t$$2\t$$1\t$$4#' |\
+	grep -v '^[a-z\-]*multi' |\
 	perl -pe '@a=split(/\t/);if($$a[0]=~/multi/){$$a[0]=$$a[3];};$$_=join("\t",@a);' |\
 	perl -pe '@a=split(/\t/);$$a[2]=lc($$a[2]);$$a[2]=~s/^(.*)\-[a-z]{4}$$/$$1/;$$a[2]=~s/^(.*)\-[a-z]{6}$$/$$1/;$$a[2]=~s/^(news.*)\-[a-z]{4}$$/$$1/;if (-e "${LEADERBOARD_DIR}/$$a[0]/$$a[2]/bleu-scores.txt"){$$b=`head -1 ${LEADERBOARD_DIR}/$$a[0]/$$a[2]/bleu-scores.txt | cut -f1`;$$b+=0;}else{$$b=0;}$$d=$$a[1]-$$b;splice(@a,2,0,$$b,$$d);$$_=join("\t",@a);' |\
 	sort -k5,5 -k1,1 -k2,2nr
@@ -168,7 +170,7 @@ compare-model-bleu-scores:
 
 print-improved-bleu:
 	@make -s compare-model-bleu-scores |\
-	grep -v ' 0.00' | grep -v ' -[0-9]'
+	grep -v ' 0.00  [a-z]' | grep -v ' -[0-9]'
 
 print-decreased-bleu:
 	@make -s compare-model-bleu-scores |\
