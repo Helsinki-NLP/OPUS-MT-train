@@ -38,6 +38,30 @@ fineng-test-student:
 
 
 
+
+euseng-train-tinystudent:
+	make SRCLANGS=eus TRGLANGS=eng train-tiny11-student
+
+swaeng-train-tinystudent:
+	make SRCLANGS=swa TRGLANGS=eng train-tiny11-student
+
+glgeng-train-tinystudent:
+	make SRCLANGS=glg TRGLANGS=eng train-tiny11-student
+
+
+euseng-train-smallstudent:
+	make SRCLANGS=eus TRGLANGS=eng train-small-student
+
+swaeng-train-smallstudent:
+	make SRCLANGS=swa TRGLANGS=eng train-small-student
+
+glgeng-train-smallstudent:
+	make SRCLANGS=glg TRGLANGS=eng train-small-student
+
+
+
+
+
 ## generic recipes for training and testing student models
 
 train-student:

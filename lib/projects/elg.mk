@@ -44,7 +44,8 @@ ELG_EU_SELECTED_BIG = gmq zle zls zlw spa fra deu
 
 
 # raul-timo: rus2eng ukr2eng sla2eng ine2eng mul2eng
-raul-timo: sla2eng ine2eng mul2eng
+# raul-timo: sla2eng ine2eng mul2eng
+raul-timo: ita2eng fra2eng spa2eng por2eng cat2eng
 
 #	${MAKE} rus2eng
 #	${MAKE} ukr2eng
@@ -52,10 +53,13 @@ raul-timo: sla2eng ine2eng mul2eng
 #	${MAKE} ine2eng
 #	${MAKE} mul2eng
 
-rus2eng ukr2eng:
+rus2eng ukr2eng ita2eng fra2eng por2eng spa2eng cat2eng:
 	make MODELTYPE=transformer tatoeba-$@-data-5m
 
 sla2eng ine2eng mul2eng:
+	make MODELTYPE=transformer tatoeba-$@-data-5m0.5temp
+
+roa2eng:
 	make MODELTYPE=transformer tatoeba-$@-data-5m0.5temp
 
 
