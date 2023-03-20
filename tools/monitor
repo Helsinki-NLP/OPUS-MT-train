@@ -1,0 +1,52 @@
+#!/usr/bin/bash
+
+
+energy_counter() {
+    python3 << END
+import sys
+from pynvml import (
+    nvmlInit, nvmlDeviceGetCount, nvmlDeviceGetHandleByIndex,
+    nvmlDeviceGetTotalEnergyConsumption, nvmlShutdown
+)
+
+nvmlInit()
+
+deviceCount = nvmlDeviceGetCount()
+for i in range(deviceCount):
+    handle = nvmlDeviceGetHandleByIndex(i)
+    energy = nvmlDeviceGetTotalEnergyConsumption(handle)
+    print(f"     energy counter GPU {i}: {energy} mJ", file=sys.stderr)
+
+nvmlShutdown()
+END
+}
+
+
+COMMAND=$@
+
+TIME=$(which time || echo "time")
+NVIDIA_GPU_QUERY=timestamp,name,pci.bus_id,driver_version,pstate,pcie.link.gen.max,pcie.link.gen.current,temperature.gpu,utilization.gpu,utilization.memory,power.draw,memory.total,memory.free,memory.used
+
+tmpfile=$(mktemp)
+
+if command -v nvidia-smi &> /dev/null
+then
+    nvidia-smi --query-gpu=${NVIDIA_GPU_QUERY} --format=csv -l 1 > ${tmpfile}.gpu &
+    echo " - energy-comsumption counter (start): "  >&2
+    energy_counter
+fi
+
+${TIME} -v -o ${tmpfile} $@
+echo " - resources used according to time:"         >&2
+cat ${tmpfile}                                      >&2
+rm -f ${tmpfile}
+
+if command -v nvidia-smi &> /dev/null
+then
+    kill %1
+    echo " - energy-comsumption counter (end): "    >&2
+    energy_counter
+    echo " - GPU utlization:"                       >&2
+    cat ${tmpfile}.gpu                              >&2
+    rm -f ${tmpfile}.gpu
+fi

@@ -3,4 +3,4 @@
 # USAGE postprocess.sh < input > output
 #
 
-sed 's/ //g;s/▁/ /g'
+sed 's/ //g;s/▁/ /g;s/^ *//'

@@ -150,6 +150,7 @@ ifneq ($(subst -align,,${MODELTYPE}),${MODELTYPE})
   MARIAN_EXTRA += --guided-alignment ${TRAIN_ALG}
 endif
 
+
 ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny)
   MARIAN_ENC_DEPTH = 3
   MARIAN_DEC_DEPTH = 2
@@ -209,6 +210,17 @@ ifeq ($(subst -align,,${MODELTYPE}),transformer-big)
 				--optimizer-delay 2 # --fp16
   GPUJOB_HPC_MEM = 16g
 endif
+
+
+ifeq ($(subst -align,,${MODELTYPE}),transformer-24x12)
+  MARIAN_ENC_DEPTH = 24
+  MARIAN_DEC_DEPTH = 12
+  MARIAN_ATT_HEADS = 8
+  MARIAN_DIM_EMB = 2024
+  MARIAN_EXTRA += --optimizer-delay 2 --fp16
+  GPUJOB_HPC_MEM = 32g
+endif
+
 
 
 
@@ -280,7 +292,7 @@ endif
 ##       load anyway before calling make? It is already set in the
 ##       SLURM scripts ...
 ##--------------------------------------------------------------------
-	${LOAD_ENV} && ${MARIAN_TRAIN} \
+	${LOAD_ENV} && ${MONITOR} ${MARIAN_TRAIN} \
 		${MARIAN_TRAINING_PARAMETER} \
 		${MARIAN_EXTRA} \
 		${MARIAN_STOP_CRITERIA} \
@@ -298,7 +310,7 @@ endif
 		--shuffle ${MARIAN_SHUFFLE} \
 		--sharding ${MARIAN_SHARDING} \
 		--overwrite \
-		--keep-best
+		--keep-best 2>>$(@:.done=.log) 1>&2
 	touch $@
 
 

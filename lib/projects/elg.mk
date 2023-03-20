@@ -79,6 +79,42 @@ roa2eng:
 
 
 
+
+
+fin2eng-extended:
+	${MAKE} MODELTYPE=transformer-big CONTINUE_EXISTING=1 DATASET=${DATASET}+news tatoeba-fin2eng-trainjob-bt
+
+eng2fin-extended:
+	${MAKE} MODELTYPE=transformer-big CONTINUE_EXISTING=1 DATASET=${DATASET}+news tatoeba-eng2fin-trainjob-bt
+
+swe2fin-extended:
+	${MAKE} MODELTYPE=transformer-big CONTINUE_EXISTING=1 DATASET=${DATASET}+news tatoeba-swe2fin-trainjob-bt-pbt
+
+fin2swe-extended:
+	${MAKE} MODELTYPE=transformer-big CONTINUE_EXISTING=1 tatoeba-fin2swe-trainjob-bt-pbt
+
+
+
+
+fin2eng-24x12:
+	${MAKE} MODELTYPE=transformer-24x12 DATASET=${DATASET}+news \
+		GPUJOB_HPC_CORES=4 GPUJOB_HPC_MEM=32g \
+		GPUJOB_SUBMIT=-gpu0123 \
+		MARIAN_WORKSPACE=15000 tatoeba-fin2eng-trainjob-bt
+
+fin2swe-24x12:
+	${MAKE} MODELTYPE=transformer-24x12 \
+		GPUJOB_HPC_CORES=4 GPUJOB_HPC_MEM=32g \
+		GPUJOB_SUBMIT=-gpu0123 \
+		MARIAN_WORKSPACE=15000 tatoeba-fin2swe-trainjob-bt-pbt
+
+
+
+
+
+
+
+
 elg-release-models:
 	make MODELTYPE=transformer-big release-all-improved-models-bt
 	make MODELTYPE=transformer-big release-all-improved-models

@@ -38,31 +38,42 @@ fineng-test-student:
 
 
 
+HPLTLANGS = eus swa glg zho
 
-euseng-train-tinystudent:
-	make SRCLANGS=eus TRGLANGS=eng train-tiny11-student
+hplt-train-tinystudents:
+	for l in ${HPLTLANGS}; do \
+	  make SRCLANGS=$$l TRGLANGS=eng train-tiny11-student; \
+	  make SRCLANGS=$$l TRGLANGS=eng train-small-student; \
+	done
 
-swaeng-train-tinystudent:
-	make SRCLANGS=swa TRGLANGS=eng train-tiny11-student
+#	  make HPC_MEM=32g GPUJOB_HPC_MEM=32g SRCLANGS=$$l TRGLANGS=eng train-base-student; \
 
-glgeng-train-tinystudent:
-	make SRCLANGS=glg TRGLANGS=eng train-tiny11-student
+hplt-quantize-students:
+	for l in ${HPLTLANGS}; do \
+	  make SRCLANGS=$$l TRGLANGS=eng quantize-tiny11-student; \
+	  make SRCLANGS=$$l TRGLANGS=eng quantize-small-student; \
+	done
 
+hplt-test-quantized-students:
+	for l in ${HPLTLANGS}; do \
+	  make SRCLANGS=$$l TRGLANGS=eng test-quantized-tiny11-student; \
+	  make SRCLANGS=$$l TRGLANGS=eng test-quantized-small-student; \
+	done
 
-euseng-train-smallstudent:
-	make SRCLANGS=eus TRGLANGS=eng train-small-student
-
-swaeng-train-smallstudent:
-	make SRCLANGS=swa TRGLANGS=eng train-small-student
-
-glgeng-train-smallstudent:
-	make SRCLANGS=glg TRGLANGS=eng train-small-student
-
+hplt-release-students:
+	for l in ${HPLTLANGS}; do \
+	  make SRCLANGS=$$l TRGLANGS=eng release-tiny11-student; \
+	  make SRCLANGS=$$l TRGLANGS=eng release-small-student; \
+	done
 
 
 
 
 ## generic recipes for training and testing student models
+
+data-student:
+	make ${STUDENT_HPCPARAMS} FT_SELECTED=${STUDENT_CEFILTER} \
+		data-${STUDENT_DATA}-${STUDENT_VOCAB}-tatoeba
 
 train-student:
 	make ${STUDENT_HPCPARAMS} FT_SELECTED=${STUDENT_CEFILTER} \

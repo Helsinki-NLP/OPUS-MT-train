@@ -98,6 +98,11 @@ MODELNAME       := ${patsubst %.zip,%,${notdir ${MODELZIP}}}
 MULTI_TARGET_MODEL := ${shell ${WGET} -qq -O - ${MODELINFO} | grep 'use-target-labels' | wc -l}
 ifneq (${MULTI_TARGET_MODEL},0)
   TARGET_LANG_LABEL := ${shell ${WGET} -qq -O - ${MODELINFO} | grep -o '>>${TRG}.*<<' | head -1}
+ifeq (${TARGET_LANG_LABEL},)
+ifneq ($(wildcard ${LANGPAIR}/${MODELNAME}/*.vocab.yml),)
+  TARGET_LANG_LABEL := $(shell grep -o '>>${TRG}.*<<' $(wildcard ${LANGPAIR}/${MODELNAME}/*.vocab.yml) | head -1)
+endif
+endif
 endif
 
 RELEASED_BITEXTS := $(patsubst %.tar,%,${shell ${WGET} -qq -O - ${TATOEBA_GITRAW}/Wiki.md | \
@@ -137,6 +142,7 @@ all: prepare
 	${MAKE} translate-all-parts
 	${MAKE} score-translations
 	${MAKE} sort-scored-translations
+	${MAKE} extract-best-translations
 
 
 .PHONY: mtmodel
@@ -191,6 +197,12 @@ else
   REV_SRC_PREPROCESS_ARGS = ${TRG} ${REV_LANGPAIR}/${REV_MODELNAME}/source.spm
   REV_TRG_PREPROCESS_ARGS = ${SRC} ${REV_LANGPAIR}/${REV_MODELNAME}/target.spm
 endif
+
+print-reverse-modelinfo:
+	@echo ${REV_MODELNAME}
+	@echo ${REV_MODELZIP}
+	@echo ${MODELINFO}
+	@echo "multi-target model: ${REV_MULTI_TARGET_MODEL}"
 
 
 ## score translations with reverse translation model

@@ -287,7 +287,7 @@ PIVOT_LANG         ?= ${DEFAULT_PIVOT_LANG}
 FT_SELECTED ?= 95
 
 %-ftbest:
-	@for s in ${SRCLANGS}; do \
+	@-for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
 	    if [ -e ${FORWARDTRANS_HOME}/$$s-$$t/latest ]; then \
 	      if [ `ls ${FORWARDTRANS_HOME}/$$s-$$t/latest/ | grep "best${FT_SELECTED}.gz" | wc -l` -eq 0 ]; then \
@@ -304,7 +304,7 @@ FT_SELECTED ?= 95
 	${@:-ftbest=}
 
 %-ftrawbest:
-	@for s in ${SRCLANGS}; do \
+	@-for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
 	    if [ -e ${FORWARDTRANS_HOME}/$$s-$$t/latest ]; then \
 	      ${MAKE} -C ${FORWARDTRANS_HOME} SRC=$$s TRG=$$t \

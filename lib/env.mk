@@ -105,6 +105,7 @@ export TMPWORKDIR
 SCRIPTDIR      ?= ${REPOHOME}scripts
 TOOLSDIR       ?= ${REPOHOME}tools
 
+MONITOR        ?= ${shell which monitor   2>/dev/null || echo ${TOOLSDIR}/monitor}
 ISO639         ?= ${shell which iso639    2>/dev/null || echo 'perl ${TOOLSDIR}/LanguageCodes/ISO-639-3/bin/iso639'}
 PIGZ           ?= ${shell which pigz      2>/dev/null || echo ${TOOLSDIR}/pigz/pigz}
 TERASHUF       ?= ${shell which terashuf  2>/dev/null || echo ${TOOLSDIR}/terashuf/terashuf}

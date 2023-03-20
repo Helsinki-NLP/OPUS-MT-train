@@ -42,7 +42,8 @@ BT_CWORK_ONTAINER     = project-Tatoeba-MT-bt
 
 ## split size in nr-of-lines
 ## default part to be selected = aa
-SPLIT_SIZE ?= 1000000
+SPLIT_SIZE       ?= 1000000
+MAX_NR_OF_PARTS  ?= 50
 
 ## maximum input length (number sentence piece segments)
 ## maximum number of sentences to be translated (top N lines)
@@ -97,8 +98,8 @@ BITEXT_LATEST_TRG    = ${OUTPUT_DIR}/latest/Tatoeba-train.${PIVOT}-${SRC}-${TRG}
 BITEXT_LATEST_README = ${OUTPUT_DIR}/latest/README.md
 
 
-## all parts of the bitext
-PARTS                 = $(subst .,,${suffix ${basename ${wildcard ${BITEXT_PRE:${PART}.gz=}??.gz}}})
+## all parts of the bitext (restricted to a specific max number of parts)
+PARTS                 = $(wordlist 1,${MAX_NR_OF_PARTS},$(subst .,,${suffix ${basename ${wildcard ${BITEXT_PRE:${PART}.gz=}??.gz}}}))
 ALL_BITEXT_LATEST_SRC = ${patsubst %,${OUTPUT_DIR}/latest/Tatoeba-train.${PIVOT}-${SRC}-${TRG}.%.${SRC}.gz,${PARTS}}
 ALL_BITEXT_LATEST_TRG = ${patsubst %,${OUTPUT_DIR}/latest/Tatoeba-train.${PIVOT}-${SRC}-${TRG}.%.${TRG}.gz,${PARTS}}
 
@@ -140,7 +141,7 @@ ${MODELDIR}/decoder.yml:
 ifneq (${MODELZIP},)
 	mkdir -p ${dir $@}
 	${WGET} -O ${dir $@}/model.zip ${MODELZIP}
-	cd ${dir $@} && unzip model.zip
+	cd ${dir $@} && unzip -n model.zip
 	rm -f ${dir $@}/model.zip
 	mv ${dir $@}/preprocess.sh ${dir $@}/preprocess-old.sh
 	sed 's#perl -C -pe.*$$#perl -C -pe  "s/(?!\\n)\\p{C}/ /g;" |#' \
