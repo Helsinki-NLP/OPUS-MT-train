@@ -198,6 +198,8 @@ else
 endif
 
 
+## convenient function to reverse a list
+reverse = $(if $(wordlist 2,2,$(1)),$(call reverse,$(wordlist 2,$(words $(1)),$(1))) $(firstword $(1)),$(1))
 
 
 

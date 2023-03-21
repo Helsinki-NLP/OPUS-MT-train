@@ -16,9 +16,9 @@ include ${REPOHOME}lib/slurm.mk
 SRC = fin
 TRG = eng
 
-WIKI_DIR     = ${PWD}/wiki
-LANGID       = ${SRC}
-PART         = aa
+WIKI_DIR ?= ${PWD}/wiki
+PART     ?= aa
+LANGID    = ${SRC}
 
 
 ## TODO: should use unshuffled versions and split into individual languages
@@ -46,6 +46,7 @@ BT_WORK_CONTAINER     = project-Tatoeba-MT-bt
 ## can be general wikipedia, wikinews, wikibooks, ...
 
 
+WIKIS = wikipedia wikibooks wikinews wikiquote wikisource wiktionary
 # WIKISOURCES = wiki wikibooks wikinews wikiquote wikisource wiktionary
 WIKISOURCES = ${sort $(patsubst %.txt.gz,%,$(notdir ${wildcard ${WIKI_DIR}/${LANGID}/*.txt.gz})) \
 		$(patsubst %.${PART}.gz,%,$(notdir ${wildcard ${WIKI_DIR}/${LANGID}/*.${PART}.gz}))}
@@ -173,8 +174,8 @@ WIKI_LATEST_TRG    = ${OUTPUT_DIR}/latest/${WIKISOURCE}.${PART}.${LANGPAIR}.${TR
 WIKI_LATEST_README = ${OUTPUT_DIR}/latest/README.md
 
 ## all parts of this wiki
-PARTS = ${sort ${patsubst ${WIKI_DIR}/${LANGID}/${WIKISOURCE}.%.gz,%,\
-		${wildcard ${WIKI_DIR}/${LANGID}/${WIKISOURCE}.??.gz}}}
+PARTS = $(sort $(patsubst ${WIKI_DIR}/${LANGID}/${WIKISOURCE}.%.gz,%,\
+		$(wildcard ${WIKI_DIR}/${LANGID}/${WIKISOURCE}.??.gz)))
 
 
 ## targets for all parts of the current wiki source
@@ -229,15 +230,27 @@ all-jobs: download
 #------------------------------------------------------------
 
 SRC2          := ${shell iso639 -2 ${SRC}}
-NEWSCRAWL_URL := https://data.statmt.org/news-crawl/fi/
+NEWSCRAWL_URL := https://data.statmt.org/news-crawl/${SRC2}/
 NEWSCRAWLS    := $(patsubst "%.gz",news/${SRC}/%.txt.gz,${shell wget -qq -O - https://data.statmt.org/news-crawl/${SRC2}/ | grep -o '"news.*.gz"'})
 newscrawls: ${NEWSCRAWLS}
+last-newscrawl: $(lastword ${NEWSCRAWLS})
 
+prepare-newscrawls:
+	${MAKE} WIKI_DIR=news newscrawls
+	${MAKE} WIKI_DIR=news prepare-allwikis
 
 translate-newscrawls:
+	${MAKE} WIKI_DIR=news newscrawls
 	${MAKE} WIKI_DIR=news prepare-allwikis
 	${MAKE} WIKI_DIR=news translate-all
 
+translate-last-newscrawl:
+	${MAKE} WIKI_DIR=news last-newscrawl
+	${MAKE} WIKI_DIR=news prepare-allwikis
+	${MAKE} WIKI_DIR=news translate-last-source
+
+
+# ${NEWSCRAWLS}:
 news/${SRC}/news.%.txt.gz:
 	mkdir -p $(dir $@)
 	wget -qq -O $@ $(patsubst news/${SRC}/%.txt.gz,${NEWSCRAWL_URL}%.gz,$@)
@@ -399,6 +412,14 @@ translate-all:
 	  ${MAKE} WIKISOURCE=$$s translate-all-parts; \
 	done
 
+.PHONY: translate-first-source
+translate-first-source:
+	${MAKE} WIKISOURCE=$(firstword ${WIKISOURCES}) translate-all-parts
+
+.PHONY: translate-last-source
+translate-last-source:
+	${MAKE} WIKISOURCE=$(lastword ${WIKISOURCES}) translate-all-parts
+
 
 ## create all source language files
 .PHONY: latest-all-source-parts
@@ -495,8 +516,11 @@ ${WIKI_DIR}/${SRC}/data:
 	tar -C ${dir $@} -xf $@.tar
 	rm -f $@.tar
 
+WIKIS_SHUFFLED = $(patsubst %,${WIKI_DIR}/${SRC}/%.txt.gz,${WIKIS})
+
 # de-duplicate and shuffle
-${WIKI_DIR}/${SRC}/${WIKISOURCE}.txt.gz:
+# ${WIKI_DIR}/${SRC}/${WIKISOURCE}.txt.gz:
+${WIKIS_SHUFFLED}:
 	${MAKE} ${WIKI_DIR}/${SRC}/data
 	for f in `find ${dir $@} -name '*.id.gz'`; do \
 	  t=`echo $$f | sed 's/\.id\.gz/.txt.gz/'`; \

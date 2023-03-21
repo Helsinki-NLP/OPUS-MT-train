@@ -84,12 +84,12 @@ else
 endif
 	${MAKE} ${LOCAL_TRAIN_SRC}.charfreq
 	if [ `cat ${LOCAL_TRAIN_SRC}.charfreq | wc -l` -gt 1000 ]; then \
-	  ${SPM_TRAIN} ${SPMEXTRA} \
+	  ${SPM_TRAIN} ${SPMEXTRA} --byte_fallback \
 		--model_prefix=$@ --vocab_size=$(SUBWORD_SRCVOCAB_SIZE) --input=${LOCAL_TRAIN_SRC}.text \
 		--input_sentence_size ${SPM_INPUT_SIZE} --shuffle_input_sentence ${SPM_SHUFFLE_INPUT} \
 		--character_coverage=0.9995 --hard_vocab_limit=false; \
 	else \
-	  ${SPM_TRAIN} ${SPMEXTRA} \
+	  ${SPM_TRAIN} ${SPMEXTRA} --byte_fallback \
 		--model_prefix=$@ --vocab_size=$(SUBWORD_SRCVOCAB_SIZE) --input=${LOCAL_TRAIN_SRC}.text \
 		--input_sentence_size ${SPM_INPUT_SIZE} --shuffle_input_sentence ${SPM_SHUFFLE_INPUT} \
 		--character_coverage=1.0 --hard_vocab_limit=false; \
@@ -116,12 +116,12 @@ else
 	cat ${LOCAL_TRAIN_TRG} | ${SPM_PREPROCESS} | head -${SPM_INPUT_SIZE} > ${LOCAL_TRAIN_TRG}.text
 	${MAKE} ${LOCAL_TRAIN_TRG}.charfreq
 	if [ `cat ${LOCAL_TRAIN_TRG}.charfreq | wc -l` -gt 1000 ]; then \
-	  ${SPM_TRAIN} ${SPMEXTRA} \
+	  ${SPM_TRAIN} ${SPMEXTRA} --byte_fallback \
 		--model_prefix=$@ --vocab_size=$(SUBWORD_TRGVOCAB_SIZE) --input=${LOCAL_TRAIN_TRG}.text \
 		--input_sentence_size ${SPM_INPUT_SIZE} --shuffle_input_sentence ${SPM_SHUFFLE_INPUT} \
 		--character_coverage=0.9995 --hard_vocab_limit=false; \
 	else \
-	  ${SPM_TRAIN} ${SPMEXTRA} \
+	  ${SPM_TRAIN} ${SPMEXTRA} --byte_fallback \
 		--model_prefix=$@ --vocab_size=$(SUBWORD_TRGVOCAB_SIZE) --input=${LOCAL_TRAIN_TRG}.text \
 		--input_sentence_size ${SPM_INPUT_SIZE} --shuffle_input_sentence ${SPM_SHUFFLE_INPUT} \
 		--character_coverage=1.0 --hard_vocab_limit=false; \
@@ -157,12 +157,12 @@ else
 	rm -f ${LOCAL_TRAIN}.tmp
 	${MAKE} ${LOCAL_TRAIN}.text.charfreq
 	if [ `cat ${LOCAL_TRAIN}.text.charfreq | wc -l` -gt 1000 ]; then \
-	  ${SPM_TRAIN} ${SPMEXTRA} \
+	  ${SPM_TRAIN} ${SPMEXTRA} --byte_fallback \
 		--model_prefix=$@ --vocab_size=$(SUBWORD_TRGVOCAB_SIZE) --input=${LOCAL_TRAIN}.text \
 		--input_sentence_size ${SPM_INPUT_SIZE} --shuffle_input_sentence ${SPM_SHUFFLE_INPUT} \
 		--character_coverage=0.9995 --hard_vocab_limit=false; \
 	else \
-	  ${SPM_TRAIN} ${SPMEXTRA} \
+	  ${SPM_TRAIN} ${SPMEXTRA} --byte_fallback \
 		--model_prefix=$@ --vocab_size=$(SUBWORD_TRGVOCAB_SIZE) --input=${LOCAL_TRAIN}.text \
 		--input_sentence_size ${SPM_INPUT_SIZE} --shuffle_input_sentence ${SPM_SHUFFLE_INPUT} \
 		--character_coverage=1.0 --hard_vocab_limit=false; \
@@ -244,12 +244,12 @@ ifeq ($(wildcard ${SPM_MONO}),)
 	cat $< | ${SPM_PREPROCESS} | head -${SPM_INPUT_SIZE} > $<.text
 	${MAKE} ${LOCAL_MONO_DATA}.${PRE}.charfreq
 	if [ `cat ${LOCAL_MONO_DATA}.${PRE}.charfreq | wc -l` -gt 1000 ]; then \
-	  ${SPM_TRAIN} ${SPMEXTRA} \
+	  ${SPM_TRAIN} ${SPMEXTRA} --byte_fallback \
 		--model_prefix=$@ --vocab_size=$(SUBWORD_TRGVOCAB_SIZE) --input=$<.text \
 		--input_sentence_size ${SPM_INPUT_SIZE} --shuffle_input_sentence ${SPM_SHUFFLE_INPUT} \
 		--character_coverage=0.9995 --hard_vocab_limit=false; \
 	else \
-	  ${SPM_TRAIN} ${SPMEXTRA} \
+	  ${SPM_TRAIN} ${SPMEXTRA} --byte_fallback \
 		--model_prefix=$@ --vocab_size=$(SUBWORD_TRGVOCAB_SIZE) --input=$<.text \
 		--input_sentence_size ${SPM_INPUT_SIZE} --shuffle_input_sentence ${SPM_SHUFFLE_INPUT} \
 		--character_coverage=1.0 --hard_vocab_limit=false; \
