@@ -142,7 +142,7 @@ all:
 # 16384 32768 65536 8192 4096
 # (but this breaks the way we create the short size string)
 
-
+TRGLANG_GROUP ?= gmw
 TRGLANG_GROUP_LANGS = $(call find-langgroup,${TRGLANG_GROUP})
 
 SUBWORD_TRG_SHORTSIZE = ${SUBWORD_TRGVOCAB_SIZE:000=}k
@@ -487,6 +487,9 @@ find-langgroup-pair = $(sort $(call find-srclanggroup,${1}) $(call find-trglangg
 
 
 ## expand language groups to individual languages and language pairs
+
+SRCLANGGROUP ?= gmw
+TRGLANGGROUP ?= gmw
 
 LANGGROUP_SRCLANGS := ${call find-srclanggroup,${SRCLANGGROUP},${PIVOT}}
 LANGGROUP_TRGLANGS := ${call find-srclanggroup,${TRGLANGGROUP},${PIVOT}}
