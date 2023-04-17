@@ -61,6 +61,9 @@ else ifeq (${shell hostname},dx7-nkiel-4gpu)
 else ifeq (${shell hostname --domain 2>/dev/null},bullx)
   HPC_HOST = puhti
   include ${REPOHOME}lib/env/puhti.mk
+else ifeq ($(shell hostname | sed 's/[0-9]//g'),uan)
+  HPC_HOST = lumi
+  include ${REPOHOME}lib/env/lumi.mk
 endif
 
 
@@ -183,9 +186,18 @@ WGET    := wget -T 1
 ## TODO: this assumes that we have nvidia-smi on the system
 
 NVIDIA_SMI := ${shell which nvidia-smi 2>/dev/null}
+ROCM_SMI := ${shell which rocm-smi 2>/dev/null}
+
 ifneq ($(wildcard ${NVIDIA_SMI}),)
 ifeq (${shell nvidia-smi | grep failed | wc -l},1)
   MARIAN_BUILD_OPTIONS += -DCOMPILE_CUDA=off
+  LOAD_ENV = ${LOAD_CPU_ENV}
+else
+  GPU_AVAILABLE = 1
+  LOAD_ENV = ${LOAD_GPU_ENV}
+endif
+else ifneq ($(wildcard ${ROCM_SMI}),)
+ifeq (${shell rocm-smi 2>&1 | grep ERROR | wc -l},1)
   LOAD_ENV = ${LOAD_CPU_ENV}
 else
   GPU_AVAILABLE = 1
@@ -232,11 +244,8 @@ CPAN := ${shell ${LOAD_BUILD_ENV} >/dev/null 2>/dev/null && which cpanm 2>/dev/n
 ##
 ## eval "$(perl -I$HOME/perl5/lib/perl5 -Mlocal::lib)"
 
-export PATH                := ${HOME}/perl5/bin:${PATH}:${MARIAN_HOME}:${SPM_HOME}:${FASTALIGN_HOME}
-export PERL5LIB            := ${HOME}/perl5/lib/perl5:${PERL5LIB}}
-export PERL_LOCAL_LIB_ROOT := ${HOME}/perl5:${PERL_LOCAL_LIB_ROOT}}
-export PERL_MB_OPT         := --install_base "${HOME}/perl5"
-export PERL_MM_OPT         := INSTALL_BASE=${HOME}/perl5
+
+
 
 ## quick hack to fix a problem in marian-dev submodule fbgemm
 ## --> googletest changed to 'main' from 'master' (stupid)
@@ -350,6 +359,8 @@ ${TOOLSDIR}/extract-lex/build/extract_lex:
 	${LOAD_EXTRACTLEX_BUILD_ENV} && ${MAKE} -C ${dir $@} -j4
 
 
+## eflomal is now pip-installable
+##
 ## for Mac users: use gcc to compile eflomal
 ##
 ## sudo port install gcc10

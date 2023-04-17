@@ -46,6 +46,13 @@ else
 endif
 
 
+export PATH                := ${HOME}/perl5/bin:${PATH}:${MARIAN_HOME}:${SPM_HOME}:${FASTALIGN_HOME}
+export PERL5LIB            := ${HOME}/perl5/lib/perl5:${PERL5LIB}}
+export PERL_LOCAL_LIB_ROOT := ${HOME}/perl5:${PERL_LOCAL_LIB_ROOT}}
+export PERL_MB_OPT         := --install_base "${HOME}/perl5"
+export PERL_MM_OPT         := INSTALL_BASE=${HOME}/perl5
+
+
 # CPU_MODULES = gcc/8.3.0 cuda/10.1.168 cudnn/7.6.1.34-10.1 intel-mkl/2019.0.4 python-env 
 # GPU_MODULES = gcc/8.3.0 cuda/10.1.168 cudnn/7.6.1.34-10.1 intel-mkl/2019.0.4 python-env
 CPU_MODULES = perl python-data cuda intel-oneapi-mkl openmpi
