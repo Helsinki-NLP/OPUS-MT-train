@@ -84,6 +84,13 @@ print-model-names:
 	@echo "       start with model: ${MODEL_LATEST}"
 	@echo "         write model to: ${MODEL_START}"
 
+print-marian-path:
+	@echo ${MARIAN}
+
+
+MARIAN_OPTIMIZER_PARAMS ?= 0.9 0.98 1e-09
+MARIAN_LEARNING_RATE ?= 0.0003
+
 
 ## possible model variants
 MARIAN_MODELS_DONE   = 	${patsubst %,${WORKDIR}/${MODEL}.%.model${NR}.done,${MODELTYPES}}
@@ -216,8 +223,13 @@ ifeq ($(subst -align,,${MODELTYPE}),transformer-24x12)
   MARIAN_ENC_DEPTH = 24
   MARIAN_DEC_DEPTH = 12
   MARIAN_ATT_HEADS = 8
-  MARIAN_DIM_EMB = 2024
-  MARIAN_EXTRA += --optimizer-delay 2 --fp16
+  MARIAN_DIM_EMB = 1024
+  MARIAN_OPTIMIZER_PARAMS = 0.92 0.998 1e-09
+  MARIAN_LEARNING_RATE = 0.0001
+  MARIAN_EXTRA += --optimizer-delay 10 --lr-warmup-cycle --fp16
+  MARIAN_VALID_FREQ = 2000
+  MARIAN_SAVE_FREQ = 2000
+  MARIAN_DISP_FREQ = 2000
   GPUJOB_HPC_MEM = 32g
 endif
 
@@ -244,11 +256,11 @@ MARIAN_TRAINING_PARAMETER ?= \
         --transformer-postprocess-emb d \
         --transformer-postprocess dan \
 	--label-smoothing 0.1 \
-        --learn-rate 0.0003 \
+        --learn-rate ${MARIAN_LEARNING_RATE} \
 	--lr-warmup 16000 \
 	--lr-decay-inv-sqrt 16000 \
 	--lr-report \
-        --optimizer-params 0.9 0.98 1e-09 \
+        --optimizer-params ${MARIAN_OPTIMIZER_PARAMS} \
 	--clip-norm ${MARIAN_CLIP_NORM} \
         --sync-sgd \
         --exponential-smoothing
@@ -309,7 +321,7 @@ endif
 		--tempdir ${TMPDIR} \
 		--shuffle ${MARIAN_SHUFFLE} \
 		--sharding ${MARIAN_SHARDING} \
-		--overwrite \
+		--overwrite --disp-first 10 --disp-label-counts \
 		--keep-best 2>>$(@:.done=.log) 1>&2
 	touch $@
 

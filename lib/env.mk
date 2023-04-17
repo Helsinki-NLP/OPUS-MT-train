@@ -130,7 +130,8 @@ GET_ISO_CODE   ?= ${ISO639} -m
 
 ## marian-nmt binaries
 
-MARIAN_TRAIN   = ${MARIAN_HOME}marian
+# MARIAN_TRAIN   = ${MARIAN_HOME}marian
+MARIAN_TRAIN   = ${MARIAN}
 MARIAN_DECODER = ${MARIAN_HOME}marian-decoder
 MARIAN_SCORER  = ${MARIAN_HOME}marian-scorer
 MARIAN_VOCAB   = ${MARIAN_HOME}marian-vocab

@@ -79,6 +79,12 @@ roa2eng:
 
 
 
+fin2eng-extended-release:
+	${MAKE} MODELTYPE=transformer-big DATASET=${DATASET}+news tatoeba-fin2eng-dist-bt
+	${MAKE} MODELTYPE=transformer-big DATASET=${DATASET}+news tatoeba-eng2fin-dist-bt
+
+swe2fin-extended-release:
+	${MAKE} MODELTYPE=transformer-big DATASET=${DATASET}+news tatoeba-swe2fin-dist-bt-pbt
 
 
 fin2eng-extended:
@@ -94,21 +100,56 @@ fin2swe-extended:
 	${MAKE} MODELTYPE=transformer-big CONTINUE_EXISTING=1 tatoeba-fin2swe-trainjob-bt-pbt
 
 
+24x12-evalall:
+	${MAKE} MODELTYPE=transformer-24x12 DATASET=${DATASET}+news \
+		GPUJOB_HPC_MEM=64g \
+		GPUJOB_SUBMIT=-gpu0123 \
+		MARIAN_EXTRA=--no-restore-corpus \
+	tatoeba-fin2eng-evalall-bt
+	${MAKE} MODELTYPE=transformer-24x12 DATASET=${DATASET}+news \
+		GPUJOB_HPC_MEM=64g \
+		GPUJOB_SUBMIT=-gpu0123 \
+	tatoeba-eng2fin-evalall-bt
+	${MAKE} MODELTYPE=transformer-24x12 \
+		GPUJOB_HPC_MEM=64g \
+		GPUJOB_SUBMIT=-gpu0123 \
+		MARIAN_EXTRA=--no-restore-corpus \
+	tatoeba-fin2swe-evalall-bt-pbt
+	${MAKE} MODELTYPE=transformer-24x12 \
+		GPUJOB_HPC_MEM=64g \
+		GPUJOB_SUBMIT=-gpu0123 \
+	tatoeba-swe2fin-evalall-bt-pbt
+
+
 
 
 fin2eng-24x12:
 	${MAKE} MODELTYPE=transformer-24x12 DATASET=${DATASET}+news \
-		GPUJOB_HPC_CORES=4 GPUJOB_HPC_MEM=32g \
+		GPUJOB_HPC_MEM=64g \
 		GPUJOB_SUBMIT=-gpu0123 \
-		MARIAN_WORKSPACE=15000 tatoeba-fin2eng-trainjob-bt
+		MARIAN_EXTRA=--no-restore-corpus \
+	tatoeba-fin2eng-trainjob-bt
+
+#		GPUJOB_SUBMIT=-gpu01 \
+
+eng2fin-24x12:
+	${MAKE} MODELTYPE=transformer-24x12 DATASET=${DATASET}+news \
+		GPUJOB_HPC_MEM=64g \
+		GPUJOB_SUBMIT=-gpu0123 \
+	tatoeba-eng2fin-trainjob-bt
 
 fin2swe-24x12:
 	${MAKE} MODELTYPE=transformer-24x12 \
-		GPUJOB_HPC_CORES=4 GPUJOB_HPC_MEM=32g \
+		GPUJOB_HPC_MEM=64g \
 		GPUJOB_SUBMIT=-gpu0123 \
-		MARIAN_WORKSPACE=15000 tatoeba-fin2swe-trainjob-bt-pbt
+		MARIAN_EXTRA=--no-restore-corpus \
+	tatoeba-fin2swe-trainjob-bt-pbt
 
-
+swe2fin-24x12:
+	${MAKE} MODELTYPE=transformer-24x12 \
+		GPUJOB_HPC_MEM=64g \
+		GPUJOB_SUBMIT=-gpu0123 \
+	tatoeba-swe2fin-trainjob-bt-pbt
 
 
 

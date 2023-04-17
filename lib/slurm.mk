@@ -47,12 +47,13 @@ ifdef EMAIL
 	echo '#SBATCH --mail-type=END' >> ${TMPWORKDIR}/$@
 	echo '#SBATCH --mail-user=${EMAIL}' >> ${TMPWORKDIR}/$@
 endif
-	echo '#SBATCH --mem=${GPUJOB_HPC_MEM}' >> ${TMPWORKDIR}/$@
-	echo '#SBATCH -n ${GPUJOB_HPC_CORES}' >> ${TMPWORKDIR}/$@
-	echo '#SBATCH -N ${GPUJOB_HPC_NODES}' >> ${TMPWORKDIR}/$@
+	echo '#SBATCH --mem=${GPUJOB_HPC_MEM}'  >> ${TMPWORKDIR}/$@
+	echo '#SBATCH -n ${GPUJOB_HPC_CORES}'   >> ${TMPWORKDIR}/$@
+	echo '#SBATCH -N ${GPUJOB_HPC_NODES}'   >> ${TMPWORKDIR}/$@
+	echo '#SBATCH --ntasks=${NR_GPUS}'      >> ${TMPWORKDIR}/$@
 	echo '#SBATCH -t ${GPUJOB_HPC_TIME}:00' >> ${TMPWORKDIR}/$@
-	echo '#SBATCH -p ${GPUJOB_HPC_QUEUE}' >> ${TMPWORKDIR}/$@
-	echo '#SBATCH ${HPC_GPU_ALLOCATION}' >> ${TMPWORKDIR}/$@
+	echo '#SBATCH -p ${GPUJOB_HPC_QUEUE}'   >> ${TMPWORKDIR}/$@
+	echo '#SBATCH ${HPC_GPU_ALLOCATION}'    >> ${TMPWORKDIR}/$@
 ifdef BROKEN_NODES
 	echo '#SBATCH --exclude=${BROKEN_NODES}' >> ${TMPWORKDIR}/$@
 endif
@@ -67,7 +68,8 @@ endif
 	echo 'cd $${SLURM_SUBMIT_DIR:-.}' >> ${TMPWORKDIR}/$@
 	echo 'pwd' >> ${TMPWORKDIR}/$@
 	echo 'echo "Starting at `date`"' >> ${TMPWORKDIR}/$@
-	echo 'srun ${MAKE} -j ${GPUJOB_HPC_JOBS} ${MAKEARGS} ${@:.submit=}' >> ${TMPWORKDIR}/$@
+#	echo 'srun ${MAKE} -j ${GPUJOB_HPC_JOBS} ${MAKEARGS} ${@:.submit=}' >> ${TMPWORKDIR}/$@
+	echo '${MAKE} -j ${GPUJOB_HPC_JOBS} ${MAKEARGS} ${@:.submit=}' >> ${TMPWORKDIR}/$@
 	echo 'echo "Finishing at `date`"' >> ${TMPWORKDIR}/$@
 	sbatch ${SBATCH_ARGS} ${TMPWORKDIR}/$@
 	mkdir -p ${WORKDIR}

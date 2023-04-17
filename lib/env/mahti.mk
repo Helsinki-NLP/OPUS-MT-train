@@ -19,6 +19,10 @@ GPU           = a100
 WALLTIME      = 36
 
 
+MARIAN = ${shell which marian-no-mpi 2>/dev/null || which marian 2>/dev/null || echo ${TOOLSDIR}/marian-dev/build/marian}
+
+
+
 ## test whether we have permissions to see pre-installed software
 ifneq (${wildcard /projappl/project_2003093/install-old},)
   APPLHOME       = /projappl/project_2003093/

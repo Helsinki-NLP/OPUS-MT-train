@@ -623,8 +623,10 @@ ifeq (${GPU},p100)
   MARIAN_WORKSPACE = 13000
 
 else ifeq (${GPU},a100)
-ifeq ($(subst -align,,${MODELTYPE}),transformer-big)
-  MARIAN_WORKSPACE = 15000
+ifeq ($(subst -align,,${MODELTYPE}),transformer-24x12)
+  MARIAN_WORKSPACE = 20000
+else ifeq ($(subst -align,,${MODELTYPE}),transformer-big)
+  MARIAN_WORKSPACE = 20000
 else ifeq ($(subst -align,,${MODELTYPE}),transformer-small)
   MARIAN_WORKSPACE = 10000
 else ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny)
@@ -632,11 +634,13 @@ else ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny)
 else ifeq ($(subst -align,,${MODELTYPE}),transformer-tiny11)
   MARIAN_WORKSPACE = 10000
 else
-  MARIAN_WORKSPACE = 20000
+  MARIAN_WORKSPACE = 25000
 endif
 
 else ifeq (${GPU},v100)
-ifeq ($(subst -align,,${MODELTYPE}),transformer-big)
+ifeq ($(subst -align,,${MODELTYPE}),transformer-24x12)
+  MARIAN_WORKSPACE = 15000
+else ifeq ($(subst -align,,${MODELTYPE}),transformer-big)
   MARIAN_WORKSPACE = 15000
 else ifeq ($(subst -align,,${MODELTYPE}),transformer-small)
   MARIAN_WORKSPACE = 10000
