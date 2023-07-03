@@ -77,6 +77,21 @@ roa2eng:
 
 
 
+fin2eng-extended-align:
+	${MAKE} MODELTYPE=transformer-align DATASET=${DATASET}+news tatoeba-fin2eng-trainjob-bt
+
+eng2fin-extended-align:
+	${MAKE} MODELTYPE=transformer-align DATASET=${DATASET}+news tatoeba-eng2fin-trainjob-bt
+
+swe2fin-extended-align:
+	${MAKE} MODELTYPE=transformer-align DATASET=${DATASET}+news tatoeba-swe2fin-trainjob-bt-pbt
+
+fin2swe-extended-align:
+	${MAKE} MODELTYPE=transformer-align tatoeba-fin2swe-trainjob-bt-pbt
+
+
+
+
 
 
 fin2eng-extended-release:

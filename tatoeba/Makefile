@@ -136,6 +136,13 @@ all:
 ## fixed sentence piece models for all langs
 #################################################
 
+## store basic parallel data on allas
+
+.PHONY: store-helsinki-data
+store-helsinki-data:
+	which a-get
+	swift upload Helsinki-NLP-data-opusmtTC --changed --skip-identical --use-slo --segment-size 5G  work/data
+
 
 # or rather base 2 sizes?
 # 16384 32768 65536 8192 4096

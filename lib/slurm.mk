@@ -73,7 +73,7 @@ endif
 	echo 'echo "Finishing at `date`"' >> ${TMPWORKDIR}/$@
 	sbatch ${SBATCH_ARGS} ${TMPWORKDIR}/$@
 	mkdir -p ${WORKDIR}
-	mv ${TMPWORKDIR}/$@ ${WORKDIR}/$@
+	-mv ${TMPWORKDIR}/$@ ${WORKDIR}/$@
 
 # 	echo 'srun ${MAKE} NR=${NR} MODELTYPE=${MODELTYPE} DATASET=${DATASET} SRC=${SRC} TRG=${TRG} PRE_SRC=${PRE_SRC} PRE_TRG=${PRE_TRG} ${MAKEARGS} ${@:.submit=}' >> $@
 
@@ -123,7 +123,7 @@ endif
 	echo 'echo "Finishing at `date`"' >> ${TMPWORKDIR}/$@
 	sbatch ${SBATCH_ARGS} ${TMPWORKDIR}/$@
 	mkdir -p ${WORKDIR}
-	mv ${TMPWORKDIR}/$@ ${WORKDIR}/$@
+	-mv ${TMPWORKDIR}/$@ ${WORKDIR}/$@
 
 
 #	echo '${MAKE} -j ${HPC_CORES} DATASET=${DATASET} SRC=${SRC} TRG=${TRG} PRE_SRC=${PRE_SRC} PRE_TRG=${PRE_TRG} ${MAKEARGS} ${@:.submitcpu=}' >> $@
