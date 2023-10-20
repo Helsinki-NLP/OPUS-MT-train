@@ -3,7 +3,6 @@
 # important secondary langs in Finland
 #-------------------------------------------------------------------
 
-
 fiet:
 	${MAKE} SRCLANGS=fi TRGLANGS=et bilingual-medium
 

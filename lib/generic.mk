@@ -415,6 +415,9 @@ endif
 %-gpu23:
 	${MAKE} NR_GPUS=2 MARIAN_GPUS='2 3' ${@:-gpu23=}
 
+%-gpu8:
+	${MAKE} NR_GPUS=8 MARIAN_GPUS='0 1 2 3 4 5 6 7' $(subst -gpu8,,$@)
+
 
 ## document level models
 ## devtest data should not be shuffled

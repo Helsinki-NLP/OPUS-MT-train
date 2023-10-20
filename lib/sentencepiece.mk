@@ -35,9 +35,9 @@ SPM_INPUT_SIZE    = 2000000
 SPM_SHUFFLE_INPUT = 0
 
 ifneq (${DATA_IS_SHUFFLED},1)
-  SPM_PREPROCESS = grep . | ${SHUFFLE}
+  SPM_PREPROCESS = egrep '\S' | ${SHUFFLE}
 else
-  SPM_PREPROCESS = grep .
+  SPM_PREPROCESS = egrep '\S'
 endif
 
 

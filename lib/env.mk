@@ -55,16 +55,18 @@ else ifeq (${shell hostname},dx6-ibs-p2)
 else ifeq (${shell hostname},dx7-nkiel-4gpu)
   HPC_HOST = dx7
   include ${REPOHOME}lib/env/dx7.mk
-# else ifneq ($(wildcard /wrk/tiedeman/research),)
-#   HPC_HOST = taito
-#   include ${REPOHOME}lib/env/taito.mk
 else ifeq (${shell hostname --domain 2>/dev/null},bullx)
   HPC_HOST = puhti
   include ${REPOHOME}lib/env/puhti.mk
 else ifeq ($(shell hostname | sed 's/[0-9]//g'),uan)
   HPC_HOST = lumi
+endif
+
+
+ifeq (${HPC_HOST},lumi)
   include ${REPOHOME}lib/env/lumi.mk
 endif
+
 
 
 ## default settings for CPU cores to be used
@@ -120,10 +122,11 @@ SPM_HOME       ?= ${dir ${MARIAN}}
 FASTALIGN      ?= ${shell which fast_align  2>/dev/null || echo ${TOOLSDIR}/fast_align/build/fast_align}
 FASTALIGN_HOME ?= ${dir ${FASTALIGN}}
 ATOOLS         ?= ${FASTALIGN_HOME}atools
-EFLOMAL        ?= ${shell which eflomal     2>/dev/null || echo ${TOOLSDIR}/eflomal/eflomal}
-EFLOMAL_HOME   ?= ${dir ${EFLOMAL}}
-WORDALIGN      ?= ${EFLOMAL_HOME}align.py
-EFLOMAL        ?= ${EFLOMAL_HOME}eflomal
+EFLOMAL        ?= ${shell which eflomal-align  2>/dev/null || echo ${TOOLSDIR}/eflomal/eflomal-align}
+# EFLOMAL_HOME   ?= ${dir ${EFLOMAL}}
+# EFLOMAL        ?= ${EFLOMAL_HOME}eflomal
+# WORDALIGN      ?= ${EFLOMAL_HOME}align.py
+WORDALIGN      ?= ${EFLOMAL}
 EXTRACT_LEX    ?= ${shell which extract_lex 2>/dev/null || echo ${TOOLSDIR}/extract-lex/build/extract_lex}
 MOSESSCRIPTS   ?= ${TOOLSDIR}/moses-scripts/scripts
 TMX2MOSES      ?= ${shell which tmx2moses 2>/dev/null || echo ${TOOLSDIR}/OpusTools-perl/scripts/convert/tmx2moses}
@@ -179,7 +182,7 @@ GZIP    := ${shell which ${PIGZ}     2>/dev/null || echo gzip}
 GZCAT   := ${GZIP} -cd
 ZCAT    := gzip -cd
 UNIQ    := ${SORT} -u
-WGET    := wget -T 1
+WGET    ?= wget -T 1
 
 
 ## check that we have a GPU available
@@ -299,6 +302,9 @@ ${TOOLSDIR}/LanguageCodes/ISO-639-3/bin/iso639:
 ${TOOLSDIR}/LanguageCodes/ISO-639-5/lib/ISO/639/5.pm:
 	${MAKE} -C tools/LanguageCodes all
 
+.PHONY: install-atools
+install-atools: ${TOOLSDIR}/fast_align/build/atools
+
 ${TOOLSDIR}/fast_align/build/atools:
 	mkdir -p ${dir $@}
 	cd ${dir $@} && cmake ..
@@ -377,7 +383,7 @@ ${TOOLSDIR}/extract-lex/build/extract_lex:
 .PHONY: install-eflomal
 install-eflomal:
 ${TOOLSDIR}/eflomal/eflomal:
-	${MAKE} -C ${dir $@} all
+	-${MAKE} -C ${dir $@} all
 	cd ${dir $@} && python3 setup.py install --user
 #	python3 setup.py install --install-dir ${HOME}/.local
 

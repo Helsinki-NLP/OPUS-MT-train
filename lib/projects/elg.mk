@@ -43,6 +43,47 @@ ELG_EU_SELECTED_BIG = gmq zle zls zlw spa fra deu
 # "cat oci"
 
 
+lumi-eulangs:
+	make GPUJOB_SUBMIT=-gpu8 \
+		LANGPAIRSTR="eulangs" \
+		DATA_SAMPLING_WEIGHT=0.5 \
+		MODELTYPE=transformer-24x12-align \
+		SRCLANGS="${ELG_EU_LANGIDS}" \
+		TRGLANGS="${ELG_EU_LANGIDS}" tatoeba-job
+
+
+lumi-fisv:
+	make GPUJOB_SUBMIT=-gpu8 tatoeba-fin2swe-trainjob
+
+lumi-enfisv-big:
+	make GPUJOB_SUBMIT=-gpu8 \
+		DATA_SAMPLING_WEIGHT=0.5 \
+		SKIP_SAME_LANG=0 \
+		MODELTYPE=transformer-big-align \
+		SRCLANGS="eng fin swe" \
+		TRGLANGS="eng fin swe" tatoeba-job
+
+lumi-enfisv-big-noalign:
+	make GPUJOB_SUBMIT=-gpu8 \
+		GPUJOB_HPC_MEM=32g \
+		DATA_SAMPLING_WEIGHT=0.5 \
+		SKIP_SAME_LANG=0 \
+		MODELTYPE=transformer-big \
+		SRCLANGS="eng fin swe" \
+		TRGLANGS="eng fin swe" tatoeba-job
+
+lumi-enfisv-big-noalign-eval:
+	make GPUJOB_SUBMIT=-gpu8 \
+		GPUJOB_HPC_MEM=32g \
+		DATA_SAMPLING_WEIGHT=0.5 \
+		SKIP_SAME_LANG=0 \
+		MODELTYPE=transformer-big \
+		SRCLANGS="eng fin swe" \
+		TRGLANGS="eng fin swe" eval-testsets-tatoeba tatoeba-eval tatoeba-eval-testsets
+
+
+
+
 # raul-timo: rus2eng ukr2eng sla2eng ine2eng mul2eng
 # raul-timo: sla2eng ine2eng mul2eng
 raul-timo: ita2eng fra2eng spa2eng por2eng cat2eng

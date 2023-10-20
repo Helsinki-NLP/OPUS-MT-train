@@ -17,7 +17,11 @@ ${WORKHOME}/${LANGPAIRSTR}/${DATASET}-languages.%: ${WORKHOME}/${LANGPAIRSTR}/${
 
 ## a file with all released data sets in the current Tatoeba TC release
 ${RELEASED_TATOEBA_DATA_FILE}:
-	${WGET} -O $@ ${RELEASED_TATOEBA_DATA_URL}
+	if [ -e ${RELEASED_TATOEBA_DATA_LOCAL} ]; then \
+	  cp ${RELEASED_TATOEBA_DATA_LOCAL} $@; \
+	else \
+	  ${WGET} -O $@ ${RELEASED_TATOEBA_DATA_URL}; \
+	fi
 
 
 ## don't delete intermediate label files
@@ -49,10 +53,17 @@ fetch-datasets fetch-tatoeba-datasets:
 	        if [ "${SKIP_SAME_LANG}" == "1" ] && [ "$$s" == "$$t" ]; then \
 	          echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
 	        else \
-	          if [ ! -e ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$t-$$s.clean.$$t.gz ]; then \
-	            ${MAKE} SRCLANGS=$$t TRGLANGS=$$s \
-		        ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$t-$$s.clean.$$t.gz; \
-	          fi \
+	          if [ "$$s" == "$$t" ]; then \
+	            if [ ! -e ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$t-$$s.clean.$${t}2.gz ]; then \
+	              ${MAKE} SRCLANGS=$$t TRGLANGS=$$s \
+		          ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$t-$$s.clean.$${t}2.gz; \
+	            fi \
+		  else \
+	            if [ ! -e ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$t-$$s.clean.$$t.gz ]; then \
+	              ${MAKE} SRCLANGS=$$t TRGLANGS=$$s \
+		          ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$t-$$s.clean.$$t.gz; \
+	            fi \
+		  fi \
 	        fi \
 	      fi \
 	    fi \
@@ -170,7 +181,11 @@ print-skiplangids:
 
 tatoeba/langids-train-only-${TATOEBA_VERSION}.txt:
 	mkdir -p ${dir $@}
-	${WGET} -O $@ ${TATOEBA_RAWGIT_MASTER}/data/release/${TATOEBA_VERSION}/langids-train-only.txt
+	if [ -e ${TATOEBA_LOCAL_DATA}/data/release/${TATOEBA_VERSION}/langids-train-only.txt ]; then \
+	  cp ${TATOEBA_LOCAL_DATA}/data/release/${TATOEBA_VERSION}/langids-train-only.txt $@; \
+	else \
+	  ${WGET} -O $@ ${TATOEBA_RAWGIT_MASTER}/data/release/${TATOEBA_VERSION}/langids-train-only.txt; \
+	fi
 
 ## monolingual data from Tatoeba challenge (wiki data)
 
@@ -297,10 +312,14 @@ endif
 %.gz.d/data.fetched:
 	@echo ".... fetch data (${LANGPAIR}.tar)"
 	@mkdir -p ${dir $@}
-	-${WGET} -q -O ${dir $@}train.tar ${TATOEBA_TRAIN_URL}/${LANGPAIR}.tar
-	@if [ -e ${dir $@}train.tar ]; then \
-	  tar -C ${dir $@} -xf ${dir $@}train.tar; \
-	  rm -f ${dir $@}train.tar; \
+	-if [ -e ${TATOEBA_LOCAL_TRAIN}/${LANGPAIR}/train.id.gz ]; then \
+	  cp ${TATOEBA_LOCAL_TRAIN}/${LANGPAIR}/* ${dir $@}; \
+	else \
+	  ${WGET} -q -O ${dir $@}train.tar ${TATOEBA_TRAIN_URL}/${LANGPAIR}.tar; \
+	  if [ -e ${dir $@}train.tar ]; then \
+	    tar -C ${dir $@} -xf ${dir $@}train.tar; \
+	    rm -f ${dir $@}train.tar; \
+	  fi \
 	fi
 	@touch $@
 
@@ -368,7 +387,7 @@ endif
 
 ## get target language labels
 %.gz.d/target.labels: %.gz.d/data.fixed
-	@${ZCAT} ${dir $@}${TATOEBADATA}/*.id.gz | cut -f2 | sort -u | \
+	${ZCAT} ${dir $@}${TATOEBADATA}/*.id.gz | cut -f2 | sort -u | \
 	grep -v '${SKIP_LANGIDS_PATTERN}' | tr "\n" ' ' | sed 's/^ *//;s/ *$$//' > $@
 
 
@@ -430,8 +449,12 @@ ${MULTILING_TESTSETS_DONE}:
 	@mkdir -p ${WORKHOME}/${LANGPAIRSTR}/test
 	@for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
-	      ${WGET} -q -O ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp \
+	      if [ -e ${TATOEBA_LOCAL_TEST}/$$s-$$t/test.txt ]; then \
+		cp ${TATOEBA_LOCAL_DATA}/$$s-$$t/test.txt ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp; \
+	      else \
+	        ${WGET} -q -O ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp \
 			${TATOEBA_RAWGIT_RELEASE}/data/test/$$s-$$t/test.txt; \
+	      fi; \
 	      if [ -s ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp ]; then \
 		cat ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp $(FIXLANGIDS) \
 			> ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt; \
@@ -477,8 +500,12 @@ ${MULTILING_TESTSETS_DONE}:
 		  done \
 		fi; \
 	      else \
-	        ${WGET} -q -O ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp \
+		if [ -e ${TATOEBA_LOCAL_TEST}/$$t-$$s/test.txt ]; then \
+		  cp ${TATOEBA_LOCAL_TEST}/$$t-$$s/test.txt ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp; \
+		else \
+	          ${WGET} -q -O ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp \
 			${TATOEBA_RAWGIT_RELEASE}/data/test/$$t-$$s/test.txt; \
+		fi; \
 	        if [ -s ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp ]; then \
 		  cat ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.tmp $(FIXLANGIDS) \
 			> ${WORKHOME}/${LANGPAIRSTR}/test/${TATOEBA_TESTSET}.$$s-$$t.txt; \

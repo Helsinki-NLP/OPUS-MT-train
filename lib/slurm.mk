@@ -48,9 +48,10 @@ ifdef EMAIL
 	echo '#SBATCH --mail-user=${EMAIL}' >> ${TMPWORKDIR}/$@
 endif
 	echo '#SBATCH --mem=${GPUJOB_HPC_MEM}'  >> ${TMPWORKDIR}/$@
-	echo '#SBATCH -n ${GPUJOB_HPC_CORES}'   >> ${TMPWORKDIR}/$@
+	echo '#SBATCH --cpus-per-task ${GPUJOB_HPC_CORES}'   >> ${TMPWORKDIR}/$@
+	echo '#SBATCH -n 1'                     >> ${TMPWORKDIR}/$@
 	echo '#SBATCH -N ${GPUJOB_HPC_NODES}'   >> ${TMPWORKDIR}/$@
-	echo '#SBATCH --ntasks=${NR_GPUS}'      >> ${TMPWORKDIR}/$@
+#	echo '#SBATCH --ntasks=${NR_GPUS}'      >> ${TMPWORKDIR}/$@
 	echo '#SBATCH -t ${GPUJOB_HPC_TIME}:00' >> ${TMPWORKDIR}/$@
 	echo '#SBATCH -p ${GPUJOB_HPC_QUEUE}'   >> ${TMPWORKDIR}/$@
 	echo '#SBATCH ${HPC_GPU_ALLOCATION}'    >> ${TMPWORKDIR}/$@
@@ -68,8 +69,20 @@ endif
 	echo 'cd $${SLURM_SUBMIT_DIR:-.}' >> ${TMPWORKDIR}/$@
 	echo 'pwd' >> ${TMPWORKDIR}/$@
 	echo 'echo "Starting at `date`"' >> ${TMPWORKDIR}/$@
+ifeq (${HPC_HOST},lumi)
+ifneq (${NR_GPUS},8)
+	echo 'CPU_BIND="mask_cpu:fe000000000000,fe00000000000000"' >> ${TMPWORKDIR}/$@
+	echo 'CPU_BIND="$${CPU_BIND},fe0000,fe000000"' >> ${TMPWORKDIR}/$@
+	echo 'CPU_BIND="$${CPU_BIND},fe,fe00"' >> ${TMPWORKDIR}/$@
+	echo 'CPU_BIND="$${CPU_BIND},fe00000000,fe0000000000"' >> ${TMPWORKDIR}/$@
+	echo 'srun --cpu-bind=$${CPU_BIND} ${MAKE} -j ${GPUJOB_HPC_JOBS} HPC_HOST=${HPC_HOST} ${MAKEARGS} ${@:.submit=}' >> ${TMPWORKDIR}/$@
+else
+	echo '${MAKE} -j ${GPUJOB_HPC_JOBS} HPC_HOST=${HPC_HOST} ${MAKEARGS} ${@:.submit=}' >> ${TMPWORKDIR}/$@
+endif
+else
 #	echo 'srun ${MAKE} -j ${GPUJOB_HPC_JOBS} ${MAKEARGS} ${@:.submit=}' >> ${TMPWORKDIR}/$@
-	echo '${MAKE} -j ${GPUJOB_HPC_JOBS} ${MAKEARGS} ${@:.submit=}' >> ${TMPWORKDIR}/$@
+	echo '${MAKE} -j ${GPUJOB_HPC_JOBS} HPC_HOST=${HPC_HOST} ${MAKEARGS} ${@:.submit=}' >> ${TMPWORKDIR}/$@
+endif
 	echo 'echo "Finishing at `date`"' >> ${TMPWORKDIR}/$@
 	sbatch ${SBATCH_ARGS} ${TMPWORKDIR}/$@
 	mkdir -p ${WORKDIR}
@@ -118,8 +131,9 @@ endif
 	echo '${LOAD_CPU_ENV}'           >> ${TMPWORKDIR}/$@
 	echo 'cd $${SLURM_SUBMIT_DIR:-.}' >> ${TMPWORKDIR}/$@
 	echo 'pwd' >> ${TMPWORKDIR}/$@
+	echo 'module list'               >> ${TMPWORKDIR}/$@
 	echo 'echo "Starting at `date`"' >> ${TMPWORKDIR}/$@
-	echo '${MAKE} -j ${CPUJOB_HPC_JOBS} ${MAKEARGS} ${@:.submitcpu=}' >> ${TMPWORKDIR}/$@
+	echo '${MAKE} -j ${CPUJOB_HPC_JOBS}  HPC_HOST=${HPC_HOST} ${MAKEARGS} ${@:.submitcpu=}' >> ${TMPWORKDIR}/$@
 	echo 'echo "Finishing at `date`"' >> ${TMPWORKDIR}/$@
 	sbatch ${SBATCH_ARGS} ${TMPWORKDIR}/$@
 	mkdir -p ${WORKDIR}

@@ -90,6 +90,11 @@ TATOEBA_MONO_URL  := ${TATOEBA_DATAURL}-${TATOEBA_VERSION}
 TATOEBA_DATA      ?= ${WORKHOME}/data/${PRE}
 TATOEBA_MONO      ?= ${WORKHOME}/data/mono
 
+TATOEBA_LOCAL_DATA  := ${PWD}/Tatoeba-Challenge
+TATOEBA_LOCAL_TEST  := ${TATOEBA_LOCAL_DATA}/data/test
+TATOEBA_LOCAL_TRAIN := ${TATOEBA_LOCAL_DATA}/data/release/${TATOEBA_VERSION}
+
+
 ## list of language IDs that only appear in the training data
 ## (fetched from Tatoeba github)
 TATOEBA_LANGIDS_TRAINONLY = tatoeba/langids-train-only-${TATOEBA_VERSION}.txt
@@ -105,6 +110,8 @@ TATOEBA_RAWGIT_RELEASE   := https://raw.githubusercontent.com/Helsinki-NLP/Tatoe
 TATOEBA_DATA_COUNT_BASE    = ${TATOEBA_RAWGIT_MASTER}/data/release/${TATOEBA_VERSION}/released-bitexts
 RELEASED_TATOEBA_DATA_URL  = ${TATOEBA_DATA_COUNT_BASE}.txt
 RELEASED_TATOEBA_DATA_FILE = tatoeba/released-bitexts-${TATOEBA_VERSION}.txt
+
+RELEASED_TATOEBA_DATA_LOCAL  = ${TATOEBA_LOCAL_DATA}/data/release/${TATOEBA_VERSION}/released-bitexts.txt
 
 ## all released language pairs with test sets > 200 test pairs
 ## also extract all source languages that are available for a give target language

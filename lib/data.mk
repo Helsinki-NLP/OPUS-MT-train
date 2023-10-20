@@ -595,7 +595,9 @@ ifeq (${CLEAN_CORPUS_TRAINING_DATA},1)
 endif
 ifeq (${SHUFFLE_TRAINING_DATA},1)
 	@echo ".... shuffle complete training data"
-	@paste ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG} | ${SHUFFLE} | ${GZIP} -c > ${LOCAL_TRAIN_SRC}.shuffled.gz
+	@paste ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG} \
+	| LC_ALL=C awk 'length($$0)<1073741824' \
+	| ${SHUFFLE} | ${GZIP} -c > ${LOCAL_TRAIN_SRC}.shuffled.gz
 	@${GZIP} -cd ${LOCAL_TRAIN_SRC}.shuffled.gz | cut -f1 > ${LOCAL_TRAIN_SRC}
 	@${GZIP} -cd ${LOCAL_TRAIN_SRC}.shuffled.gz | cut -f2 > ${LOCAL_TRAIN_TRG}
 	@rm -f ${LOCAL_TRAIN_SRC}.shuffled.gz

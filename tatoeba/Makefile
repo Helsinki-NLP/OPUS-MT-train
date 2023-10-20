@@ -106,7 +106,8 @@ REPOHOME := ${PWD}/../
 
 ## Tatoeba Challenge Data release number
 # TATOEBA_VERSION    = v2020-07-28
-TATOEBA_VERSION      = v2021-08-07
+# TATOEBA_VERSION      = v2021-08-07
+TATOEBA_VERSION      = v2023-09-26
 
 
 include ${REPOHOME}lib/env.mk
@@ -547,8 +548,8 @@ tatoeba-%-data:
 	   T="${call find-trglanggroup,${patsubst tatoeba-%-data,%,$@},${PIVOT}}"; \
 	   ${MAKE} LANGPAIRSTR=$$s-$$t \
 		SRCLANGS="$$S" TRGLANGS="$$T" \
-		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
-		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
+		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s | xargs iso639 -m -n | sort`" \
+		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t | xargs iso639 -m -n | sort`" \
 	   tatoeba-prepare-and-data-groupsize-limits; )
 
 
@@ -562,8 +563,8 @@ tatoeba-%-train:
 	   S="${call find-srclanggroup,${patsubst tatoeba-%-train,%,$@},${PIVOT}}"; \
 	   T="${call find-trglanggroup,${patsubst tatoeba-%-train,%,$@},${PIVOT}}"; \
 	   ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" \
-			TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
-			TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
+			TATOEBA_SRCLANG_GROUP="`langgroup -n $$s | xargs iso639 -m -n | sort`" \
+			TATOEBA_TRGLANG_GROUP="`langgroup -n $$t | xargs iso639 -m -n | sort`" \
 			all-groupsize-limits; )
 
 ## start the training job
@@ -577,8 +578,8 @@ tatoeba-%-trainjob:
 	   T="${call find-trglanggroup,${patsubst tatoeba-%-trainjob,%,$@},${PIVOT}}"; \
 	   if [ ! `find ${WORKHOME}/$$s-$$t -maxdepth 1 -name '${TATOEBA_DATASET}.*${MODELTYPE}.model${NR}.done' | wc -l` -gt 0 ]; then \
 	     ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" \
-			TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
-			TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
+			TATOEBA_SRCLANG_GROUP="`langgroup -n $$s | xargs iso639 -m -n | sort`" \
+			TATOEBA_TRGLANG_GROUP="`langgroup -n $$t | xargs iso639 -m -n | sort`" \
 			tatoeba-job-groupsize-limits; \
 	   else \
 	      echo "..... already done! ($$s-$$t/${TATOEBA_DATASET}.*${MODELTYPE}.model${NR}.done)"; \
@@ -606,8 +607,8 @@ tatoeba-%-info:
 	   S="${call find-srclanggroup,${patsubst tatoeba-%-info,%,$@},${PIVOT}}"; \
 	   T="${call find-trglanggroup,${patsubst tatoeba-%-info,%,$@},${PIVOT}}"; \
 	   ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" \
-			TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
-			TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
+			TATOEBA_SRCLANG_GROUP="`langgroup -n $$s | xargs iso639 -m -n | sort`" \
+			TATOEBA_TRGLANG_GROUP="`langgroup -n $$t | xargs iso639 -m -n | sort`" \
 			print-info; )
 
 
@@ -620,8 +621,8 @@ tatoeba-%-eval:
 	      ${MAKE} LANGPAIRSTR=$$s-$$t \
 		SRCLANGS="${call find-srclanggroup,${patsubst tatoeba-%-eval,%,$@},${PIVOT}}" \
 		TRGLANGS="${call find-trglanggroup,${patsubst tatoeba-%-eval,%,$@},${PIVOT}}" \
-		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
-		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
+		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s | xargs iso639 -m -n | sort`" \
+		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t | xargs iso639 -m -n | sort`" \
 		compare-tatoeba; \
 	    fi \
 	  fi )
@@ -636,12 +637,12 @@ tatoeba-%-multieval:
 	  if [ -e ${WORKHOME}/$$s-$$t ]; then \
 	    if [ `find ${WORKHOME}/$$s-$$t/ -name '*.npz' | wc -l` -gt 0 ]; then \
 	      ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" \
-		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
-		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
+		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s | xargs iso639 -m -n | sort`" \
+		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t | xargs iso639 -m -n | sort`" \
 		tatoeba-multilingual-eval; \
 	      ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" \
-		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
-		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
+		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s | xargs iso639 -m -n | sort`" \
+		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t | xargs iso639 -m -n | sort`" \
 		tatoeba-sublang-eval; \
 	    fi \
 	  fi )
@@ -655,8 +656,8 @@ tatoeba-%-eval-testsets:
 	      ${MAKE} LANGPAIRSTR=$$s-$$t \
 		SRCLANGS="${call find-srclanggroup,${patsubst tatoeba-%-eval-testsets,%,$@},${PIVOT}}" \
 		TRGLANGS="${call find-trglanggroup,${patsubst tatoeba-%-eval-testsets,%,$@},${PIVOT}}" \
-		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
-		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
+		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s | xargs iso639 -m -n | sort`" \
+		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t | xargs iso639 -m -n | sort`" \
 		eval-testsets-tatoeba; \
 	    fi \
 	  fi )
@@ -668,8 +669,8 @@ tatoeba-%-testsets:
 	  ${MAKE} LANGPAIRSTR=$$s-$$t \
 		SRCLANGS="${call find-srclanggroup,${patsubst tatoeba-%-testsets,%,$@},${PIVOT}}" \
 		TRGLANGS="${call find-trglanggroup,${patsubst tatoeba-%-testsets,%,$@},${PIVOT}}" \
-		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
-		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
+		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s | xargs iso639 -m -n | sort`" \
+		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t | xargs iso639 -m -n | sort`" \
 		tatoeba-multilingual-testsets; )
 
 ## do all benchmark tests
@@ -696,8 +697,8 @@ tatoeba-%-dist:
 	    ${MAKE} LANGPAIRSTR=$$s-$$t \
 		SRCLANGS="${call find-srclanggroup,${patsubst tatoeba-%-dist,%,$@},${PIVOT}}" \
 		TRGLANGS="${call find-trglanggroup,${patsubst tatoeba-%-dist,%,$@},${PIVOT}}" \
-		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s`" \
-		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t`" \
+		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s | xargs iso639 -m -n | sort`" \
+		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t | xargs iso639 -m -n | sort`" \
 		release-tatoeba; \
 	  fi )
 
