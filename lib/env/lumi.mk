@@ -6,8 +6,8 @@
 # https://docs.lumi-supercomputer.eu/runjobs/scheduled-jobs/partitions/
 
 
-DATA_PREPARE_HPCPARAMS = CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=16g
-DATA_ALIGN_HPCPARAMS = CPUJOB_HPC_CORES=8 CPUJOB_HPC_JOBS=8 CPUJOB_HPC_MEM=64g
+DATA_PREPARE_HPCPARAMS = CPUJOB_HPC_CORES=2 CPUJOB_HPC_MEM=32g HPC_MEM=32g GPUJOB_HPC_MEM=32g
+DATA_ALIGN_HPCPARAMS = CPUJOB_HPC_CORES=32 CPUJOB_HPC_JOBS=8 CPUJOB_HPC_MEM=64g HPC_MEM=32g GPUJOB_HPC_MEM=32g
 # DATA_ALIGN_HPCPARAMS = CPUJOB_HPC_CORES=128 CPUJOB_HPC_JOBS=20 CPUJOB_HPC_MEM=128g
 GPUJOB_HPC_CORES = 56
 GPUJOB_HPC_MEM = 32g
@@ -51,8 +51,8 @@ EXTRA_MODULES_DIR = /projappl/project_462000067/public/gnail/software/modules
 
 CPU_MODULES   = cray-python parallel expat Perl wget
 GPU_MODULES   = cray-python parallel expat Perl wget
-LOAD_CPU_ENV  = module load LUMI/23.03 && module load ${CPU_MODULES}
-LOAD_GPU_ENV  = module load LUMI/23.03 && module load ${GPU_MODULES}
+LOAD_CPU_ENV  = module load LUMI && module load ${CPU_MODULES}
+LOAD_GPU_ENV  = module load LUMI && module load ${GPU_MODULES}
 
 # GPU_MODULES   = marian/lumi cray-python parallel
 # LOAD_GPU_ENV  = module use -a ${EXTRA_MODULES_DIR} && module load ${GPU_MODULES}

@@ -185,6 +185,14 @@ UNIQ    := ${SORT} -u
 WGET    ?= wget -T 1
 
 
+## check whether GNU parallel is available
+
+ifneq (${shell which parallel 2>/dev/null},)
+  PARALLEL_ARGS := --pipe --keep-order -q -L10000 --max-procs 25%
+  PARALLEL := parallel ${PARALLEL_ARGS}
+endif
+
+
 ## check that we have a GPU available
 ## TODO: this assumes that we have nvidia-smi on the system
 

@@ -198,6 +198,8 @@ print-datasets-current-langpair:
 	@echo ${EXTRA_BITEXTS_TRG}
 
 
+
+
 ##-------------------------------------------------------------
 ## data sets (train/dev/test)
 ##-------------------------------------------------------------
@@ -318,14 +320,56 @@ ifneq (${wildcard ${CLEAN_TRAIN_SRC}},)
 	  echo "${LANGPAIR}	$$s" >> ${WORKDIR}/train/size_per_language_pair.txt )
 endif
 
+.PHONY: available-traindata
+available-traindata: ${WORKDIR}/train/available-training-data.txt
+
+${WORKDIR}/train/available-training-data.txt:
+	mkdir -p $(dir $@)
+	rm -f $@
+	@for s in ${SRCLANGS}; do \
+	  for t in ${TRGLANGS}; do \
+	    find ${DATADIR}/${PRE} \( -name "*.$$s-$$t.*${CLEAN_TRAINDATA_TYPE}.*.gz" -o \
+	                              -name "*.$$t-$$s.*${CLEAN_TRAINDATA_TYPE}.*.gz" \) \
+		| grep -v ${DEVSET} | grep -v ${TESTSET} \
+		| sed "s/^/$$s-$$t	/" >> $@; \
+	    if [ -d ${DATADIR}/extra/$$s-$$t ]; then \
+	      find ${DATADIR}/extra/$$s-$$t -name '*.gz'     | sed "s/^/$$s-$$t	/" >> $@; \
+	    fi; \
+	    if [ "${USE_BACKTRANS}" == "1" ]; then \
+	      if [ -d ${BACKTRANS_DIR} ]; then \
+	        find ${BACKTRANS_DIR} -name '*.gz'             | sed "s/^/$$s-$$t	/" >> $@; \
+	      fi \
+	    fi; \
+	    if [ "${USE_FORWARDTRANS}" == "1" ] || [ "${USE_FORWARDTRANS_SELECTED}" == "1" ] ; then \
+	      if [ -d ${FORWARDTRANS_HOME}/$$s-$$t ]; then \
+	        find ${FORWARDTRANS_HOME}/$$s-$$t -name '*.gz' | sed "s/^/$$s-$$t	/" >> $@; \
+	      fi \
+	    fi; \
+	    if [ "${USE_BACKWARD_PIVOTING}" == "1" ]; then \
+	      if [ -d ${PIVOTTRANS_HOME}/$$s-$$t ]; then \
+	        find ${PIVOTTRANS_HOME}/$$s-$$t -name '*.gz'   | sed "s/^/$$s-$$t	/" >> $@; \
+	      fi \
+	    fi; \
+	    if [ "${USE_FORWARD_PIVOTING}" == "1" ]; then \
+	      if [ -d ${PIVOTTRANS_HOME}/$$t-$$s ]; then \
+	        find ${PIVOTTRANS_HOME}/$$t-$$s -name '*.gz'   | sed "s/^/$$s-$$t	/" >> $@; \
+	      fi \
+	    fi; \
+	  done \
+	done
+
+
 ${WORKDIR}/train/size_per_language_pair.txt: ${LOCAL_TRAINDATA_DEPENDENCIES}
+	${MAKE} ${WORKDIR}/train/available-training-data.txt
 	mkdir -p $(dir $@)
 	rm -f $@
 	for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
-	    if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
-	      if [ "${SKIP_SAME_LANG}" != "1" ] || [ "$$s" != "$$t" ]; then \
-	        ${MAKE} DATASET=${DATASET} SRC:=$$s TRG:=$$t add-size-per-language-pair-info; \
+	    if [ `grep "$$s-$$t	" ${WORKDIR}/train/available-training-data.txt | wc -l` -gt 0 ]; then \
+	      if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
+	        if [ "${SKIP_SAME_LANG}" != "1" ] || [ "$$s" != "$$t" ]; then \
+	          ${MAKE} DATASET=${DATASET} SRC:=$$s TRG:=$$t add-size-per-language-pair-info; \
+	        fi \
 	      fi \
 	    fi \
 	  done \
@@ -352,6 +396,9 @@ clean-data-source:
 	@${MAKE} ${CLEAN_TEST_SRC_STATS} ${CLEAN_TEST_TRG_STATS}
 	@${MAKE} ${DATA_SRC} ${DATA_TRG}
 
+.PHONY: clean-data-stats
+clean-data-stats: 
+	@${MAKE} ${CLEAN_TEST_SRC_STATS} ${CLEAN_TEST_TRG_STATS}
 
 
 ## shuffle training data (if one wants to do that after they have been created already)
@@ -553,15 +600,17 @@ ${LOCAL_TRAIN_SRC}: ${LOCAL_TRAINDATA_DEPENDENCIES}
 	@rm -f ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG}
 	-@for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
-	    if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
-	      if [ "${SKIP_SAME_LANG}" == "1" ] && [ "$$s" == "$$t" ]; then \
-	        echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
+	    if [ `grep "\($$s-$$t\|$$t-$$s\)	" ${WORKDIR}/train/size_per_language_pair.txt | wc -l` -gt 0 ]; then \
+	      if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
+	        if [ "${SKIP_SAME_LANG}" == "1" ] && [ "$$s" == "$$t" ]; then \
+	          echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
+	        else \
+	          echo "..... add data for $$s-$$t"; \
+	          ${MAKE} DATASET=${DATASET} SRC:=$$s TRG:=$$t add-to-local-train-data; \
+	        fi \
 	      else \
-	        echo "..... add data for $$s-$$t"; \
-	        ${MAKE} DATASET=${DATASET} SRC:=$$s TRG:=$$t add-to-local-train-data; \
+	        echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
 	      fi \
-	    else \
-	      echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
 	    fi \
 	  done \
 	done

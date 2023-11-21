@@ -309,15 +309,15 @@ endif
 ifeq (${USE_TARGET_LABELS},1)
 	cut -f1 -d ' ' $< > $<.labels
 	cut -f2- -d ' ' $< > $<.txt
-	${SPM_ENCODE} --model $(word 2,$^) < $<.txt > $@.txt
+	cat $<.txt | ${PARALLEL} ${SPM_ENCODE} --model $(word 2,$^) > $@.txt
 	paste -d ' ' $<.labels $@.txt > $@
 	rm -f $<.labels $<.txt $@.txt
 else
-	${SPM_ENCODE} --model $(word 2,$^) < $< > $@
+	cat $< | ${PARALLEL} ${SPM_ENCODE} --model $(word 2,$^) > $@
 endif
 
 %.trg.${SUBWORDS}${SUBWORD_TRGVOCAB_SIZE:000=}k: %.trg ${SUBWORD_TRG_MODEL}
-	${SPM_ENCODE} --model $(word 2,$^) < $< > $@
+	cat $< | ${PARALLEL} ${SPM_ENCODE} --model $(word 2,$^) > $@
 
 
 ## document-level models (with guided alignment)

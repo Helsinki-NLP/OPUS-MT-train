@@ -80,6 +80,29 @@ ${WORKHOME}/${LANGPAIRSTR}/${DATASET}-langlabels.src:
 	mkdir -p ${dir $@}
 	for s in ${SRCLANGS}; do \
 	    for t in ${TRGLANGS}; do \
+	      if [ -e ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$s-$$t.clean.id.gz ]; then \
+	        if [ ! -e ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$s-$$t.clean.$$s.labels ]; then \
+		  ${ZCAT} ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$s-$$t.clean.id.gz | cut -f1 | sort -u | \
+		  grep -v '${SKIP_LANGIDS_PATTERN}' | tr "\n" ' ' | sed 's/^ *//;s/ *$$//' \
+		  > ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$s-$$t.clean.$$s.labels; \
+		fi; \
+	        if [ ! -e ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$s-$$t.clean.$$t.labels ]; then \
+		  ${ZCAT} ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$s-$$t.clean.id.gz | cut -f2 | sort -u | \
+		  grep -v '${SKIP_LANGIDS_PATTERN}' | tr "\n" ' ' | sed 's/^ *//;s/ *$$//' \
+		  > ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$s-$$t.clean.$$t.labels; \
+		fi \
+	      elif [ -e ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$t-$$s.clean.id.gz ]; then \
+	        if [ ! -e ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$t-$$s.clean.$$s.labels ]; then \
+		  ${ZCAT} ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$t-$$s.clean.id.gz | cut -f2 | sort -u | \
+		  grep -v '${SKIP_LANGIDS_PATTERN}' | tr "\n" ' ' | sed 's/^ *//;s/ *$$//' \
+		  > ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$t-$$s.clean.$$s.labels; \
+		fi; \
+	        if [ ! -e ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$t-$$s.clean.$$t.labels ]; then \
+		  ${ZCAT} ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$t-$$s.clean.id.gz | cut -f1 | sort -u | \
+		  grep -v '${SKIP_LANGIDS_PATTERN}' | tr "\n" ' ' | sed 's/^ *//;s/ *$$//' \
+		  > ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$t-$$s.clean.$$t.labels; \
+		fi \
+	      fi; \
 	      if [ -e ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$s-$$t.clean.$$s.labels ]; then \
 		cat ${TATOEBA_DATA}/${TATOEBA_TRAINSET}.$$s-$$t.clean.$$s.labels >> $@.src; \
 		echo -n ' ' >> $@.src; \
@@ -307,6 +330,72 @@ else
 
 endif
 
+
+
+
+##---------------------------------
+## only make dev and test data
+##---------------------------------
+
+ifneq ($(filter ${LANGPAIR},${TATOEBA_LANGPAIRS}),${LANGPAIR})
+
+%/${TATOEBA_TESTSET}.${LANGPAIR}.${SRCEXT}:
+	@echo ".... no package released for ${LANGPAIR}!"
+
+else
+
+%/${TATOEBA_TESTSET}.${LANGPAIR}.${SRCEXT}:
+	mkdir -p ${dir $@} ${TMPWORKDIR}/${notdir $@}.gz.d
+	ln -s ${TMPWORKDIR}/${notdir $@}.gz.d $@.gz.d
+	@${MAKE} $@.gz.d/source.labels $@.gz.d/target.labels
+	@if [ `cat $@.gz.d/source.labels $@.gz.d/target.labels | wc -w` -gt 1 ]; then \
+	  echo ".... found sublanguages in the data"; \
+	  b="$@.gz.d/${TATOEBADATA}"; \
+	  for s in `cat $@.gz.d/source.labels`; do \
+	    for t in `cat $@.gz.d/target.labels`; do \
+	      echo ".... extract $$s-$$t data"; \
+	      for d in dev test; do \
+	        paste <(gzip -cd $$b/$$d.id.gz) <(gzip -cd $$b/$$d.src.gz) <(gzip -cd $$b/$$d.trg.gz) | \
+			grep -P "^$$s\t$$t\t" > $@.gz.d/$$d; \
+	        if [ -s $@.gz.d/$$d ]; then \
+		  if [ "$$s" \< "$$t" ]; then \
+		    c="${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$s-$$t.clean"; \
+	            cut -f1,2 $@.gz.d/$$d | ${GZIP} -c > $$c.id.gz; \
+		  else \
+		    c="${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.$$t-$$s.clean"; \
+	            cut -f1,2 $@.gz.d/$$d | \
+		    awk ' { t = $$1; $$1 = $$2; $$2 = t; print; } ' FS='\t' OFS='\t' |\
+		    ${GZIP} -c > $$c.id.gz; \
+		  fi; \
+	          cut -f3 $@.gz.d/$$d | ${GZIP} -c > $$c.$$s.gz; \
+	          cut -f4 $@.gz.d/$$d | ${GZIP} -c > $$c.$$t.gz; \
+	        fi \
+	      done; \
+	    done \
+	  done \
+	fi
+## NOTE: always need to copy label files to keep all sublanguages
+##       --> this is confusing if a sublanguage has the same ID as the macro-language
+##       --> example: ron includes ron and mol
+##       --> the label file for ron will include mol but the data files will not
+## TODO: can we do that in a better way somehow?
+	@if [ ! -e ${dir $@}Tatoeba-test-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SRCEXT}.gz ]; then \
+	  echo ".... move data files"; \
+	  b="$@.gz.d/${TATOEBADATA}"; \
+	  for d in dev test; do \
+	    mv $$b/$$d.src.gz ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SORTSRCEXT}.gz; \
+	    mv $$b/$$d.trg.gz ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.${SORTTRGEXT}.gz; \
+	    mv $$b/$$d.id.gz ${dir $@}Tatoeba-$$d-${TATOEBA_VERSION}.${LANGPAIR}.clean.id.gz; \
+	  done; \
+	fi
+	@echo ".... cleanup of temporary files"
+	@rm -fr ${TMPWORKDIR}/${notdir $@}.gz.d $@.gz.d
+
+endif
+
+
+
+
 ## fetch data
 ## don't break if this fails!
 %.gz.d/data.fetched:
@@ -315,7 +404,8 @@ endif
 	-if [ -e ${TATOEBA_LOCAL_TRAIN}/${LANGPAIR}/train.id.gz ]; then \
 	  cp ${TATOEBA_LOCAL_TRAIN}/${LANGPAIR}/* ${dir $@}; \
 	else \
-	  ${WGET} -q -O ${dir $@}train.tar ${TATOEBA_TRAIN_URL}/${LANGPAIR}.tar; \
+	  ${WGET} -q -O ${dir $@}train.tar ${TATOEBA_TRAIN_URL}/${LANGPAIR}.tar \
+		|| echo "failed to fetch ${TATOEBA_TRAIN_URL}/${LANGPAIR}.tar"; \
 	  if [ -e ${dir $@}train.tar ]; then \
 	    tar -C ${dir $@} -xf ${dir $@}train.tar; \
 	    rm -f ${dir $@}train.tar; \
@@ -355,6 +445,11 @@ endif
 	  fi; \
 	  touch $@; \
 	fi
+
+
+
+
+
 
 ## fix language IDs and make sure that dev/test/train exist
 ## TODO: is it good to create empty files?
@@ -400,8 +495,15 @@ endif
 %/${TATOEBA_DEVSET}.${LANGPAIR}.clean.${SRCEXT}.gz %/${TATOEBA_DEVSET}.${LANGPAIR}.clean.${TRGEXT}.gz: %/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${TRGEXT}.gz
 	@echo "done!"
 
-%/${TATOEBA_TESTSET}.${LANGPAIR}.clean.${SRCEXT}.gz %/${TATOEBA_TESTSET}.${LANGPAIR}.clean.${TRGEXT}.gz: %/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${TRGEXT}.gz
+%/${TATOEBA_TESTSET}.${LANGPAIR}.clean.${TRGEXT}.gz: %/${TATOEBA_TESTSET}.${LANGPAIR}.clean.${SRCEXT}.gz
 	@echo "done!"
+
+%/${TATOEBA_TESTSET}.${LANGPAIR}.clean.${SRCEXT}.gz: %/${TATOEBA_TRAINSET}.${LANGPAIR}.clean.${TRGEXT}.gz
+	@echo "done!"
+#	if [ ! -e $@ ]; then \
+#	  ${MAKE} $(@:clean.${SRCEXT}.gz=${SRCEXT}); \
+#	fi
+
 
 
 

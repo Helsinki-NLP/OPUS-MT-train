@@ -29,8 +29,10 @@ config local-config: ${WORKDIR}/${MODELCONFIG}
 #------------------------------------------------------------------------
 
 .PHONY: data
-data: 	
+data:
+ifneq (${SKIP_MAKE_RAWDATA},1)
 	@${MAKE} rawdata
+endif
 	@${MAKE} local-config
 	@${MAKE} traindata
 	@${MAKE} devdata

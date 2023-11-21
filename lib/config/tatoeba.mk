@@ -160,6 +160,9 @@ TATOEBA_TRGLABELFILE = ${WORKHOME}/${LANGPAIRSTR}/${DATASET}-langlabels.trg
 
 ## get source and target languages from the label files
 
+# TATOEBA_SRCLANGS = ${shell if [ -e ${TATOEBA_SRCLABELFILE} ]; then cat ${TATOEBA_SRCLABELFILE}; else echo ${SRCLANGS}; fi}
+# TATOEBA_TRGLANGS = ${shell if [ -e ${TATOEBA_TRGLABELFILE} ]; then cat ${TATOEBA_TRGLABELFILE}; else echo ${TRGLANGS}; fi}
+
 ifneq (${wildcard ${TATOEBA_SRCLABELFILE}},)
   TATOEBA_SRCLANGS = ${shell cat ${TATOEBA_SRCLABELFILE}}
 else
@@ -170,6 +173,7 @@ ifneq (${wildcard ${TATOEBA_TRGLABELFILE}},)
 else
   TATOEBA_TRGLANGS = ${TRGLANGS}
 endif
+
 
 ifdef TATOEBA_TRGLANGS
 ifneq (${words ${TATOEBA_TRGLANGS}},1)

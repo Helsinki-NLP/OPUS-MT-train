@@ -168,6 +168,17 @@ endif
 ## should we remove zero-width spaces?
 ##   perl -CIOE -pe 's/[\x{2060}\x{200B}\x{feff}]//g'
 
+## replace with ftfy?
+
+#	cat ${word 1,$^} | ftfy |\
+#	perl -CIOE -pe 's/[\x{2060}\x{200B}\x{feff}]//g' |\
+#	perl -CS -pe 's/\&\s*\#\s*160\s*\;/ /g' > $@.1
+#	cat ${word 2,$^} | ftfy |\
+#	perl -CIOE -pe 's/[\x{2060}\x{200B}\x{feff}]//g' |\
+#	perl -CS -pe 's/\&\s*\#\s*160\s*\;/ /g' > $@.2
+
+
+
 %.clean.${SRCEXT}.gz: %.${SRCEXT}.${PRE} %.${TRGEXT}.${PRE}
 	cat ${word 1,$^} |\
 	perl -CS -pe 'tr[\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}][]cd;' |\
@@ -189,6 +200,7 @@ endif
 
 %.clean.${TRGEXT}.gz: %.clean.${SRCEXT}.gz
 	@echo "done!"
+
 
 
 

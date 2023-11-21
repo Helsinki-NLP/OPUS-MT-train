@@ -64,6 +64,10 @@ MODELTYPES   = 	transformer \
 		transformer-base-align \
 		transformer-big \
 		transformer-big-align \
+		transformer-12x6 \
+		transformer-12x6-align \
+		transformer-12x12 \
+		transformer-12x12-align \
 		transformer-24x12 \
 		transformer-24x12-align \
 		transformer-small \
@@ -680,7 +684,9 @@ endif
 ## decoder flags (CPU and GPU variants)
 
 MARIAN_BEAM_SIZE = 4
-MARIAN_MINI_BATCH = 256
+# MARIAN_MINI_BATCH = 256
+# MARIAN_MAXI_BATCH = 512
+MARIAN_MINI_BATCH = 128
 MARIAN_MAXI_BATCH = 512
 # MARIAN_MINI_BATCH = 512
 # MARIAN_MAXI_BATCH = 1024

@@ -133,6 +133,70 @@ all:
 
 
 
+
+
+WRONG_LUMI_LANGS = fin-isl fra-nld hun-spa nld-spa nld-swe pol-por por-swe deu-eng eng-spa eng-por
+
+redo-lumidata:
+	for l in ${WRONG_LUMI_LANGS}; do \
+	  rm -f work/data/simple/*$${l}*; \
+	  rm -f $$l-strict-data; \
+	done
+	${MAKE} $(patsubst %,%-strict-data,${WRONG_LUMI_LANGS})
+	${MAKE} restart-lumijobs
+
+restart-lumijobs:
+	make MARIAN_EXTRA=--no-restore-corpus lumi-jobs lumi-eulangs
+	make MARIAN_EXTRA=--no-restore-corpus lumi-big-multi-eng lumi-big-multi-eng2 lumi-big-multi-eng3
+	make MARIAN_EXTRA=--no-restore-corpus lumi-big-multi2
+
+# work/data/simple/Tatoeba-train-v2023-09-26.eng-spa.strict.eng.gz
+CLEANDATA_BASENAME = work/data/simple/Tatoeba-train-v2023-09-26
+CHECK_DATASETS = $(patsubst %,%-checksize,${TATOEBA_LANGPAIRS})
+
+check-cleandata-sizes: ${CHECK_DATASETS}
+
+%-checksize:
+	@if [ `${GZIP} -cd < ${CLEANDATA_BASENAME}.${@:-checksize=}.clean.$(firstword $(subst -, ,${@:-checksize=})).gz | wc -l` -ne \
+	     `${GZIP} -cd < ${CLEANDATA_BASENAME}.${@:-checksize=}.clean.$(lastword $(subst -, ,${@:-checksize=})).gz | wc -l` ]; then \
+	  echo "different size: ${@:-checksize=}"; \
+	else \
+	  echo "same size: ${@:-checksize=}"; \
+	fi
+
+
+print-langpairs:
+	@echo "$(sort ${TATOEBA_LANGPAIRS})" | tr " " "\n"
+
+ALL_STRICT_DATASETS = $(patsubst %,%-strict-data,${TATOEBA_LANGPAIRS})
+all-strict-datasets: ${ALL_STRICT_DATASETS}
+
+%-strict-data:
+	( s=$(firstword $(subst -, ,$(@:-strict-data=))); \
+	  t=$(lastword $(subst -, ,$(@:-strict-data=))); \
+	  if [ ! $$s \> $$t ]; then \
+	    ${MAKE} SRC=$$s TRG=$$t clean-data-source; \
+	    ${MAKE} SRC=$$s TRG=$$t strict-clean-datasets; \
+	  fi )
+	touch $@
+
+strict-clean-datasets:
+	for s in $(sort $(shell cat ${CLEAN_TRAIN_SRC:.${CLEAN_TRAINDATA_TYPE}.${SRCEXT}.gz=.clean.${SRCEXT}.labels})); do \
+	  for t in $(sort $(shell cat ${CLEAN_TRAIN_TRG:.${CLEAN_TRAINDATA_TYPE}.${TRGEXT}.gz=.clean.${TRGEXT}.labels})); do \
+	    ${MAKE} SRC=$$s TRGL=$$t strict-clean-dataset; \
+	  done \
+	done
+
+strict-clean-dataset:
+	if [ -e ${CLEAN_TEST_SRC} ] && [ -e ${CLEAN_TEST_TRG} ]; then \
+	  ${MAKE} ${CLEAN_TEST_SRC_STATS} ${CLEAN_TEST_TRG_STATS}; \
+	fi
+	if [ -e ${CLEAN_TRAIN_SRC:.${CLEAN_TRAINDATA_TYPE}.${SRCEXT}.gz=.clean.${SRCEXT}.gz} ]; then \
+	  ${MAKE} strict-clean-data; \
+	fi
+
+
+
 #################################################
 ## fixed sentence piece models for all langs
 #################################################
@@ -593,13 +657,19 @@ tatoeba-%-pivotlang:
 	  ${MAKE} PIVOT=${TATOEBA_PIVOT} \
 		DATASET=${DATASET}+${TATOEBA_PIVOT} \
 		MODEL_LATEST_VOCAB= \
-		SKIP_LANGPAIRS=${TATOEBA_PIVOT}-${TATOEBA_PIVOT} \
 		BPEMODELNAME=opus+${TATOEBA_PIVOT} \
 	  ${@:-pivotlang=}; \
 	else \
 	  echo "pivot language '${TATOEBA_PIVOT}' is already included in $@!"; \
 	fi
 
+#		SKIP_LANGPAIRS=${TATOEBA_PIVOT}-${TATOEBA_PIVOT} \
+
+
+gmq-info:
+	langgroup gmq
+	echo $(filter nor,$(TATOEBA_LANGS))
+	echo ${call find-srclanggroup,gmq}
 
 tatoeba-%-info:
 	-( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-info,%,$@))); \
