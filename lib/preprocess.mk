@@ -110,15 +110,21 @@ strict-clean-data: ${STRICT_TRAIN_SRC}
 %.strict.${SRCEXT}.gz: %.clean.${SRCEXT}.gz
 ifdef WORD_RATIO_THRESHOLD
 	if [ -e $< ]; then \
-	  $(MOSESSCRIPTS)/training/clean-corpus-n.perl \
-		-ratio ${WORD_RATIO_THRESHOLD} \
-		-max-word-length ${LONGEST_WORD_THRESHOLD} \
-		$(<:.${SRCEXT}.gz=) \
-		$(SRCEXT) $(TRGEXT) \
-		$(@:.${SRCEXT}.gz=) \
-		${MIN_NR_TOKENS} ${MAX_NR_TOKENS}; \
-	  ${GZIP} -f $(@:.gz=) $(@:.${SRCEXT}.gz=.${TRGEXT}); \
+	  paste <(${GZIP} -cd $<) <(${GZIP} -cd $(<:.${SRCEXT}.gz=.${TRGEXT}.gz)) \
+	  | ${PARALLEL} ${MAX_LENGTH_FILTER} --min-length ${MIN_NR_TOKENS} --max-length ${MAX_NR_TOKENS} \
+	  | ${PARALLEL} ${MAX_WORD_LENGTH_FILTER} --max-word-length ${LONGEST_WORD_THRESHOLD} \
+	  | ${PARALLEL} ${SRCTRG_RATIO_FILTER} --ratio-length $(shell echo "scale=3;1 / ${WORD_RATIO_THRESHOLD}" | bc) \
+	  | tee >(cut -f1 | ${GZIP} -c > $@) | cut -f2 | ${GZIP} -c > $(@:.${SRCEXT}.gz=.${TRGEXT}.gz); \
 	fi
+#	  $(MOSESSCRIPTS)/training/clean-corpus-n.perl \
+#		-ratio ${WORD_RATIO_THRESHOLD} \
+#		-max-word-length ${LONGEST_WORD_THRESHOLD} \
+#		$(<:.${SRCEXT}.gz=) \
+#		$(SRCEXT) $(TRGEXT) \
+#		$(@:.${SRCEXT}.gz=) \
+#		${MIN_NR_TOKENS} ${MAX_NR_TOKENS}; \
+#	  ${GZIP} -f $(@:.gz=) $(@:.${SRCEXT}.gz=.${TRGEXT}); \
+#	fi
 else
 	-if [ -e $< ]; then \
 	  ln -s $< $@; \
@@ -398,16 +404,22 @@ STATS_MIN_NROFLINES ?= 100
 
 ## apply the cleanup script from Moses
 %.src.clean.${PRE_SRC}: %.src.${PRE_SRC} %.trg.${PRE_TRG}
-	rm -f $@.${SRCEXT} $<.${TRGEXT}
-	ln -s ${word 1,$^} $<.${SRCEXT}
-	ln -s ${word 2,$^} $<.${TRGEXT}
-	$(MOSESSCRIPTS)/training/clean-corpus-n.perl \
-		-ratio ${NR_TOKEN_RATIO} \
-		-max-word-length ${MAX_TOKEN_LENGTH} \
-		$< $(SRCEXT) $(TRGEXT) $@ ${MIN_NR_TOKENS} ${MAX_NR_TOKENS}
-	rm -f $<.${SRCEXT} $<.${TRGEXT}
-	mv $@.${SRCEXT} $@
-	mv $@.${TRGEXT} $(@:.src.clean.${PRE_SRC}=.trg.clean.${PRE_TRG})
+	paste $^ \
+	| ${PARALLEL} ${MAX_LENGTH_FILTER} --min-length ${MIN_NR_TOKENS} --max-length ${MAX_NR_TOKENS} \
+	| ${PARALLEL} ${MAX_WORD_LENGTH_FILTER} --max-word-length ${MAX_TOKEN_LENGTH} \
+	| ${PARALLEL} ${SRCTRG_RATIO_FILTER} --ratio-length $(shell echo "scale=3;1 / ${NR_TOKEN_RATIO}" | bc) \
+	| tee >(cut -f1 > $@) \
+	| cut -f2 > $(@:.src.clean.${PRE_SRC}=.trg.clean.${PRE_TRG})
+#	rm -f $<.${SRCEXT} $<.${TRGEXT}
+#	ln -s ${word 1,$^} $<.${SRCEXT}
+#	ln -s ${word 2,$^} $<.${TRGEXT}
+#	$(MOSESSCRIPTS)/training/clean-corpus-n.perl \
+#		-ratio ${NR_TOKEN_RATIO} \
+#		-max-word-length ${MAX_TOKEN_LENGTH} \
+#		$< $(SRCEXT) $(TRGEXT) $@ ${MIN_NR_TOKENS} ${MAX_NR_TOKENS}
+#	rm -f $<.${SRCEXT} $<.${TRGEXT}
+#	mv $@.${SRCEXT} $@
+#	mv $@.${TRGEXT} $(@:.src.clean.${PRE_SRC}=.trg.clean.${PRE_TRG})
 	echo -n "* total size (${DATASET}): " >> ${dir $@}README.md
 	cat $@ | wc -l >> ${dir $@}README.md
 

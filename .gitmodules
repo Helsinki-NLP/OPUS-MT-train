@@ -37,3 +37,6 @@
 [submodule "OPUS-MT-leaderboard"]
 	path = OPUS-MT-leaderboard
 	url = ../OPUS-MT-leaderboard.git
+[submodule "tools/OpusCleaner"]
+	path = tools/OpusCleaner
+	url = https://github.com/hplt-project/OpusCleaner.git

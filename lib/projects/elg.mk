@@ -59,10 +59,10 @@ lumi-eulangs-100max:
 		DATA_SAMPLING_WEIGHT=0.5 \
 		MODELTYPE=transformer-12x12 \
 		SRCLANGS="${ELG_EU_LANGIDS}" \
-		TRGLANGS="${ELG_EU_LANGIDS}" tatoeba-job-100max
+		TRGLANGS="${ELG_EU_LANGIDS}" tatoeba-job-bt-100max
 
 %-100max:
-	${MAKE} MAX_DATA_SIZE=100000000 DATASET=${DATASET}100max ${@:-100max=}
+	${MAKE} MAX_DATA_SIZE=100000000 DATASET=${DATASET}max100 ${@:-100max=}
 
 lumi-fisv:
 	make GPUJOB_SUBMIT=-gpu8 tatoeba-fin2swe-trainjob
@@ -81,7 +81,7 @@ lumi-enfi-bt:
 
 
 
-LUMI_MULTI_ARGS = DATA_SAMPLING_WEIGHT=0.5 GPUJOB_SUBMIT=-gpu8 SKIP_SAME_LANG=0
+LUMI_MULTI_ARGS = DATA_SAMPLING_WEIGHT=0.5 GPUJOB_SUBMIT=-gpu8 SKIP_SAME_LANG=0 SKIP_MAKE_RAWDATA=1
 
 lumi-jobs:
 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-gmq2fin-trainjob
@@ -108,46 +108,151 @@ lumi-big-fin:
 	done
 
 
+lumi-bigger-fin:
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6-align tatoeba-fin2eng-trainjob-bt
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6-align tatoeba-eng2fin-trainjob-bt
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6-align tatoeba-fin2swe-trainjob-bt
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6-align tatoeba-swe2fin-trainjob-bt
+
+lumi-bigger-eng2fin:
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6-align tatoeba-eng2fin-trainjob-bt
+
+
+
+lumi-bigger-gmq+eng2fin:
+	make GPUJOB_SUBMIT=-gpu8 \
+		LANGPAIRSTR="gmq+eng-fin" \
+		SKIP_SAME_LANG=0 \
+		DATA_SAMPLING_WEIGHT=0.5 \
+		MODELTYPE=transformer-12x6 \
+		SRCLANGS="dan fao isl jut nno nob non nrn ovd qer rmg swe eng" \
+		TRGLANGS="fin" tatoeba-job-bt
+	make GPUJOB_SUBMIT=-gpu8 \
+		LANGPAIRSTR="fin-gmq+eng" \
+		SKIP_SAME_LANG=0 \
+		DATA_SAMPLING_WEIGHT=0.5 \
+		MODELTYPE=transformer-12x6 \
+		TRGLANGS="dan fao isl jut nno nob non nrn ovd qer rmg swe eng" \
+		SRCLANGS="fin" tatoeba-job-bt
+
+
+
+# lumi-bigger-multi:
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 TATOEBA_PIVOT=eng tatoeba-gmq2fin-trainjob-bt-pivotlang
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 TATOEBA_PIVOT=eng tatoeba-fin2gmq-trainjob-bt-pivotlang
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-sla2eng-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2sla-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-gem2eng-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2gem-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2itc-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-itc2eng-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-zlw2eng-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2zlw-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-zle2eng-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2zle-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-zls2eng-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2zls-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-sem2eng-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2sem-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-urj2eng-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2urj-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-alv2eng-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2alv-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-sit2eng-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2sit-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-sla2eng-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2sla-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-zls2eng-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2zls-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-ine2eng-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-eng2ine-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-mul2eng-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-eng2mul-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-itc2gem-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-gem2itc-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-gem2gem-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-itc2itc-trainjob
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-sla2sla-trainjob
+
+
+
+LUMI_TASK = trainjob
+
+lumi-bigger-multi-bt:
+	${MAKE} LUMI_TASK=trainjob-bt lumi-bigger-multi
+
 lumi-bigger-multi:
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 TATOEBA_PIVOT=eng tatoeba-gmq2fin-trainjob-bt-pivotlang
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 TATOEBA_PIVOT=eng tatoeba-fin2gmq-trainjob-bt-pivotlang
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-sla2eng-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2sla-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-gem2eng-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2gem-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2itc-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-zlw2eng-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2zlw-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-zle2eng-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2zle-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-zls2eng-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2zls-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-sem2eng-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2sem-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-urj2eng-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2urj-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-alv2eng-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2alv-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-sit2eng-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2sit-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-ine2eng-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-eng2ine-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-mul2eng-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-eng2mul-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-itc2gem-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-gem2itc-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-gem2gem-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-itc2itc-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-sla2sla-trainjob
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-sla2eng-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2sla-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-gem2eng-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2gem-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2itc-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-itc2eng-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-zlw2eng-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2zlw-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-zle2eng-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2zle-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-zls2eng-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2zls-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-sem2eng-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2sem-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-urj2eng-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2urj-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-alv2eng-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2alv-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-sit2eng-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2sit-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-sla2eng-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2sla-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-zls2eng-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2zls-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-ine2eng-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-eng2ine-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-mul2eng-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-eng2mul-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-itc2gem-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-gem2itc-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-gem2gem-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-itc2itc-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-sla2sla-${LUMI_TASK}
 
 
-#	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-itc2eng-trainjob
 
-lumi-bigger-multi2:
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-sla2eng-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2sla-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-zls2eng-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2zls-trainjob
+
+
+lumi-bigger-multi-eval:
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-sla2eng-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2sla-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-zls2eng-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2zls-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-sla2eng-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2sla-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-gem2eng-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2gem-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2itc-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-zlw2eng-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2zlw-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-zle2eng-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2zle-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-zls2eng-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2zls-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-sem2eng-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2sem-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-urj2eng-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2urj-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-alv2eng-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2alv-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-sit2eng-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2sit-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-ine2eng-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-eng2ine-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-mul2eng-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-eng2mul-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-itc2gem-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-gem2itc-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-gem2gem-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-itc2itc-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-sla2sla-eval-testsets
 
 
 
@@ -168,11 +273,37 @@ lumi-biggest-multi:
 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 MAX_DATA_SIZE=25000000 tatoeba-itc2itc-trainjob
 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 MAX_DATA_SIZE=25000000 tatoeba-sla2sla-trainjob
 
-lumi-biggest-multi2:
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-itc2eng-trainjob
+lumi-multi2:
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 SKIP_MAKE_RAWDATA=1 tatoeba-itc2eng-trainjob
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 SKIP_MAKE_RAWDATA=1 tatoeba-itc2eng-trainjob-bt
 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 MAX_DATA_SIZE=25000000 SKIP_MAKE_RAWDATA=1 tatoeba-ine2ine-trainjob
 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 MAX_DATA_SIZE=25000000 SKIP_MAKE_RAWDATA=1 tatoeba-mul2mul-trainjob
 
+lumi-multi3:
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 SKIP_MAKE_RAWDATA=1 tatoeba-ine2ine-trainjob-bt
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 SKIP_MAKE_RAWDATA=1 tatoeba-mul2mul-trainjob-bt
+
+
+lumi-biggest-multi-eval:
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-gem2eng-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-eng2gem-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-eng2itc-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 MAX_DATA_SIZE=25000000 tatoeba-ine2eng-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 MAX_DATA_SIZE=25000000 tatoeba-eng2ine-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 MAX_DATA_SIZE=25000000 tatoeba-mul2eng-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 MAX_DATA_SIZE=25000000 tatoeba-eng2mul-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 MAX_DATA_SIZE=25000000 tatoeba-itc2gem-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 MAX_DATA_SIZE=25000000 tatoeba-gem2itc-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 MAX_DATA_SIZE=25000000 tatoeba-gem2gem-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 MAX_DATA_SIZE=25000000 tatoeba-sla2sla-eval-testsets
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 MAX_DATA_SIZE=25000000 tatoeba-itc2itc-eval-testsets
+
+#	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 MAX_DATA_SIZE=25000000 tatoeba-itc2itc-evalall
+#	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 MAX_DATA_SIZE=25000000 tatoeba-sla2sla-evalall
+#	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-itc2eng-evalall
+
+#	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-sla2eng-evalall
+#	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-eng2sla-evalall
 
 lumi-huge-multi-eng:
 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-24x12 tatoeba-gem2eng-trainjob

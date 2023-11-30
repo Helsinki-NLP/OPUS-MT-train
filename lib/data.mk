@@ -35,44 +35,6 @@ TRAINDATA_SIZE = ${shell \
 	fi }
 
 
-## set sample data size for mulitlingual models
-## (only if DATA_SAMPLING_WEIGHT is set)
-## MAX_DATA_SIZE controls the maximum data size for a language pair
-##    default: keep all data for the largest language pair (no down-sampling)
-## DATA_SAMPLING_WEIGHT balances between uniform and distributional sampling
-##  = 1: sample proportional to the size of bitext per language pair
-##  = 0.2: corresponds to temperature 5 to up-sample low resource languages
-
-ifneq (${words ${SRCLANGS} ${TRGLANGS}},2)
-ifdef DATA_SAMPLING_WEIGHT
-ifneq (${wildcard ${WORKDIR}/train/size_per_language_pair.txt},)
-ifdef MAX_DATA_SIZE
-  FIT_DATA_SIZE = ${shell ${REPOHOME}scripts/data-sample-sizes.pl -w ${DATA_SAMPLING_WEIGHT} -m ${MAX_DATA_SIZE} \
-			${WORKDIR}/train/size_per_language_pair.txt | grep '^${LANGPAIR}	' | cut -f2}
-else
-  FIT_DATA_SIZE = ${shell ${REPOHOME}scripts/data-sample-sizes.pl -w ${DATA_SAMPLING_WEIGHT} \
-			${WORKDIR}/train/size_per_language_pair.txt | grep '^${LANGPAIR}	' | cut -f2}
-endif
-endif
-endif
-endif
-
-print-data-sampling-size:
-	${REPOHOME}scripts/data-sample-sizes.pl -w 0.3 \
-			${WORKDIR}/train/size_per_language_pair.txt | grep '^${LANGPAIR}	' | cut -f2
-	@echo "sample size for ${LANGPAIR}: ${FIT_DATA_SIZE}"
-
-print-data-sampling-sizes:
-	for s in ${SRCLANGS}; do \
-	  for t in ${TRGLANGS}; do \
-	    if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
-	      if [ "${SKIP_SAME_LANG}" != "1" ] || [ "$$s" != "$$t" ]; then \
-	        ${MAKE} SRC:=$$s TRG:=$$t print-data-sampling-size; \
-	      fi \
-	    fi \
-	  done \
-	done
-
 
 
 ## look for cleanup scripts and put them into a pipe
@@ -97,6 +59,7 @@ endif
 ##   if such a subdir exists
 
 
+SIZE_PER_LANGPAIR_FILE := size_per_language_pair.txt
 
 ifneq (${wildcard ${BACKTRANS_HOME}/${TRG}-${SRC}/latest},)
   BACKTRANS_DIR = ${BACKTRANS_HOME}/${TRG}-${SRC}/latest
@@ -112,12 +75,14 @@ endif
 ifeq (${USE_BACKTRANS},1)
   BACKTRANS_SRC = ${sort ${wildcard ${BACKTRANS_DIR}/*.${SRCEXT}.gz}}
   BACKTRANS_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${BACKTRANS_SRC}}
+  SIZE_PER_LANGPAIR_FILE := ${SIZE_PER_LANGPAIR_FILE:.txt=-bt.txt}
 endif
 
 # forward-translation data (source-to-target)
 ifeq (${USE_FORWARDTRANS},1)
   FORWARDTRANS_SRC = ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.gz}}
   FORWARDTRANS_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${FORWARDTRANS_SRC}}
+  SIZE_PER_LANGPAIR_FILE := ${SIZE_PER_LANGPAIR_FILE:.txt=-ft.txt}
 endif
 
 # forward-translation data (source-to-target)
@@ -125,12 +90,14 @@ endif
 ifneq (${USE_FORWARDTRANS_SELECTED},)
   FORWARDTRANS_SRC += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.best${USE_FORWARDTRANS_SELECTED}.gz}}
   FORWARDTRANS_TRG += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/*.${TRGEXT}.best${USE_FORWARDTRANS_SELECTED}.gz}}
+  SIZE_PER_LANGPAIR_FILE := ${SIZE_PER_LANGPAIR_FILE:.txt=-fts.txt}
 endif
 
 ## selected by "raw" (unnormalised) scores
 ifneq (${USE_FORWARDTRANS_SELECTED_RAW},)
   FORWARDTRANS_SRC += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.rawbest${USE_FORWARDTRANS_SELECTED_RAW}.gz}}
   FORWARDTRANS_TRG += ${sort ${wildcard ${FORWARDTRANS_HOME}/${SRC}-${TRG}/latest/*.${TRGEXT}.rawbest${USE_FORWARDTRANS_SELECTED_RAW}.gz}}
+  SIZE_PER_LANGPAIR_FILE := ${SIZE_PER_LANGPAIR_FILE:.txt=-ftsr.txt}
 endif
 
 
@@ -138,18 +105,21 @@ endif
 ifeq (${USE_FORWARDTRANSMONO},1)
   FORWARDTRANSMONO_SRC = ${sort ${wildcard ${BACKTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.gz}}
   FORWARDTRANSMONO_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${FORWARDTRANSMONO_SRC}}
+  SIZE_PER_LANGPAIR_FILE := ${SIZE_PER_LANGPAIR_FILE:.txt=-ftm.txt}
 endif
 
 # forward translation using pivoting (target language is automatically created)
 ifeq (${USE_FORWARD_PIVOTING},1)
   PIVOTING_SRC = ${sort ${wildcard ${PIVOTTRANS_HOME}/${TRG}-${SRC}/latest/*.${SRCEXT}.gz}}
   PIVOTING_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${PIVOTING_SRC}}
+  SIZE_PER_LANGPAIR_FILE := ${SIZE_PER_LANGPAIR_FILE:.txt=-ftp.txt}
 endif
 
 # backward translation using pivoting (source language is automatically created)
 ifeq (${USE_BACKWARD_PIVOTING},1)
   PIVOTING_SRC += ${sort ${wildcard ${PIVOTTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.gz}}
   PIVOTING_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${PIVOTING_SRC}}
+  SIZE_PER_LANGPAIR_FILE := ${SIZE_PER_LANGPAIR_FILE:.txt=-btp.txt}
 endif
 
 # pivot-based data augmentation data (in both directions)
@@ -157,6 +127,7 @@ ifeq (${USE_PIVOTING},1)
   PIVOTING_SRC = ${sort ${wildcard ${PIVOTTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.gz} \
 			${wildcard ${PIVOTTRANS_HOME}/${TRG}-${SRC}/latest/*.${SRCEXT}.gz}}
   PIVOTING_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${PIVOTING_SRC}}
+  SIZE_PER_LANGPAIR_FILE := ${SIZE_PER_LANGPAIR_FILE:.txt=-pt.txt}
 endif
 
 
@@ -164,7 +135,47 @@ endif
 ifeq (${USE_EXTRA_BITEXTS},1)
   EXTRA_BITEXTS_SRC = ${sort ${wildcard ${DATADIR}/extra/${SRC}-${TRG}/*.${SRCEXT}.gz}}
   EXTRA_BITEXTS_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${EXTRA_BITEXTS_SRC}}
+  SIZE_PER_LANGPAIR_FILE := ${SIZE_PER_LANGPAIR_FILE:.txt=-xt.txt}
 endif
+
+
+## set sample data size for mulitlingual models
+## (only if DATA_SAMPLING_WEIGHT is set)
+## MAX_DATA_SIZE controls the maximum data size for a language pair
+##    default: keep all data for the largest language pair (no down-sampling)
+## DATA_SAMPLING_WEIGHT balances between uniform and distributional sampling
+##  = 1: sample proportional to the size of bitext per language pair
+##  = 0.2: corresponds to temperature 5 to up-sample low resource languages
+
+ifneq (${words ${SRCLANGS} ${TRGLANGS}},2)
+ifdef DATA_SAMPLING_WEIGHT
+ifneq (${wildcard ${WORKDIR}/train/${SIZE_PER_LANGPAIR_FILE}},)
+ifdef MAX_DATA_SIZE
+  FIT_DATA_SIZE = ${shell ${REPOHOME}scripts/data-sample-sizes.pl -w ${DATA_SAMPLING_WEIGHT} -m ${MAX_DATA_SIZE} \
+			${WORKDIR}/train/${SIZE_PER_LANGPAIR_FILE} | grep '^${LANGPAIR}	' | cut -f2}
+else
+  FIT_DATA_SIZE = ${shell ${REPOHOME}scripts/data-sample-sizes.pl -w ${DATA_SAMPLING_WEIGHT} \
+			${WORKDIR}/train/${SIZE_PER_LANGPAIR_FILE} | grep '^${LANGPAIR}	' | cut -f2}
+endif
+endif
+endif
+endif
+
+print-data-sampling-size:
+	${REPOHOME}scripts/data-sample-sizes.pl -w 0.3 \
+			${WORKDIR}/train/${SIZE_PER_LANGPAIR_FILE} | grep '^${LANGPAIR}	' | cut -f2
+	@echo "sample size for ${LANGPAIR}: ${FIT_DATA_SIZE}"
+
+print-data-sampling-sizes:
+	for s in ${SRCLANGS}; do \
+	  for t in ${TRGLANGS}; do \
+	    if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
+	      if [ "${SKIP_SAME_LANG}" != "1" ] || [ "$$s" != "$$t" ]; then \
+	        ${MAKE} SRC:=$$s TRG:=$$t print-data-sampling-size; \
+	      fi \
+	    fi \
+	  done \
+	done
 
 
 
@@ -313,11 +324,11 @@ endif
 ## --> counts are used to estimate temperature-based sample sizes
 ##     for multilingual models
 
-train-size-per-language: ${WORKDIR}/train/size_per_language_pair.txt
+train-size-per-language: ${WORKDIR}/train/${SIZE_PER_LANGPAIR_FILE}
 add-size-per-language-pair-info:
 ifneq (${wildcard ${CLEAN_TRAIN_SRC}},)
 	( s=`${GZCAT} ${wildcard ${CLEAN_TRAIN_SRC}} | wc -l`; \
-	  echo "${LANGPAIR}	$$s" >> ${WORKDIR}/train/size_per_language_pair.txt )
+	  echo "${LANGPAIR}	$$s" >> ${WORKDIR}/train/${SIZE_PER_LANGPAIR_FILE} )
 endif
 
 .PHONY: available-traindata
@@ -359,16 +370,18 @@ ${WORKDIR}/train/available-training-data.txt:
 	done
 
 
-${WORKDIR}/train/size_per_language_pair.txt: ${LOCAL_TRAINDATA_DEPENDENCIES}
+${WORKDIR}/train/${SIZE_PER_LANGPAIR_FILE}: ${LOCAL_TRAINDATA_DEPENDENCIES}
 	${MAKE} ${WORKDIR}/train/available-training-data.txt
 	mkdir -p $(dir $@)
 	rm -f $@
 	for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
-	    if [ `grep "$$s-$$t	" ${WORKDIR}/train/available-training-data.txt | wc -l` -gt 0 ]; then \
-	      if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
-	        if [ "${SKIP_SAME_LANG}" != "1" ] || [ "$$s" != "$$t" ]; then \
-	          ${MAKE} DATASET=${DATASET} SRC:=$$s TRG:=$$t add-size-per-language-pair-info; \
+	    if [ ! $$s \> $$t ]; then \
+	      if [ `grep "$$s-$$t	" ${WORKDIR}/train/available-training-data.txt | wc -l` -gt 0 ]; then \
+	        if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
+	          if [ "${SKIP_SAME_LANG}" != "1" ] || [ "$$s" != "$$t" ]; then \
+	            ${MAKE} DATASET=${DATASET} SRC:=$$s TRG:=$$t add-size-per-language-pair-info; \
+	          fi \
 	        fi \
 	      fi \
 	    fi \
@@ -592,7 +605,7 @@ local-train-data: ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG}
 ## add training data for each language combination
 ## and put it together in local space
 ${LOCAL_TRAIN_SRC}: ${LOCAL_TRAINDATA_DEPENDENCIES}
-	${MAKE} ${WORKDIR}/train/size_per_language_pair.txt
+	${MAKE} ${WORKDIR}/train/${SIZE_PER_LANGPAIR_FILE}
 	@mkdir -p ${dir $@}
 	@echo ""                           > ${dir $@}README.md
 	@echo "# ${notdir ${TRAIN_BASE}}" >> ${dir $@}README.md
@@ -600,7 +613,7 @@ ${LOCAL_TRAIN_SRC}: ${LOCAL_TRAINDATA_DEPENDENCIES}
 	@rm -f ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG}
 	-@for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
-	    if [ `grep "\($$s-$$t\|$$t-$$s\)	" ${WORKDIR}/train/size_per_language_pair.txt | wc -l` -gt 0 ]; then \
+	    if [ `grep "\($$s-$$t\|$$t-$$s\)	" ${WORKDIR}/train/${SIZE_PER_LANGPAIR_FILE} | wc -l` -gt 0 ]; then \
 	      if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
 	        if [ "${SKIP_SAME_LANG}" == "1" ] && [ "$$s" == "$$t" ]; then \
 	          echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
@@ -630,26 +643,39 @@ endif
 ######################################
 ifeq (${CLEAN_CORPUS_TRAINING_DATA},1)
 	@echo ".... another cleanup of local training data"
-	@ln -s ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_SRC}.${SRCEXT}
-	@ln -s ${LOCAL_TRAIN_TRG} ${LOCAL_TRAIN_SRC}.${TRGEXT}
-	@$(MOSESSCRIPTS)/training/clean-corpus-n.perl \
-		-ratio ${NR_TOKEN_RATIO} \
-		-max-word-length ${MAX_TOKEN_LENGTH} \
-		${LOCAL_TRAIN_SRC} $(SRCEXT) $(TRGEXT) \
-		${LOCAL_TRAIN_SRC}.clean \
-		${MIN_NR_TOKENS} ${MAX_NR_TOKENS}
-	@mv -f ${LOCAL_TRAIN_SRC}.clean.${SRCEXT} ${LOCAL_TRAIN_SRC}
-	@mv -f ${LOCAL_TRAIN_SRC}.clean.${TRGEXT} ${LOCAL_TRAIN_TRG}
+	paste ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG} \
+	| ${PARALLEL} ${MAX_LENGTH_FILTER} --min-length ${MIN_NR_TOKENS} --max-length ${MAX_NR_TOKENS} \
+	| ${PARALLEL} ${MAX_WORD_LENGTH_FILTER} --max-word-length ${MAX_TOKEN_LENGTH} \
+	| ${PARALLEL} ${SRCTRG_RATIO_FILTER} --ratio-length $(shell echo "scale=3;1 / ${NR_TOKEN_RATIO}" | bc) \
+	| tee >(cut -f1 > ${LOCAL_TRAIN_SRC}.${SRCEXT}) | cut -f2 > ${LOCAL_TRAIN_SRC}.${TRGEXT}
+	@mv -f ${LOCAL_TRAIN_SRC}.${SRCEXT} ${LOCAL_TRAIN_SRC}
+	@mv -f ${LOCAL_TRAIN_SRC}.${TRGEXT} ${LOCAL_TRAIN_TRG}
 	@rm -f ${LOCAL_TRAIN_SRC}.${SRCEXT} ${LOCAL_TRAIN_SRC}.${TRGEXT}
+#	@ln -s ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_SRC}.${SRCEXT}
+#	@ln -s ${LOCAL_TRAIN_TRG} ${LOCAL_TRAIN_SRC}.${TRGEXT}
+#	@$(MOSESSCRIPTS)/training/clean-corpus-n.perl \
+#		-ratio ${NR_TOKEN_RATIO} \
+#		-max-word-length ${MAX_TOKEN_LENGTH} \
+#		${LOCAL_TRAIN_SRC} $(SRCEXT) $(TRGEXT) \
+#		${LOCAL_TRAIN_SRC}.clean \
+#		${MIN_NR_TOKENS} ${MAX_NR_TOKENS}
+#	@mv -f ${LOCAL_TRAIN_SRC}.clean.${SRCEXT} ${LOCAL_TRAIN_SRC}
+#	@mv -f ${LOCAL_TRAIN_SRC}.clean.${TRGEXT} ${LOCAL_TRAIN_TRG}
+#	@rm -f ${LOCAL_TRAIN_SRC}.${SRCEXT} ${LOCAL_TRAIN_SRC}.${TRGEXT}
 endif
 ifeq (${SHUFFLE_TRAINING_DATA},1)
 	@echo ".... shuffle complete training data"
 	@paste ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG} \
 	| LC_ALL=C awk 'length($$0)<1073741824' \
-	| ${SHUFFLE} | ${GZIP} -c > ${LOCAL_TRAIN_SRC}.shuffled.gz
-	@${GZIP} -cd ${LOCAL_TRAIN_SRC}.shuffled.gz | cut -f1 > ${LOCAL_TRAIN_SRC}
-	@${GZIP} -cd ${LOCAL_TRAIN_SRC}.shuffled.gz | cut -f2 > ${LOCAL_TRAIN_TRG}
-	@rm -f ${LOCAL_TRAIN_SRC}.shuffled.gz
+	| ${SHUFFLE} \
+	| tee >(cut -f1 > ${LOCAL_TRAIN_SRC}.src) \
+	|       cut -f2 > ${LOCAL_TRAIN_TRG}.trg
+	mv ${LOCAL_TRAIN_SRC}.src ${LOCAL_TRAIN_SRC}
+	mv ${LOCAL_TRAIN_TRG}.trg ${LOCAL_TRAIN_TRG}
+#	| ${GZIP} -c > ${LOCAL_TRAIN_SRC}.shuffled.gz
+#	@${GZIP} -cd ${LOCAL_TRAIN_SRC}.shuffled.gz \
+#	| tee >(cut -f1 > ${LOCAL_TRAIN_SRC}) | cut -f2 > ${LOCAL_TRAIN_TRG}
+#	@rm -f ${LOCAL_TRAIN_SRC}.shuffled.gz
 #	@paste ${LOCAL_TRAIN_SRC} ${LOCAL_TRAIN_TRG} | ${SHUFFLE} > ${LOCAL_TRAIN_SRC}.shuffled
 #	@cut -f1 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_SRC}
 #	@cut -f2 ${LOCAL_TRAIN_SRC}.shuffled > ${LOCAL_TRAIN_TRG}

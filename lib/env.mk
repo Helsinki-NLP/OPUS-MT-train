@@ -134,6 +134,16 @@ TMX2MOSES      ?= ${shell which tmx2moses 2>/dev/null || echo ${TOOLSDIR}/OpusTo
 GET_ISO_CODE   ?= ${ISO639} -m
 
 
+
+OPUS_CLEANER_HOME      := ${TOOLSDIR}/OpusCleaner
+OPUS_CLEANER_FILTERS   := ${OPUS_CLEANER_HOME}/opuscleaner/filters
+MAX_LENGTH_FILTER      := ${OPUS_CLEANER_FILTERS}/max_length.py
+MAX_WORD_LENGTH_FILTER := ${OPUS_CLEANER_FILTERS}/max_word_length.py
+SRCTRG_RATIO_FILTER    := ${OPUS_CLEANER_FILTERS}/src_trg_ratio.py
+
+
+
+
 ## marian-nmt binaries
 
 # MARIAN_TRAIN   = ${MARIAN_HOME}marian
@@ -188,7 +198,7 @@ WGET    ?= wget -T 1
 ## check whether GNU parallel is available
 
 ifneq (${shell which parallel 2>/dev/null},)
-  PARALLEL_ARGS := --pipe --keep-order -q -L10000 --max-procs 25%
+  PARALLEL_ARGS := --pipe --keep-order -q -L10000 --max-procs 50%
   PARALLEL := parallel ${PARALLEL_ARGS}
 endif
 
