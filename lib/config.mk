@@ -458,9 +458,10 @@ TESTSET_NAME ?= opus-test
 ## TODO: MODELDIR still in use?
 ## TODO: SPMDIR still in use? (monolingual sp models)
 
-DATADIR  = ${WORKHOME}/data
-MODELDIR = ${WORKHOME}/models/${LANGPAIRSTR}
-SPMDIR   = ${WORKHOME}/SentencePieceModels
+DATADIR      = ${WORKHOME}/data
+EXTRADATADIR = ${DATADIR}/extra
+MODELDIR     = ${WORKHOME}/models/${LANGPAIRSTR}
+SPMDIR       = ${WORKHOME}/SentencePieceModels
 
 ## train data sets (word alignment for the guided alignment option)
 TRAIN_BASE = ${WORKDIR}/train/${DATASET}

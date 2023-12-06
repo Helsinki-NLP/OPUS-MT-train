@@ -60,6 +60,7 @@ endif
 
 
 SIZE_PER_LANGPAIR_FILE := size_per_language_pair.txt
+AVAILABLE_TRAINING_DATA_FILE := available-training-data.txt
 
 ifneq (${wildcard ${BACKTRANS_HOME}/${TRG}-${SRC}/latest},)
   BACKTRANS_DIR = ${BACKTRANS_HOME}/${TRG}-${SRC}/latest
@@ -113,6 +114,7 @@ ifeq (${USE_FORWARD_PIVOTING},1)
   PIVOTING_SRC = ${sort ${wildcard ${PIVOTTRANS_HOME}/${TRG}-${SRC}/latest/*.${SRCEXT}.gz}}
   PIVOTING_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${PIVOTING_SRC}}
   SIZE_PER_LANGPAIR_FILE := ${SIZE_PER_LANGPAIR_FILE:.txt=-ftp.txt}
+  AVAILABLE_TRAINING_DATA_FILE := ${AVAILABLE_TRAINING_DATA_FILE:.txt=-ftp.txt}
 endif
 
 # backward translation using pivoting (source language is automatically created)
@@ -120,6 +122,7 @@ ifeq (${USE_BACKWARD_PIVOTING},1)
   PIVOTING_SRC += ${sort ${wildcard ${PIVOTTRANS_HOME}/${SRC}-${TRG}/latest/*.${SRCEXT}.gz}}
   PIVOTING_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${PIVOTING_SRC}}
   SIZE_PER_LANGPAIR_FILE := ${SIZE_PER_LANGPAIR_FILE:.txt=-btp.txt}
+  AVAILABLE_TRAINING_DATA_FILE := ${AVAILABLE_TRAINING_DATA_FILE:.txt=-btp.txt}
 endif
 
 # pivot-based data augmentation data (in both directions)
@@ -128,14 +131,16 @@ ifeq (${USE_PIVOTING},1)
 			${wildcard ${PIVOTTRANS_HOME}/${TRG}-${SRC}/latest/*.${SRCEXT}.gz}}
   PIVOTING_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${PIVOTING_SRC}}
   SIZE_PER_LANGPAIR_FILE := ${SIZE_PER_LANGPAIR_FILE:.txt=-pt.txt}
+  AVAILABLE_TRAINING_DATA_FILE := ${AVAILABLE_TRAINING_DATA_FILE:.txt=-pt.txt}
 endif
 
 
 # additional data sets that might be available ...
 ifeq (${USE_EXTRA_BITEXTS},1)
-  EXTRA_BITEXTS_SRC = ${sort ${wildcard ${DATADIR}/extra/${SRC}-${TRG}/*.${SRCEXT}.gz}}
+  EXTRA_BITEXTS_SRC = ${sort ${wildcard ${EXTRADATADIR}/${SRC}-${TRG}/*.${SRCEXT}.gz}}
   EXTRA_BITEXTS_TRG = ${patsubst %.${SRCEXT}.gz,%.${TRGEXT}.gz,${EXTRA_BITEXTS_SRC}}
   SIZE_PER_LANGPAIR_FILE := ${SIZE_PER_LANGPAIR_FILE:.txt=-xt.txt}
+  AVAILABLE_TRAINING_DATA_FILE := ${AVAILABLE_TRAINING_DATA_FILE:.txt=-xt.txt}
 endif
 
 
@@ -332,9 +337,9 @@ ifneq (${wildcard ${CLEAN_TRAIN_SRC}},)
 endif
 
 .PHONY: available-traindata
-available-traindata: ${WORKDIR}/train/available-training-data.txt
+available-traindata: ${WORKDIR}/train/${AVAILABLE_TRAINING_DATA_FILE}
 
-${WORKDIR}/train/available-training-data.txt:
+${WORKDIR}/train/${AVAILABLE_TRAINING_DATA_FILE}:
 	mkdir -p $(dir $@)
 	rm -f $@
 	@for s in ${SRCLANGS}; do \
@@ -343,8 +348,8 @@ ${WORKDIR}/train/available-training-data.txt:
 	                              -name "*.$$t-$$s.*${CLEAN_TRAINDATA_TYPE}.*.gz" \) \
 		| grep -v ${DEVSET} | grep -v ${TESTSET} \
 		| sed "s/^/$$s-$$t	/" >> $@; \
-	    if [ -d ${DATADIR}/extra/$$s-$$t ]; then \
-	      find ${DATADIR}/extra/$$s-$$t -name '*.gz'     | sed "s/^/$$s-$$t	/" >> $@; \
+	    if [ -e ${EXTRADATADIR}/$$s-$$t ]; then \
+	      find ${EXTRADATADIR}/$$s-$$t/ -name '*.gz'     | sed "s/^/$$s-$$t	/" >> $@; \
 	    fi; \
 	    if [ "${USE_BACKTRANS}" == "1" ]; then \
 	      if [ -d ${BACKTRANS_DIR} ]; then \
@@ -371,13 +376,14 @@ ${WORKDIR}/train/available-training-data.txt:
 
 
 ${WORKDIR}/train/${SIZE_PER_LANGPAIR_FILE}: ${LOCAL_TRAINDATA_DEPENDENCIES}
-	${MAKE} ${WORKDIR}/train/available-training-data.txt
+	${MAKE} ${WORKDIR}/train/${AVAILABLE_TRAINING_DATA_FILE}
 	mkdir -p $(dir $@)
 	rm -f $@
+	touch $@
 	for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
-	    if [ ! $$s \> $$t ]; then \
-	      if [ `grep "$$s-$$t	" ${WORKDIR}/train/available-training-data.txt | wc -l` -gt 0 ]; then \
+	    if [ `grep "\($$s-$$t\|$$t-$$s\)	" $@ | wc -l` -eq 0 ]; then \
+	      if [ `grep "\($$s-$$t\|$$t-$$s\)	" ${WORKDIR}/train/${AVAILABLE_TRAINING_DATA_FILE} | wc -l` -gt 0 ]; then \
 	        if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
 	          if [ "${SKIP_SAME_LANG}" != "1" ] || [ "$$s" != "$$t" ]; then \
 	            ${MAKE} DATASET=${DATASET} SRC:=$$s TRG:=$$t add-size-per-language-pair-info; \
@@ -816,20 +822,25 @@ raw-devdata: ${DEV_SRC} ${DEV_TRG}
 ## maybe introduce over/undersampling of dev data like we have for train data?
 
 ${DEV_SRC}.shuffled.gz:
+	${MAKE} ${WORKDIR}/train/${SIZE_PER_LANGPAIR_FILE}
 	mkdir -p ${sort ${dir $@} ${dir ${DEV_SRC}} ${dir ${DEV_TRG}}}
 	rm -f ${DEV_SRC} ${DEV_TRG}
 	echo "# Validation data"                         > ${dir ${DEV_SRC}}README.md
 	echo ""                                         >> ${dir ${DEV_SRC}}README.md
 	-for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
-	    if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
-	      if [ "${SKIP_SAME_LANG}" == "1" ] && [ "$$s" == "$$t" ]; then \
-	        echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
-	      else \
-	        ${MAKE} SRC=$$s TRG=$$t add-to-dev-data; \
+	    if [ `grep "\($$s-$$t\|$$t-$$s\)	" ${WORKDIR}/train/${SIZE_PER_LANGPAIR_FILE} | wc -l` -gt 0 ]; then \
+	      if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
+	        if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
+	          if [ "${SKIP_SAME_LANG}" == "1" ] && [ "$$s" == "$$t" ]; then \
+	            echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
+	          else \
+	            ${MAKE} SRC=$$s TRG=$$t add-to-dev-data; \
+	          fi \
+	        else \
+	          echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
+	        fi \
 	      fi \
-	    else \
-	      echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
 	    fi \
 	  done \
 	done
@@ -943,6 +954,7 @@ endif
 
 ${TEST_SRC}: ${DEV_SRC}
 ifneq (${TESTSET},${DEVSET})
+	${MAKE} ${WORKDIR}/train/${SIZE_PER_LANGPAIR_FILE}
 	mkdir -p ${dir $@}
 	rm -f ${TEST_SRC} ${TEST_TRG}
 	echo "# Test data"                         > ${dir ${TEST_SRC}}/README.md
@@ -954,14 +966,18 @@ ifneq (${TESTSET},${DEVSET})
 	elif [ ! -e $@ ]; then \
 	  for s in ${SRCLANGS}; do \
 	    for t in ${TRGLANGS}; do \
-	      if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
-	        if [ "${SKIP_SAME_LANG}" == "1" ] && [ "$$s" == "$$t" ]; then \
-	          echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
-	        else \
-	          ${MAKE} SRC=$$s TRG=$$t add-to-test-data; \
+	      if [ `grep "\($$s-$$t\|$$t-$$s\)	" ${WORKDIR}/train/${SIZE_PER_LANGPAIR_FILE} | wc -l` -gt 0 ]; then \
+	        if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
+	          if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
+	            if [ "${SKIP_SAME_LANG}" == "1" ] && [ "$$s" == "$$t" ]; then \
+	              echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
+	            else \
+	              ${MAKE} SRC=$$s TRG=$$t add-to-test-data; \
+	            fi \
+	          else \
+	            echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
+	          fi \
 	        fi \
-	      else \
-	        echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
 	      fi \
 	    done \
 	  done; \

@@ -1,6 +1,36 @@
 # -*-makefile-*-
 
 
+
+## include additional bitexts from bible translations
+## assumes that they exist in ${DATADIR}/bible
+%-bibles:
+	cp tatoeba/released-bitexts-${TATOEBA_VERSION}.txt tatoeba/released-bitexts-${TATOEBA_VERSION}+bibles.txt
+	ls ${DATADIR}/bible | grep '^...-...$$' >> tatoeba/released-bitexts-${TATOEBA_VERSION}+bibles.txt
+	${MAKE} DATASET=${DATASET}+bibles \
+		EXTRADATADIR=${DATADIR}/bible \
+		USE_EXTRA_BITEXTS=1 \
+		RELEASED_TATOEBA_DATA_FILE=tatoeba/released-bitexts-${TATOEBA_VERSION}+bibles.txt \
+		SHUFFLE_TRAINING_DATA=1 ${@:-bibles=}
+
+
+## NEW: only use training data (leaving some leftout data for development and testing)
+
+%-bible:
+	cp tatoeba/released-bitexts-${TATOEBA_VERSION}.txt tatoeba/released-bitexts-${TATOEBA_VERSION}+bible.txt
+	ls ${DATADIR}/bible/train | grep '^...-...$$' >> tatoeba/released-bitexts-${TATOEBA_VERSION}+bible.txt
+	${MAKE} DATASET=${DATASET}+bible \
+		EXTRADATADIR=${DATADIR}/bible/train \
+		SUBWORD_MODEL_NAME=opus+bible \
+		USE_EXTRA_BITEXTS=1 \
+		RELEASED_TATOEBA_DATA_FILE=tatoeba/released-bitexts-${TATOEBA_VERSION}+bible.txt \
+		SIZE_PER_LANGPAIR_FILE=${SIZE_PER_LANGPAIR_FILE:.txt=-bible.txt} \
+		AVAILABLE_TRAINING_DATA_FILE=${AVAILABLE_TRAINING_DATA_FILE:.txt=-bible.txt} \
+		SHUFFLE_TRAINING_DATA=1 ${@:-bible=}
+
+
+
+
 # ${TATOEBA_SRCLABELFILE} ${TATOEBA_TRGLABELFILE}
 
 .PHONY: tatoeba-langlabel-files langlabel-files
@@ -119,6 +149,16 @@ ${WORKHOME}/${LANGPAIRSTR}/${DATASET}-langlabels.src:
 	      fi; \
 	    done \
 	done
+ifeq (${USE_EXTRA_BITEXTS},1)
+	for s in $(sort ${SRCLANGS} $(shell langgroup ${SRCLANGS})); do \
+	  for t in $(sort ${TRGLANGS} $(shell langgroup ${TRGLANGS})); do \
+	    if [ `find ${EXTRADATADIR} -name "$$s-$$t" | wc -l` -gt 0 ]; then \
+	      echo "$$s " >> $@.src; \
+	      echo "$$t " >> $@.trg; \
+	    fi \
+	  done \
+	done
+endif
 	if [ -e $@.src ]; then \
 	  cat $@.src | tr ' ' "\n" | sort -u | tr "\n" ' ' | sed 's/^ *//;s/ *$$//' > $@; \
 	  rm $@.src; \
