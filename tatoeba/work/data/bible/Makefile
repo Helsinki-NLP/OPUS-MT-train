@@ -10,15 +10,16 @@ include ${REPOHOME}lib/slurm.mk
 
 PIVOT = eng
 BIBLE_HOME := ${HOME}/work/LumiNMT/data/bibles
-BIBLE_LANGS := $(filter-out ${PIVOT},$(sort $(notdir $(shell find ${BIBLE_HOME} -name '*.txt' | cut -f1 -d-))))
+BIBLE_LANGS := $(sort $(notdir $(shell find ${BIBLE_HOME} -name '*.txt' | cut -f1 -d-)))
 
 BIBLES_TOKENIZED := $(wildcard ${BIBLE_HOME}/*.txt)
 BIBLES_DETOKENIZED := $(patsubst ${BIBLE_HOME}/%,detok/%,${BIBLES_TOKENIZED})
+BIBLES_NONEMPTY := $(patsubst ${BIBLE_HOME}/%.txt,detok/%.nonempty,${BIBLES_TOKENIZED})
 
 DETOKENIZER = ../../../../tools/moses-scripts/scripts/tokenizer/detokenizer.perl
 
-PIVOT2X       := $(patsubst %,${PIVOT}-%,${BIBLE_LANGS})
-PIVOT2X_TRAIN := $(patsubst %,train/${PIVOT}-%,${BIBLE_LANGS})
+PIVOT2X       := $(patsubst %,${PIVOT}-%,$(filter-out ${PIVOT},${BIBLE_LANGS}))
+PIVOT2X_TRAIN := $(patsubst %,train/${PIVOT}-%,$(filter-out ${PIVOT},${BIBLE_LANGS}))
 
 
 all: detok
@@ -52,13 +53,27 @@ ${PIVOT}-%:
 
 
 ## make train/dev/test splits for all language pairs
+## we will use lines 29222 - 30221 for test
+##             lines 28722 - 29221 for dev
+## all other lines as training data
+## Why? Because those lines have quite a good coverage across all bible translations
 
-BIBLE_TRAINSETS = $(patsubst %,train/%.gz,${BIBLE_LANGS})
+BIBLE_TRAINSETS := $(patsubst %,train/%.gz,${BIBLE_LANGS})
+BIBLE_DEVSETS   := $(patsubst detok/%.txt,dev/%_28721-29220.txt,${BIBLES_DETOKENIZED})
+BIBLE_TESTSETS  := $(patsubst detok/%.txt,test/%_29221-30221.txt,${BIBLES_DETOKENIZED})
 
-bible-trainsets: ${BIBLE_TRAINSETS}
+bible-datasets: ${BIBLE_DEVSETS} ${BIBLE_TESTSETS} ${BIBLE_TRAINSETS}
+
+test/%_29221-30221.txt: detok/%.txt
+	@mkdir -p test
+	@awk 'NR>=29222 && NR<=30221' $< > $@
+
+dev/%_28721-29220.txt: detok/%.txt
+	@mkdir -p dev
+	@awk 'NR>=28722 && NR<=29221' $< > $@
 
 train/%.gz:
-	@mkdir -p train test dev
+	@mkdir -p train
 	@rm -f $(@:.gz=) $@.tmp
 	@echo -n "create $@"
 	@for T in ${BIBLE_LANGS}; do \
@@ -66,17 +81,14 @@ train/%.gz:
 	  for s in `ls detok/$(notdir $(@:.gz=))-*.txt`; do \
 	    for t in `ls detok/$$T-*.txt`; do \
 	      if [ $$s != $$t ]; then \
-	        paste $$s $$t | grep -v '^	' | grep -v '	$$' | grep -v 'BLANK' >> $@.tmp; \
+	        paste $$s $$t | awk 'NR<28722 || NR>30221'   | grep -v '^	' | grep -v '	$$' | grep -v 'BLANK' >> $@.tmp; \
 	      fi \
 	    done \
 	  done; \
-	  ${UNIQ} < $@.tmp | sed "s/^/$$T	/" | ${SHUFFLE} 2>/dev/null > $@.uniq; \
-	  head -500 $@.uniq >> test/$(notdir $(@:.gz=)); \
-	  head -600 $@.uniq | tail -100 >> dev/$(notdir $(@:.gz=)); \
-	  tail -n +601 $@.uniq >> $(@:.gz=); \
-	  rm -f $@.tmp $@.uniq; \
+	  ${UNIQ} < $@.tmp | sed "s/^/$$T	/" | ${SHUFFLE} 2>/dev/null >> $(@:.gz=); \
+	  rm -f $@.tmp; \
 	done
-	@${GZIP} test/$(notdir $(@:.gz=)) dev/$(notdir $(@:.gz=)) $(@:.gz=)
+	@${GZIP} $(@:.gz=)
 	@echo "done"
 
 
@@ -126,3 +138,10 @@ ${BIBLE_LANGPAIRS_REVERSE}:
 	  echo "ln -s $(@:-reverse=) $(word 2,$(subst -, ,$@))-$(word 1,$(subst -, ,$@))"; \
 	  ln -s $(@:-reverse=) $(word 2,$(subst -, ,$@))-$(word 1,$(subst -, ,$@)); \
 	fi
+
+
+get-nonempty-lines: ${BIBLES_NONEMPTY}
+
+detok/%.nonempty: detok/%.txt
+	grep -E --line-number -v '^(|BLANK)$$' $< | cut -f1 -d: > $@
+
