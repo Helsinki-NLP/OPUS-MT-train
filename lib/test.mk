@@ -17,7 +17,9 @@ TESTSETS_PRETRG = $(patsubst %,${TESTSET_DIR}/%.${TRGEXT}.${PRE}.gz,${TESTSETS})
 eval-testsets:
 	for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
-	    ${MAKE} SRC=$$s TRG=$$t compare-testsets-langpair; \
+	    if [ -e ${TESTSET_HOME}/$$s-$$t ]; then \
+	      ${MAKE} SRC=$$s TRG=$$t compare-testsets-langpair; \
+	    fi \
 	  done \
 	done
 

@@ -353,6 +353,8 @@ print-info:
 	@echo "model file: ${MODEL_START}"
 	@echo "source vocab: ${MODEL_SRCVOCAB}"
 	@echo "target vocab: ${MODEL_TRGVOCAB}"
+	@echo "source traindata: ${TRAINDATA_SRC}"
+	@echo "target traindata: ${TRAINDATA_TRG}"
 	@echo "final model file: ${MODEL_FINAL}"
 	@echo "latest compatible model: ${MODEL_LATEST}"
 	ls -t 	${WORKDIR}/*${MODEL_VARIANT}.${PRE_SRC}-${PRE_TRG}.${subst -align,,${MODELTYPE}}.model[0-9].npz \

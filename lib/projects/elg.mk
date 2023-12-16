@@ -43,17 +43,30 @@ ELG_EU_SELECTED_BIG = gmq zle zls zlw spa fra deu
 # "cat oci"
 
 
-lumi-eulangs:
-	make GPUJOB_SUBMIT=-gpu8 \
-		LANGPAIRSTR="eulangs" \
-		SKIP_SAME_LANG=0 \
-		SKIP_MAKE_RAWDATA=1 \
-		DATA_SAMPLING_WEIGHT=0.5 \
-		MODELTYPE=transformer-12x12 \
-		SRCLANGS="${ELG_EU_LANGIDS}" \
-		TRGLANGS="${ELG_EU_LANGIDS}" tatoeba-job
+LUMI_TASK = trainjob
 
-lumi-eulangs-100max:
+
+
+lumi-eng2gem:
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-eng2gem-trainjob-bt
+
+
+lumi-eval-jobs:
+	make HPC_MEM=32g HPC_TIME=8:00 lumi-bigger-multi-eval-bt.submit
+	make HPC_MEM=32g HPC_TIME=8:00 lumi-biggest-multi-eval-bt.submit
+	make HPC_MEM=32g HPC_TIME=8:00 lumi-bigger-gmq+eng2fin-eval.submit
+	make HPC_MEM=32g HPC_TIME=8:00 lumi-enfisv-bigger-eval.submit
+	make HPC_MEM=32g HPC_TIME=8:00 LUMI_TASK=eval-testsets lumi-wikimedia-base.submit
+	make HPC_MEM=32g HPC_TIME=8:00 LUMI_TASK=eval-testsets lumi-wikimedia-big.submit
+	make HPC_MEM=32g HPC_TIME=8:00 LUMI_TASK=eval-testsets lumi-wikimedia-bigger.submit
+	make HPC_MEM=32g HPC_TIME=8:00 LUMI_TASK=eval-testsets lumi-wikimedia-biggest.submit
+	make HPC_MEM=32g HPC_TIME=8:00 LUMI_TASK=eval-testsets lumi-big-fin.submit
+	make HPC_MEM=32g HPC_TIME=8:00 LUMI_TASK=eval-testsets lumi-bigger-fin.submit
+	make HPC_MEM=32g HPC_TIME=8:00 lumi-big-multi-eval.submit
+
+
+
+lumi-eulangs:
 	make GPUJOB_SUBMIT=-gpu8 \
 		LANGPAIRSTR="eulangs" \
 		SKIP_SAME_LANG=0 \
@@ -73,49 +86,51 @@ LUMI_MULTI_ARGS = DATA_SAMPLING_WEIGHT=0.5 GPUJOB_SUBMIT=-gpu8 SKIP_SAME_LANG=0 
 # MARIAN_EXTRA=--no-restore-corpus
 
 
-lumi-bible-bikol:
-	make ${LUMI_MULTI_ARGS} tatoeba-eng2bik-trainjob-bt-bibles
-	make GPUJOB_SUBMIT=-gpu8 \
-		SKIP_SAME_LANG=0 \
-		SKIP_MAKE_RAWDATA=1 \
-		DATA_SAMPLING_WEIGHT=0.5 \
-		SRCLANGS="deu eng fra nld por spa" \
-		TRGLANGS="bik" \
-	tatoeba-job-bt-bibles
 
 
-lumi-wikimedia5:
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-urj2eng-trainjob-bt-bibles
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-bnt2eng-trainjob-bt-bibles
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-alv2eng-trainjob-bt-bibles
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-mul2eng-trainjob-bt-bibles
+JHUBC_SPM = ${WORKHOME}/mul-mul/train/opus+bible.spm64k-model
+
+%-jhubc:
+	${MAKE} TATOEBA_DATASET=jhubc DATASET=jhubc \
+		SPMSRCMODEL=${JHUBC_SPM} SPMTRGMODEL=${JHUBC_SPM} $(@:-jhubc=)
+
+lumi-bible:
+	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-mul2mul-${LUMI_TASK}-jhubc
 
 
-lumi-wikimedia4:
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2bnt-trainjob-bt-bibles
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-bnt2eng-trainjob-bt-bibles
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2alv-trainjob-bt-bibles
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-alv2eng-trainjob-bt-bibles
 
+lumi-wikimedia-bigger:
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-alv2eng-${LUMI_TASK}-bt-bibles
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2alv-${LUMI_TASK}-bt-bibles
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-bnt2eng-${LUMI_TASK}-bt-bibles
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2bnt-${LUMI_TASK}-bt-bibles
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-poz2eng-${LUMI_TASK}-bt-bibles
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2poz-${LUMI_TASK}-bt-bibles
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-urj2eng-${LUMI_TASK}-bt-bibles
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2urj-${LUMI_TASK}-bt-bibles
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-mul2eng-${LUMI_TASK}-bt-bibles
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 MAX_DATA_SIZE=25000000 tatoeba-eng2mul-${LUMI_TASK}-bt-bibles
 
-lumi-wikimedia3:
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big tatoeba-eng2alv-trainjob-bt-bibles
+lumi-wikimedia-biggest:
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-eng2poz-${LUMI_TASK}-bt-bibles
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 MAX_DATA_SIZE=25000000 tatoeba-eng2mul-${LUMI_TASK}-bt-bibles
+#	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-poz2eng-${LUMI_TASK}-bt-bibles
+#	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 MAX_DATA_SIZE=25000000 tatoeba-mul2eng-${LUMI_TASK}-bt-bibles
 
-lumi-wikimedia2:
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big tatoeba-eng2pqe-trainjob-bt-bibles
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big tatoeba-eng2poz-trainjob-bt-bibles
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big tatoeba-eng2alv-trainjob-bt-bibles
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-eng2poz-trainjob-bt-bibles
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-eng2poz-trainjob-bt-bibles
+lumi-wikimedia-big:
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big tatoeba-eng2alv-${LUMI_TASK}-bt-bibles
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big tatoeba-eng2poz-${LUMI_TASK}-bt-bibles
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big tatoeba-eng2pqe-${LUMI_TASK}-bt-bibles
 
+lumi-wikimedia-base:
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-align tatoeba-eng2bik-${LUMI_TASK}-bt-bibles
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-align tatoeba-eng2guw-${LUMI_TASK}-bt-bibles
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-align tatoeba-eng2pqe-${LUMI_TASK}-bt-bibles
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-align tatoeba-eng2tah-${LUMI_TASK}-bt-bibles
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-align tatoeba-eng2yue-${LUMI_TASK}-bt-bibles
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-align tatoeba-eng2zho-${LUMI_TASK}-bt-bibles
 
-lumi-wikimedia:
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-align tatoeba-eng2tah-trainjob-bt-bibles
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-align tatoeba-eng2pqe-trainjob-bt-bibles
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-align tatoeba-eng2guw-trainjob-bt-bibles
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-align tatoeba-eng2alv-trainjob-bt-bibles
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-align tatoeba-eng2yue-trainjob-bt-bibles
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-align tatoeba-eng2zho-trainjob-bt-bibles
+lumi-wikimedia-bre:
 	make GPUJOB_SUBMIT=-gpu8 \
 		SKIP_SAME_LANG=0 \
 		SKIP_MAKE_RAWDATA=1 \
@@ -123,6 +138,8 @@ lumi-wikimedia:
 		SRCLANGS="eng fra" \
 		TRGLANGS="bre" \
 	tatoeba-job-bt-bibles
+
+lumi-wikimedia-bikol:
 	make GPUJOB_SUBMIT=-gpu8 \
 		SKIP_SAME_LANG=0 \
 		SKIP_MAKE_RAWDATA=1 \
@@ -130,26 +147,33 @@ lumi-wikimedia:
 		SRCLANGS="deu eng fra nld por spa" \
 		TRGLANGS="bik" \
 	tatoeba-job-bt-bibles
-#	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-eng2poz-trainjob-bt-bibles
-#	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-eng2pqe-trainjob-bt-bibles
+
+
+
+#	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-eng2poz-${LUMI_TASK}-bt-bibles
+#	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-eng2pqe-${LUMI_TASK}-bt-bibles
+
+
+
+
 
 
 lumi-big-fin:
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-gmw2fin-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-fin2gmw-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-sla2fin-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-fin2sla-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-itc2fin-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-fin2itc-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-gem2fin-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-fin2gem-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big tatoeba-ine2fin-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big tatoeba-fin2ine-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big tatoeba-mul2fin-trainjob
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big tatoeba-fin2mul-trainjob
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-gmw2fin-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-fin2gmw-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-sla2fin-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-fin2sla-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-itc2fin-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-fin2itc-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-gem2fin-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-fin2gem-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big tatoeba-ine2fin-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big tatoeba-fin2ine-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big tatoeba-mul2fin-${LUMI_TASK}
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big tatoeba-fin2mul-${LUMI_TASK}
 	for l in jpn zho ara tur; do \
-	  make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-$${l}2fin-trainjob; \
-	  make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-fin2$${l}-trainjob; \
+	  make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-$${l}2fin-${LUMI_TASK}; \
+	  make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-fin2$${l}-${LUMI_TASK}; \
 	  make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align SRCLANGS="$$l eng" TRGLANGS=fin tatoeba-job; \
 	  make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align TRGLANGS="$$l eng" SRCLANGS=fin tatoeba-job; \
 	done
@@ -158,10 +182,10 @@ lumi-big-fin:
 ## bigger transformer models for fin-eng and fin-swe in both directions
 
 lumi-bigger-fin:
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6-align tatoeba-fin2swe-trainjob-bt
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6-align tatoeba-swe2fin-trainjob-bt
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6-align tatoeba-fin2eng-trainjob-bt
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6-align tatoeba-eng2fin-trainjob-bt
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6-align tatoeba-fin2swe-${LUMI_TASK}-bt
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6-align tatoeba-swe2fin-${LUMI_TASK}-bt
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6-align tatoeba-fin2eng-${LUMI_TASK}-bt
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6-align tatoeba-eng2fin-${LUMI_TASK}-bt
 
 
 ## bigger transformer models for North-Germanic + English to Finnish translation
@@ -184,10 +208,45 @@ lumi-bigger-gmq+eng2fin:
 		SRCLANGS="fin" tatoeba-job-bt
 
 
-# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 TATOEBA_PIVOT=eng tatoeba-gmq2fin-trainjob-bt-pivotlang
-# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 TATOEBA_PIVOT=eng tatoeba-fin2gmq-trainjob-bt-pivotlang
+lumi-bigger-gmq+eng2fin-eval:
+	make GPUJOB_SUBMIT=-gpu8 \
+		LANGPAIRSTR="gmq+eng-fin" \
+		SKIP_SAME_LANG=0 \
+		DATA_SAMPLING_WEIGHT=0.5 \
+		MODELTYPE=transformer-12x6 \
+		SRCLANGS="dan fao isl jut nno nob non nrn ovd qer rmg swe eng" \
+		TRGLANGS="fin" eval-testsets-bt
+	make GPUJOB_SUBMIT=-gpu8 \
+		LANGPAIRSTR="fin-gmq+eng" \
+		SKIP_SAME_LANG=0 \
+		DATA_SAMPLING_WEIGHT=0.5 \
+		MODELTYPE=transformer-12x6 \
+		TRGLANGS="dan fao isl jut nno nob non nrn ovd qer rmg swe eng" \
+		SRCLANGS="fin" eval-testsets-bt
 
-LUMI_TASK = trainjob
+
+
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 TATOEBA_PIVOT=eng tatoeba-gmq2fin-${LUMI_TASK}-bt-pivotlang
+# 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 TATOEBA_PIVOT=eng tatoeba-fin2gmq-${LUMI_TASK}-bt-pivotlang
+
+
+
+
+
+lumi-big-multi:
+	${MAKE} LUMI_TASK=trainjob MODELTYPE=transformer-big lumi-multi
+
+lumi-big-multi-bt:
+	${MAKE} LUMI_TASK=trainjob-bt MODELTYPE=transformer-big lumi-multi
+
+
+lumi-big-multi-eval:
+	${MAKE} LUMI_TASK=eval-testsets MODELTYPE=transformer-big lumi-multi
+
+lumi-big-multi-bt-eval:
+	${MAKE} LUMI_TASK=eval-testsets-bt MODELTYPE=transformer-big lumi-multi
+
+
 
 
 lumi-bigger-multi:
@@ -210,6 +269,9 @@ lumi-biggest-multi:
 lumi-biggest-multi-bt:
 	${MAKE} LUMI_TASK=trainjob-bt MODELTYPE=transformer-12x12 lumi-multi
 
+lumi-biggest-multi-eval-bt:
+	${MAKE} LUMI_TASK=eval-testsets-bt MODELTYPE=transformer-12x12 lumi-multi
+
 
 
 lumi-huge-multi:
@@ -217,6 +279,12 @@ lumi-huge-multi:
 
 lumi-huge-multi-bt:
 	${MAKE} LUMI_TASK=trainjob-bt MODELTYPE=transformer-24x12 lumi-multi
+
+lumi-huge-multi-eval:
+	${MAKE} LUMI_TASK=eval-testsets MODELTYPE=transformer-24x12 lumi-multi
+
+lumi-huge-multi-bt-eval:
+	${MAKE} LUMI_TASK=eval-testsets-bt MODELTYPE=transformer-24x12 lumi-multi
 
 
 
@@ -322,6 +390,14 @@ lumi-enfisv-bigger:
 		MODELTYPE=transformer-12x6 \
 		SRCLANGS="eng fin swe" \
 		TRGLANGS="eng fin swe" tatoeba-job-bt
+
+lumi-enfisv-bigger-eval:
+	make GPUJOB_SUBMIT=-gpu8 \
+		DATA_SAMPLING_WEIGHT=0.5 \
+		SKIP_SAME_LANG=0 \
+		MODELTYPE=transformer-12x6 \
+		SRCLANGS="eng fin swe" \
+		TRGLANGS="eng fin swe" eval-testsets-bt
 
 
 

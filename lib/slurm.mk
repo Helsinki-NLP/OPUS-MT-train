@@ -70,6 +70,7 @@ endif
 	echo 'pwd' >> ${TMPWORKDIR}/$@
 	echo 'echo "Starting at `date`"' >> ${TMPWORKDIR}/$@
 ifeq (${HPC_HOST},lumi)
+	echo '/appl/local/csc/soft/ai/bin/gpu-energy --save' >> ${TMPWORKDIR}/$@
 ifneq (${NR_GPUS},8)
 	echo 'CPU_BIND="mask_cpu:fe000000000000,fe00000000000000"' >> ${TMPWORKDIR}/$@
 	echo 'CPU_BIND="$${CPU_BIND},fe0000,fe000000"' >> ${TMPWORKDIR}/$@
@@ -79,6 +80,7 @@ ifneq (${NR_GPUS},8)
 else
 	echo '${MAKE} -j ${GPUJOB_HPC_JOBS} HPC_HOST=${HPC_HOST} ${MAKEARGS} ${@:.submit=}' >> ${TMPWORKDIR}/$@
 endif
+	echo '/appl/local/csc/soft/ai/bin/gpu-energy --diff' >> ${TMPWORKDIR}/$@
 else
 #	echo 'srun ${MAKE} -j ${GPUJOB_HPC_JOBS} ${MAKEARGS} ${@:.submit=}' >> ${TMPWORKDIR}/$@
 	echo '${MAKE} -j ${GPUJOB_HPC_JOBS} HPC_HOST=${HPC_HOST} ${MAKEARGS} ${@:.submit=}' >> ${TMPWORKDIR}/$@

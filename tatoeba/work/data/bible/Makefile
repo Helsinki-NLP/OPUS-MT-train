@@ -18,8 +18,11 @@ BIBLES_NONEMPTY := $(patsubst ${BIBLE_HOME}/%.txt,detok/%.nonempty,${BIBLES_TOKE
 
 DETOKENIZER = ../../../../tools/moses-scripts/scripts/tokenizer/detokenizer.perl
 
-PIVOT2X       := $(patsubst %,${PIVOT}-%,$(filter-out ${PIVOT},${BIBLE_LANGS}))
-PIVOT2X_TRAIN := $(patsubst %,train/${PIVOT}-%,$(filter-out ${PIVOT},${BIBLE_LANGS}))
+PIVOT2X         := $(patsubst %,${PIVOT}-%,$(filter-out ${PIVOT},${BIBLE_LANGS}))
+PIVOT2X_TRAIN   := $(patsubst %,train/${PIVOT}-%,$(filter-out ${PIVOT},${BIBLE_LANGS}))
+
+
+MUL2MUL_WORKDIR := ../../mul-mul
 
 
 all: detok
@@ -35,7 +38,7 @@ detok/%.txt: ${BIBLE_HOME}/%.txt
 	mkdir -p $(dir $@)
 	${DETOKENIZER} -l $(shell iso639 -2 -k -n $(firstword $(subst -, ,$(notdir $<)))) < $< > $@
 
-${PIVOT}-%:
+${PIVOT2X}: ${PIVOT}-%:
 	mkdir -p $@
 	rm -f $@/bibles.txt
 	-for s in `ls detok/${PIVOT}-*.txt`; do \
@@ -61,6 +64,10 @@ ${PIVOT}-%:
 BIBLE_TRAINSETS := $(patsubst %,train/%.gz,${BIBLE_LANGS})
 BIBLE_DEVSETS   := $(patsubst detok/%.txt,dev/%_28721-29220.txt,${BIBLES_DETOKENIZED})
 BIBLE_TESTSETS  := $(patsubst detok/%.txt,test/%_29221-30221.txt,${BIBLES_DETOKENIZED})
+
+
+BIBLE_TRAINTOK  := $(patsubst %,train-tokenized/%.gz,${BIBLE_LANGS})
+
 
 bible-datasets: ${BIBLE_DEVSETS} ${BIBLE_TESTSETS} ${BIBLE_TRAINSETS}
 
@@ -145,3 +152,116 @@ get-nonempty-lines: ${BIBLES_NONEMPTY}
 detok/%.nonempty: detok/%.txt
 	grep -E --line-number -v '^(|BLANK)$$' $< | cut -f1 -d: > $@
 
+
+
+
+#####################################################################################
+
+
+.PHONY: tokenize tokenize-opus tokenize-bibles
+
+tokenize: tokenize-opus tokenize-bibles
+
+tokenize-opus: ${MUL2MUL_WORKDIR}/train/opusTCv20230926+bt.src.clean.spm64k.gz \
+		${MUL2MUL_WORKDIR}/train/opusTCv20230926+bt.trg.clean.spm64k.gz
+
+tokenize-opus-src: ${MUL2MUL_WORKDIR}/train/opusTCv20230926+bt.src.clean.spm64k.gz
+tokenize-opus-trg: ${MUL2MUL_WORKDIR}/train/opusTCv20230926+bt.trg.clean.spm64k.gz
+
+tokenize-bibles: ${BIBLE_TRAINTOK}
+
+
+${MUL2MUL_WORKDIR}/train/opusTCv20230926+bt.src.clean.spm64k.gz: \
+			${MUL2MUL_WORKDIR}/train/opusTCv20230926+bt.src.clean.spm32k.gz \
+			${MUL2MUL_WORKDIR}/train/opus+bible.spm64k-model
+	${GZIP} -cd < $< \
+	| parallel --pipe --keep-order -q -L10000 sed 's/ //g;s/▁/ /g;s/^ *//;s/ *$$//' \
+	| parallel --pipe --keep-order -q -L10000 cut -f2- -d' ' \
+	| parallel --pipe --keep-order -q -L10000 spm_encode --model $(word 2,$^) > $@.src
+	paste -d ' ' <(${GZIP} -cd < $< | cut -f1 -d' ') $@.src | ${GZIP} -c > $@
+	rm -f $@.src
+
+${MUL2MUL_WORKDIR}/train/opusTCv20230926+bt.trg.clean.spm64k.gz: \
+			${MUL2MUL_WORKDIR}/train/opusTCv20230926+bt.trg.clean.spm32k.gz \
+			${MUL2MUL_WORKDIR}/train/opus+bible.spm64k-model
+	${GZIP} -cd < $< \
+	| parallel --pipe --keep-order -q -L10000 sed 's/ //g;s/▁/ /g;s/^ *//;s/ *$$//' \
+	| parallel --pipe --keep-order -q -L10000 spm_encode --model $(word 2,$^) \
+	| ${GZIP} -c > $@
+
+
+## language label files for the bible model
+
+BIBLE_LANGLABEL_FILES = ${MUL2MUL_WORKDIR}/bibles-langlabels.src ${MUL2MUL_WORKDIR}/jhubc-langlabels.trg \
+			${MUL2MUL_WORKDIR}/bibles-languages.src ${MUL2MUL_WORKDIR}/jhubc-languages.trg
+
+OPUS_LANGLABEL_FILES = 	${MUL2MUL_WORKDIR}/opusTCv20230926+jhubc-langlabels.src \
+			${MUL2MUL_WORKDIR}/opusTCv20230926+jhubc-langlabels.trg \
+			${MUL2MUL_WORKDIR}/opusTCv20230926+jhubc-languages.src \
+			${MUL2MUL_WORKDIR}/opusTCv20230926+jhubc-languages.trg
+
+bible-langlabel-files: ${BIBLE_LANGLABEL_FILES}
+opus-langlabel-files: ${OPUS_LANGLABEL_FILES}
+
+${BIBLE_LANGLABEL_FILES}:
+	find detok -name '*.txt' -printf "%f\n" | cut -f1 -d- | sort -u | tr "\n" ' ' > $@
+
+${OPUS_LANGLABEL_FILES}: ${MUL2MUL_WORKDIR}/opusTCv20230926+jhubc-%: ${MUL2MUL_WORKDIR}/bibles-%
+	cat ${MUL2MUL_WORKDIR}/opusTCv20230926-langlabels.src $< | tr ' ' "\n" | sort -u | tr "\n" ' ' > $@
+
+
+
+
+## sentence piece model from bible data and OPUS mul-mul data
+
+bible-spm: ${MUL2MUL_WORKDIR}/train/opus+bible.spm64k-model
+
+${MUL2MUL_WORKDIR}/train/opus+bible.spm64k-model:
+	pigz -cd < ${MUL2MUL_WORKDIR}/train/opusTCv20230926+bt.src.clean.spm64k.gz \
+	| sed 's/ //g;s/▁/ /g' | sed 's/^ *//;s/ *$$//' \
+	| head -1000000 > /scratch/project_462000088/tmp/mul.txt
+	find detok/ -name '*.txt' | xargs cat | terashuf \
+	| head -1000000 >> /scratch/project_462000088/tmp/mul.txt
+	spm_train  --byte_fallback \
+	   --model_prefix=$@ \
+	   --vocab_size=64000 \
+	   --input=/scratch/project_462000088/tmp/mul.txt \
+	   --input_sentence_size 2000000 \
+	   --shuffle_input_sentence 0 \
+	   --character_coverage=0.9995 \
+	   --hard_vocab_limit=false
+	rm -f /scratch/project_462000088/tmp/mul.txt
+	mv $@.model $@
+
+
+train-tokenized/%.gz: train/%.gz ${MUL2MUL_WORKDIR}/train/opus+bible.spm64k-model
+	mkdir -p ${dir $@}
+	${GZIP} -cd < $< | cut -f2 \
+	| parallel --pipe --keep-order -q -L10000 spm_encode --model $(word 2,$^) > $@.src
+	${GZIP} -cd < $< | cut -f3 \
+	| parallel --pipe --keep-order -q -L10000 spm_encode --model $(word 2,$^) > $@.trg
+	paste <(${GZIP} -cd < $< | cut -f1) $@.src $@.trg | ${GZIP} -c > $@
+	rm -f $@.src $@.trg
+
+
+
+bible-traindata: ${MUL2MUL_WORKDIR}/train/jhubc.src.clean.spm64k.gz
+
+${MUL2MUL_WORKDIR}/train/jhubc.src.clean.spm64k.gz:
+	find train-tokenized -name '*.gz' \
+	| xargs zcat \
+	| sed 's/^\([^	]*\)	/>>\1<< /' \
+	| terashuf \
+	| tee >(cut -f1 | ${GZIP} -c >$@) \
+	| ${GZIP} -c > $(patsubst %.src.clean.spm64k.gz,%.trg.clean.spm64k.gz,$@)
+
+${MUL2MUL_WORKDIR}/train/jhubc.trg.clean.spm64k.gz: ${MUL2MUL_WORKDIR}/train/jhubc.src.clean.spm64k.gz
+	@echo "done!"
+
+
+${MUL2MUL_WORKDIR}/train/opusTCv20230926+bt+jhubc.src.clean.spm64k.gz: \
+			${MUL2MUL_WORKDIR}/train/jhubc.src.clean.spm64k.gz \
+			${MUL2MUL_WORKDIR}/train/opusTCv20230926+bt.src.clean.spm64k.gz
+	zcat $^ > $@.tmpsrc
+	zcat $(patsubst %.src.clean.spm64k.gz,%.trg.clean.spm64k.gz,$^) > $@.tmptrg
+	paste $@.tmpsrc $@.tmpsrc | terashuf | tee >(cut -f1 | ${GZIP} -c > $@) |
