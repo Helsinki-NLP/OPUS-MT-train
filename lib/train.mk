@@ -234,6 +234,21 @@ ifeq ($(subst -align,,${MODELTYPE}),transformer-24x12)
 endif
 
 
+ifeq ($(subst -align,,${MODELTYPE}),transformer-24x12b)
+  MARIAN_ENC_DEPTH = 24
+  MARIAN_DEC_DEPTH = 12
+  MARIAN_ATT_HEADS = 16
+  MARIAN_DIM_EMB = 1024
+  MARIAN_OPTIMIZER_PARAMS = 0.92 0.998 1e-09
+  MARIAN_LEARNING_RATE = 0.0001
+  MARIAN_EXTRA += --transformer-dim-ffn 4096 --transformer-dim-aan 4096 --optimizer-delay 10 --lr-warmup-cycle --fp16
+  MARIAN_VALID_FREQ = 2000
+  MARIAN_SAVE_FREQ = 2000
+  MARIAN_DISP_FREQ = 2000
+  GPUJOB_HPC_MEM = 32g
+endif
+
+
 ifeq ($(subst -align,,${MODELTYPE}),transformer-12x12)
   MARIAN_ENC_DEPTH = 12
   MARIAN_DEC_DEPTH = 12

@@ -16,17 +16,17 @@
 
 ## NEW: only use training data (leaving some leftout data for development and testing)
 
-%-bible:
-	cp tatoeba/released-bitexts-${TATOEBA_VERSION}.txt tatoeba/released-bitexts-${TATOEBA_VERSION}+bible.txt
-	ls ${DATADIR}/bible/train | grep '^...-...$$' >> tatoeba/released-bitexts-${TATOEBA_VERSION}+bible.txt
-	${MAKE} DATASET=${DATASET}+bible \
-		EXTRADATADIR=${DATADIR}/bible/train \
-		SUBWORD_MODEL_NAME=opus+bible \
+%-jhubc:
+	cp tatoeba/released-bitexts-${TATOEBA_VERSION}.txt tatoeba/released-bitexts-${TATOEBA_VERSION}+jhubc.txt
+	ls ${DATADIR}/bible/train-split | grep '^...-...$$' >> tatoeba/released-bitexts-${TATOEBA_VERSION}+jhubc.txt
+	${MAKE} DATASET=${DATASET}+jhubc \
+		EXTRADATADIR=${DATADIR}/bible/train-split \
+		SUBWORD_MODEL_NAME=opus+jhubc \
 		USE_EXTRA_BITEXTS=1 \
-		RELEASED_TATOEBA_DATA_FILE=tatoeba/released-bitexts-${TATOEBA_VERSION}+bible.txt \
-		SIZE_PER_LANGPAIR_FILE=${SIZE_PER_LANGPAIR_FILE:.txt=-bible.txt} \
-		AVAILABLE_TRAINING_DATA_FILE=${AVAILABLE_TRAINING_DATA_FILE:.txt=-bible.txt} \
-		SHUFFLE_TRAINING_DATA=1 ${@:-bible=}
+		RELEASED_TATOEBA_DATA_FILE=tatoeba/released-bitexts-${TATOEBA_VERSION}+jhubc.txt \
+		SIZE_PER_LANGPAIR_FILE=${SIZE_PER_LANGPAIR_FILE:.txt=-jhubc.txt} \
+		AVAILABLE_TRAINING_DATA_FILE=${AVAILABLE_TRAINING_DATA_FILE:.txt=-jhubc.txt} \
+		SHUFFLE_TRAINING_DATA=1 ${@:-jhubc=}
 
 
 

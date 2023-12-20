@@ -70,6 +70,8 @@ MODELTYPES   = 	transformer \
 		transformer-12x12-align \
 		transformer-24x12 \
 		transformer-24x12-align \
+		transformer-24x12b \
+		transformer-24x12b-align \
 		transformer-small \
 		transformer-small-align \
 		transformer-tiny \

@@ -47,8 +47,25 @@ LUMI_TASK = trainjob
 
 
 
-lumi-eng2gem:
-	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-eng2gem-trainjob-bt
+## languages that cover a minimum of 10 languages according to ISO 639 codes
+##
+## languages printed in this way and then sorted:
+##
+#	for l in $(shell langgroup -p `langgroup mul` | tr ' ' "\n" | sort -u); do \
+#	  if [ `langgroup $$l | wc -w` -gt 10 ]; then \
+#	    echo $$l; \
+#	  else \
+#	    p=`langgroup -p $$l`; \
+#	    if [ `langgroup $$p | wc -w` -gt 10 ]; then \
+#	      echo $$p; \
+#	    fi \
+#	  fi \
+#	done
+
+
+MIN10_LANG_GROUPS = aav afa alg alv aql art ath aus awd azc bad bai bat ber bnt cau cba ccn cdc cel cmc csu cus dmn dra esx fiu fox gem gmq gmw hmx hok iir inc ine ira iro itc kar kdo kro map mkh mno mul mun myn nah nai ngf nic nub omq omv oto paa phi poz pqe pqw roa sai sal sdv sem sio sit sla smi ssa tai tbq trk tup tuw urj xgn xnd zhx
+
+
 
 
 lumi-eval-jobs:
@@ -56,15 +73,19 @@ lumi-eval-jobs:
 	make HPC_MEM=32g HPC_TIME=8:00 lumi-biggest-multi-eval-bt.submit
 	make HPC_MEM=32g HPC_TIME=8:00 lumi-bigger-gmq+eng2fin-eval.submit
 	make HPC_MEM=32g HPC_TIME=8:00 lumi-enfisv-bigger-eval.submit
-	make HPC_MEM=32g HPC_TIME=8:00 LUMI_TASK=eval-testsets lumi-wikimedia-base.submit
-	make HPC_MEM=32g HPC_TIME=8:00 LUMI_TASK=eval-testsets lumi-wikimedia-big.submit
-	make HPC_MEM=32g HPC_TIME=8:00 LUMI_TASK=eval-testsets lumi-wikimedia-bigger.submit
-	make HPC_MEM=32g HPC_TIME=8:00 LUMI_TASK=eval-testsets lumi-wikimedia-biggest.submit
-	make HPC_MEM=32g HPC_TIME=8:00 LUMI_TASK=eval-testsets lumi-big-fin.submit
-	make HPC_MEM=32g HPC_TIME=8:00 LUMI_TASK=eval-testsets lumi-bigger-fin.submit
+	make HPC_MEM=32g HPC_TIME=8:00 LUMI_TASK=evalall lumi-wikimedia-base.submit
+	make HPC_MEM=32g HPC_TIME=8:00 LUMI_TASK=evalall lumi-wikimedia-big.submit
+	make HPC_MEM=32g HPC_TIME=8:00 LUMI_TASK=evalall lumi-wikimedia-bigger.submit
+	make HPC_MEM=32g HPC_TIME=8:00 LUMI_TASK=evalall lumi-wikimedia-biggest.submit
+	make HPC_MEM=32g HPC_TIME=8:00 LUMI_TASK=evalall LUMI_TASK2=evalall lumi-big-fin.submit
+	make HPC_MEM=32g HPC_TIME=8:00 LUMI_TASK=evalall lumi-bigger-fin.submit
 	make HPC_MEM=32g HPC_TIME=8:00 lumi-big-multi-eval.submit
+	make HPC_MEM=32g HPC_TIME=8:00 LUMI_TASK2=evalall lumi-eulangs.submit
 
 
+
+
+LUMI_TASK2 = train-job
 
 lumi-eulangs:
 	make GPUJOB_SUBMIT=-gpu8 \
@@ -74,7 +95,28 @@ lumi-eulangs:
 		DATA_SAMPLING_WEIGHT=0.5 \
 		MODELTYPE=transformer-12x12 \
 		SRCLANGS="${ELG_EU_LANGIDS}" \
-		TRGLANGS="${ELG_EU_LANGIDS}" tatoeba-job-bt-100max
+		TRGLANGS="${ELG_EU_LANGIDS}" ${LUMI_TASK2}-bt-100max
+
+lumi-eulangs-12x6:
+	make GPUJOB_SUBMIT=-gpu8 \
+		LANGPAIRSTR="eulangs" \
+		SKIP_SAME_LANG=0 \
+		SKIP_MAKE_RAWDATA=1 \
+		DATA_SAMPLING_WEIGHT=0.5 \
+		MODELTYPE=transformer-12x6 \
+		SRCLANGS="${ELG_EU_LANGIDS}" \
+		TRGLANGS="${ELG_EU_LANGIDS}" ${LUMI_TASK2}-bt-100max
+
+lumi-eulangs-24x12:
+	make GPUJOB_SUBMIT=-gpu8 \
+		LANGPAIRSTR="eulangs" \
+		SKIP_SAME_LANG=0 \
+		SKIP_MAKE_RAWDATA=1 \
+		DATA_SAMPLING_WEIGHT=0.5 \
+		MODELTYPE=transformer-24x12b \
+		SRCLANGS="${ELG_EU_LANGIDS}" \
+		TRGLANGS="${ELG_EU_LANGIDS}" ${LUMI_TASK2}-bt-100max
+
 
 %-100max:
 	${MAKE} MAX_DATA_SIZE=100000000 DATASET=${DATASET}max100 ${@:-100max=}
@@ -87,15 +129,46 @@ LUMI_MULTI_ARGS = DATA_SAMPLING_WEIGHT=0.5 GPUJOB_SUBMIT=-gpu8 SKIP_SAME_LANG=0 
 
 
 
+lumi_bible_urj2eng:
+	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-urj2eng-${LUMI_TASK}-jhubc
+
+lumi_bible_urj2world:
+	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-urj2deu+eng+fra+por+spa-${LUMI_TASK}-jhubc
+
+
+# also interesting:
+# (but need to prepare bible data for urj lang pairs!)
+#
+# lumi_bible_urj2urj lumi_bible_gmq+urj2gmq+urj
+
+lumi-bible-models: 
+	for l in alv dmn eka kdo lam nqo nyo tog znd bnt poz pqe urj; do \
+	  ${MAKE} lumi_bible_$${l}2deu+eng+fra+por+spa lumi_bible_deu+eng+fra+por+spa2$${l}; \
+	done
+
+lumi-bible-mul2world:
+	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 \
+		tatoeba-mul2deu+eng+fra+por+spa-${LUMI_TASK}-jhubc-bt-max25 \
+		tatoeba-deu+eng+fra+por+spa2mul-${LUMI_TASK}-jhubc-bt-max25
+
+lumi_bible_%:
+	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 \
+		tatoeba-$(patsubst lumi_bible_%,%,$@)-${LUMI_TASK}-jhubc-bt-max50
+
+
+
+
+
+
 
 JHUBC_SPM = ${WORKHOME}/mul-mul/train/opus+bible.spm64k-model
 
-%-jhubc:
+%-m2m_jhubc:
 	${MAKE} TATOEBA_DATASET=jhubc DATASET=jhubc \
-		SPMSRCMODEL=${JHUBC_SPM} SPMTRGMODEL=${JHUBC_SPM} $(@:-jhubc=)
+		SPMSRCMODEL=${JHUBC_SPM} SPMTRGMODEL=${JHUBC_SPM} $(@:-m2m_jhubc=)
 
 lumi-bible:
-	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-mul2mul-${LUMI_TASK}-jhubc
+	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-mul2mul-${LUMI_TASK}-m2m_jhubc
 
 
 
@@ -174,8 +247,8 @@ lumi-big-fin:
 	for l in jpn zho ara tur; do \
 	  make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-$${l}2fin-${LUMI_TASK}; \
 	  make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align tatoeba-fin2$${l}-${LUMI_TASK}; \
-	  make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align SRCLANGS="$$l eng" TRGLANGS=fin tatoeba-job; \
-	  make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align TRGLANGS="$$l eng" SRCLANGS=fin tatoeba-job; \
+	  make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align SRCLANGS="$$l eng" TRGLANGS=fin ${LUMI_TASK2}; \
+	  make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big-align TRGLANGS="$$l eng" SRCLANGS=fin ${LUMI_TASK2}; \
 	done
 
 
@@ -186,6 +259,9 @@ lumi-bigger-fin:
 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6-align tatoeba-swe2fin-${LUMI_TASK}-bt
 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6-align tatoeba-fin2eng-${LUMI_TASK}-bt
 	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6-align tatoeba-eng2fin-${LUMI_TASK}-bt
+
+lumi-bigger-fin2eng:
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-fin2eng-${LUMI_TASK}-bt
 
 
 ## bigger transformer models for North-Germanic + English to Finnish translation
@@ -215,14 +291,14 @@ lumi-bigger-gmq+eng2fin-eval:
 		DATA_SAMPLING_WEIGHT=0.5 \
 		MODELTYPE=transformer-12x6 \
 		SRCLANGS="dan fao isl jut nno nob non nrn ovd qer rmg swe eng" \
-		TRGLANGS="fin" eval-testsets-bt
+		TRGLANGS="fin" evalall-bt
 	make GPUJOB_SUBMIT=-gpu8 \
 		LANGPAIRSTR="fin-gmq+eng" \
 		SKIP_SAME_LANG=0 \
 		DATA_SAMPLING_WEIGHT=0.5 \
 		MODELTYPE=transformer-12x6 \
 		TRGLANGS="dan fao isl jut nno nob non nrn ovd qer rmg swe eng" \
-		SRCLANGS="fin" eval-testsets-bt
+		SRCLANGS="fin" evalall-bt
 
 
 
@@ -241,10 +317,10 @@ lumi-big-multi-bt:
 
 
 lumi-big-multi-eval:
-	${MAKE} LUMI_TASK=eval-testsets MODELTYPE=transformer-big lumi-multi
+	${MAKE} LUMI_TASK=evalall MODELTYPE=transformer-big lumi-multi
 
 lumi-big-multi-bt-eval:
-	${MAKE} LUMI_TASK=eval-testsets-bt MODELTYPE=transformer-big lumi-multi
+	${MAKE} LUMI_TASK=evalall-bt MODELTYPE=transformer-big lumi-multi
 
 
 
@@ -256,10 +332,10 @@ lumi-bigger-multi-bt:
 	${MAKE} LUMI_TASK=trainjob-bt MODELTYPE=transformer-12x6 lumi-multi
 
 lumi-bigger-multi-eval:
-	${MAKE} LUMI_TASK=eval-testsets MODELTYPE=transformer-12x6 lumi-multi
+	${MAKE} LUMI_TASK=evalall MODELTYPE=transformer-12x6 lumi-multi
 
 lumi-bigger-multi-eval-bt:
-	${MAKE} LUMI_TASK=eval-testsets-bt MODELTYPE=transformer-12x6 lumi-multi
+	${MAKE} LUMI_TASK=evalall-bt MODELTYPE=transformer-12x6 lumi-multi
 
 
 
@@ -270,21 +346,21 @@ lumi-biggest-multi-bt:
 	${MAKE} LUMI_TASK=trainjob-bt MODELTYPE=transformer-12x12 lumi-multi
 
 lumi-biggest-multi-eval-bt:
-	${MAKE} LUMI_TASK=eval-testsets-bt MODELTYPE=transformer-12x12 lumi-multi
+	${MAKE} LUMI_TASK=evalall-bt MODELTYPE=transformer-12x12 lumi-multi
 
 
 
 lumi-huge-multi:
-	${MAKE} LUMI_TASK=trainjob MODELTYPE=transformer-24x12 lumi-multi
+	${MAKE} LUMI_TASK=trainjob MODELTYPE=transformer-24x12b lumi-multi
 
 lumi-huge-multi-bt:
-	${MAKE} LUMI_TASK=trainjob-bt MODELTYPE=transformer-24x12 lumi-multi
+	${MAKE} LUMI_TASK=trainjob-bt MODELTYPE=transformer-24x12b lumi-multi
 
 lumi-huge-multi-eval:
-	${MAKE} LUMI_TASK=eval-testsets MODELTYPE=transformer-24x12 lumi-multi
+	${MAKE} LUMI_TASK=evalall MODELTYPE=transformer-24x12b lumi-multi
 
 lumi-huge-multi-bt-eval:
-	${MAKE} LUMI_TASK=eval-testsets-bt MODELTYPE=transformer-24x12 lumi-multi
+	${MAKE} LUMI_TASK=evalall-bt MODELTYPE=transformer-24x12b lumi-multi
 
 
 
@@ -324,8 +400,47 @@ lumi-multi:
 	-make ${LUMI_MULTI_ARGS} MAX_DATA_SIZE=25000000 tatoeba-ine2ine-${LUMI_TASK}
 	-make ${LUMI_MULTI_ARGS} MAX_DATA_SIZE=25000000 DEVSIZE=20000 tatoeba-mul2mul-${LUMI_TASK}
 
+
+
+## start models
+
+lumi-extra-multi-bt:
+	${MAKE} LUMI_TASK=trainjob-bt-max100 MODELTYPE=transformer-12x12 lumi-multi-big
+	${MAKE} LUMI_TASK=trainjob-bt-max50 MODELTYPE=transformer-12x12 lumi-multi-biggest
+
+lumi-extra2-multi-bt:
+	${MAKE} LUMI_TASK=trainjob-bt-max100 MODELTYPE=transformer-24x12b lumi-multi-big
+	${MAKE} LUMI_TASK=trainjob-bt-max50 MODELTYPE=transformer-24x12b lumi-multi-biggest
+
+lumi-ineine50:
+	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-24x12b tatoeba-ine2ine-trainjob-bt-max50
+
+
+lumi-multi-big:
+	-make ${LUMI_MULTI_ARGS} tatoeba-ine2eng-${LUMI_TASK}
+	-make ${LUMI_MULTI_ARGS} tatoeba-eng2ine-${LUMI_TASK}
+	-make ${LUMI_MULTI_ARGS} tatoeba-mul2eng-${LUMI_TASK}
+	-make ${LUMI_MULTI_ARGS} tatoeba-eng2mul-${LUMI_TASK}
+	-make ${LUMI_MULTI_ARGS} tatoeba-itc2gem-${LUMI_TASK}
+	-make ${LUMI_MULTI_ARGS} tatoeba-gem2itc-${LUMI_TASK}
+	-make ${LUMI_MULTI_ARGS} tatoeba-gem2gem-${LUMI_TASK}
+	-make ${LUMI_MULTI_ARGS} tatoeba-itc2itc-${LUMI_TASK}
+	-make ${LUMI_MULTI_ARGS} tatoeba-sla2sla-${LUMI_TASK}
+
+lumi-multi-biggest:
+	-make ${LUMI_MULTI_ARGS} tatoeba-ine2ine-${LUMI_TASK}
+	-make ${LUMI_MULTI_ARGS} DEVSIZE=20000 tatoeba-mul2mul-${LUMI_TASK}
+
+
 %-max25:
 	${MAKE} MAX_DATA_SIZE=25000000 DATASET=${DATASET}max25 $(@:-max25=)
+
+%-max50:
+	${MAKE} MAX_DATA_SIZE=50000000 DATASET=${DATASET}max50 ${@:-max50=}
+
+%-max100:
+	${MAKE} MAX_DATA_SIZE=100000000 DATASET=${DATASET}max100 ${@:-max100=}
+
 
 
 lumi-multi-restart:
@@ -397,7 +512,7 @@ lumi-enfisv-bigger-eval:
 		SKIP_SAME_LANG=0 \
 		MODELTYPE=transformer-12x6 \
 		SRCLANGS="eng fin swe" \
-		TRGLANGS="eng fin swe" eval-testsets-bt
+		TRGLANGS="eng fin swe" evalall-bt
 
 
 
@@ -422,7 +537,7 @@ lumi-enfisv-big-noalign-eval:
 	make 	GPUJOB_HPC_MEM=32g \
 		MODELTYPE=transformer-big \
 		SRCLANGS="eng fin swe" \
-		TRGLANGS="eng fin swe" eval-testsets-tatoeba tatoeba-eval tatoeba-eval-testsets
+		TRGLANGS="eng fin swe" evalall-tatoeba tatoeba-eval tatoeba-eval-testsets
 
 
 

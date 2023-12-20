@@ -19,7 +19,7 @@ BIBLES_NONEMPTY := $(patsubst ${BIBLE_HOME}/%.txt,detok/%.nonempty,${BIBLES_TOKE
 DETOKENIZER = ../../../../tools/moses-scripts/scripts/tokenizer/detokenizer.perl
 
 PIVOT2X         := $(patsubst %,${PIVOT}-%,$(filter-out ${PIVOT},${BIBLE_LANGS}))
-PIVOT2X_TRAIN   := $(patsubst %,train/${PIVOT}-%,$(filter-out ${PIVOT},${BIBLE_LANGS}))
+PIVOT2X_TRAIN   := $(patsubst %,train-split/${PIVOT}-%,$(filter-out ${PIVOT},${BIBLE_LANGS}))
 
 
 MUL2MUL_WORKDIR := ../../mul-mul
@@ -30,7 +30,30 @@ all: detok
 	  ${MAKE} PIVOT=$$l pivot2x; \
 	done
 
+big-lang-train:
+	for l in deu eng fra por spa; do \
+	  ${MAKE} PIVOT=$$l pivot2x-train; \
+	done
+
+big-lang-por:
+	${MAKE} PIVOT=por pivot2x-train
+
+big-lang-spa:
+	${MAKE} PIVOT=spa pivot2x-train
+
+
+
+## extract bitexts for a specific language (PIVOT) and all languages that language is aligned to
+## this includes ALL lines (no dedicated dev or test sets!)
 pivot2x: ${PIVOT2X}
+
+## extract bitexts for a specific language (PIVOT) and all languages that language is aligned to
+## this takes data from the training data (leaving dev and test sets)
+pivot2x-train: ${PIVOT2X_TRAIN}
+
+
+
+
 
 detok: ${BIBLES_DETOKENIZED}
 
@@ -99,16 +122,12 @@ train/%.gz:
 	@echo "done"
 
 
-## extract bitexts for a specific language (PIVOT) and all languages that language is aligned to
-
-pivot2x-train: ${PIVOT2X_TRAIN}
-
-train/${PIVOT}-%: train/${PIVOT}.gz
+train-split/${PIVOT}-%: train/${PIVOT}.gz
 	mkdir -p $@
-	${GZIP} -cd < $< | grep '$(patsubst train/${PIVOT}-%,%,$@)	' \
+	${GZIP} -cd < $< | grep '^$(patsubst train-split/${PIVOT}-%,%,$@)	' \
 	| tee >(cut -f2 | ${GZIP} -c > $@/bible.${PIVOT}.gz) \
-	| ${GZIP} -c $@/bible.$(patsubst train/${PIVOT}-%,%,$@).gz
-
+	| cut -f3 | ${GZIP} -c > $@/bible.$(patsubst train-split/${PIVOT}-%,%,$@).gz
+	-cd train-split && ln -s $(notdir $@) $(patsubst train-split/${PIVOT}-%,%,$@)-${PIVOT}
 
 
 ## all bible bitexts in one file
@@ -253,15 +272,50 @@ ${MUL2MUL_WORKDIR}/train/jhubc.src.clean.spm64k.gz:
 	| sed 's/^\([^	]*\)	/>>\1<< /' \
 	| terashuf \
 	| tee >(cut -f1 | ${GZIP} -c >$@) \
+	| cut -f2 \
 	| ${GZIP} -c > $(patsubst %.src.clean.spm64k.gz,%.trg.clean.spm64k.gz,$@)
 
 ${MUL2MUL_WORKDIR}/train/jhubc.trg.clean.spm64k.gz: ${MUL2MUL_WORKDIR}/train/jhubc.src.clean.spm64k.gz
 	@echo "done!"
 
 
-${MUL2MUL_WORKDIR}/train/opusTCv20230926+bt+jhubc.src.clean.spm64k.gz: \
-			${MUL2MUL_WORKDIR}/train/jhubc.src.clean.spm64k.gz \
-			${MUL2MUL_WORKDIR}/train/opusTCv20230926+bt.src.clean.spm64k.gz
-	zcat $^ > $@.tmpsrc
-	zcat $(patsubst %.src.clean.spm64k.gz,%.trg.clean.spm64k.gz,$^) > $@.tmptrg
-	paste $@.tmpsrc $@.tmpsrc | terashuf | tee >(cut -f1 | ${GZIP} -c > $@) |
+# ${MUL2MUL_WORKDIR}/train/opusTCv20230926+bt+jhubc.src.clean.spm64k.gz: \
+# 			${MUL2MUL_WORKDIR}/train/jhubc.src.clean.spm64k.gz \
+# 			${MUL2MUL_WORKDIR}/train/opusTCv20230926+bt.src.clean.spm64k.gz
+# 	zcat $^ > $@.tmpsrc
+# 	zcat $(patsubst %.src.clean.spm64k.gz,%.trg.clean.spm64k.gz,$^) > $@.tmptrg
+# 	paste $@.tmpsrc $@.tmptrg | terashuf | tee >(cut -f1 | ${GZIP} -c > $@) \
+#	| cut -f2 \
+#	| ${GZIP} -c > $(patsubst %.src.clean.spm64k.gz,%.trg.clean.spm64k.gz,$@)
+
+
+opus_bible-traindata: ${MUL2MUL_WORKDIR}/train/opusTCv20230926+bt+jhubc.src.clean.spm64k.gz
+
+${MUL2MUL_WORKDIR}/train/opusTCv20230926+bt+jhubc.src.clean.spm64k.gz:
+	if [ ! -e $@.tmp.gz ]; then \
+	  paste <(${GZIP} -cd <${MUL2MUL_WORKDIR}/train/opusTCv20230926+bt.src.clean.spm64k.gz) \
+		<(${GZIP} -cd <${MUL2MUL_WORKDIR}/train/opusTCv20230926+bt.trg.clean.spm64k.gz) \
+	  | parallel --pipe --keep-order -q -L10000 sed 's/^>>\([^ ]*\)<< /\1	/' \
+	  | ${GZIP} -c > $@.tmp.gz; \
+	fi
+	zcat $@.tmp.gz train-tokenized/*.gz \
+	| parallel --pipe --keep-order -q -L10000 sed 's/^\([^	]*\)	/>>\1<< /' \
+	| MEMORY=56 terashuf \
+	| tee >(cut -f1 | ${GZIP} -c >$@) \
+	| cut -f2 \
+	| ${GZIP} -c > $(patsubst %.src.clean.spm64k.gz,%.trg.clean.spm64k.gz,$@)
+	rm -f $@.tmp.gz
+
+
+
+
+bible-traindata-fast: ${MUL2MUL_WORKDIR}/train/jhubc_fast.src.clean.spm64k.gz
+
+${MUL2MUL_WORKDIR}/train/jhubc_fast.src.clean.spm64k.gz:
+	find train-tokenized -name '*.gz' \
+	| xargs zcat \
+	| parallel --pipe --keep-order -q -L10000 sed 's/^\([^	]*\)	/>>\1<< /' \
+	| MEMORY=56 terashuf \
+	| tee >(cut -f1 | ${GZIP} -c >$@) \
+	| cut -f2 \
+	| ${GZIP} -c > $(patsubst %.src.clean.spm64k.gz,%.trg.clean.spm64k.gz,$@)
