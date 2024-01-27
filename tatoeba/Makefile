@@ -133,7 +133,27 @@ all:
 
 
 
+jhubc.count:
+	pigz -cd < work/mul-mul/train/jhubc.src.clean.spm64k.gz | wc -l > $@
+	pigz -cd < work/mul-mul/train/jhubc.trg.clean.spm64k.gz | wc -l >> $@
 
+
+opusjhubc: work/mul-mul/train/opusTCv20230926+bt+jhubc.src.clean.spm64k.gz
+
+work/mul-mul/train/opusTCv20230926+bt+jhubc.src.clean.spm64k.gz: work/mul-mul/train/jhubc.clean.spm64k work/mul-mul/train/opusTCv20230926+bt.clean.spm64k
+	paste -d "\n" $^ | grep -v '^	*$$' | tee >(cut -f1 | pigz -c > $@) \
+	| cut -f2 \
+	| pigz -c > work/mul-mul/train/opusTCv20230926+bt+jhubc.trg.clean.spm64k.gz
+
+work/mul-mul/train/jhubc.clean.spm64k:
+	paste 	<(pigz -cd work/mul-mul/train/jhubc.src.clean.spm64k.gz) \
+		<(pigz -cd work/mul-mul/train/jhubc.trg.clean.spm64k.gz) \
+	> $@
+
+work/mul-mul/train/opusTCv20230926+bt.clean.spm64k:
+	paste 	<(pigz -cd work/mul-mul/train/opusTCv20230926+bt.src.clean.spm64k.gz) \
+		<(pigz -cd work/mul-mul/train/opusTCv20230926+bt.trg.clean.spm64k.gz) \
+	> $@
 
 
 

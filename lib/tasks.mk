@@ -189,6 +189,9 @@ all-job:
 	  echo "........ submit a job for training the model!"; \
 	  ${MAKE} ${TRAINJOB_HPCPARAMS} train-and-eval.submit${GPUJOB_SUBMIT}; \
 	else \
+	  echo " test data: ${TESTDATA_SRC} ${TESTDATA_TRG}"; \
+	  echo "  dev data: ${DEVDATA_SRC} ${DEVDATA_TRG}"; \
+	  echo "train data: ${TRAINDATA_SRC} ${TRAINDATA_TRG}"; \
 	  echo "........ submit a CPU job for making data files first!"; \
 	  echo "........ submit training job later!"; \
 	  ${MAKE} ${ALLJOB_HPCPARAMS} data-and-train-job.submitcpu; \

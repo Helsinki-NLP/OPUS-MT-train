@@ -35,11 +35,11 @@ big-lang-train:
 	  ${MAKE} PIVOT=$$l pivot2x-train; \
 	done
 
-big-lang-por:
-	${MAKE} PIVOT=por pivot2x-train
+other-lang-train:
+	for l in fin nob nno swe rus; do \
+	  ${MAKE} PIVOT=$$l pivot2x-train; \
+	done
 
-big-lang-spa:
-	${MAKE} PIVOT=spa pivot2x-train
 
 
 
@@ -295,12 +295,12 @@ ${MUL2MUL_WORKDIR}/train/opusTCv20230926+bt+jhubc.src.clean.spm64k.gz:
 	if [ ! -e $@.tmp.gz ]; then \
 	  paste <(${GZIP} -cd <${MUL2MUL_WORKDIR}/train/opusTCv20230926+bt.src.clean.spm64k.gz) \
 		<(${GZIP} -cd <${MUL2MUL_WORKDIR}/train/opusTCv20230926+bt.trg.clean.spm64k.gz) \
-	  | parallel --pipe --keep-order -q -L10000 sed 's/^>>\([^ ]*\)<< /\1	/' \
+	  | parallel --pipe --keep-order -q -L10000 --max-procs 8 sed 's/^>>\([^ ]*\)<< /\1	/' \
 	  | ${GZIP} -c > $@.tmp.gz; \
 	fi
 	zcat $@.tmp.gz train-tokenized/*.gz \
 	| parallel --pipe --keep-order -q -L10000 sed 's/^\([^	]*\)	/>>\1<< /' \
-	| MEMORY=56 terashuf \
+	| MEMORY=16 terashuf \
 	| tee >(cut -f1 | ${GZIP} -c >$@) \
 	| cut -f2 \
 	| ${GZIP} -c > $(patsubst %.src.clean.spm64k.gz,%.trg.clean.spm64k.gz,$@)

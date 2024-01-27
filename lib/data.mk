@@ -964,23 +964,25 @@ ifneq (${TESTSET},${DEVSET})
 		  CLEAN_TEST_TRG=${TESTSET_DIR}/${TESTSET}.${TRGEXT}.${PRE}.gz \
 	  add-to-test-data; \
 	elif [ ! -e $@ ]; then \
-	  for s in ${SRCLANGS}; do \
-	    for t in ${TRGLANGS}; do \
-	      if [ `grep "\($$s-$$t\|$$t-$$s\)	" ${WORKDIR}/train/${SIZE_PER_LANGPAIR_FILE} | wc -l` -gt 0 ]; then \
-	        if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
+	  if [ "${SKIP_CREATE_TESTSET}" != "1" ]; then \
+	    for s in ${SRCLANGS}; do \
+	      for t in ${TRGLANGS}; do \
+	        if [ `grep "\($$s-$$t\|$$t-$$s\)	" ${WORKDIR}/train/${SIZE_PER_LANGPAIR_FILE} | wc -l` -gt 0 ]; then \
 	          if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
-	            if [ "${SKIP_SAME_LANG}" == "1" ] && [ "$$s" == "$$t" ]; then \
-	              echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
+	            if [ ! `echo "$$s-$$t $$t-$$s" | egrep '${SKIP_LANGPAIRS}' | wc -l` -gt 0 ]; then \
+	              if [ "${SKIP_SAME_LANG}" == "1" ] && [ "$$s" == "$$t" ]; then \
+	                echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
+	              else \
+	                ${MAKE} SRC=$$s TRG=$$t add-to-test-data; \
+	              fi \
 	            else \
-	              ${MAKE} SRC=$$s TRG=$$t add-to-test-data; \
+	              echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
 	            fi \
-	          else \
-	            echo "!!!!!!!!!!! skip language pair $$s-$$t !!!!!!!!!!!!!!!!"; \
 	          fi \
 	        fi \
-	      fi \
-	    done \
-	  done; \
+	      done \
+	    done; \
+	  fi; \
 	  if [ ${TESTSIZE} -lt `cat $@ | wc -l` ]; then \
 	    paste ${TEST_SRC} ${TEST_TRG} | ${SHUFFLE} | ${GZIP} -c > $@.shuffled.gz; \
 	    ${GZIP} -cd < $@.shuffled.gz | cut -f1 | tail -${TESTSIZE} > ${TEST_SRC}; \
