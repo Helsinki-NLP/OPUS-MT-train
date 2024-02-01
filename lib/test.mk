@@ -16,21 +16,84 @@ OPUSMT_TESTSETS_GITRAW := https://raw.githubusercontent.com/Helsinki-NLP/OPUS-MT
 OPUSMT_TESTSETS_TSV    := ${OPUSMT_TESTSETS_GITRAW}/testsets.tsv
 
 ## eval all available test sets
-eval-testsets:
+## - fetch test sets from OPUS-MT-testsets
+## - add language labels if necessary
+## - start translation and evaluate
+eval-testsets-all:
+	rm -f $@.tsv
+	wget -O $@.tsv ${OPUSMT_TESTSETS_TSV}
 	for s in ${SRCLANGS}; do \
 	  for t in ${TRGLANGS}; do \
-	    for n in `wget -qq -O - ${OPUSMT_TESTSETS_TSV} | grep "^$$s	$$t	" | cut -f3`; do \
-	      p=`wget -qq -O - ${OPUSMT_TESTSETS_TSV} | grep "^$$s	$$t	$$n	" | cut -f7,8`; \
-	      i=`echo "$$p" | cut -f1`; \
-	      o=`echo "$$p" | cut -f1`; \
-	      if [ ! -e ${WORKDIR}/test/$$n-$$s$$t.src ]; then \
-	        wget -O ${WORKDIR}/test/$$n-$$s$$t.src ${OPUSMT_TESTSETS_GITRAW}/$$i; \
-	        wget -O ${WORKDIR}/test/$$n-$$s$$t.trg ${OPUSMT_TESTSETS_GITRAW}/$$o; \
+	    for n in `grep "^$$s	$$t	" $@.tsv | cut -f3`; do \
+	      p=`grep "^$$s	$$t	$$n	" $@.tsv | cut -f5,6,7,8`; \
+	      l=`echo "$$p" | cut -f2`; \
+	      i=`echo "$$p" | cut -f3`; \
+	      o=`echo "$$p" | cut -f4`; \
+	      echo "get $$i and $$o"; \
+	      rm -f ${WORKDIR}/test/$$n-$$s$$t.src ${WORKDIR}/test/$$n-$$s$$t.trg; \
+	      if [ "${USE_TARGET_LABELS}" == "1" ]; then \
+	         if [ "$$l" == "" ]; then \
+	           echo "add language labels to $$i"; \
+	           wget -O ${WORKDIR}/test/$$n-$$s$$t.srcraw ${OPUSMT_TESTSETS_GITRAW}/$$i; \
+	           sed "s/^/>>$${t}<< /" < ${WORKDIR}/test/$$n-$$s$$t.srcraw > ${WORKDIR}/test/$$n-$$s$$t.src; \
+	           rm -f ${WORKDIR}/test/$$n-$$s$$t.srcraw; \
+	         else \
+	           echo "add language labels from $$l"; \
+	           wget -O ${WORKDIR}/test/$$n-$$s$$t.srcraw ${OPUSMT_TESTSETS_GITRAW}/$$i; \
+	           wget -O ${WORKDIR}/test/$$n-$$s$$t.langids ${OPUSMT_TESTSETS_GITRAW}/$$l; \
+		   sed 's/^/>>/;s/$$/<</' < ${WORKDIR}/test/$$n-$$s$$t.langids > ${WORKDIR}/test/$$n-$$s$$t.labels; \
+	           paste -d ' ' ${WORKDIR}/test/$$n-$$s$$t.labels ${WORKDIR}/test/$$n-$$s$$t.srcraw \
+	           | sed 's/^ />>$${t}<< /' > ${WORKDIR}/test/$$n-$$s$$t.src; \
+	           rm -f ${WORKDIR}/test/$$n-$$s$$t.srcraw ${WORKDIR}/test/$$n-$$s$$t.langids ${WORKDIR}/test/$$n-$$s$$t.labels; \
+	         fi \
 	      fi; \
+	      wget -O ${WORKDIR}/test/$$n-$$s$$t.trg ${OPUSMT_TESTSETS_GITRAW}/$$o; \
 	      ${MAKE} TESTSET=$$n TESTSET_NAME=$$n-$$s$$t SRC=$$s TRG=$$t SKIP_CREATE_TESTSET=1 compare; \
+	      rm -f ${WORKDIR}/test/$$n-$$s$$t.src ${WORKDIR}/test/$$n-$$s$$t.trg; \
 	    done \
 	  done \
 	done
+
+
+DO_EVAL_LANGPAIRS     := $(patsubst %,eval-testsets_%,${LANGPAIRS})
+DO_EVAL_LANGPAIRS_ENG := $(filter %-eng eng-%,${DO_EVAL_LANGPAIRS})
+
+eval-testsets: ${DO_EVAL_LANGPAIRS}
+eval-english-testsets: ${DO_EVAL_LANGPAIRS_ENG}
+
+eval-testsets_%:
+	rm -f $@.tsv
+	wget -O $@.tsv ${OPUSMT_TESTSETS_TSV}
+	( s=$(firstword $(subst -, ,$(patsubst eval-testsets_%,%,$@))); \
+	  t=$(lastword $(subst -, ,$(patsubst eval-testsets_%,%,$@))); \
+	  for n in `grep "^$$s	$$t	" $@.tsv | cut -f3`; do \
+	      p=`grep "^$$s	$$t	$$n	" $@.tsv | cut -f5,6,7,8`; \
+	      l=`echo "$$p" | cut -f2`; \
+	      i=`echo "$$p" | cut -f3`; \
+	      o=`echo "$$p" | cut -f4`; \
+	      echo "get $$i and $$o"; \
+	      rm -f ${WORKDIR}/test/$$n-$$s$$t.src ${WORKDIR}/test/$$n-$$s$$t.trg; \
+	      if [ "${USE_TARGET_LABELS}" == "1" ]; then \
+	         if [ "$$l" == "" ]; then \
+	           echo "add language labels to $$i"; \
+	           wget -O ${WORKDIR}/test/$$n-$$s$$t.srcraw ${OPUSMT_TESTSETS_GITRAW}/$$i; \
+	           sed "s/^/>>$${t}<< /" < ${WORKDIR}/test/$$n-$$s$$t.srcraw > ${WORKDIR}/test/$$n-$$s$$t.src; \
+	           rm -f ${WORKDIR}/test/$$n-$$s$$t.srcraw; \
+	         else \
+	           echo "add language labels from $$l"; \
+	           wget -O ${WORKDIR}/test/$$n-$$s$$t.srcraw ${OPUSMT_TESTSETS_GITRAW}/$$i; \
+	           wget -O ${WORKDIR}/test/$$n-$$s$$t.langids ${OPUSMT_TESTSETS_GITRAW}/$$l; \
+		   sed 's/^/>>/;s/$$/<</' < ${WORKDIR}/test/$$n-$$s$$t.langids > ${WORKDIR}/test/$$n-$$s$$t.labels; \
+	           paste -d ' ' ${WORKDIR}/test/$$n-$$s$$t.labels ${WORKDIR}/test/$$n-$$s$$t.srcraw \
+	           | sed 's/^ />>$${t}<< /' > ${WORKDIR}/test/$$n-$$s$$t.src; \
+	           rm -f ${WORKDIR}/test/$$n-$$s$$t.srcraw ${WORKDIR}/test/$$n-$$s$$t.langids ${WORKDIR}/test/$$n-$$s$$t.labels; \
+	         fi \
+	      fi; \
+	      wget -O ${WORKDIR}/test/$$n-$$s$$t.trg ${OPUSMT_TESTSETS_GITRAW}/$$o; \
+	      ${MAKE} TESTSET=$$n TESTSET_NAME=$$n-$$s$$t SRC=$$s TRG=$$t SKIP_CREATE_TESTSET=1 compare; \
+	      rm -f ${WORKDIR}/test/$$n-$$s$$t.src ${WORKDIR}/test/$$n-$$s$$t.trg; \
+	  done )
+
 
 
 ## eval all available test sets
@@ -155,7 +218,7 @@ LEADERBOARD_DIR = ${REPOHOME}scores
 ## - newstest sometimes has additional langpair-IDs in their names
 
 compare-bleu-score-table:
-	@grep BLEU ${WORKHOME}/*/*.eval |\
+	@find ${WORKHOME}/ -name '*.eval' | xargs grep BLEU |\
 	perl -pe 's#^${WORKHOME}/([^/]*)/([^\.]+)\.(.*?-.*?\.)?([^\.]+\.[^\.]+\.[^\.]+)\.([^\.]+)\.([^\.]+)\.eval:.*? = ([0-9\.]+) .*$$#$$5-$$6\t$$7\t$$2\t$$1\t$$4#' |\
 	grep -v '^[a-z\-]*multi' |\
 	perl -pe '@a=split(/\t/);if($$a[0]=~/multi/){$$a[0]=$$a[3];};$$_=join("\t",@a);' |\

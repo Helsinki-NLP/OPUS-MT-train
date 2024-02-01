@@ -42,7 +42,7 @@ ELG_EU_SELECTED_BIG = gmq zle zls zlw spa fra deu
 # "fry ltz nds afr"
 # "cat oci"
 
-HPLT1_LANGS = ara hbs cat eng est eus fin gle glg hin isl mkd nor sqi swa zho
+HPLT1_LANGS = ara hbs cat eng est eus fin gle glg hin isl mkd mlt nor sqi swa zho
 
 
 LUMI_TASK = trainjob
@@ -192,8 +192,12 @@ lumi-bible-models2:
 	  ${MAKE} lumi_bible_$${l}2deu+eng+fra+por+spa lumi_bible_deu+eng+fra+por+spa2$${l}; \
 	done
 
-lumi-bible-afa:
-	${MAKE} LUMI_JHUBC_MODEL=transformer-12x6 lumi_bible_afa2deu+eng+fra+por+spa lumi_bible_deu+eng+fra+por+spa2afa
+lumi-bible-models-eval: 
+	for l in $(MIN10_LANG_GROUPS); do \
+	  ${MAKE} LUMI_TASK=eval-testsets lumi_bible_$${l}2deu+eng+fra+por+spa; \
+	  ${MAKE} LUMI_TASK=eval-testsets lumi_bible_deu+eng+fra+por+spa2$${l}; \
+	done
+
 
 ## big languages to lang-group, 6 layer encoder, 12 layer decoder
 
@@ -224,7 +228,7 @@ lumi-bible-urj2nordic:
 		tatoeba-fin+nob+nno+swe+rus2urj-${LUMI_TASK}-jhubc-bt
 
 lumi-bible-urj2nordic-eval:
-	${MAKE} LUMI_TASK=evalall lumi-bible-urj2nordic
+	${MAKE} LUMI_TASK=eval-testsets lumi-bible-urj2nordic
 
 # lumi-bible-nordic2urj:
 #	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big \
@@ -269,6 +273,10 @@ lumi-bible-big-eval:
 	${MAKE} LUMI_TASK=eval-testsets lumi-bible-big
 
 
+lumi-bible-eval-english:
+	${MAKE} LUMI_TASK=eval-english-testsets lumi-bible
+
+
 
 # OPUS-TC + BT + JHUBC
 
@@ -291,13 +299,20 @@ lumi-opusbible-huge:
 	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-24x24 tatoeba-mul2mul-${LUMI_TASK}-m2m_opusjhubc
 
 
+lumi-opusbible-big-eval:
+	${MAKE} LUMI_TASK=eval-testsets lumi-opusbible-big
 
-hplt1_models2:
-	for l in hbs gle hin swa; do \
-	  make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-align tatoeba-$${l}2eng-${LUMI_TASK}-bt; \
-	done
+lumi-opusbible-eval-english:
+	${MAKE} LUMI_TASK=eval-english-testsets lumi-opusbible
 
 
+
+
+
+
+hplt1_models-eval:
+	${MAKE} LUMI_TASK=eval-testsets hplt1_models
+	${MAKE} LUMI_TASK=eval-testsets hplt1_models-reverse
 
 hplt1_models:
 	for l in ${HPLT1_LANGS}; do \
@@ -309,10 +324,10 @@ hplt1_models-reverse:
 	  make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-align tatoeba-eng2$${l}-${LUMI_TASK}-bt; \
 	done
 
-hplt1_models-missing:
-	for l in gle; do \
-	  make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-align tatoeba-$${l}2eng-${LUMI_TASK}-bt; \
-	done
+hplt1-missing:
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-align tatoeba-eng2mlt-${LUMI_TASK}-bt
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-align tatoeba-gle2eng-${LUMI_TASK}-bt
+	make ${LUMI_MULTI_ARGS} MODELTYPE=transformer-align tatoeba-eng2gle-${LUMI_TASK}-bt
 
 
 

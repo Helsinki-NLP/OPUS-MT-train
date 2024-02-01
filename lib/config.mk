@@ -29,6 +29,8 @@ DATASET       ?= ${TRAINSET_NAME}
 ifdef LANGPAIRS
   SRCLANGS ?= ${sort ${shell echo "${LANGPAIRS}" | tr ' ' "\n" | cut -f1 -d '-'}}
   TRGLANGS ?= ${sort ${shell echo "${LANGPAIRS}" | tr ' ' "\n" | cut -f2 -d '-'}}
+else
+  LANGPAIRS = $(foreach s,$(SRCLANGS),$(foreach t,$(TRGLANGS),${s}-${t}))
 endif
 
 

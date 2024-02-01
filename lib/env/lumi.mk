@@ -14,8 +14,14 @@ GPUJOB_HPC_MEM = 64g
 
 
 CSCPROJECT      = project_462000088
-CSC_GPU_PROJECT = project_462000086
-CSC_CPU_PROJECT = project_462000086
+
+## collab with Turku (F3AI)
+# CSC_GPU_PROJECT = project_462000086
+# CSC_CPU_PROJECT = project_462000086
+
+## LingDig-LT
+CSC_GPU_PROJECT = project_462000223
+CSC_CPU_PROJECT = project_462000223
 
 
 WORKHOME      = ${shell realpath ${PWD}/work}
