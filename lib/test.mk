@@ -31,7 +31,9 @@ eval-testsets-all:
 	      o=`echo "$$p" | cut -f4`; \
 	      echo "get $$i and $$o"; \
 	      rm -f ${WORKDIR}/test/$$n-$$s$$t.src ${WORKDIR}/test/$$n-$$s$$t.trg; \
-	      if [ "${USE_TARGET_LABELS}" == "1" ]; then \
+	      if [ "${USE_TARGET_LABELS}" != "1" ]; then \
+	           wget -O ${WORKDIR}/test/$$n-$$s$$t.src ${OPUSMT_TESTSETS_GITRAW}/$$i; \
+	      else \
 	         if [ "$$l" == "" ]; then \
 	           echo "add language labels to $$i"; \
 	           wget -O ${WORKDIR}/test/$$n-$$s$$t.srcraw ${OPUSMT_TESTSETS_GITRAW}/$$i; \
@@ -43,7 +45,7 @@ eval-testsets-all:
 	           wget -O ${WORKDIR}/test/$$n-$$s$$t.langids ${OPUSMT_TESTSETS_GITRAW}/$$l; \
 		   sed 's/^/>>/;s/$$/<</' < ${WORKDIR}/test/$$n-$$s$$t.langids > ${WORKDIR}/test/$$n-$$s$$t.labels; \
 	           paste -d ' ' ${WORKDIR}/test/$$n-$$s$$t.labels ${WORKDIR}/test/$$n-$$s$$t.srcraw \
-	           | sed 's/^ />>$${t}<< /' > ${WORKDIR}/test/$$n-$$s$$t.src; \
+	           | sed "s/^ />>$${t}<< /" > ${WORKDIR}/test/$$n-$$s$$t.src; \
 	           rm -f ${WORKDIR}/test/$$n-$$s$$t.srcraw ${WORKDIR}/test/$$n-$$s$$t.langids ${WORKDIR}/test/$$n-$$s$$t.labels; \
 	         fi \
 	      fi; \
@@ -56,24 +58,27 @@ eval-testsets-all:
 
 
 DO_EVAL_LANGPAIRS     := $(patsubst %,eval-testsets_%,${LANGPAIRS})
-DO_EVAL_LANGPAIRS_ENG := $(filter %-eng eng-%,${DO_EVAL_LANGPAIRS})
+DO_EVAL_LANGPAIRS_ENG := $(patsubst %,eval-testsets_%,$(filter %-eng eng-%,${LANGPAIRS}))
 
 eval-testsets: ${DO_EVAL_LANGPAIRS}
 eval-english-testsets: ${DO_EVAL_LANGPAIRS_ENG}
 
-eval-testsets_%:
-	rm -f $@.tsv
-	wget -O $@.tsv ${OPUSMT_TESTSETS_TSV}
+eval-testsets.tsv:
+	wget -O $@ ${OPUSMT_TESTSETS_TSV}
+
+eval-testsets_%: eval-testsets.tsv
 	( s=$(firstword $(subst -, ,$(patsubst eval-testsets_%,%,$@))); \
 	  t=$(lastword $(subst -, ,$(patsubst eval-testsets_%,%,$@))); \
-	  for n in `grep "^$$s	$$t	" $@.tsv | cut -f3`; do \
-	      p=`grep "^$$s	$$t	$$n	" $@.tsv | cut -f5,6,7,8`; \
+	  for n in `grep "^$$s	$$t	" $< | cut -f3`; do \
+	      p=`grep "^$$s	$$t	$$n	" $< | cut -f5,6,7,8`; \
 	      l=`echo "$$p" | cut -f2`; \
 	      i=`echo "$$p" | cut -f3`; \
 	      o=`echo "$$p" | cut -f4`; \
 	      echo "get $$i and $$o"; \
 	      rm -f ${WORKDIR}/test/$$n-$$s$$t.src ${WORKDIR}/test/$$n-$$s$$t.trg; \
-	      if [ "${USE_TARGET_LABELS}" == "1" ]; then \
+	      if [ "${USE_TARGET_LABELS}" != "1" ]; then \
+	           wget -O ${WORKDIR}/test/$$n-$$s$$t.src ${OPUSMT_TESTSETS_GITRAW}/$$i; \
+	      else \
 	         if [ "$$l" == "" ]; then \
 	           echo "add language labels to $$i"; \
 	           wget -O ${WORKDIR}/test/$$n-$$s$$t.srcraw ${OPUSMT_TESTSETS_GITRAW}/$$i; \
@@ -85,7 +90,7 @@ eval-testsets_%:
 	           wget -O ${WORKDIR}/test/$$n-$$s$$t.langids ${OPUSMT_TESTSETS_GITRAW}/$$l; \
 		   sed 's/^/>>/;s/$$/<</' < ${WORKDIR}/test/$$n-$$s$$t.langids > ${WORKDIR}/test/$$n-$$s$$t.labels; \
 	           paste -d ' ' ${WORKDIR}/test/$$n-$$s$$t.labels ${WORKDIR}/test/$$n-$$s$$t.srcraw \
-	           | sed 's/^ />>$${t}<< /' > ${WORKDIR}/test/$$n-$$s$$t.src; \
+	           | sed "s/^ />>$${t}<< /" > ${WORKDIR}/test/$$n-$$s$$t.src; \
 	           rm -f ${WORKDIR}/test/$$n-$$s$$t.srcraw ${WORKDIR}/test/$$n-$$s$$t.langids ${WORKDIR}/test/$$n-$$s$$t.labels; \
 	         fi \
 	      fi; \
@@ -106,7 +111,7 @@ eval-testsets-old:
 	  done \
 	done
 
-%-testsets-langpair: ${TESTSETS_PRESRC} ${TESTSETS_PRETRG}
+%-testsets-langpair: # ${TESTSETS_PRESRC} ${TESTSETS_PRETRG}
 	@echo "testsets: ${TESTSET_DIR}/*.${SRCEXT}.gz"
 	for t in ${TESTSETS}; do \
 	  ${MAKE} TESTSET=$$t TESTSET_NAME=$$t-${SRC}${TRG} ${@:-testsets-langpair=}; \
@@ -120,9 +125,10 @@ eval-testsets-old:
 
 ENSEMBLE = ${wildcard ${WORKDIR}/${MODEL}.${MODELTYPE}.model*.npz.best-perplexity.npz}
 
-${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.ensemble.${SRC}.${TRG}: ${TEST_SRC}.${PRE_SRC} ${ENSEMBLE}
+${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.ensemble.${SRC}.${TRG}: ${ENSEMBLE}
+	if [ ! -e ${TEST_SRC}.${PRE_SRC} ]; then ${MAKE} ${TEST_SRC}.${PRE_SRC}; fi
 	mkdir -p ${dir $@}
-	grep . $< > $@.input
+	grep . ${TEST_SRC}.${PRE_SRC} > $@.input
 	${LOAD_ENV} && ${MARIAN_DECODER} -i $@.input \
 		--models ${ENSEMBLE} \
 		--vocabs ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB} \
@@ -141,11 +147,13 @@ endif
 # for comparing system to reference translations
 #------------------------------------------------------------------------
 
-${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}: ${TEST_SRC}.${PRE_SRC} ${MODEL_FINAL}
+${WORKDIR}/${TESTSET_NAME}.${MODEL}${NR}.${MODELTYPE}.${SRC}.${TRG}: ${MODEL_FINAL}
+	echo "........ evaluate model ${MODEL_FINAL}"
+	if [ ! -e ${TEST_SRC}.${PRE_SRC} ]; then ${MAKE} ${TEST_SRC}.${PRE_SRC}; fi
 	mkdir -p ${dir $@}
-	grep . $< > $@.input
+	grep . ${TEST_SRC}.${PRE_SRC} > $@.input
 	${LOAD_ENV} && ${MARIAN_DECODER} -i $@.input \
-		-c ${word 2,$^}.decoder.yml \
+		-c $<.decoder.yml \
 		${MARIAN_DECODER_FLAGS} > $@.output
 ifneq ($(findstring spm,${PRE_TRG}),)
 	sed 's/ //g;s/▁/ /g' < $@.output | sed 's/^ *//;s/ *$$//' > $@
@@ -165,7 +173,8 @@ endif
 ## of sacrebleu (now: score in percentages)
 ## --> this breaks easily if the score < 10 or = 100
 
-%.eval: % ${TEST_TRG}
+%.eval: %
+	if [ ! -e ${TEST_TRG} ]; then ${MAKE} ${TEST_TRG}; fi
 	paste ${TEST_SRC}.${PRE_SRC} ${TEST_TRG} | grep $$'.\t' | cut -f2 > $@.ref
 	cat $< | sacrebleu -f text ${SACREBLEU_PARAMS} $@.ref > $@
 	cat $< | sacrebleu -f text ${SACREBLEU_PARAMS} --metrics=chrf --width=3 $@.ref |\
@@ -174,6 +183,8 @@ endif
 
 
 %.compare: %.eval
+	if [ ! -e ${TEST_SRC} ]; then ${MAKE} ${TEST_SRC}; fi
+	if [ ! -e ${TEST_TRG} ]; then ${MAKE} ${TEST_TRG}; fi
 	grep . ${TEST_SRC} > $@.1
 	grep . ${TEST_TRG} > $@.2
 	grep . ${<:.eval=} > $@.3
