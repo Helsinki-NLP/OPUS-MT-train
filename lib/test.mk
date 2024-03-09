@@ -15,6 +15,8 @@ TESTSETS_PRETRG = $(patsubst %,${TESTSET_DIR}/%.${TRGEXT}.${PRE}.gz,${TESTSETS})
 OPUSMT_TESTSETS_GITRAW := https://raw.githubusercontent.com/Helsinki-NLP/OPUS-MT-testsets/master
 OPUSMT_TESTSETS_TSV    := ${OPUSMT_TESTSETS_GITRAW}/testsets.tsv
 
+TESTSETS_TSV = eval-testsets.tsv
+
 ## eval all available test sets
 ## - fetch test sets from OPUS-MT-testsets
 ## - add language labels if necessary
@@ -57,16 +59,21 @@ eval-testsets-all:
 	done
 
 
-DO_EVAL_LANGPAIRS     := $(patsubst %,eval-testsets_%,${LANGPAIRS})
-DO_EVAL_LANGPAIRS_ENG := $(patsubst %,eval-testsets_%,$(filter %-eng eng-%,${LANGPAIRS}))
+DO_EVAL_LANGPAIRS       := $(patsubst %,eval-testsets_%,${LANGPAIRS})
+DO_EVAL_LANGPAIRS_ENG   := $(patsubst %,eval-testsets_%,$(filter %-eng eng-%,${LANGPAIRS}))
+DO_EVAL_LANGPAIRS_PIVOT := $(patsubst %,eval-testsets_%,$(filter %-${PIVOT} ${PIVOT}-%,${LANGPAIRS}))
 
 eval-testsets: ${DO_EVAL_LANGPAIRS}
 eval-english-testsets: ${DO_EVAL_LANGPAIRS_ENG}
+eval-pivot-testsets: ${DO_EVAL_LANGPAIRS_PIVOT}
 
 eval-testsets.tsv:
 	wget -O $@ ${OPUSMT_TESTSETS_TSV}
 
-eval-testsets_%: eval-testsets.tsv
+eval-testsets-flores200.tsv: eval-testsets.tsv
+	grep '	flores200-devtest	' $< > $@
+
+eval-testsets_%: ${TESTSETS_TSV}
 	( s=$(firstword $(subst -, ,$(patsubst eval-testsets_%,%,$@))); \
 	  t=$(lastword $(subst -, ,$(patsubst eval-testsets_%,%,$@))); \
 	  for n in `grep "^$$s	$$t	" $< | cut -f3`; do \

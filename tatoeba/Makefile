@@ -754,7 +754,7 @@ tatoeba-%-eval-testsets:
 	    fi \
 	  fi )
 
-## evaluate test sets
+## evaluate english-centric test sets
 tatoeba-%-eval-english-testsets:
 	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-eval-english-testsets,%,$@))); \
 	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-eval-english-testsets,%,$@))); \
@@ -766,6 +766,21 @@ tatoeba-%-eval-english-testsets:
 		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s | xargs iso639 -m -n | sort`" \
 		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t | xargs iso639 -m -n | sort`" \
 		eval-english-testsets-tatoeba; \
+	    fi \
+	  fi )
+
+## evaluate PIVOT-centric test sets
+tatoeba-%-eval-pivot-testsets:
+	( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-eval-pivot-testsets,%,$@))); \
+	  t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-eval-pivot-testsets,%,$@))); \
+	  if [ -e ${WORKHOME}/$$s-$$t ]; then \
+	    if [ `find ${WORKHOME}/$$s-$$t/ -name '*.npz' | wc -l` -gt 0 ]; then \
+	      ${MAKE} LANGPAIRSTR=$$s-$$t \
+		SRCLANGS="${call find-srclanggroup,${patsubst tatoeba-%-eval-pivot-testsets,%,$@},${PIVOT}}" \
+		TRGLANGS="${call find-trglanggroup,${patsubst tatoeba-%-eval-pivot-testsets,%,$@},${PIVOT}}" \
+		TATOEBA_SRCLANG_GROUP="`langgroup -n $$s | xargs iso639 -m -n | sort`" \
+		TATOEBA_TRGLANG_GROUP="`langgroup -n $$t | xargs iso639 -m -n | sort`" \
+		eval-pivot-testsets-tatoeba; \
 	    fi \
 	  fi )
 
