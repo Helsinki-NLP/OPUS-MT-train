@@ -233,22 +233,25 @@ lumi-eulangs-24x12:
 
 
 LUMI_MULTI_ARGS = DATA_SAMPLING_WEIGHT=0.5 GPUJOB_SUBMIT=-gpu8 SKIP_SAME_LANG=0 SKIP_MAKE_RAWDATA=1
+LUMI_BIBLE_MODELTYPE = transformer-12x6
+LUMI_JHUBC_MODEL = ${LUMI_BIBLE_MODELTYPE}
 
 # MARIAN_EXTRA=--no-restore-corpus
 
 
 
 lumi_bible_urj2eng:
-	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-urj2eng-${LUMI_TASK}-jhubc
+	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=${LUMI_BIBLE_MODELTYPE} tatoeba-urj2eng-${LUMI_TASK}-jhubc
 
 lumi_bible_urj2world:
-	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 tatoeba-urj2deu+eng+fra+por+spa-${LUMI_TASK}-jhubc
+	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=${LUMI_BIBLE_MODELTYPE} tatoeba-urj2deu+eng+fra+por+spa-${LUMI_TASK}-jhubc
 
 
 # also interesting:
 # (but need to prepare bible data for urj lang pairs!)
 #
 # lumi_bible_urj2urj lumi_bible_gmq+urj2gmq+urj
+
 
 
 lumi-bible-big-models: 
@@ -269,6 +272,33 @@ lumi-bible-missing-big-models:
 	for l in $(BIBLE_NO_TATOEBADEVTEST); do \
 	  ${MAKE} 	lumi_biblebig_$${l}2deu+eng+fra+por+spa \
 			lumi_biblebig_deu+eng+fra+por+spa2$${l}; \
+
+lumi-biblebig-models: 
+	for l in $(MIN10_LANG_GROUPS); do \
+	  ${MAKE} LUMI_BIBLE_MODELTYPE=transformer-big \
+		lumi_biblebig_$${l}2deu+eng+fra+por+spa \
+		lumi_biblebig_deu+eng+fra+por+spa2$${l}; \
+	done
+
+lumi-biblebig-models-eval: 
+	for l in $(MIN10_LANG_GROUPS); do \
+	  ${MAKE} GPUJOB_HPC_JOBS=4 GPUJOB_HPC_MEM=128g LUMI_TASK=eval-testsets lumi_biblebig_$${l}2deu+eng+fra+por+spa; \
+	  ${MAKE} GPUJOB_HPC_JOBS=4 GPUJOB_HPC_MEM=128g LUMI_TASK=eval-testsets lumi_biblebig_deu+eng+fra+por+spa2$${l}; \
+	done
+
+
+
+lumi-bible12x6-models: 
+	for l in $(MIN10_LANG_GROUPS); do \
+	  ${MAKE} LUMI_BIBLE_MODELTYPE=transformer-12x6 \
+		lumi_bible12x6_$${l}2deu+eng+fra+por+spa \
+		lumi_bible12x6_deu+eng+fra+por+spa2$${l}; \
+	done
+
+lumi-bible12x6-models-eval: 
+	for l in $(MIN10_LANG_GROUPS); do \
+	  ${MAKE} GPUJOB_HPC_JOBS=2 LUMI_TASK=eval-testsets lumi_bible12x6_$${l}2deu+eng+fra+por+spa; \
+	  ${MAKE} GPUJOB_HPC_JOBS=2 LUMI_TASK=eval-testsets lumi_bible12x6_deu+eng+fra+por+spa2$${l}; \
 	done
 
 
@@ -293,7 +323,7 @@ lumi-bible-big-models-releases:
 
 
 lumi-bible-mul2world:
-	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 \
+	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=${LUMI_BIBLE_MODELTYPE} \
 		tatoeba-mul2deu+eng+fra+por+spa-${LUMI_TASK}-jhubc-bt-max25 \
 		tatoeba-deu+eng+fra+por+spa2mul-${LUMI_TASK}-jhubc-bt-max25
 
@@ -316,7 +346,7 @@ lumi-bible-urj2nordic-eval:
 #		tatoeba-fin+nob+nno+swe+rus2urj-${LUMI_TASK}-jhubc-bt
 
 
-LUMI_JHUBC_MODEL = transformer-12x6
+
 
 lumi_bible12x6_%:
 	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x6 \
@@ -762,6 +792,7 @@ lumi-mulmul50-12x12:
 	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-mul2mul-trainjob-bt-max50
 
 
+<<<<<<< HEAD
 lumi-mulmul: lumi-opusbible-big lumi-opusbible-bigger
 	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-mul2mul-trainjob-bt
 	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-mul2mul-trainjob-bt-max50
@@ -777,6 +808,12 @@ lumi-mulmul50-eval:
 
 
 lumi-mulmul50-eval-pivots:
+=======
+lumi-mulmul:
+	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-mul2mul-trainjob-bt
+
+lumi-mulmul50-eval:
+>>>>>>> 6b6eb484e61c1a2703fb27342c77b2a4986e1cc0
 	for l in ${PIVOTS}; do \
 	  ${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 GPUJOB_HPC_JOBS=1 PIVOT=$$l tatoeba-mul2mul-eval-pivot-testsets-bt-max50.submit; \
 	done
