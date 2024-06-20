@@ -88,6 +88,8 @@ BIBLE_TRAINSETS := $(patsubst %,train/%.gz,${BIBLE_LANGS})
 BIBLE_DEVSETS   := $(patsubst detok/%.txt,dev/%_28721-29220.txt,${BIBLES_DETOKENIZED})
 BIBLE_TESTSETS  := $(patsubst detok/%.txt,test/%_29221-30221.txt,${BIBLES_DETOKENIZED})
 
+BIBLE_NONBLANK_DEVSETS   := $(patsubst dev/%,nonblank/dev/%,${BIBLE_DEVSETS})
+BIBLE_NONBLANK_TESTSETS  := $(patsubst test/%,nonblank/test/%,${BIBLE_TESTSETS})
 
 BIBLE_TRAINTOK  := $(patsubst %,train-tokenized/%.gz,${BIBLE_LANGS})
 
@@ -101,6 +103,20 @@ test/%_29221-30221.txt: detok/%.txt
 dev/%_28721-29220.txt: detok/%.txt
 	@mkdir -p dev
 	@awk 'NR>=28722 && NR<=29221' $< > $@
+
+
+bible-complete-devtest: ${BIBLE_NONBLANK_TESTSETS} ${BIBLE_NONBLANK_DEVSETS}
+
+nonblank/%.txt: %.txt
+	@if [ `grep . $< | grep -v BLANK | wc -l` -eq `cat $< | wc -l` ]; then \
+	   echo "include $<"; \
+	   mkdir -p $(dir $@); \
+	   cp $< $@; \
+	else \
+	   echo -n "exclude $< - line count: "; \
+	   grep . $< | grep -v BLANK | wc -l; \
+	fi
+
 
 train/%.gz:
 	@mkdir -p train

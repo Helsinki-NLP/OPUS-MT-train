@@ -73,6 +73,72 @@ LUMI_EVAL_TASK = eval-testsets
 MIN10_LANG_GROUPS = aav afa alg alv aql art ath aus awd azc bad bai bat ber bnt cau cba ccn cdc cel cmc csu cus dmn dra esx fiu fox gem gmq gmw hmx hok iir inc ine ira iro itc kar kdo kro map mkh mno mul mun myn nah nai ngf nic nub omq omv oto paa phi poz pqe pqw roa sai sal sdv sem sio sit sla smi ssa tai tbq trk tup tuw urj xgn xnd zhx
 
 
+##---------------------------------------------------------
+## language groups for which we do not have any development data from the Tatoeba data sets
+##  ---> fix a devset from Bible data
+
+# BIBLE_NO_TATOEBADEVTEST = aus bad bai csu kar kdo kro mno ngf nyo oto paa sal tuw
+BIBLE_NO_TATOEBADEVTEST = aus bad bai csu kar kdo kro mno ngf nyo oto paa
+
+opusbible-multi-missing-devset:
+	for g in ${BIBLE_NO_TATOEBADEVTEST}; do \
+	  if [ ! -s work/deu+eng+fra+por+spa-$$g/val/Tatoeba-dev-v2023-09-26.src ]; then \
+	    echo "fix devset for work/deu+eng+fra+por+spa-$$g"; \
+	    l=`langgroup $$g`; \
+	    rm -f work/deu+eng+fra+por+spa-$$g/val/Tatoeba-dev-v2023-09-26.tmpsrc; \
+	    rm -f work/deu+eng+fra+por+spa-$$g/val/Tatoeba-dev-v2023-09-26.tmptrg; \
+	    for s in deu eng fra por spa; do \
+	      for t in $$l; do \
+		x=`find work/data/bible/dev -name "$$s-*.txt"`; \
+		y=`find work/data/bible/dev -name "$$t-*.txt"`; \
+		for x in $$x; do \
+		  for y in $$y; do \
+		    cat $$x | sed "s/^/>>$$t<< /" >> work/deu+eng+fra+por+spa-$$g/val/Tatoeba-dev-v2023-09-26.tmpsrc; \
+		    cat $$y >> work/deu+eng+fra+por+spa-$$g/val/Tatoeba-dev-v2023-09-26.tmptrg; \
+	          done \
+	        done \
+	      done \
+	    done; \
+	    paste work/deu+eng+fra+por+spa-$$g/val/Tatoeba-dev-v2023-09-26.tmpsrc \
+		  work/deu+eng+fra+por+spa-$$g/val/Tatoeba-dev-v2023-09-26.tmptrg |\
+	    grep '^>>...<< ..*	' | grep '	.' | grep -v 'BLANK' | ${SHUFFLE} | head -5000 |\
+	    tee >(cut -f1 >work/deu+eng+fra+por+spa-$$g/val/Tatoeba-dev-v2023-09-26.src) | \
+	    cut -f2 >work/deu+eng+fra+por+spa-$$g/val/Tatoeba-dev-v2023-09-26.trg; \
+	  fi \
+	done
+
+
+## the other translation direction
+
+opusbible-multi-missing-devset-trg:
+	for g in ${BIBLE_NO_TATOEBADEVTEST}; do \
+	  if [ ! -s work/$$g-deu+eng+fra+por+spa/val/Tatoeba-dev-v2023-09-26.src ]; then \
+	    echo "fix devset for work/$$g-deu+eng+fra+por+spa"; \
+	    l=`langgroup $$g`; \
+	    rm -f work/$$g-deu+eng+fra+por+spa/val/Tatoeba-dev-v2023-09-26.tmpsrc; \
+	    rm -f work/$$g-deu+eng+fra+por+spa/val/Tatoeba-dev-v2023-09-26.tmptrg; \
+	    for s in $$l; do \
+	      for t in deu eng fra por spa; do \
+		x=`find work/data/bible/dev -name "$$s-*.txt"`; \
+		y=`find work/data/bible/dev -name "$$t-*.txt"`; \
+		for x in $$x; do \
+		  for y in $$y; do \
+		    cat $$x | sed "s/^/>>$$t<< /" >> work/$$g-deu+eng+fra+por+spa/val/Tatoeba-dev-v2023-09-26.tmpsrc; \
+		    cat $$y >> work/$$g-deu+eng+fra+por+spa/val/Tatoeba-dev-v2023-09-26.tmptrg; \
+	          done \
+	        done \
+	      done \
+	    done; \
+	    paste work/$$g-deu+eng+fra+por+spa/val/Tatoeba-dev-v2023-09-26.tmpsrc \
+		  work/$$g-deu+eng+fra+por+spa/val/Tatoeba-dev-v2023-09-26.tmptrg |\
+	    grep '^>>...<< ..*	' | grep '	.' | grep -v 'BLANK' | ${SHUFFLE} | head -5000 |\
+	    tee >(cut -f1 >work/$$g-deu+eng+fra+por+spa/val/Tatoeba-dev-v2023-09-26.src) | \
+	    cut -f2 >work/$$g-deu+eng+fra+por+spa/val/Tatoeba-dev-v2023-09-26.trg; \
+	  fi \
+	done
+
+##---------------------------------------------------------
+
 
 
 lumi-eval-jobs:
@@ -191,6 +257,20 @@ lumi-bible-big-models:
 			lumi_biblebig_deu+eng+fra+por+spa2$${l}; \
 	done
 
+## start the models that do not have a Tatoeba-devset
+
+lumi-bible-missing-models: 
+	for l in $(BIBLE_NO_TATOEBADEVTEST); do \
+	  ${MAKE} 	lumi_biblebase_$${l}2deu+eng+fra+por+spa \
+			lumi_biblebase_deu+eng+fra+por+spa2$${l}; \
+	done
+
+lumi-bible-missing-big-models: 
+	for l in $(BIBLE_NO_TATOEBADEVTEST); do \
+	  ${MAKE} 	lumi_biblebig_$${l}2deu+eng+fra+por+spa \
+			lumi_biblebig_deu+eng+fra+por+spa2$${l}; \
+	done
+
 
 lumi-bible-12x6-models: 
 	for l in $(MIN10_LANG_GROUPS); do \
@@ -205,6 +285,10 @@ lumi-bible-12x6-models-eval:
 	done
 
 
+
+
+lumi-bible-big-models-releases:
+	${MAKE} LUMI_TASK=dist lumi-bible-big-models
 
 
 
@@ -242,7 +326,12 @@ lumi_biblebig_%:
 	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big \
 		tatoeba-$(patsubst lumi_biblebig_%,%,$@)-${LUMI_TASK}-jhubc-bt-max50
 
+lumi_biblebase_%:
+	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer \
+		tatoeba-$(patsubst lumi_biblebase_%,%,$@)-${LUMI_TASK}-jhubc-bt-max50
 
+lumi-nuyeng:
+	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer tatoeba-nuy2eng-${LUMI_TASK}-jhubc
 
 
 
@@ -288,13 +377,32 @@ lumi-bible-eval-english:
 		SPMSRCMODEL=${JHUBC_SPM} \
 		SPMTRGMODEL=${JHUBC_SPM} $(@:-m2m_opusjhubc=)
 
+
+
+
+
 lumi-opusbible: lumi-opusbible-big lumi-opusbible-bigger # lumi-opusbible-huge
 
 lumi-opusbible-big:
 	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-big tatoeba-mul2mul-${LUMI_TASK}-m2m_opusjhubc
 
+
+## doing a second version of the opusbible model
+
+lumi-opusbible-big2:
+	${MAKE} ${LUMI_MULTI_ARGS} NR=2 \
+		MARIAN_EARLY_STOPPING=20 \
+		MARIAN_TRAINING_PARAMETER="--task transformer-big --optimizer-delay 10 --lr-warmup-cycle" \
+		MARIAN_OPTIMIZER_PARAMS="0.9 0.999 1e-06" \
+		MARIAN_LEARNING_RATE=0.0001 \
+		MODELTYPE=transformer-big tatoeba-mul2mul-${LUMI_TASK}-m2m_opusjhubc
+
 lumi-opusbible-bigger:
-	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-mul2mul-${LUMI_TASK}-m2m_opusjhubc
+	${MAKE} ${LUMI_MULTI_ARGS} MARIAN_EARLY_STOPPING=20 MODELTYPE=transformer-12x12 tatoeba-mul2mul-${LUMI_TASK}-m2m_opusjhubc
+
+lumi-opusbible-bigger2:
+	${MAKE} ${LUMI_MULTI_ARGS} NR=2 MARIAN_EARLY_STOPPING=20 MODELTYPE=transformer-12x12 tatoeba-mul2mul-${LUMI_TASK}-m2m_opusjhubc
+
 
 lumi-opusbible-huge:
 	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-24x24 tatoeba-mul2mul-${LUMI_TASK}-m2m_opusjhubc
@@ -658,8 +766,17 @@ lumi-mulmul: lumi-opusbible-big lumi-opusbible-bigger
 	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-mul2mul-trainjob-bt
 	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-mul2mul-trainjob-bt-max50
 
+lumi-mulmul25:
+	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-mul2mul-trainjob-bt
 
 lumi-mulmul50-eval:
+	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 \
+		GPUJOB_HPC_JOBS=4 GPUJOB_HPC_MEM=96g GPUJOB_HPC_CORES=12 \
+		tatoeba-mul2mul-eval-testsets-bt-max50.submit
+
+
+
+lumi-mulmul50-eval-pivots:
 	for l in ${PIVOTS}; do \
 	  ${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 GPUJOB_HPC_JOBS=1 PIVOT=$$l tatoeba-mul2mul-eval-pivot-testsets-bt-max50.submit; \
 	done
