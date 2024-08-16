@@ -73,29 +73,12 @@ foreach my $lineset (keys %linesets){
     else{
 	$subsets{$nrlangs}{$nrlines}{$nrbibles} = $lineset;
     }
-    
-    # if (exists $subsets{$nrlines}{$nrlangs}{$nrbibles}){
-    # 	print STDERR "subset exists already for $nrlines lines, $nrlangs languages, and $nrbibles bibles\n";
-    # }
-    # else{
-    # 	$subsets{$nrlines}{$nrlangs}{$nrbibles} = $lineset;
-    # }
-    
+        
     # print "$nrlines\t$nrbibles\t$nrlangs\t$lineset\t$langstr\t$biblestr\n";
 }
 
 
 ## for each corpus size: get the subset that covers most languages and bibles
-
-# foreach my $nrlines (sort {$b <=> $a} keys %subsets){
-#    my ($nrlangs) = sort {$b <=> $a} keys %{$subsets{$nrlines}};
-    # my ($nrbibles) = sort {$b <=> $a} keys %{$subsets{$nrlines}{$nrlangs}};
-    # my $lineset = $subsets{$nrlines}{$nrlangs}{$nrbibles};
-    # my %langs = get_bible_langs($linesets{$lineset});
-    # my $langstr = join(':',sort keys %langs);
-    # my $biblestr = join(':',sort keys %{$linesets{$lineset}});
-    # print "$nrlines\t$nrlangs\t$nrbibles\t$lineset\t$langstr\t$biblestr\n";
-
 
 foreach my $nrlangs (sort {$b <=> $a} keys %subsets){
     my ($nrlines) = sort {$b <=> $a} keys %{$subsets{$nrlangs}};
@@ -105,16 +88,42 @@ foreach my $nrlangs (sort {$b <=> $a} keys %subsets){
     my $langstr = join(':',sort keys %langs);
     my $biblestr = join(':',sort keys %{$linesets{$lineset}});
     print "$nrlines\t$nrlangs\t$nrbibles\t$lineset\t$langstr\t$biblestr\n";
+    print_subset($nrlines,$nrlangs,$nrbibles,$lineset,$langstr,$biblestr);
+}
 
-    # foreach my $nrlangs (sort {$b <=> $a} keys %{$subsets{$nrlines}}){
-    # 	foreach my $nrbibles (sort {$b <=> $a} keys %{$subsets{$nrlines}{$nrlangs}}){
-    # 	    my $lineset = $subsets{$nrlines}{$nrlangs}{$nrbibles};
-    # 	    my %langs = get_bible_langs($linesets{$lineset});
-    # 	    my $langstr = join(':',sort keys %langs);
-    # 	    my $biblestr = join(':',sort keys %{$linesets{$lineset}});
-    # 	    print "$nrlines\t$nrbibles\t$nrlangs\t$lineset\t$langstr\t$biblestr\n";
-    # 	}
-    # }
+
+
+
+sub print_subset{
+    my ($nrlines,$nrlangs,$nrbibles,$lineset,$langstr,$biblestr) = @_;
+    my $dir = "subset-$nrlangs-$nrbibles-$nrlines";
+    mkdir $dir;
+    my @bibles = split(/\:/,$biblestr);
+    my @lines = split(/\:/,$lineset);
+    my %selected = ();
+    foreach (@lines){
+	$selected{$_}=1;
+    }
+    foreach my $file (@bibles){
+	my $basename = basename($file);
+        my ($lang) = split(/\-/,$basename);
+	open F,"<$file" || die "cannot open file $file\n";
+	open O,">$dir/$basename" || die "cannot write to file $dir/$basename\n";
+	my $line=-1;
+	while (<F>){
+	    $line++;
+	    if (exists $selected{$line}){
+		print O $_;
+	    }
+	}
+	close O;
+	close F;
+    }
+    if ($dir){
+	system("zip -r $dir.zip $dir >/dev/null 2>/dev/null");
+	system("rm $dir/*.txt >/dev/null 2>/dev/null");
+	system("rmdir $dir >/dev/null 2>/dev/null");
+    }
 }
 
 

@@ -260,6 +260,22 @@ lumi-bible-big-models:
 			lumi_biblebig_deu+eng+fra+por+spa2$${l}; \
 	done
 
+lumi-bible-big2eng-models: 
+	for l in $(MIN10_LANG_GROUPS); do \
+	  ${MAKE} lumi_biblebig_$${l}2eng; \
+	done
+
+lumi-bible-big2roa-models: 
+	for l in $(MIN10_LANG_GROUPS); do \
+	  ${MAKE} lumi_biblebig_$${l}2fra+ita+por+spa; \
+	done
+
+lumi-bible-big2ger-models: 
+	for l in $(MIN10_LANG_GROUPS); do \
+	  ${MAKE} lumi_biblebig_$${l}2deu+eng+nld; \
+	done
+
+
 ## start the models that do not have a Tatoeba-devset
 
 lumi-bible-missing-models: 
@@ -792,7 +808,6 @@ lumi-mulmul50-12x12:
 	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-mul2mul-trainjob-bt-max50
 
 
-<<<<<<< HEAD
 lumi-mulmul: lumi-opusbible-big lumi-opusbible-bigger
 	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-mul2mul-trainjob-bt
 	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-mul2mul-trainjob-bt-max50
@@ -808,12 +823,6 @@ lumi-mulmul50-eval:
 
 
 lumi-mulmul50-eval-pivots:
-=======
-lumi-mulmul:
-	${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 tatoeba-mul2mul-trainjob-bt
-
-lumi-mulmul50-eval:
->>>>>>> 6b6eb484e61c1a2703fb27342c77b2a4986e1cc0
 	for l in ${PIVOTS}; do \
 	  ${MAKE} ${LUMI_MULTI_ARGS} MODELTYPE=transformer-12x12 GPUJOB_HPC_JOBS=1 PIVOT=$$l tatoeba-mul2mul-eval-pivot-testsets-bt-max50.submit; \
 	done
