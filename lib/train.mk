@@ -95,8 +95,7 @@ MARIAN_LEARNING_RATE ?= 0.0003
 ## possible model variants
 MARIAN_MODELS_DONE   = 	${patsubst %,${WORKDIR}/${MODEL}.%.model${NR}.done,${MODELTYPES}}
 
-MARIAN_TRAIN_PREREQS = 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
-			${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz \
+MARIAN_TRAIN_PREREQS = 	${TRAINDATA_SRC} ${TRAINDATA_TRG} \
 			$(sort ${MODEL_SRCVOCAB} ${MODEL_TRGVOCAB})
 
 
@@ -105,15 +104,15 @@ MARIAN_TRAIN_PREREQS = 	${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz \
 ## TODO: do we want to add valid-metrics "ce-mean-words" and "bleu-detok"?
 
 ifndef SKIP_VALIDATION
-  MARIAN_TRAIN_PREREQS += ${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG}
+  MARIAN_TRAIN_PREREQS += ${DEVDATA_SRC} ${DEVDATA_TRG}
   MARIAN_STOP_CRITERIA = --early-stopping ${MARIAN_EARLY_STOPPING} \
         --valid-freq ${MARIAN_VALID_FREQ} \
-        --valid-sets ${DEV_SRC}.${PRE_SRC} ${DEV_TRG}.${PRE_TRG} \
+        --valid-sets ${DEVDATA_SRC} ${DEVDATA_TRG} \
         --valid-metrics perplexity \
         --valid-mini-batch ${MARIAN_VALID_MINI_BATCH} \
-	--valid-max-length 100 \
+	--valid-max-length 200 \
 	--valid-log ${WORKDIR}/${MODEL}.${MODELTYPE}.valid${NR}.log \
-        --beam-size 6 --normalize 1 --allow-unk
+        --beam-size 4 --normalize 1 --allow-unk
   MODEL_FINAL = ${WORKDIR}/${MODEL_BASENAME}.npz.best-perplexity.npz
 else
   MODEL_FINAL = ${WORKDIR}/${MODEL_BASENAME}.npz
@@ -273,13 +272,32 @@ ifeq ($(subst -align,,${MODELTYPE}),transformer-12x12)
   MARIAN_DIM_EMB = 1024
   MARIAN_OPTIMIZER_PARAMS = 0.9 0.999 1e-06
   MARIAN_LEARNING_RATE = 0.00001
-  MARIAN_EXTRA += --transformer-dim-ffn 4096 --optimizer-delay 20 --lr-warmup-cycle --fp16
-  MARIAN_VALID_FREQ = 5000
-  MARIAN_SAVE_FREQ = 2000
-  MARIAN_DISP_FREQ = 5000
+#   MARIAN_EXTRA += --transformer-dim-ffn 4096 --optimizer-delay 20 --lr-warmup-cycle --fp16
+  MARIAN_EXTRA += --transformer-dim-ffn 4096 --optimizer-delay 20 --lr-warmup-cycle
+  MARIAN_VALID_FREQ = 1000
+  MARIAN_SAVE_FREQ = 1000
+  MARIAN_DISP_FREQ = 1000
   GPUJOB_HPC_MEM = 64g
 endif
 
+ifeq ($(subst -align,,${MODELTYPE}),transformer-12x12b)
+  MARIAN_TRAINING_PARAMETER = --task transformer-big \
+	--enc-depth 12 \
+	--dec-depth 12 \
+        --learn-rate 0.00005 \
+	--lr-warmup 8000 \
+	--lr-decay-inv-sqrt 8000 \
+	--lr-report \
+        --optimizer-params 0.9 0.999 1e-06 \
+	--transformer-dim-ffn 4096 \
+	--optimizer-delay 5 \
+	--lr-warmup-cycle \
+        --transformer-heads 16
+  MARIAN_VALID_FREQ = 1000
+  MARIAN_SAVE_FREQ = 1000
+  MARIAN_DISP_FREQ = 1000
+  GPUJOB_HPC_MEM = 64g
+endif
 
 ifeq ($(subst -align,,${MODELTYPE}),transformer-12x6)
   MARIAN_ENC_DEPTH = 12
@@ -382,7 +400,7 @@ endif
 ##--------------------------------------------------------------------
 	${LOAD_ENV} && ${MONITOR} ${MARIAN_TRAIN} \
 		${MARIAN_TRAINING_PARAMETER} \
-		${MARIAN_EXTRA} \
+		${MARIAN_EXTRA} ${MARIAN_EXTRA2} \
 		${MARIAN_STOP_CRITERIA} \
 		${MARIAN_DATA_STORAGE} \
 		--workspace ${MARIAN_WORKSPACE} \

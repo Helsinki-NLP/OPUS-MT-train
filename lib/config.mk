@@ -72,6 +72,8 @@ MODELTYPES   = 	transformer \
 		transformer-6x12-align \
 		transformer-12x12 \
 		transformer-12x12-align \
+		transformer-12x12b \
+		transformer-12x12b-align \
 		transformer-24x12 \
 		transformer-24x12-align \
 		transformer-24x12b \
@@ -480,12 +482,30 @@ TRAIN_S2T  = ${TRAIN_BASE}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}.s2t.gz
 TRAIN_T2S  = ${TRAIN_BASE}${TRAINSIZE}.${PRE_SRC}-${PRE_TRG}.t2s.gz
 
 ## data sets that are pre-processed and ready to be used
-TRAINDATA_SRC = ${TRAIN_SRC}.clean.${PRE_SRC}.gz 
-TRAINDATA_TRG = ${TRAIN_TRG}.clean.${PRE_TRG}.gz
+TRAINDATA_SRC = ${TRAIN_SRC}.clean.${PRE_SRC}${TRAINSIZE}.gz 
+TRAINDATA_TRG = ${TRAIN_TRG}.clean.${PRE_TRG}${TRAINSIZE}.gz
 DEVDATA_SRC   = ${DEV_SRC}.${PRE_SRC} 
 DEVDATA_TRG   = ${DEV_TRG}.${PRE_TRG}
 TESTDATA_SRC  = ${TEST_SRC}.${PRE_SRC} 
 TESTDATA_TRG  = ${TEST_TRG}
+
+
+## select a random shard of some sharded training data
+ifeq (${SELECT_RANDOM_SHARDED_TRAINDATA},1)
+ifneq ($(wildcard ${TRAIN_SRC}.clean.${PRE_SRC}-aa.gz),)
+  TRAINDATA_SRC := $(shell ls ${TRAIN_SRC}.clean.${PRE_SRC}-*.gz | shuf | head -1)
+  TRAINDATA_TRG := $(patsubst ${TRAIN_SRC}.clean.${PRE_SRC}-%,${TRAIN_TRG}.clean.${PRE_TRG}-%,${TRAINDATA_SRC})
+  MARIAN_EXTRA += --no-restore-corpus
+endif
+endif
+
+print_train_info:
+	@echo "=========================================="
+	@echo "src traindata: ${TRAINDATA_SRC}"
+	@echo "trg traindata: ${TRAINDATA_TRG}"
+	@echo "marian: ${MARIAN_EXTRA}"
+	@echo "=========================================="
+
 
 ## training data in local space
 LOCAL_TRAIN_SRC = ${TMPWORKDIR}/${LANGPAIRSTR}/train/${DATASET}.src
@@ -599,7 +619,7 @@ TEST_COMPARISON  = ${TEST_TRANSLATION}.compare
 
 MARIAN_GPUS             ?= 0
 MARIAN_EXTRA            = 
-MARIAN_VALID_FREQ       ?= 10000
+MARIAN_VALID_FREQ       ?= 5000
 MARIAN_SAVE_FREQ        ?= ${MARIAN_VALID_FREQ}
 MARIAN_DISP_FREQ        ?= ${MARIAN_VALID_FREQ}
 MARIAN_EARLY_STOPPING   ?= 10
@@ -725,7 +745,7 @@ else
 			--quiet-translation \
 			--mini-batch ${HPC_CORES} --maxi-batch 100 --maxi-batch-sort src \
 			--max-length ${MARIAN_MAX_LENGTH} --max-length-crop
-  MARIAN_EXTRA = --cpu-threads ${HPC_CORES}
+  MARIAN_EXTRA += --cpu-threads ${HPC_CORES}
 endif
 
 

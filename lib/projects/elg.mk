@@ -73,6 +73,23 @@ LUMI_EVAL_TASK = eval-testsets
 MIN10_LANG_GROUPS = aav afa alg alv aql art ath aus awd azc bad bai bat ber bnt cau cba ccn cdc cel cmc csu cus dmn dra esx fiu fox gem gmq gmw hmx hok iir inc ine ira iro itc kar kdo kro map mkh mno mul mun myn nah nai ngf nic nub omq omv oto paa phi poz pqe pqw roa sai sal sdv sem sio sit sla smi ssa tai tbq trk tup tuw urj xgn xnd zhx
 
 
+
+## split training data for the huge mul2mul + jhubc trainin data set
+
+MUL2MUL_JHUBC_TRAIN_BASE = work/mul-mul/train/opusTCv20230926+bt+jhubc
+# MUL2MUL_JHUBC_SHARD_SIZE = 250000000
+MUL2MUL_JHUBC_SHARD_SIZE = 2000000000
+
+
+split-mul2mul-jhubc-traindata: 	${MUL2MUL_JHUBC_TRAIN_BASE}.src.clean.spm64k-aa.gz \
+				${MUL2MUL_JHUBC_TRAIN_BASE}.trg.clean.spm64k-aa.gz
+
+${MUL2MUL_JHUBC_TRAIN_BASE}.src.clean.spm64k-aa.gz ${MUL2MUL_JHUBC_TRAIN_BASE}.trg.clean.spm64k-aa.gz:
+	${GZIP} -cd < $(@:-aa.gz=.gz) |\
+	split -l ${MUL2MUL_JHUBC_SHARD_SIZE} - $(@:aa.gz=)
+	$(GZIP) -f $(@:aa.gz=)*
+
+
 ##---------------------------------------------------------
 ## language groups for which we do not have any development data from the Tatoeba data sets
 ##  ---> fix a devset from Bible data
@@ -434,20 +451,122 @@ lumi-opusbible-big:
 
 
 ## doing a second version of the opusbible model
+## NEW 2024-09-21: select random shard from the big training data (does this work?)
+## ---> doesn't really work ... why?
 
 lumi-opusbible-big2:
 	${MAKE} ${LUMI_MULTI_ARGS} NR=2 \
 		MARIAN_EARLY_STOPPING=20 \
-		MARIAN_TRAINING_PARAMETER="--task transformer-big --optimizer-delay 10 --lr-warmup-cycle" \
-		MARIAN_OPTIMIZER_PARAMS="0.9 0.999 1e-06" \
-		MARIAN_LEARNING_RATE=0.0001 \
+		MARIAN_TRAINING_PARAMETER="--task transformer-big --optimizer-delay 10 --lr-warmup-cycle --optimizer-params 0.9 0.999 1e-06 --learn-rate 0.0001" \
+		SELECT_RANDOM_SHARDED_TRAINDATA=1 \
+		MARIAN_EXTRA=--no-restore-corpus \
 		MODELTYPE=transformer-big tatoeba-mul2mul-${LUMI_TASK}-m2m_opusjhubc
+
+# MARIAN_EXTRA=--no-restore-corpus
+
+lumi-opusbible-big3:
+	${MAKE} ${LUMI_MULTI_ARGS} NR=3 \
+		MARIAN_EARLY_STOPPING=20 \
+		MARIAN_TRAINING_PARAMETER="--task transformer-big --optimizer-delay 10 --lr-warmup-cycle --lr-decay-repeat-warmup --lr-warmup-at-reload --lr-decay-freq 10000 --lr-decay-strategy batches+stalled --mini-batch-warmup 16000 --lr-warmup 8000 --lr-decay-inv-sqrt 8000 --check-gradient-nan --normalize-gradient --optimizer-params 0.9 0.999 1e-08 --learn-rate 0.0005" \
+		MARIAN_WORKSPACE=-10000 \
+		MARIAN_VALID_FREQ=1000 \
+		SELECT_RANDOM_SHARDED_TRAINDATA=1 \
+		MARIAN_EXTRA=--no-restore-corpus \
+		MODELTYPE=transformer-big tatoeba-mul2mul-${LUMI_TASK}-m2m_opusjhubc
+
+lumi-opusbible-big4:
+	${MAKE} ${LUMI_MULTI_ARGS} NR=4 \
+		MARIAN_EARLY_STOPPING=10 \
+		MARIAN_TRAINING_PARAMETER="--task transformer-big --optimizer adagrad --optimizer-delay 10 --lr-warmup-cycle --lr-decay-repeat-warmup --lr-decay-freq 10000 --lr-decay-strategy batches+stalled --mini-batch-warmup 16000 --lr-warmup 8000 --lr-decay-inv-sqrt 8000 --check-gradient-nan --normalize-gradient --optimizer-params 1e-010" \
+		MARIAN_WORKSPACE=-10000 \
+		MARIAN_VALID_FREQ=1000 \
+		SELECT_RANDOM_SHARDED_TRAINDATA=1 \
+		MARIAN_EXTRA=--no-restore-corpus \
+		MODELTYPE=transformer-big tatoeba-mul2mul-${LUMI_TASK}-m2m_opusjhubc
+
+lumi-opusbible-big5:
+	${MAKE} ${LUMI_MULTI_ARGS} NR=5 \
+		MARIAN_EARLY_STOPPING=10 \
+		MARIAN_TRAINING_PARAMETER="--task transformer-big --optimizer adagrad --optimizer-delay 10 --lr-warmup-cycle --lr-decay-repeat-warmup --lr-decay-freq 10000 --lr-decay-strategy batches+stalled --mini-batch-warmup 16000 --lr-warmup 8000 --lr-decay-inv-sqrt 8000 --check-gradient-nan --normalize-gradient --pretrained-model ${PWD}/work/mul-mul/opusTCv20230926+bt+jhubc.spm64k-spm64k.transformer-big.model2.npz.best-perplexity.npz" \
+		MARIAN_WORKSPACE=-10000 \
+		MARIAN_VALID_FREQ=1000 \
+		SELECT_RANDOM_SHARDED_TRAINDATA=1 \
+		MARIAN_EXTRA=--no-restore-corpus \
+		MODELTYPE=transformer-big tatoeba-mul2mul-${LUMI_TASK}-m2m_opusjhubc
+
+# --optimizer-params 1e-010 
+
+lumi-opusbible-big6:
+	${MAKE} ${LUMI_MULTI_ARGS} NR=6 \
+		MARIAN_EARLY_STOPPING=10 \
+		MARIAN_TRAINING_PARAMETER="--task transformer-big --optimizer adagrad --optimizer-delay 10 --lr-warmup-cycle --lr-decay-repeat-warmup --lr-decay-freq 10000 --lr-decay-strategy batches+stalled --mini-batch-warmup 16000 --lr-warmup 8000 --lr-decay-inv-sqrt 8000 --check-gradient-nan --normalize-gradient" \
+		MARIAN_WORKSPACE=-10000 \
+		MARIAN_VALID_FREQ=1000 \
+		SELECT_RANDOM_SHARDED_TRAINDATA=1 \
+		MARIAN_EXTRA=--no-restore-corpus \
+		MODELTYPE=transformer-big tatoeba-mul2mul-${LUMI_TASK}-m2m_opusjhubc
+
+lumi-opusbible-big7:
+	${MAKE} ${LUMI_MULTI_ARGS} NR=7 \
+		MARIAN_EARLY_STOPPING=10 \
+		MARIAN_TRAINING_PARAMETER="--task transformer-big --optimizer adagrad --optimizer-delay 10 --lr-warmup-cycle --lr-decay-repeat-warmup --lr-decay-freq 10000 --lr-decay-strategy batches+stalled --mini-batch-warmup 16000 --lr-warmup 8000 --lr-decay-inv-sqrt 8000 --check-gradient-nan --normalize-gradient" \
+		MARIAN_WORKSPACE=-10000 \
+		MARIAN_VALID_FREQ=1000 \
+		SELECT_RANDOM_SHARDED_TRAINDATA=1 \
+		MARIAN_EXTRA=--no-restore-corpus \
+		MODELTYPE=transformer-big tatoeba-mul2mul-${LUMI_TASK}-m2m_opusjhubc
+
 
 lumi-opusbible-bigger:
 	${MAKE} ${LUMI_MULTI_ARGS} MARIAN_EARLY_STOPPING=20 MODELTYPE=transformer-12x12 tatoeba-mul2mul-${LUMI_TASK}-m2m_opusjhubc
 
 lumi-opusbible-bigger2:
 	${MAKE} ${LUMI_MULTI_ARGS} NR=2 MARIAN_EARLY_STOPPING=20 MODELTYPE=transformer-12x12 tatoeba-mul2mul-${LUMI_TASK}-m2m_opusjhubc
+
+lumi-opusbible-bigger3:
+	${MAKE} ${LUMI_MULTI_ARGS} NR=3 \
+		MARIAN_EXTRA2="--lr-decay-repeat-warmup --lr-decay-freq 10000 --lr-decay-strategy batches+stalled --mini-batch-warmup 16000 --check-gradient-nan --normalize-gradient --no-restore-corpus --pretrained-model ${PWD}/work/mul-mul/opusTCv20230926+bt+jhubc.spm64k-spm64k.transformer-12x12.model2.npz.best-perplexity.npz" \
+		MARIAN_EARLY_STOPPING=20 \
+		MARIAN_WORKSPACE=-10000 \
+		SELECT_RANDOM_SHARDED_TRAINDATA=1 \
+		MODELTYPE=transformer-12x12 \
+	tatoeba-mul2mul-${LUMI_TASK}-m2m_opusjhubc
+
+lumi-opusbible-bigger4:
+	${MAKE} ${LUMI_MULTI_ARGS} NR=4 \
+		MARIAN_EXTRA2="--lr-decay-repeat-warmup --no-restore-corpus" \
+		MARIAN_EARLY_STOPPING=20 \
+		MARIAN_WORKSPACE=-10000 \
+		SELECT_RANDOM_SHARDED_TRAINDATA=1 \
+		MODELTYPE=transformer-12x12 \
+	tatoeba-mul2mul-${LUMI_TASK}-m2m_opusjhubc
+
+lumi-opusbible-bigger5:
+	${MAKE} ${LUMI_MULTI_ARGS} NR=5 \
+		MARIAN_EXTRA2="--lr-decay-repeat-warmup --no-restore-corpus" \
+		MARIAN_EARLY_STOPPING=10 \
+		MARIAN_WORKSPACE=-10000 \
+		SELECT_RANDOM_SHARDED_TRAINDATA=1 \
+		MODELTYPE=transformer-12x12 \
+	tatoeba-mul2mul-${LUMI_TASK}-m2m_opusjhubc
+
+lumi-opusbible-bigger6:
+	${MAKE} ${LUMI_MULTI_ARGS} NR=6 \
+		MARIAN_EXTRA2="--no-restore-corpus" \
+		MARIAN_EARLY_STOPPING=10 \
+		MARIAN_WORKSPACE=-10000 \
+		SELECT_RANDOM_SHARDED_TRAINDATA=1 \
+		MODELTYPE=transformer-12x12b \
+	tatoeba-mul2mul-${LUMI_TASK}-m2m_opusjhubc
+
+lumi-opusbible-bigger7:
+	${MAKE} ${LUMI_MULTI_ARGS} NR=7 \
+		MARIAN_EXTRA2="--no-restore-corpus" \
+		MARIAN_EARLY_STOPPING=10 \
+		MARIAN_WORKSPACE=-10000 \
+		SELECT_RANDOM_SHARDED_TRAINDATA=1 \
+		MODELTYPE=transformer-12x12b \
+	tatoeba-mul2mul-${LUMI_TASK}-m2m_opusjhubc
 
 
 lumi-opusbible-huge:

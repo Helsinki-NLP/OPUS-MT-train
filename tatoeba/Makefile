@@ -672,6 +672,23 @@ tatoeba-%-trainjob:
 	   fi )
 
 
+tatoeba-%-printinfo:
+	-( s=$(firstword $(subst 2, ,$(patsubst tatoeba-%-printinfo,%,$@))); \
+	   t=$(lastword  $(subst 2, ,$(patsubst tatoeba-%-printinfo,%,$@))); \
+	   S="${call find-srclanggroup,${patsubst tatoeba-%-printinfo,%,$@},${PIVOT}}"; \
+	   T="${call find-trglanggroup,${patsubst tatoeba-%-printinfo,%,$@},${PIVOT}}"; \
+	   if [ ! `find ${WORKHOME}/$$s-$$t -maxdepth 1 -name '${TATOEBA_DATASET}.*${MODELTYPE}.model${NR}.done' | wc -l` -gt 0 ]; then \
+	     ${MAKE} LANGPAIRSTR=$$s-$$t SRCLANGS="$$S" TRGLANGS="$$T" \
+			TATOEBA_SRCLANG_GROUP="`langgroup -n $$s | xargs iso639 -m -n | sort`" \
+			TATOEBA_TRGLANG_GROUP="`langgroup -n $$t | xargs iso639 -m -n | sort`" \
+			print_train_info; \
+	   else \
+	      echo "..... already done! ($$s-$$t/${TATOEBA_DATASET}.*${MODELTYPE}.model${NR}.done)"; \
+	   fi )
+
+
+
+
 ## add pivot languages
 tatoeba-%-pivotlang:
 	@if [ "$(call find-langgroup-pair,$(word 2,$(subst -, ,$@)),${TATOEBA_PIVOT})" != \
