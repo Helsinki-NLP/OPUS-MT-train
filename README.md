@@ -86,4 +86,4 @@ None of this would be possible without all the great open source software includ
 
 ... and many other tools like terashuf, pigz, jq, Moses SMT, fast_align, sacrebleu ...
 
-We would also like to acknowledge the support by the [University of Helsinki](https://blogs.helsinki.fi/language-technology/), the [IT Center of Science CSC](https://www.csc.fi/en/home), the funding through projects in the EU Horizon 2020 framework ([FoTran](http://www.helsinki.fi/fotran), [MeMAD](https://memad.eu/), [ELG](https://www.european-language-grid.eu/)) and the contributors to the open collection of parallel corpora [OPUS](http://opus.nlpl.eu/).
+We would also like to acknowledge the support by the [University of Helsinki](https://blogs.helsinki.fi/language-technology/), the [IT Center of Science CSC](https://www.csc.fi/en/home), the funding through projects in the EU Horizon 2020 framework ([FoTran](http://www.helsinki.fi/fotran), [MeMAD](https://memad.eu/), [ELG](https://www.european-language-grid.eu/), [HPLT](https://hplt-project.org)) and the contributors to the open collection of parallel corpora [OPUS](http://opus.nlpl.eu/).
